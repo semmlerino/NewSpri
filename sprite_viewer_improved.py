@@ -20,6 +20,8 @@ from PySide6.QtWidgets import (
 from PySide6.QtCore import Qt, QTimer, Signal, QRect, QSize, QPropertyAnimation, QEasingCurve
 from PySide6.QtGui import QPixmap, QPainter, QColor, QPen, QAction, QDragEnterEvent, QDropEvent, QIcon, QFont
 
+from config import Config
+
 
 class SpriteCanvas(QLabel):
     """Custom canvas widget for displaying sprites with zoom and pan capabilities."""
@@ -28,7 +30,7 @@ class SpriteCanvas(QLabel):
     
     def __init__(self):
         super().__init__()
-        self.setMinimumSize(600, 400)
+        self.setMinimumSize(Config.Canvas.MIN_WIDTH, Config.Canvas.MIN_HEIGHT)
         self.setStyleSheet("""
             QLabel {
                 border: 2px solid #ccc;
@@ -47,9 +49,9 @@ class SpriteCanvas(QLabel):
         
         # Background settings
         self._show_checkerboard = True
-        self._bg_color = QColor(128, 128, 128)
+        self._bg_color = Config.Canvas.DEFAULT_BG_COLOR
         self._show_grid = False
-        self._grid_size = 32
+        self._grid_size = Config.Canvas.DEFAULT_GRID_SIZE
         
         # Frame info
         self._current_frame = 0
@@ -71,13 +73,13 @@ class SpriteCanvas(QLabel):
     
     def set_zoom(self, factor: float):
         """Set zoom factor."""
-        self._zoom_factor = max(0.1, min(10.0, factor))
+        self._zoom_factor = max(Config.Canvas.ZOOM_MIN, min(Config.Canvas.ZOOM_MAX, factor))
         self.update()
     
     def reset_view(self):
         """Reset zoom and pan to default."""
         self._zoom_factor = 1.0
-        self._pan_offset = [0, 0]
+        self._pan_offset = Config.Canvas.DEFAULT_PAN_OFFSET.copy()
         self.update()
     
     def fit_to_window(self):
@@ -91,8 +93,8 @@ class SpriteCanvas(QLabel):
         # Calculate scale to fit
         scale_x = canvas_rect.width() / pixmap_size.width()
         scale_y = canvas_rect.height() / pixmap_size.height()
-        self._zoom_factor = min(scale_x, scale_y) * 0.9  # 90% to leave some margin
-        self._pan_offset = [0, 0]
+        self._zoom_factor = min(scale_x, scale_y) * Config.Canvas.ZOOM_FIT_MARGIN
+        self._pan_offset = Config.Canvas.DEFAULT_PAN_OFFSET.copy()
         self.update()
     
     def set_background_mode(self, checkerboard: bool, color: QColor = None):
@@ -102,7 +104,7 @@ class SpriteCanvas(QLabel):
             self._bg_color = color
         self.update()
     
-    def set_grid_overlay(self, show: bool, size: int = 32):
+    def set_grid_overlay(self, show: bool, size: int = Config.Canvas.DEFAULT_GRID_SIZE):
         """Toggle grid overlay."""
         self._show_grid = show
         self._grid_size = size
@@ -145,22 +147,27 @@ class SpriteCanvas(QLabel):
             return
             
         # Create semi-transparent background
-        info_rect = QRect(rect.width() - 150, 10, 140, 30)
-        painter.fillRect(info_rect, QColor(0, 0, 0, 180))
+        info_rect = QRect(
+            rect.width() - Config.Drawing.FRAME_INFO_MARGIN_RIGHT, 
+            Config.Drawing.FRAME_INFO_MARGIN_TOP,
+            Config.Drawing.FRAME_INFO_WIDTH, 
+            Config.Drawing.FRAME_INFO_HEIGHT
+        )
+        painter.fillRect(info_rect, QColor(0, 0, 0, Config.Drawing.FRAME_INFO_BG_ALPHA))
         
         # Draw text
-        painter.setPen(QColor(255, 255, 255))
+        painter.setPen(Config.Drawing.FRAME_INFO_TEXT_COLOR)
         font = QFont()
-        font.setPointSize(11)
+        font.setPointSize(Config.Font.FRAME_INFO_FONT_SIZE)
         font.setBold(True)
         painter.setFont(font)
         painter.drawText(info_rect, Qt.AlignCenter, f"Frame {self._current_frame + 1}/{self._total_frames}")
     
     def _draw_checkerboard(self, painter: QPainter, rect: QRect):
         """Draw checkerboard background pattern."""
-        tile_size = 16
-        light_color = QColor(255, 255, 255)
-        dark_color = QColor(192, 192, 192)
+        tile_size = Config.Drawing.CHECKERBOARD_TILE_SIZE
+        light_color = Config.Drawing.CHECKERBOARD_LIGHT_COLOR
+        dark_color = Config.Drawing.CHECKERBOARD_DARK_COLOR
         
         for y in range(0, rect.height(), tile_size):
             for x in range(0, rect.width(), tile_size):
@@ -169,8 +176,8 @@ class SpriteCanvas(QLabel):
     
     def _draw_grid(self, painter: QPainter, sprite_rect: QRect):
         """Draw grid overlay on sprite."""
-        pen = QPen(QColor(255, 0, 0, 128))
-        pen.setWidth(1)
+        pen = QPen(Config.Drawing.GRID_COLOR)
+        pen.setWidth(Config.Drawing.GRID_PEN_WIDTH)
         painter.setPen(pen)
         
         grid_size = self._grid_size * self._zoom_factor
@@ -214,11 +221,11 @@ class SpriteCanvas(QLabel):
         zoom_in = delta > 0
         
         if zoom_in:
-            self._zoom_factor *= 1.2
+            self._zoom_factor *= Config.Canvas.ZOOM_FACTOR
         else:
-            self._zoom_factor /= 1.2
+            self._zoom_factor /= Config.Canvas.ZOOM_FACTOR
         
-        self._zoom_factor = max(0.1, min(10.0, self._zoom_factor))
+        self._zoom_factor = max(Config.Canvas.ZOOM_MIN, min(Config.Canvas.ZOOM_MAX, self._zoom_factor))
         self.update()
 
 
@@ -243,11 +250,11 @@ class PlaybackControls(QFrame):
         """)
         
         layout = QVBoxLayout(self)
-        layout.setSpacing(10)
+        layout.setSpacing(Config.UI.MAIN_LAYOUT_SPACING)
         
         # Large play/pause button
         self.play_button = QPushButton("▶ Play")
-        self.play_button.setMinimumHeight(40)
+        self.play_button.setMinimumHeight(Config.UI.PLAYBACK_BUTTON_MIN_HEIGHT)
         self.play_button.setStyleSheet("""
             QPushButton {
                 font-size: 14pt;
@@ -273,28 +280,28 @@ class PlaybackControls(QFrame):
         
         # Frame navigation
         nav_layout = QHBoxLayout()
-        nav_layout.setSpacing(4)
+        nav_layout.setSpacing(Config.UI.NAV_BUTTON_SPACING)
         
         # Navigation buttons with better styling
-        button_style = """
-            QPushButton {
+        button_style = f"""
+            QPushButton {{
                 font-size: 12pt;
-                min-width: 35px;
-                min-height: 35px;
+                min-width: {Config.UI.NAV_BUTTON_WIDTH_PX};
+                min-height: {Config.UI.NAV_BUTTON_HEIGHT_PX};
                 background-color: #e0e0e0;
                 border: 1px solid #bbb;
                 border-radius: 4px;
-            }
-            QPushButton:hover:enabled {
+            }}
+            QPushButton:hover:enabled {{
                 background-color: #d0d0d0;
-            }
-            QPushButton:pressed {
+            }}
+            QPushButton:pressed {{
                 background-color: #c0c0c0;
-            }
-            QPushButton:disabled {
+            }}
+            QPushButton:disabled {{
                 color: #999;
                 background-color: #f0f0f0;
-            }
+            }}
         """
         
         self.first_btn = QPushButton("⏮")
@@ -309,7 +316,7 @@ class PlaybackControls(QFrame):
         
         # Frame slider in the middle
         self.frame_slider = QSlider(Qt.Horizontal)
-        self.frame_slider.setMinimum(0)
+        self.frame_slider.setMinimum(Config.Slider.FRAME_SLIDER_MIN)
         self.frame_slider.setMaximum(0)
         self.frame_slider.valueChanged.connect(self.frameChanged)
         nav_layout.addWidget(self.frame_slider, 1)
@@ -333,15 +340,15 @@ class PlaybackControls(QFrame):
         fps_layout.addWidget(fps_label)
         
         self.fps_slider = QSlider(Qt.Horizontal)
-        self.fps_slider.setRange(1, 60)
-        self.fps_slider.setValue(10)
+        self.fps_slider.setRange(Config.Animation.MIN_FPS, Config.Animation.MAX_FPS)
+        self.fps_slider.setValue(Config.Animation.DEFAULT_FPS)
         self.fps_slider.setTickPosition(QSlider.TicksBelow)
-        self.fps_slider.setTickInterval(10)
+        self.fps_slider.setTickInterval(Config.Slider.FPS_SLIDER_TICK_INTERVAL)
         self.fps_slider.valueChanged.connect(self._on_fps_changed)
         fps_layout.addWidget(self.fps_slider, 1)
         
-        self.fps_value = QLabel("10 fps")
-        self.fps_value.setMinimumWidth(50)
+        self.fps_value = QLabel(f"{Config.Animation.DEFAULT_FPS} fps")
+        self.fps_value.setMinimumWidth(Config.Slider.FPS_VALUE_MIN_WIDTH)
         self.fps_value.setAlignment(Qt.AlignRight)
         fps_layout.addWidget(self.fps_value)
         
@@ -450,17 +457,10 @@ class FrameExtractor(QGroupBox):
         layout.addWidget(preset_label)
         
         presets_layout = QGridLayout()
-        presets_layout.setSpacing(8)
+        presets_layout.setSpacing(Config.UI.PRESET_GRID_SPACING)
         
         self.preset_group = QButtonGroup()
-        preset_data = [
-            ("16×16", 16, 16, "Small icons"),
-            ("32×32", 32, 32, "Standard tiles"),
-            ("64×64", 64, 64, "Large tiles"),
-            ("128×128", 128, 128, "2×2 tiles"),
-            ("192×192", 192, 192, "3×3 character sprites"),
-            ("256×256", 256, 256, "4×4 large sprites"),
-        ]
+        preset_data = Config.FrameExtraction.FRAME_PRESETS
         
         for i, (label, width, height, tooltip) in enumerate(preset_data):
             btn = QRadioButton(label)
@@ -470,7 +470,7 @@ class FrameExtractor(QGroupBox):
             presets_layout.addWidget(btn, i // 3, i % 3)
         
         # Default to 192×192
-        self.preset_group.button(4).setChecked(True)
+        self.preset_group.button(Config.FrameExtraction.DEFAULT_PRESET_INDEX).setChecked(True)
         
         layout.addLayout(presets_layout)
         
@@ -485,11 +485,11 @@ class FrameExtractor(QGroupBox):
         layout.addWidget(custom_label)
         
         size_layout = QHBoxLayout()
-        size_layout.setSpacing(5)
+        size_layout.setSpacing(Config.UI.SIZE_LAYOUT_SPACING)
         
         self.width_spin = QSpinBox()
-        self.width_spin.setRange(1, 2048)
-        self.width_spin.setValue(192)
+        self.width_spin.setRange(Config.FrameExtraction.MIN_FRAME_SIZE, Config.FrameExtraction.MAX_FRAME_SIZE)
+        self.width_spin.setValue(Config.FrameExtraction.DEFAULT_FRAME_WIDTH)
         self.width_spin.setSuffix(" px")
         self.width_spin.valueChanged.connect(self._on_custom_size_changed)
         size_layout.addWidget(self.width_spin)
@@ -497,15 +497,15 @@ class FrameExtractor(QGroupBox):
         size_layout.addWidget(QLabel("×"))
         
         self.height_spin = QSpinBox()
-        self.height_spin.setRange(1, 2048)
-        self.height_spin.setValue(192)
+        self.height_spin.setRange(Config.FrameExtraction.MIN_FRAME_SIZE, Config.FrameExtraction.MAX_FRAME_SIZE)
+        self.height_spin.setValue(Config.FrameExtraction.DEFAULT_FRAME_HEIGHT)
         self.height_spin.setSuffix(" px")
         self.height_spin.valueChanged.connect(self._on_custom_size_changed)
         size_layout.addWidget(self.height_spin)
         
         # Auto-detect button
         self.auto_btn = QPushButton("Auto")
-        self.auto_btn.setMaximumWidth(60)
+        self.auto_btn.setMaximumWidth(Config.UI.AUTO_BUTTON_MAX_WIDTH)
         self.auto_btn.setToolTip("Auto-detect frame size")
         size_layout.addWidget(self.auto_btn)
         
@@ -517,27 +517,27 @@ class FrameExtractor(QGroupBox):
         layout.addWidget(offset_label)
         
         offset_layout = QHBoxLayout()
-        offset_layout.setSpacing(5)
+        offset_layout.setSpacing(Config.UI.SIZE_LAYOUT_SPACING)
         
         offset_layout.addWidget(QLabel("X:"))
         self.offset_x = QSpinBox()
-        self.offset_x.setRange(0, 1000)
-        self.offset_x.setValue(0)
+        self.offset_x.setRange(Config.FrameExtraction.DEFAULT_OFFSET, Config.FrameExtraction.MAX_OFFSET)
+        self.offset_x.setValue(Config.FrameExtraction.DEFAULT_OFFSET)
         self.offset_x.setSuffix(" px")
         self.offset_x.valueChanged.connect(self.settingsChanged)
         offset_layout.addWidget(self.offset_x)
         
         offset_layout.addWidget(QLabel("Y:"))
         self.offset_y = QSpinBox()
-        self.offset_y.setRange(0, 1000)
-        self.offset_y.setValue(0)
+        self.offset_y.setRange(Config.FrameExtraction.DEFAULT_OFFSET, Config.FrameExtraction.MAX_OFFSET)
+        self.offset_y.setValue(Config.FrameExtraction.DEFAULT_OFFSET)
         self.offset_y.setSuffix(" px")
         self.offset_y.valueChanged.connect(self.settingsChanged)
         offset_layout.addWidget(self.offset_y)
         
         # Auto-detect margins button
         self.auto_margins_btn = QPushButton("Auto")
-        self.auto_margins_btn.setMaximumWidth(60)
+        self.auto_margins_btn.setMaximumWidth(Config.UI.AUTO_BUTTON_MAX_WIDTH)
         self.auto_margins_btn.setToolTip("Auto-detect margins")
         offset_layout.addWidget(self.auto_margins_btn)
         
@@ -581,8 +581,13 @@ class SpriteViewer(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Python Sprite Viewer")
-        self.setGeometry(100, 100, 1200, 800)
+        self.setWindowTitle(Config.App.WINDOW_TITLE)
+        self.setGeometry(
+            Config.UI.DEFAULT_WINDOW_X, 
+            Config.UI.DEFAULT_WINDOW_Y,
+            Config.UI.DEFAULT_WINDOW_WIDTH, 
+            Config.UI.DEFAULT_WINDOW_HEIGHT
+        )
         
         # Sprite data
         self._sprite_frames: List[QPixmap] = []
@@ -595,7 +600,7 @@ class SpriteViewer(QMainWindow):
         # Animation timer
         self._timer = QTimer()
         self._timer.timeout.connect(self._next_frame)
-        self._fps = 10
+        self._fps = Config.Animation.DEFAULT_FPS
         
         # UI setup
         self._setup_ui()
@@ -621,7 +626,7 @@ class SpriteViewer(QMainWindow):
         
         # Main horizontal layout
         main_layout = QHBoxLayout(central_widget)
-        main_layout.setSpacing(10)
+        main_layout.setSpacing(Config.UI.MAIN_LAYOUT_SPACING)
         
         # Left side - Canvas
         canvas_container = QWidget()
@@ -637,14 +642,14 @@ class SpriteViewer(QMainWindow):
         
         # Right side - Controls
         controls_container = QWidget()
-        controls_container.setMaximumWidth(350)
-        controls_container.setMinimumWidth(300)
+        controls_container.setMaximumWidth(Config.UI.CONTROLS_MAX_WIDTH)
+        controls_container.setMinimumWidth(Config.UI.CONTROLS_MIN_WIDTH)
         controls_layout = QVBoxLayout(controls_container)
-        controls_layout.setSpacing(15)
+        controls_layout.setSpacing(Config.UI.CONTROLS_LAYOUT_SPACING)
         
         # 1. Sprite Sheet Info (collapsible)
         info_group = QGroupBox("Sprite Sheet Info")
-        info_group.setMaximumHeight(120)  # Prevent growing
+        info_group.setMaximumHeight(Config.UI.INFO_GROUP_MAX_HEIGHT)  # Prevent growing
         info_layout = QVBoxLayout(info_group)
         self._info_label = QLabel("No sprite sheet loaded")
         self._info_label.setWordWrap(True)
@@ -674,7 +679,7 @@ class SpriteViewer(QMainWindow):
         bg_layout.addWidget(self._bg_combo, 1)
         
         self._color_button = QPushButton("Color")
-        self._color_button.setMaximumWidth(60)
+        self._color_button.setMaximumWidth(Config.UI.COLOR_BUTTON_MAX_WIDTH)
         self._color_button.clicked.connect(self._choose_background_color)
         self._color_button.setEnabled(False)
         bg_layout.addWidget(self._color_button)
@@ -759,7 +764,7 @@ class SpriteViewer(QMainWindow):
         
         # Add current zoom display
         self._zoom_label = QLabel("100%")
-        self._zoom_label.setMinimumWidth(60)
+        self._zoom_label.setMinimumWidth(Config.UI.ZOOM_LABEL_MIN_WIDTH)
         self._zoom_label.setAlignment(Qt.AlignCenter)
         self._zoom_label.setStyleSheet("""
             QLabel {
@@ -853,12 +858,12 @@ class SpriteViewer(QMainWindow):
     
     def _zoom_in(self):
         """Zoom in by 20%."""
-        self._canvas.set_zoom(self._canvas._zoom_factor * 1.2)
+        self._canvas.set_zoom(self._canvas._zoom_factor * Config.Canvas.ZOOM_FACTOR)
         self._update_zoom_label()
     
     def _zoom_out(self):
         """Zoom out by 20%."""
-        self._canvas.set_zoom(self._canvas._zoom_factor / 1.2)
+        self._canvas.set_zoom(self._canvas._zoom_factor / Config.Canvas.ZOOM_FACTOR)
         self._update_zoom_label()
     
     def _zoom_fit(self):
@@ -963,7 +968,7 @@ class SpriteViewer(QMainWindow):
         width = pixmap.width()
         height = pixmap.height()
         
-        common_sizes = [16, 32, 64, 128, 192, 256]
+        common_sizes = Config.File.COMMON_FRAME_SIZES
         for size in common_sizes:
             if width % size == 0 and height % size == 0:
                 return True
@@ -978,7 +983,7 @@ class SpriteViewer(QMainWindow):
         height = self._original_sprite_sheet.height()
         
         # Try common sprite sizes
-        common_sizes = [256, 192, 128, 64, 32, 16]
+        common_sizes = Config.FrameExtraction.AUTO_DETECT_SIZES
         
         for size in common_sizes:
             if width % size == 0 and height % size == 0:
@@ -987,7 +992,7 @@ class SpriteViewer(QMainWindow):
                 frames_y = height // size
                 total_frames = frames_x * frames_y
                 
-                if 1 <= total_frames <= 100:  # Reasonable frame count
+                if Config.Animation.MIN_REASONABLE_FRAMES <= total_frames <= Config.Animation.MAX_REASONABLE_FRAMES:  # Reasonable frame count
                     self._frame_extractor.set_frame_size(size, size)
                     self._status_bar.showMessage(f"Auto-detected frame size: {size}×{size}")
                     return
@@ -995,7 +1000,7 @@ class SpriteViewer(QMainWindow):
         # If no common size fits, try to find the GCD
         from math import gcd
         frame_size = gcd(width, height)
-        if frame_size >= 16:  # Minimum reasonable sprite size
+        if frame_size >= Config.FrameExtraction.MIN_SPRITE_SIZE:  # Minimum reasonable sprite size
             self._frame_extractor.set_frame_size(frame_size, frame_size)
             self._status_bar.showMessage(f"Auto-detected frame size: {frame_size}×{frame_size}")
     
@@ -1121,7 +1126,7 @@ class SpriteViewer(QMainWindow):
             self._playback_controls.set_playing(False)
         else:
             if self._sprite_frames:
-                self._timer.start(1000 // self._fps)
+                self._timer.start(Config.Animation.TIMER_BASE // self._fps)
                 self._is_playing = True
                 self._playback_controls.set_playing(True)
     
@@ -1158,7 +1163,7 @@ class SpriteViewer(QMainWindow):
         """Handle FPS change."""
         self._fps = value
         if self._is_playing:
-            self._timer.setInterval(1000 // self._fps)
+            self._timer.setInterval(Config.Animation.TIMER_BASE // self._fps)
     
     def _on_frame_slider_changed(self, value: int):
         """Handle frame slider change."""
@@ -1232,7 +1237,7 @@ class SpriteViewer(QMainWindow):
             for y in range(height):
                 pixel = image.pixel(x, y)
                 alpha = (pixel >> 24) & 0xFF
-                if alpha > 10:  # Non-transparent pixel
+                if alpha > Config.FrameExtraction.MARGIN_DETECTION_ALPHA_THRESHOLD:  # Non-transparent pixel
                     has_content = True
                     break
             if has_content:
@@ -1246,7 +1251,7 @@ class SpriteViewer(QMainWindow):
             for x in range(width):
                 pixel = image.pixel(x, y)
                 alpha = (pixel >> 24) & 0xFF
-                if alpha > 10:  # Non-transparent pixel
+                if alpha > Config.FrameExtraction.MARGIN_DETECTION_ALPHA_THRESHOLD:  # Non-transparent pixel
                     has_content = True
                     break
             if has_content:
