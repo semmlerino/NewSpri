@@ -21,6 +21,9 @@ from PySide6.QtCore import Qt, QTimer, Signal, QRect, QSize, QPropertyAnimation,
 from PySide6.QtGui import QPixmap, QPainter, QColor, QPen, QAction, QDragEnterEvent, QDropEvent, QIcon, QFont
 
 from config import Config
+from styles import StyleManager
+from sprite_model import SpriteModel
+from animation_controller import AnimationController
 
 
 class SpriteCanvas(QLabel):
@@ -31,13 +34,7 @@ class SpriteCanvas(QLabel):
     def __init__(self):
         super().__init__()
         self.setMinimumSize(Config.Canvas.MIN_WIDTH, Config.Canvas.MIN_HEIGHT)
-        self.setStyleSheet("""
-            QLabel {
-                border: 2px solid #ccc;
-                border-radius: 4px;
-                background-color: #f5f5f5;
-            }
-        """)
+        self.setStyleSheet(StyleManager.get_canvas_normal())
         self.setAlignment(Qt.AlignCenter)
         self.setCursor(Qt.OpenHandCursor)
         
@@ -240,14 +237,7 @@ class PlaybackControls(QFrame):
     def __init__(self):
         super().__init__()
         self.setFrameStyle(QFrame.StyledPanel)
-        self.setStyleSheet("""
-            QFrame {
-                background-color: #f8f8f8;
-                border: 1px solid #ddd;
-                border-radius: 6px;
-                padding: 10px;
-            }
-        """)
+        self.setStyleSheet(StyleManager.get_playback_controls_frame())
         
         layout = QVBoxLayout(self)
         layout.setSpacing(Config.UI.MAIN_LAYOUT_SPACING)
@@ -255,26 +245,7 @@ class PlaybackControls(QFrame):
         # Large play/pause button
         self.play_button = QPushButton("▶ Play")
         self.play_button.setMinimumHeight(Config.UI.PLAYBACK_BUTTON_MIN_HEIGHT)
-        self.play_button.setStyleSheet("""
-            QPushButton {
-                font-size: 14pt;
-                font-weight: bold;
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-            QPushButton:pressed {
-                background-color: #3d8b40;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
-        """)
+        self.play_button.setStyleSheet(StyleManager.get_play_button_stopped())
         self.play_button.clicked.connect(self.playPauseClicked)
         layout.addWidget(self.play_button)
         
@@ -283,26 +254,7 @@ class PlaybackControls(QFrame):
         nav_layout.setSpacing(Config.UI.NAV_BUTTON_SPACING)
         
         # Navigation buttons with better styling
-        button_style = f"""
-            QPushButton {{
-                font-size: 12pt;
-                min-width: {Config.UI.NAV_BUTTON_WIDTH_PX};
-                min-height: {Config.UI.NAV_BUTTON_HEIGHT_PX};
-                background-color: #e0e0e0;
-                border: 1px solid #bbb;
-                border-radius: 4px;
-            }}
-            QPushButton:hover:enabled {{
-                background-color: #d0d0d0;
-            }}
-            QPushButton:pressed {{
-                background-color: #c0c0c0;
-            }}
-            QPushButton:disabled {{
-                color: #999;
-                background-color: #f0f0f0;
-            }}
-        """
+        button_style = StyleManager.get_navigation_buttons()
         
         self.first_btn = QPushButton("⏮")
         self.first_btn.setStyleSheet(button_style)
@@ -336,7 +288,7 @@ class PlaybackControls(QFrame):
         # FPS control with better layout
         fps_layout = QHBoxLayout()
         fps_label = QLabel("Speed:")
-        fps_label.setStyleSheet("font-weight: bold;")
+        fps_label.setStyleSheet(StyleManager.get_speed_label())
         fps_layout.addWidget(fps_label)
         
         self.fps_slider = QSlider(Qt.Horizontal)
@@ -368,44 +320,10 @@ class PlaybackControls(QFrame):
         """Update play button state."""
         if playing:
             self.play_button.setText("⏸ Pause")
-            self.play_button.setStyleSheet("""
-                QPushButton {
-                    font-size: 14pt;
-                    font-weight: bold;
-                    background-color: #ff9800;
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                }
-                QPushButton:hover {
-                    background-color: #e68900;
-                }
-                QPushButton:pressed {
-                    background-color: #cc7a00;
-                }
-            """)
+            self.play_button.setStyleSheet(StyleManager.get_play_button_playing())
         else:
             self.play_button.setText("▶ Play")
-            self.play_button.setStyleSheet("""
-                QPushButton {
-                    font-size: 14pt;
-                    font-weight: bold;
-                    background-color: #4CAF50;
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                }
-                QPushButton:hover {
-                    background-color: #45a049;
-                }
-                QPushButton:pressed {
-                    background-color: #3d8b40;
-                }
-                QPushButton:disabled {
-                    background-color: #cccccc;
-                    color: #666666;
-                }
-            """)
+            self.play_button.setStyleSheet(StyleManager.get_play_button_stopped())
     
     def set_frame_range(self, max_frame: int):
         """Set the frame slider range."""
@@ -434,26 +352,13 @@ class FrameExtractor(QGroupBox):
     
     def __init__(self):
         super().__init__("Frame Extraction")
-        self.setStyleSheet("""
-            QGroupBox {
-                font-weight: bold;
-                border: 2px solid #cccccc;
-                border-radius: 5px;
-                margin-top: 10px;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-            }
-        """)
+        self.setStyleSheet(StyleManager.get_frame_extractor_groupbox())
         
         layout = QVBoxLayout(self)
         
         # Quick presets as radio buttons
         preset_label = QLabel("Quick Presets:")
-        preset_label.setStyleSheet("font-weight: normal; margin-bottom: 5px;")
+        preset_label.setStyleSheet(StyleManager.get_preset_label())
         layout.addWidget(preset_label)
         
         presets_layout = QGridLayout()
@@ -481,7 +386,7 @@ class FrameExtractor(QGroupBox):
         
         # Custom size controls
         custom_label = QLabel("Custom Size:")
-        custom_label.setStyleSheet("font-weight: normal; margin-top: 10px;")
+        custom_label.setStyleSheet(StyleManager.get_custom_label())
         layout.addWidget(custom_label)
         
         size_layout = QHBoxLayout()
@@ -513,7 +418,7 @@ class FrameExtractor(QGroupBox):
         
         # Offset controls
         offset_label = QLabel("Offset (if needed):")
-        offset_label.setStyleSheet("font-weight: normal; margin-top: 10px;")
+        offset_label.setStyleSheet(StyleManager.get_offset_label())
         layout.addWidget(offset_label)
         
         offset_layout = QHBoxLayout()
@@ -545,7 +450,7 @@ class FrameExtractor(QGroupBox):
         
         # Grid overlay checkbox
         self.grid_checkbox = QCheckBox("Show grid overlay")
-        self.grid_checkbox.setStyleSheet("margin-top: 10px;")
+        self.grid_checkbox.setStyleSheet(StyleManager.get_grid_checkbox())
         layout.addWidget(self.grid_checkbox)
     
     def _on_custom_size_changed(self):
@@ -589,18 +494,12 @@ class SpriteViewer(QMainWindow):
             Config.UI.DEFAULT_WINDOW_HEIGHT
         )
         
-        # Sprite data
-        self._sprite_frames: List[QPixmap] = []
-        self._current_frame = 0
-        self._is_playing = False
-        self._loop_enabled = True
-        self._original_sprite_sheet: Optional[QPixmap] = None
-        self._sprite_sheet_info = ""  # Store basic info separately
+        # Sprite data model (Phase 3: Data extraction complete)
+        self._sprite_model = SpriteModel()
         
-        # Animation timer
-        self._timer = QTimer()
-        self._timer.timeout.connect(self._next_frame)
-        self._fps = Config.Animation.DEFAULT_FPS
+        # Animation controller (Phase 4: Animation timing extraction)
+        self._animation_controller = AnimationController()
+        self._animation_controller.initialize(self._sprite_model, self)
         
         # UI setup
         self._setup_ui()
@@ -653,7 +552,7 @@ class SpriteViewer(QMainWindow):
         info_layout = QVBoxLayout(info_group)
         self._info_label = QLabel("No sprite sheet loaded")
         self._info_label.setWordWrap(True)
-        self._info_label.setStyleSheet("color: #666; font-size: 10pt;")
+        self._info_label.setStyleSheet(StyleManager.get_info_label())
         self._info_label.setAlignment(Qt.AlignTop)
         info_layout.addWidget(self._info_label)
         controls_layout.addWidget(info_group)
@@ -693,7 +592,7 @@ class SpriteViewer(QMainWindow):
         # Help text at bottom
         help_label = QLabel("Drag & drop sprite sheets or use toolbar buttons")
         help_label.setAlignment(Qt.AlignCenter)
-        help_label.setStyleSheet("color: #888; font-style: italic; padding: 10px;")
+        help_label.setStyleSheet(StyleManager.get_help_label())
         controls_layout.addWidget(help_label)
         
         main_layout.addWidget(controls_container)
@@ -702,28 +601,7 @@ class SpriteViewer(QMainWindow):
         """Set up main toolbar with common actions."""
         toolbar = QToolBar("Main Toolbar")
         toolbar.setMovable(False)
-        toolbar.setStyleSheet("""
-            QToolBar {
-                background-color: #f5f5f5;
-                border-bottom: 1px solid #ddd;
-                padding: 5px;
-                spacing: 5px;
-            }
-            QToolButton {
-                background-color: white;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                padding: 5px;
-                margin: 2px;
-            }
-            QToolButton:hover {
-                background-color: #e8e8e8;
-                border-color: #bbb;
-            }
-            QToolButton:pressed {
-                background-color: #ddd;
-            }
-        """)
+        toolbar.setStyleSheet(StyleManager.get_main_toolbar())
         self.addToolBar(toolbar)
         
         # File actions
@@ -766,15 +644,7 @@ class SpriteViewer(QMainWindow):
         self._zoom_label = QLabel("100%")
         self._zoom_label.setMinimumWidth(Config.UI.ZOOM_LABEL_MIN_WIDTH)
         self._zoom_label.setAlignment(Qt.AlignCenter)
-        self._zoom_label.setStyleSheet("""
-            QLabel {
-                background-color: white;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                padding: 5px;
-                font-weight: bold;
-            }
-        """)
+        self._zoom_label.setStyleSheet(StyleManager.get_zoom_display())
         toolbar.addWidget(self._zoom_label)
     
     def _setup_menu(self):
@@ -826,6 +696,35 @@ class SpriteViewer(QMainWindow):
     
     def _connect_signals(self):
         """Connect all widget signals."""
+        # ============================================================================
+        # MODEL SIGNAL CONNECTIONS (Phase 3.7: Event-driven architecture)
+        # ============================================================================
+        
+        # Connect SpriteModel signals to UI update methods
+        self._sprite_model.frameChanged.connect(self._on_model_frame_changed)
+        self._sprite_model.dataLoaded.connect(self._on_model_data_loaded)
+        self._sprite_model.extractionCompleted.connect(self._on_model_extraction_completed)
+        self._sprite_model.playbackStateChanged.connect(self._on_model_playback_state_changed)
+        self._sprite_model.errorOccurred.connect(self._on_model_error_occurred)
+        self._sprite_model.configurationChanged.connect(self._on_model_configuration_changed)
+        
+        # ============================================================================
+        # ANIMATION CONTROLLER SIGNAL CONNECTIONS (Phase 4.2: Timer extraction)
+        # ============================================================================
+        
+        # Connect AnimationController signals to UI update methods
+        self._animation_controller.frameAdvanced.connect(self._on_controller_frame_advanced)
+        self._animation_controller.animationStarted.connect(self._on_controller_animation_started)
+        self._animation_controller.animationPaused.connect(self._on_controller_animation_paused)
+        self._animation_controller.animationStopped.connect(self._on_controller_animation_stopped)
+        self._animation_controller.animationCompleted.connect(self._on_controller_animation_completed)
+        self._animation_controller.errorOccurred.connect(self._on_controller_error_occurred)
+        self._animation_controller.statusChanged.connect(self._on_controller_status_changed)
+        
+        # ============================================================================
+        # UI WIDGET SIGNAL CONNECTIONS
+        # ============================================================================
+        
         # Frame extractor signals
         self._frame_extractor.settingsChanged.connect(self._update_frame_slicing)
         self._frame_extractor.presetSelected.connect(self._frame_extractor.set_frame_size)
@@ -833,22 +732,104 @@ class SpriteViewer(QMainWindow):
         self._frame_extractor.auto_margins_btn.clicked.connect(self._auto_detect_margins)
         self._frame_extractor.grid_checkbox.toggled.connect(self._toggle_grid)
         
-        # Playback control signals
-        self._playback_controls.playPauseClicked.connect(self._toggle_playback)
+        # Playback control signals (updated for Phase 4.2: Controller integration)
+        self._playback_controls.playPauseClicked.connect(self._animation_controller.toggle_playback)
         self._playback_controls.frameChanged.connect(self._on_frame_slider_changed)
-        self._playback_controls.fpsChanged.connect(self._on_fps_changed)
-        self._playback_controls.loopToggled.connect(self._toggle_loop)
+        self._playback_controls.fpsChanged.connect(self._animation_controller.set_fps)
+        self._playback_controls.loopToggled.connect(self._animation_controller.set_loop_mode)
         
         self._playback_controls.first_btn.clicked.connect(self._go_to_first_frame)
         self._playback_controls.prev_btn.clicked.connect(self._go_to_prev_frame)
         self._playback_controls.next_btn.clicked.connect(self._go_to_next_frame)
         self._playback_controls.last_btn.clicked.connect(self._go_to_last_frame)
     
+    # ============================================================================
+    # MODEL SIGNAL HANDLERS (Phase 3.7: Event-driven architecture)
+    # ============================================================================
+    
+    def _on_model_frame_changed(self, current_frame: int, total_frames: int):
+        """Handle frame change from model."""
+        # Update canvas display
+        if self._sprite_model.sprite_frames and 0 <= current_frame < len(self._sprite_model.sprite_frames):
+            self._canvas.set_pixmap(self._sprite_model.sprite_frames[current_frame])
+            self._canvas.set_frame_info(current_frame, total_frames)
+            self._playback_controls.set_current_frame(current_frame)
+    
+    def _on_model_data_loaded(self, file_path: str):
+        """Handle data loaded from model."""
+        self._info_label.setText(self._sprite_model.sprite_info)
+        self._status_bar.showMessage(f"Loaded: {self._sprite_model.file_name}")
+    
+    def _on_model_extraction_completed(self, frame_count: int):
+        """Handle frame extraction completion from model."""
+        self._info_label.setText(self._sprite_model.sprite_info)
+        if frame_count > 0:
+            self._playback_controls.set_frame_range(frame_count - 1)
+            self._playback_controls.update_button_states(True, True, False)
+        else:
+            self._playback_controls.set_frame_range(0)
+            self._playback_controls.update_button_states(False, False, False)
+    
+    def _on_model_playback_state_changed(self, is_playing: bool):
+        """Handle playback state change from model."""
+        # Update UI to reflect model's playback state
+        # Timer control is now handled by AnimationController
+        self._playback_controls.set_playing(is_playing)
+    
+    def _on_model_error_occurred(self, error_message: str):
+        """Handle error from model."""
+        QMessageBox.warning(self, "Sprite Model Error", error_message)
+        self._status_bar.showMessage(f"Error: {error_message}")
+    
+    def _on_model_configuration_changed(self):
+        """Handle configuration change from model."""
+        # Trigger re-extraction of frames with new settings
+        self._update_frame_slicing()
+    
+    # ============================================================================
+    # ANIMATION CONTROLLER SIGNAL HANDLERS (Phase 4.2: Timer extraction)
+    # ============================================================================
+    
+    def _on_controller_frame_advanced(self, frame_index: int):
+        """Handle frame advancement from animation controller."""
+        # Update display for new frame (controller drives this during playback)
+        self._update_display()
+    
+    def _on_controller_animation_started(self):
+        """Handle animation start from controller."""
+        # Update UI state for animation start
+        self._status_bar.showMessage("Animation started")
+    
+    def _on_controller_animation_paused(self):
+        """Handle animation pause from controller."""
+        # Update UI state for animation pause
+        self._status_bar.showMessage("Animation paused")
+    
+    def _on_controller_animation_stopped(self):
+        """Handle animation stop from controller."""
+        # Update UI state for animation stop
+        self._status_bar.showMessage("Animation stopped")
+    
+    def _on_controller_animation_completed(self):
+        """Handle animation completion from controller."""
+        # Update UI state for animation completion
+        self._status_bar.showMessage("Animation completed")
+    
+    def _on_controller_error_occurred(self, error_message: str):
+        """Handle error from animation controller."""
+        # Display controller error to user
+        self._status_bar.showMessage(f"Animation error: {error_message}")
+    
+    def _on_controller_status_changed(self, status_message: str):
+        """Handle status updates from animation controller."""
+        # Display controller status in status bar
+        self._status_bar.showMessage(status_message)
+    
     def _show_welcome_message(self):
         """Show welcome message in status bar."""
         self._status_bar.showMessage("Welcome! Drag & drop sprite sheets or click Open to get started")
-        # Reset info label to default state
-        self._sprite_sheet_info = ""
+        # Reset model to default state
+        self._sprite_model.clear_sprite_data()
         self._info_label.setText("No sprite sheet loaded")
     
     def _on_canvas_frame_changed(self, current: int, total: int):
@@ -928,81 +909,49 @@ class SpriteViewer(QMainWindow):
             self._load_sprite_sheet(file_path)
     
     def _load_sprite_sheet(self, file_path: str):
-        """Load and slice a sprite sheet."""
-        pixmap = QPixmap(file_path)
-        if pixmap.isNull():
-            QMessageBox.warning(self, "Error", "Failed to load image file")
-            # Reset to welcome state on error
+        """Load and slice a sprite sheet using SpriteModel."""
+        # Load sprite sheet through model (Phase 3.3: File loading extraction)
+        success, error_message = self._sprite_model.load_sprite_sheet(file_path)
+        
+        if not success:
+            # Handle loading error with UI feedback
+            QMessageBox.warning(self, "Error", error_message)
             self._show_welcome_message()
             return
         
-        # Store original sprite sheet for re-slicing
-        self._original_sprite_sheet = pixmap
-        
-        # Update info
-        file_name = Path(file_path).name
-        self._sprite_sheet_info = (
-            f"<b>File:</b> {file_name}<br>"
-            f"<b>Size:</b> {pixmap.width()} × {pixmap.height()} px<br>"
-            f"<b>Format:</b> {Path(file_path).suffix.upper()[1:]}"
-        )
-        self._info_label.setText(self._sprite_sheet_info)
+        # Update UI with sprite sheet info from model
+        self._info_label.setText(self._sprite_model.sprite_info)
         
         # Try to auto-detect frame size if it's a new sheet
-        if self._should_auto_detect_size(pixmap):
+        if self._should_auto_detect_size(self._sprite_model.original_sprite_sheet):
             self._auto_detect_frame_size()
         
         # Slice the sprite sheet into individual frames
         self._slice_sprite_sheet()
         
-        # Reset to first frame
-        self._current_frame = 0
+        # Update display (current frame already reset by model)
         self._update_display()
         
-        # Update status
-        self._status_bar.showMessage(f"Loaded: {file_name}")
+        # Update status bar
+        self._status_bar.showMessage(f"Loaded: {self._sprite_model.file_name}")
     
     def _should_auto_detect_size(self, pixmap: QPixmap) -> bool:
-        """Check if we should auto-detect frame size."""
-        # Simple heuristic: if dimensions are multiples of common sizes
-        width = pixmap.width()
-        height = pixmap.height()
-        
-        common_sizes = Config.File.COMMON_FRAME_SIZES
-        for size in common_sizes:
-            if width % size == 0 and height % size == 0:
-                return True
-        return False
+        """Check if we should auto-detect frame size using SpriteModel."""
+        # Use model's auto-detection logic (Phase 3.5: Auto-detection extraction)
+        return self._sprite_model.should_auto_detect_size()
     
     def _auto_detect_frame_size(self):
-        """Auto-detect frame size based on sprite sheet analysis."""
-        if not self._original_sprite_sheet:
-            return
+        """Auto-detect frame size using SpriteModel analysis."""
+        # Use model's auto-detection algorithm (Phase 3.5: Auto-detection extraction)
+        success, width, height, message = self._sprite_model.auto_detect_frame_size()
         
-        width = self._original_sprite_sheet.width()
-        height = self._original_sprite_sheet.height()
-        
-        # Try common sprite sizes
-        common_sizes = Config.FrameExtraction.AUTO_DETECT_SIZES
-        
-        for size in common_sizes:
-            if width % size == 0 and height % size == 0:
-                # Check if this produces a reasonable number of frames
-                frames_x = width // size
-                frames_y = height // size
-                total_frames = frames_x * frames_y
-                
-                if Config.Animation.MIN_REASONABLE_FRAMES <= total_frames <= Config.Animation.MAX_REASONABLE_FRAMES:  # Reasonable frame count
-                    self._frame_extractor.set_frame_size(size, size)
-                    self._status_bar.showMessage(f"Auto-detected frame size: {size}×{size}")
-                    return
-        
-        # If no common size fits, try to find the GCD
-        from math import gcd
-        frame_size = gcd(width, height)
-        if frame_size >= Config.FrameExtraction.MIN_SPRITE_SIZE:  # Minimum reasonable sprite size
-            self._frame_extractor.set_frame_size(frame_size, frame_size)
-            self._status_bar.showMessage(f"Auto-detected frame size: {frame_size}×{frame_size}")
+        if success:
+            # Update UI with detected frame size
+            self._frame_extractor.set_frame_size(width, height)
+            self._status_bar.showMessage(message)
+        else:
+            # Handle detection failure
+            self._status_bar.showMessage(f"Auto-detection failed: {message}")
     
     def _load_test_sprites(self):
         """Load test sprites from various common locations."""
@@ -1024,67 +973,45 @@ class SpriteViewer(QMainWindow):
                 break
     
     def _slice_sprite_sheet(self):
-        """Slice the original sprite sheet into individual frames."""
-        if not self._original_sprite_sheet:
-            return
-        
+        """Slice the original sprite sheet into individual frames using SpriteModel."""
+        # Get frame extraction settings from UI
         frame_width, frame_height = self._frame_extractor.get_frame_size()
         offset_x, offset_y = self._frame_extractor.get_offset()
         
-        sheet_width = self._original_sprite_sheet.width()
-        sheet_height = self._original_sprite_sheet.height()
+        # Extract frames through model (Phase 3.4: Frame extraction)
+        success, error_message, total_frames = self._sprite_model.extract_frames(
+            frame_width, frame_height, offset_x, offset_y
+        )
         
-        # Calculate available area after margins
-        available_width = sheet_width - offset_x
-        available_height = sheet_height - offset_y
+        if not success:
+            # Handle extraction error
+            self._info_label.setText(self._sprite_model.sprite_info)
+            QMessageBox.warning(self, "Frame Extraction Error", error_message)
+            return
         
-        # Calculate how many frames fit
-        frames_per_row = available_width // frame_width if frame_width > 0 else 0
-        frames_per_col = available_height // frame_height if frame_height > 0 else 0
+        # Update UI with extraction results
+        self._info_label.setText(self._sprite_model.sprite_info)
         
-        # Extract individual frames
-        self._sprite_frames = []
-        for row in range(frames_per_col):
-            for col in range(frames_per_row):
-                x = offset_x + (col * frame_width)
-                y = offset_y + (row * frame_height)
-                
-                # Extract frame from sprite sheet
-                frame_rect = QRect(x, y, frame_width, frame_height)
-                frame = self._original_sprite_sheet.copy(frame_rect)
-                
-                if not frame.isNull():
-                    self._sprite_frames.append(frame)
-        
-        # Update UI
-        total_frames = len(self._sprite_frames)
         if total_frames > 0:
-            # Update info label with complete information
-            frame_info = (
-                f"<br><b>Frames:</b> {total_frames} "
-                f"({frames_per_row}×{frames_per_col})<br>"
-                f"<b>Frame size:</b> {frame_width}×{frame_height} px"
-            )
-            self._info_label.setText(self._sprite_sheet_info + frame_info)
-            
-            # Update playback controls
+            # Update playback controls for successful extraction
             self._playback_controls.set_frame_range(total_frames - 1)
             self._playback_controls.update_button_states(True, True, False)
         else:
-            # No frames extracted
-            self._info_label.setText(self._sprite_sheet_info + "<br><b>Frames:</b> 0")
+            # No frames extracted - reset playback controls
+            self._playback_controls.set_frame_range(0)
+            self._playback_controls.update_button_states(False, False, False)
     
     def _update_frame_slicing(self):
         """Update frame slicing based on current settings."""
-        if not self._original_sprite_sheet:
+        if not self._sprite_model.original_sprite_sheet:
             return
         
         # Re-slice with new dimensions
         self._slice_sprite_sheet()
         
         # Reset to first frame if current is out of bounds
-        if self._current_frame >= len(self._sprite_frames):
-            self._current_frame = 0
+        if self._sprite_model.current_frame >= len(self._sprite_model.sprite_frames):
+            self._sprite_model.set_current_frame(0)
         
         # Update display
         self._update_display()
@@ -1096,10 +1023,10 @@ class SpriteViewer(QMainWindow):
     
     def _update_display(self):
         """Update the canvas display."""
-        if self._sprite_frames and 0 <= self._current_frame < len(self._sprite_frames):
-            self._canvas.set_pixmap(self._sprite_frames[self._current_frame])
-            self._canvas.set_frame_info(self._current_frame, len(self._sprite_frames))
-            self._playback_controls.set_current_frame(self._current_frame)
+        if self._sprite_model.sprite_frames and 0 <= self._sprite_model.current_frame < len(self._sprite_model.sprite_frames):
+            self._canvas.set_pixmap(self._sprite_model.sprite_frames[self._sprite_model.current_frame])
+            self._canvas.set_frame_info(self._sprite_model.current_frame, len(self._sprite_model.sprite_frames))
+            self._playback_controls.set_current_frame(self._sprite_model.current_frame)
             self._update_navigation_buttons()
         else:
             self._canvas.set_pixmap(QPixmap())
@@ -1107,48 +1034,16 @@ class SpriteViewer(QMainWindow):
             self._playback_controls.set_current_frame(0)
             self._update_navigation_buttons()
             # If no sprite sheet is loaded, show welcome message
-            if not self._original_sprite_sheet:
+            if not self._sprite_model.original_sprite_sheet:
                 self._show_welcome_message()
     
     def _update_navigation_buttons(self):
         """Update navigation button states."""
-        has_frames = bool(self._sprite_frames)
-        at_start = self._current_frame == 0
-        at_end = self._current_frame == len(self._sprite_frames) - 1 if has_frames else True
+        has_frames = bool(self._sprite_model.sprite_frames)
+        at_start = self._sprite_model.current_frame == 0
+        at_end = self._sprite_model.current_frame == len(self._sprite_model.sprite_frames) - 1 if has_frames else True
         
         self._playback_controls.update_button_states(has_frames, at_start, at_end)
-    
-    def _toggle_playback(self):
-        """Toggle animation playback."""
-        if self._is_playing:
-            self._timer.stop()
-            self._is_playing = False
-            self._playback_controls.set_playing(False)
-        else:
-            if self._sprite_frames:
-                self._timer.start(Config.Animation.TIMER_BASE // self._fps)
-                self._is_playing = True
-                self._playback_controls.set_playing(True)
-    
-    def _next_frame(self):
-        """Advance to next frame."""
-        if not self._sprite_frames:
-            return
-        
-        self._current_frame += 1
-        
-        if self._current_frame >= len(self._sprite_frames):
-            if self._loop_enabled:
-                self._current_frame = 0
-            else:
-                self._current_frame = len(self._sprite_frames) - 1
-                self._toggle_playback()  # Stop playback
-        
-        self._update_display()
-    
-    def _toggle_loop(self, enabled: bool):
-        """Toggle loop mode."""
-        self._loop_enabled = enabled
     
     def _toggle_grid(self, checked: bool = None):
         """Toggle grid overlay."""
@@ -1159,50 +1054,44 @@ class SpriteViewer(QMainWindow):
             frame_width, frame_height = self._frame_extractor.get_frame_size()
             self._canvas.set_grid_overlay(checked, max(frame_width, frame_height))
     
-    def _on_fps_changed(self, value: int):
-        """Handle FPS change."""
-        self._fps = value
-        if self._is_playing:
-            self._timer.setInterval(Config.Animation.TIMER_BASE // self._fps)
-    
     def _on_frame_slider_changed(self, value: int):
-        """Handle frame slider change."""
-        if self._sprite_frames and 0 <= value < len(self._sprite_frames):
-            if self._is_playing:
-                self._toggle_playback()
-            self._current_frame = value
+        """Handle frame slider change using SpriteModel."""
+        if self._sprite_model.sprite_frames and 0 <= value < len(self._sprite_model.sprite_frames):
+            if self._sprite_model.is_playing:
+                self._animation_controller.pause_animation()
+            self._sprite_model.set_current_frame(value)
             self._update_display()
     
     def _go_to_first_frame(self):
-        """Go to first frame."""
-        if self._sprite_frames:
-            if self._is_playing:
-                self._toggle_playback()
-            self._current_frame = 0
+        """Go to first frame using SpriteModel."""
+        if self._sprite_model.sprite_frames:
+            if self._sprite_model.is_playing:
+                self._animation_controller.pause_animation()
+            self._sprite_model.first_frame()
             self._update_display()
     
     def _go_to_last_frame(self):
-        """Go to last frame."""
-        if self._sprite_frames:
-            if self._is_playing:
-                self._toggle_playback()
-            self._current_frame = len(self._sprite_frames) - 1
+        """Go to last frame using SpriteModel."""
+        if self._sprite_model.sprite_frames:
+            if self._sprite_model.is_playing:
+                self._animation_controller.pause_animation()
+            self._sprite_model.last_frame()
             self._update_display()
     
     def _go_to_prev_frame(self):
-        """Go to previous frame."""
-        if self._sprite_frames and self._current_frame > 0:
-            if self._is_playing:
-                self._toggle_playback()
-            self._current_frame -= 1
+        """Go to previous frame using SpriteModel."""
+        if self._sprite_model.sprite_frames and self._sprite_model.current_frame > 0:
+            if self._sprite_model.is_playing:
+                self._animation_controller.pause_animation()
+            self._sprite_model.previous_frame()
             self._update_display()
     
     def _go_to_next_frame(self):
-        """Go to next frame."""
-        if self._sprite_frames and self._current_frame < len(self._sprite_frames) - 1:
-            if self._is_playing:
-                self._toggle_playback()
-            self._current_frame += 1
+        """Go to next frame using SpriteModel."""
+        if self._sprite_model.sprite_frames and self._sprite_model.current_frame < len(self._sprite_model.sprite_frames) - 1:
+            if self._sprite_model.is_playing:
+                self._animation_controller.pause_animation()
+            self._sprite_model.next_frame()
             self._update_display()
     
     def _change_background(self, bg_type: str):
@@ -1221,48 +1110,18 @@ class SpriteViewer(QMainWindow):
             self._canvas.set_background_mode(False, color)
     
     def _auto_detect_margins(self):
-        """Auto-detect margins by analyzing sprite sheet content."""
-        if not self._original_sprite_sheet:
-            return
+        """Auto-detect margins using SpriteModel pixel analysis."""
+        # Use model's margin detection algorithm (Phase 3.5: Auto-detection extraction)
+        success, offset_x, offset_y, message = self._sprite_model.auto_detect_margins()
         
-        # Convert to QImage for pixel analysis
-        image = self._original_sprite_sheet.toImage()
-        width = image.width()
-        height = image.height()
-        
-        # Detect left margin
-        left_margin = 0
-        for x in range(width):
-            has_content = False
-            for y in range(height):
-                pixel = image.pixel(x, y)
-                alpha = (pixel >> 24) & 0xFF
-                if alpha > Config.FrameExtraction.MARGIN_DETECTION_ALPHA_THRESHOLD:  # Non-transparent pixel
-                    has_content = True
-                    break
-            if has_content:
-                break
-            left_margin += 1
-        
-        # Detect top margin
-        top_margin = 0
-        for y in range(height):
-            has_content = False
-            for x in range(width):
-                pixel = image.pixel(x, y)
-                alpha = (pixel >> 24) & 0xFF
-                if alpha > Config.FrameExtraction.MARGIN_DETECTION_ALPHA_THRESHOLD:  # Non-transparent pixel
-                    has_content = True
-                    break
-            if has_content:
-                break
-            top_margin += 1
-        
-        # Update controls
-        self._frame_extractor.offset_x.setValue(left_margin)
-        self._frame_extractor.offset_y.setValue(top_margin)
-        
-        self._status_bar.showMessage(f"Auto-detected margins: X={left_margin}, Y={top_margin}")
+        if success:
+            # Update UI with detected margins
+            self._frame_extractor.offset_x.setValue(offset_x)
+            self._frame_extractor.offset_y.setValue(offset_y)
+            self._status_bar.showMessage(message)
+        else:
+            # Handle detection failure
+            self._status_bar.showMessage(f"Margin detection failed: {message}")
     
     def dragEnterEvent(self, event: QDragEnterEvent):
         """Handle drag enter event."""
@@ -1270,26 +1129,14 @@ class SpriteViewer(QMainWindow):
             for url in event.mimeData().urls():
                 if url.toLocalFile().lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
                     event.acceptProposedAction()
-                    self._canvas.setStyleSheet("""
-                        QLabel {
-                            border: 4px dashed #4CAF50;
-                            border-radius: 8px;
-                            background-color: #e8f5e9;
-                        }
-                    """)
+                    self._canvas.setStyleSheet(StyleManager.get_canvas_drag_hover())
                     self._status_bar.showMessage("Drop sprite sheet to load...")
                     return
     
     def dropEvent(self, event: QDropEvent):
         """Handle file drop event."""
         # Reset canvas style
-        self._canvas.setStyleSheet("""
-            QLabel {
-                border: 2px solid #ccc;
-                border-radius: 4px;
-                background-color: #f5f5f5;
-            }
-        """)
+        self._canvas.setStyleSheet(StyleManager.get_canvas_normal())
         
         urls = event.mimeData().urls()
         if urls:
@@ -1300,13 +1147,7 @@ class SpriteViewer(QMainWindow):
     
     def dragLeaveEvent(self, event):
         """Handle drag leave event."""
-        self._canvas.setStyleSheet("""
-            QLabel {
-                border: 2px solid #ccc;
-                border-radius: 4px;
-                background-color: #f5f5f5;
-            }
-        """)
+        self._canvas.setStyleSheet(StyleManager.get_canvas_normal())
         self._show_welcome_message()
     
     def keyPressEvent(self, event):
@@ -1314,16 +1155,16 @@ class SpriteViewer(QMainWindow):
         key = event.key()
         
         if key == Qt.Key_Space:
-            self._toggle_playback()
+            self._animation_controller.toggle_playback()
         elif key == Qt.Key_G:
             self._toggle_grid()
-        elif key == Qt.Key_Left and self._sprite_frames:
+        elif key == Qt.Key_Left and self._sprite_model.sprite_frames:
             self._go_to_prev_frame()
-        elif key == Qt.Key_Right and self._sprite_frames:
+        elif key == Qt.Key_Right and self._sprite_model.sprite_frames:
             self._go_to_next_frame()
-        elif key == Qt.Key_Home and self._sprite_frames:
+        elif key == Qt.Key_Home and self._sprite_model.sprite_frames:
             self._go_to_first_frame()
-        elif key == Qt.Key_End and self._sprite_frames:
+        elif key == Qt.Key_End and self._sprite_model.sprite_frames:
             self._go_to_last_frame()
         else:
             super().keyPressEvent(event)
