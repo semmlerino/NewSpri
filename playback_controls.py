@@ -31,8 +31,8 @@ class PlaybackControls(QFrame):
         layout = QVBoxLayout(self)
         layout.setSpacing(Config.UI.MAIN_LAYOUT_SPACING)
         
-        # Large play/pause button
-        self.play_button = QPushButton("▶ Play")
+        # Play/pause button (compacted)
+        self.play_button = QPushButton("Play")
         self.play_button.setMinimumHeight(Config.UI.PLAYBACK_BUTTON_MIN_HEIGHT)
         self.play_button.setStyleSheet(StyleManager.get_play_button_stopped())
         self.play_button.clicked.connect(self.playPauseClicked)
@@ -42,15 +42,10 @@ class PlaybackControls(QFrame):
         nav_layout = QHBoxLayout()
         nav_layout.setSpacing(Config.UI.NAV_BUTTON_SPACING)
         
-        # Navigation buttons with better styling
+        # Navigation buttons (simplified - removed first/last)
         button_style = StyleManager.get_navigation_buttons()
         
-        self.first_btn = QPushButton("⏮")
-        self.first_btn.setStyleSheet(button_style)
-        self.first_btn.setToolTip("First frame (Home)")
-        nav_layout.addWidget(self.first_btn)
-        
-        self.prev_btn = QPushButton("◀")
+        self.prev_btn = QPushButton("Prev")
         self.prev_btn.setStyleSheet(button_style)
         self.prev_btn.setToolTip("Previous frame (←)")
         nav_layout.addWidget(self.prev_btn)
@@ -62,21 +57,16 @@ class PlaybackControls(QFrame):
         self.frame_slider.valueChanged.connect(self.frameChanged)
         nav_layout.addWidget(self.frame_slider, 1)
         
-        self.next_btn = QPushButton("▶")
+        self.next_btn = QPushButton("Next")
         self.next_btn.setStyleSheet(button_style)
         self.next_btn.setToolTip("Next frame (→)")
         nav_layout.addWidget(self.next_btn)
         
-        self.last_btn = QPushButton("⏭")
-        self.last_btn.setStyleSheet(button_style)
-        self.last_btn.setToolTip("Last frame (End)")
-        nav_layout.addWidget(self.last_btn)
-        
         layout.addLayout(nav_layout)
         
-        # FPS control with better layout
+        # FPS control (optimized layout)
         fps_layout = QHBoxLayout()
-        fps_label = QLabel("Speed:")
+        fps_label = QLabel("FPS:")
         fps_label.setStyleSheet(StyleManager.get_speed_label())
         fps_layout.addWidget(fps_label)
         
@@ -88,7 +78,7 @@ class PlaybackControls(QFrame):
         self.fps_slider.valueChanged.connect(self._on_fps_changed)
         fps_layout.addWidget(self.fps_slider, 1)
         
-        self.fps_value = QLabel(f"{Config.Animation.DEFAULT_FPS} fps")
+        self.fps_value = QLabel(f"{Config.Animation.DEFAULT_FPS}")
         self.fps_value.setMinimumWidth(Config.Slider.FPS_VALUE_MIN_WIDTH)
         self.fps_value.setAlignment(Qt.AlignRight)
         fps_layout.addWidget(self.fps_value)
@@ -102,16 +92,16 @@ class PlaybackControls(QFrame):
         layout.addWidget(self.loop_checkbox)
     
     def _on_fps_changed(self, value):
-        self.fps_value.setText(f"{value} fps")
+        self.fps_value.setText(f"{value}")
         self.fpsChanged.emit(value)
     
     def set_playing(self, playing: bool):
         """Update play button state."""
         if playing:
-            self.play_button.setText("⏸ Pause")
+            self.play_button.setText("Pause")
             self.play_button.setStyleSheet(StyleManager.get_play_button_playing())
         else:
-            self.play_button.setText("▶ Play")
+            self.play_button.setText("Play")
             self.play_button.setStyleSheet(StyleManager.get_play_button_stopped())
     
     def set_frame_range(self, max_frame: int):
@@ -127,10 +117,8 @@ class PlaybackControls(QFrame):
     def update_button_states(self, has_frames: bool, at_start: bool, at_end: bool):
         """Update navigation button states."""
         self.play_button.setEnabled(has_frames)
-        self.first_btn.setEnabled(has_frames and not at_start)
         self.prev_btn.setEnabled(has_frames and not at_start)
         self.next_btn.setEnabled(has_frames and not at_end)
-        self.last_btn.setEnabled(has_frames and not at_end)
 
 
 # Export for easy importing

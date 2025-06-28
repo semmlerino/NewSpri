@@ -22,6 +22,12 @@ class CanvasConfig:
     ZOOM_FACTOR = 1.2  # Multiplier for zoom in/out
     ZOOM_FIT_MARGIN = 0.9  # 90% of window size when fitting
     
+    # Auto-fit display settings
+    AUTO_FIT_ON_LOAD = True
+    MIN_DISPLAY_ZOOM = 2.0  # Minimum zoom for tiny sprites
+    TINY_SPRITE_THRESHOLD = 32  # Pixels - sprites smaller than this get min zoom
+    INITIAL_FIT_MARGIN = 0.85  # Tighter fit than standard zoom fit
+    
     # Pan settings
     DEFAULT_PAN_OFFSET = [0, 0]
     
@@ -60,11 +66,11 @@ class FrameExtractionConfig:
     DEFAULT_FRAME_WIDTH = 192
     DEFAULT_FRAME_HEIGHT = 192
     
-    # Default to 192x192 preset (index 4)
+    # Default to 192x192 preset (index 4 in square presets)
     DEFAULT_PRESET_INDEX = 4
     
-    # Frame size presets: (label, width, height, tooltip)
-    FRAME_PRESETS = [
+    # Frame size presets organized by category: (label, width, height, tooltip)
+    SQUARE_PRESETS = [
         ("16×16", 16, 16, "Small icons"),
         ("32×32", 32, 32, "Standard tiles"),
         ("64×64", 64, 64, "Large tiles"),
@@ -73,50 +79,94 @@ class FrameExtractionConfig:
         ("256×256", 256, 256, "4×4 large sprites"),
     ]
     
+    RECTANGULAR_PRESETS = [
+        ("16×32", 16, 32, "Tall character sprites"),
+        ("32×16", 32, 16, "Wide platform tiles"),
+        ("32×48", 32, 48, "RPG characters"),
+        ("48×32", 48, 32, "Wide characters"),
+        ("32×64", 32, 64, "Tall sprites"),
+        ("64×32", 64, 32, "Wide tiles"),
+        ("48×64", 48, 64, "Portrait sprites"),
+        ("64×48", 64, 48, "Landscape sprites"),
+        ("24×32", 24, 32, "Small characters"),
+        ("40×48", 40, 48, "Medium portraits"),
+    ]
+    
+    # Legacy combined presets (for backward compatibility)
+    FRAME_PRESETS = SQUARE_PRESETS
+    
     # Offset/margin settings
     MAX_OFFSET = 1000  # Maximum offset value for X and Y
     DEFAULT_OFFSET = 0  # Default offset value
     
+    # Frame spacing settings
+    MAX_SPACING = 20  # Maximum spacing between frames
+    DEFAULT_SPACING = 0  # Default spacing (0 = no gaps)
+    
     # Auto-detection settings
-    AUTO_DETECT_SIZES = [256, 192, 128, 64, 32, 16]  # Try these sizes first
+    AUTO_DETECT_SIZES = [256, 192, 128, 64, 32, 16]  # Try these sizes first (legacy square-only)
     MIN_SPRITE_SIZE = 16  # Minimum reasonable sprite size
     MARGIN_DETECTION_ALPHA_THRESHOLD = 10  # For detecting transparent margins
+    
+    # Enhanced auto-detection (Phase 2)
+    BASE_SIZES = [8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 160, 192, 256]
+    COMMON_ASPECT_RATIOS = [
+        (1, 1),   # Square: 32×32, 64×64
+        (1, 2),   # Tall: 16×32, 32×64, 48×96
+        (2, 1),   # Wide: 32×16, 64×32, 96×48
+        (2, 3),   # Character: 32×48, 64×96
+        (3, 2),   # Wide char: 48×32, 96×64
+        (3, 4),   # Portrait: 48×64, 72×96
+        (4, 3),   # Landscape: 64×48, 96×72
+    ]
+    
+    # Frame count constraints for detection
+    MIN_REASONABLE_FRAMES = 2
+    MAX_REASONABLE_FRAMES = 200
+    OPTIMAL_FRAME_COUNT_MIN = 4
+    OPTIMAL_FRAME_COUNT_MAX = 100
 
 
 class UIConfig:
     """User interface layout and sizing settings."""
     
-    # Main window
-    DEFAULT_WINDOW_WIDTH = 1200
-    DEFAULT_WINDOW_HEIGHT = 800
+    # Main window (optimized sizing - 17% smaller)
+    DEFAULT_WINDOW_WIDTH = 1000
+    DEFAULT_WINDOW_HEIGHT = 700
     DEFAULT_WINDOW_X = 100
     DEFAULT_WINDOW_Y = 100
     
-    # Controls panel
-    CONTROLS_MAX_WIDTH = 350
-    CONTROLS_MIN_WIDTH = 300
+    # Minimum window size for usability
+    MIN_WINDOW_WIDTH = 800   # Ensures canvas + controls are usable
+    MIN_WINDOW_HEIGHT = 600  # Ensures all controls are accessible
+    
+    # Controls panel (optimized responsive sizing)
+    CONTROLS_WIDTH_RATIO = 0.22  # 22% of window width (was 25%)
+    CONTROLS_MIN_WIDTH = 250     # Reduced minimum for better proportions
+    CONTROLS_MAX_WIDTH = 350     # Reduced maximum to improve canvas space
     
     # Info group constraints
     INFO_GROUP_MAX_HEIGHT = 120
     
-    # Layout spacing
-    MAIN_LAYOUT_SPACING = 10
-    CONTROLS_LAYOUT_SPACING = 15
-    PRESET_GRID_SPACING = 8
-    SIZE_LAYOUT_SPACING = 5
-    NAV_BUTTON_SPACING = 4
+    # Layout spacing (standardized to 6px for consistency)
+    MAIN_LAYOUT_SPACING = 6
+    CONTROLS_LAYOUT_SPACING = 6  # Consistent spacing throughout
+    PRESET_GRID_SPACING = 6      # Consistent grid spacing
+    SIZE_LAYOUT_SPACING = 5      # Keep size layout compact
+    NAV_BUTTON_SPACING = 6       # Consistent button spacing
+    COLLAPSIBLE_SECTION_SPACING = 8  # Spacing within collapsible sections
     
-    # Button dimensions
-    PLAYBACK_BUTTON_MIN_HEIGHT = 40
-    NAV_BUTTON_MIN_WIDTH = 35
-    NAV_BUTTON_MIN_HEIGHT = 35
-    COLOR_BUTTON_MAX_WIDTH = 60
-    AUTO_BUTTON_MAX_WIDTH = 60
-    ZOOM_PRESET_BUTTON_MAX_WIDTH = 50
+    # Button dimensions (compacted by 20-25%)
+    PLAYBACK_BUTTON_MIN_HEIGHT = 32   # Reduced from 40
+    NAV_BUTTON_MIN_WIDTH = 28         # Reduced from 35
+    NAV_BUTTON_MIN_HEIGHT = 28        # Reduced from 35
+    COLOR_BUTTON_MAX_WIDTH = 50       # Reduced from 60
+    AUTO_BUTTON_MAX_WIDTH = 50        # Keep for usability
+    ZOOM_PRESET_BUTTON_MAX_WIDTH = 42 # Reduced from 50
     
-    # Navigation button style values  
-    NAV_BUTTON_WIDTH_PX = "35px"
-    NAV_BUTTON_HEIGHT_PX = "35px"
+    # Navigation button style values (updated to match new dimensions)
+    NAV_BUTTON_WIDTH_PX = "28px"
+    NAV_BUTTON_HEIGHT_PX = "28px"
     
     # Zoom display
     ZOOM_LABEL_MIN_WIDTH = 60
@@ -178,8 +228,8 @@ class SliderConfig:
     # Frame slider
     FRAME_SLIDER_MIN = 0
     
-    # FPS value label
-    FPS_VALUE_MIN_WIDTH = 50
+    # FPS value label (compacted)
+    FPS_VALUE_MIN_WIDTH = 35  # Reduced from 50
 
 
 class ColorConfig:

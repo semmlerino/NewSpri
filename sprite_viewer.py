@@ -354,7 +354,8 @@ class SpriteViewer(QMainWindow):
         """Handle frame change from model."""
         # Update canvas display
         if self._sprite_model.sprite_frames and 0 <= current_frame < len(self._sprite_model.sprite_frames):
-            self._canvas.set_pixmap(self._sprite_model.sprite_frames[current_frame])
+            # Preserve zoom level during animation playback - don't auto-fit frames
+            self._canvas.set_pixmap(self._sprite_model.sprite_frames[current_frame], auto_fit=False)
             self._canvas.set_frame_info(current_frame, total_frames)
             self._playback_controls.set_current_frame(current_frame)
     
@@ -644,11 +645,12 @@ class SpriteViewer(QMainWindow):
     def _update_display(self):
         """Update the canvas display."""
         if self._sprite_model.sprite_frames and 0 <= self._sprite_model.current_frame < len(self._sprite_model.sprite_frames):
-            self._canvas.set_pixmap(self._sprite_model.sprite_frames[self._sprite_model.current_frame])
+            # Preserve zoom level during frame updates - don't auto-fit
+            self._canvas.set_pixmap(self._sprite_model.sprite_frames[self._sprite_model.current_frame], auto_fit=False)
             self._canvas.set_frame_info(self._sprite_model.current_frame, len(self._sprite_model.sprite_frames))
             self._playback_controls.set_current_frame(self._sprite_model.current_frame)
             self._update_navigation_buttons()
-            # Update zoom label in case auto-fit occurred
+            # Update zoom label to reflect current zoom level
             self._update_zoom_label()
         else:
             self._canvas.set_pixmap(QPixmap())

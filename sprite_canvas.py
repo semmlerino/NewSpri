@@ -44,10 +44,18 @@ class SpriteCanvas(QLabel):
         # Enable mouse tracking for pan
         self.setMouseTracking(True)
     
-    def set_pixmap(self, pixmap: QPixmap):
+    def set_pixmap(self, pixmap: QPixmap, auto_fit=None):
         """Set the sprite pixmap to display."""
         self._pixmap = pixmap
-        self.update()
+        
+        # Auto-fit if enabled in config (can be overridden by parameter)
+        if auto_fit is None:
+            auto_fit = Config.Canvas.AUTO_FIT_ON_LOAD
+            
+        if auto_fit and pixmap and not pixmap.isNull():
+            self.auto_fit_sprite()
+        else:
+            self.update()
     
     def set_frame_info(self, current: int, total: int):
         """Update frame information."""
@@ -71,15 +79,51 @@ class SpriteCanvas(QLabel):
         if not self._pixmap or self._pixmap.isNull():
             return
             
+        self._zoom_factor = self._calculate_fit_zoom()
+        self._pan_offset = Config.Canvas.DEFAULT_PAN_OFFSET.copy()
+        self.update()
+    
+    def auto_fit_sprite(self):
+        """Auto-fit sprite with smart minimum zoom for tiny sprites."""
+        if not self._pixmap or self._pixmap.isNull():
+            return
+        
+        pixmap_size = self._pixmap.size()
+        
+        # Apply minimum zoom for tiny sprites
+        if (pixmap_size.width() < Config.Canvas.TINY_SPRITE_THRESHOLD or 
+            pixmap_size.height() < Config.Canvas.TINY_SPRITE_THRESHOLD):
+            min_zoom = Config.Canvas.MIN_DISPLAY_ZOOM
+        else:
+            min_zoom = Config.Canvas.ZOOM_MIN
+        
+        # Calculate fit-to-window zoom with tighter margin
+        fit_zoom = self._calculate_fit_zoom(Config.Canvas.INITIAL_FIT_MARGIN)
+        
+        # Use the larger of minimum zoom or fit zoom
+        self._zoom_factor = max(min_zoom, fit_zoom)
+        self._pan_offset = Config.Canvas.DEFAULT_PAN_OFFSET.copy()
+        self.update()
+    
+    def _calculate_fit_zoom(self, margin=None):
+        """Calculate zoom factor to fit sprite in window."""
+        if not self._pixmap or self._pixmap.isNull():
+            return 1.0
+            
+        if margin is None:
+            margin = Config.Canvas.ZOOM_FIT_MARGIN
+            
         canvas_rect = self.rect()
         pixmap_size = self._pixmap.size()
         
         # Calculate scale to fit
         scale_x = canvas_rect.width() / pixmap_size.width()
         scale_y = canvas_rect.height() / pixmap_size.height()
-        self._zoom_factor = min(scale_x, scale_y) * Config.Canvas.ZOOM_FIT_MARGIN
-        self._pan_offset = Config.Canvas.DEFAULT_PAN_OFFSET.copy()
-        self.update()
+        return min(scale_x, scale_y) * margin
+    
+    def get_zoom_factor(self):
+        """Get current zoom factor."""
+        return self._zoom_factor
     
     def set_background_mode(self, checkerboard: bool, color: QColor = None):
         """Set background display mode."""
