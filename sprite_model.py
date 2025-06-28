@@ -45,9 +45,27 @@ try:
             binary_mask = (alpha_channel > 128).astype(np.uint8)
             opaque_pixels = np.sum(binary_mask)
             total_pixels = binary_mask.size
-            log_msg = f"   🎭 Binary mask: {opaque_pixels}/{total_pixels} opaque pixels ({100*opaque_pixels/total_pixels:.1f}%)"
+            alpha_transparency_ratio = 100 * opaque_pixels / total_pixels
+            log_msg = f"   🎭 Alpha mask: {opaque_pixels}/{total_pixels} opaque pixels ({alpha_transparency_ratio:.1f}%)"
             debug_log.append(log_msg)
             print(log_msg)
+            
+            # If image is mostly/completely opaque, try color key detection
+            if alpha_transparency_ratio > 95:  # Less than 5% alpha transparency
+                debug_log.append(f"   🔍 Solid image detected ({alpha_transparency_ratio:.1f}% opaque), attempting color key detection...")
+                print(f"   🔍 Solid image detected, trying color key detection...")
+                
+                # Try to detect background color (color key)
+                color_key_mask = _detect_color_key_mask(img_array, debug_log)
+                if color_key_mask is not None:
+                    binary_mask = color_key_mask
+                    opaque_pixels = np.sum(binary_mask)
+                    log_msg = f"   🎨 Color key mask: {opaque_pixels}/{total_pixels} sprite pixels ({100*opaque_pixels/total_pixels:.1f}%)"
+                    debug_log.append(log_msg)
+                    print(log_msg)
+                else:
+                    debug_log.append(f"   ❌ No suitable color key found")
+                    print(f"   ❌ No suitable color key found")
             
             # Label connected components
             labeled_array, num_features = ndimage.label(binary_mask)
@@ -85,8 +103,72 @@ try:
             debug_log.append(log_msg)
             print(log_msg)
             
-            # Merge nearby components for multi-part sprites
-            merged_bounds = _merge_nearby_components(sprite_bounds, merge_threshold=50, debug_log=debug_log)
+            # Pre-analyze for irregular collections before merging
+            widths = [w for x, y, w, h in sprite_bounds]
+            heights = [h for x, y, w, h in sprite_bounds]
+            avg_width = np.mean(widths)
+            avg_height = np.mean(heights)
+            width_std = np.std(widths)
+            height_std = np.std(heights)
+            
+            # Check if this is an irregular sprite collection (high diversity + many sprites)
+            size_range_w = max(widths) - min(widths)
+            size_range_h = max(heights) - min(heights)
+            size_diversity = (width_std + height_std) / 2
+            
+            small_sprites = [(w, h) for w, h in zip(widths, heights) if w < 24 or h < 24]
+            medium_sprites = [(w, h) for w, h in zip(widths, heights) if 24 <= w <= 64 and 24 <= h <= 64]
+            
+            is_irregular_collection = (
+                len(sprite_bounds) > 50 and  # Many sprites (lowered threshold)
+                (size_diversity > 10 or       # High size variation OR
+                 (size_range_w > min(widths) * 3 or size_range_h > min(heights) * 3) or  # Wide size range OR
+                 len(small_sprites) > 20 or   # Many small sprites OR
+                 len(sprite_bounds) > 200)    # Very high sprite count
+            )
+            
+            debug_log.append(f"   🎮 Pre-merge analysis: {len(sprite_bounds)} sprites, diversity={size_diversity:.1f}, range={size_range_w}×{size_range_h}")
+            debug_log.append(f"   🎮 Sprite mix: {len(small_sprites)} small, {len(medium_sprites)} medium")
+            debug_log.append(f"   🎮 Detection criteria: >50 sprites? {len(sprite_bounds) > 50}, diversity>10? {size_diversity > 10}, range>3x? {size_range_w > min(widths) * 3 or size_range_h > min(heights) * 3}, small>20? {len(small_sprites) > 20}, count>200? {len(sprite_bounds) > 200}")
+            debug_log.append(f"   🎮 Irregular collection: {is_irregular_collection}")
+            print(f"   🎮 Pre-merge analysis: {len(sprite_bounds)} sprites, diversity={size_diversity:.1f}, irregular={is_irregular_collection}")
+            print(f"   🎮 Criteria check: sprites>50:{len(sprite_bounds) > 50}, diversity>10:{size_diversity > 10}, small>20:{len(small_sprites) > 20}")
+            
+            if is_irregular_collection:
+                # For irregular collections (sprite atlases), disable merging entirely
+                # These are individual sprites that should NOT be combined
+                merge_threshold = 0  # No merging - keep all sprites separate
+                debug_log.append(f"   🚫 Irregular collection detected - DISABLING sprite merging")
+                print(f"   🚫 Irregular collection - NO MERGING (keeping {len(sprite_bounds)} individual sprites)")
+                
+                # Skip merging entirely for irregular collections
+                merged_bounds = sprite_bounds  # Use original bounds without merging
+            else:
+                # For regular animation sheets, use adaptive merging
+                # Calculate minimum spacing between sprites
+                x_positions = sorted([x for x, y, w, h in sprite_bounds])
+                min_spacing = float('inf')
+                for i in range(1, len(x_positions)):
+                    spacing = x_positions[i] - x_positions[i-1]
+                    if spacing > 0:  # Only consider actual gaps
+                        min_spacing = min(min_spacing, spacing)
+                
+                # Handle edge cases
+                if min_spacing == float('inf'):
+                    min_spacing = avg_width  # Default to average width if no spacing found
+                
+                # Adaptive merge threshold: smaller for tight grids, larger for scattered sprites
+                if min_spacing <= avg_width * 0.2:  # Very tight grid (spacing < 20% of sprite width)
+                    merge_threshold = max(min_spacing * 2, 10)  # Conservative merging
+                    debug_log.append(f"   🔍 Tight grid detected (spacing: {min_spacing:.1f}px), using conservative merge: {merge_threshold}px")
+                else:
+                    merge_threshold = 30  # Reduced from 50px for better precision
+                    debug_log.append(f"   🔍 Scattered layout detected (spacing: {min_spacing:.1f}px), using standard merge: {merge_threshold}px")
+                
+                print(f"   🔍 Regular animation sheet - adaptive merging: {merge_threshold}px")
+                
+                # Perform merging for regular animation sheets
+                merged_bounds = _merge_nearby_components(sprite_bounds, merge_threshold=merge_threshold, debug_log=debug_log)
             log_msg = f"   🔀 After merging: {len(merged_bounds)} sprites"
             debug_log.append(log_msg)
             print(log_msg)
@@ -98,18 +180,29 @@ try:
                 return {'success': False, 'debug_log': debug_log}
             
             # Analyze layout and suggest settings
-            result = _analyze_ccl_results(merged_bounds, img.width, img.height, debug_log)
-            result['debug_log'] = debug_log
+            log_msg = f"   🔍 Starting analysis of {len(merged_bounds)} merged sprites..."
+            debug_log.append(log_msg)
+            print(log_msg)
             
-            # Print final result to console
-            if result.get('success', False):
-                final_msg = f"   🎉 CCL SUCCESS: {result['frame_width']}×{result['frame_height']}, {result['sprite_count']} sprites"
-                print(final_msg)
-            else:
-                final_msg = f"   ❌ CCL FAILED: {result.get('method', 'unknown')}"
-                print(final_msg)
-            
-            return result
+            try:
+                result = _analyze_ccl_results(merged_bounds, img.width, img.height, debug_log)
+                result['debug_log'] = debug_log
+                
+                # Print final result to console
+                if result.get('success', False):
+                    final_msg = f"   🎉 CCL SUCCESS: {result['frame_width']}×{result['frame_height']}, {result['sprite_count']} sprites"
+                    print(final_msg)
+                else:
+                    final_msg = f"   ❌ CCL FAILED: {result.get('method', 'unknown')}"
+                    print(final_msg)
+                
+                return result
+                
+            except Exception as analysis_error:
+                log_msg = f"   💥 Analysis Error: {str(analysis_error)}"
+                debug_log.append(log_msg)
+                print(log_msg)
+                return {'success': False, 'debug_log': debug_log, 'error': f'Analysis failed: {str(analysis_error)}'}
             
         except Exception as e:
             log_msg = f"   💥 CCL Error: {str(e)}"
@@ -117,6 +210,142 @@ try:
             print(log_msg)
             return {'success': False, 'debug_log': debug_log, 'error': str(e)}
     
+    @staticmethod
+    def _detect_color_key_mask(img_array: np.ndarray, debug_log: List[str] = None) -> Optional[np.ndarray]:
+        """
+        Detect background color key and create binary mask treating it as transparent.
+        Returns binary mask where 1=sprite pixels, 0=background pixels.
+        """
+        if debug_log is None:
+            debug_log = []
+            
+        height, width = img_array.shape[:2]
+        rgb_array = img_array[:, :, :3]  # RGB channels only
+        
+        # Strategy 1: Sample corners and edges (likely background areas)
+        corner_samples = []
+        border_width = min(20, width//10, height//10)  # Sample border area
+        
+        # Corner regions
+        corners = [
+            rgb_array[0:border_width, 0:border_width],  # Top-left
+            rgb_array[0:border_width, -border_width:],  # Top-right  
+            rgb_array[-border_width:, 0:border_width],  # Bottom-left
+            rgb_array[-border_width:, -border_width:]   # Bottom-right
+        ]
+        
+        for i, corner in enumerate(corners):
+            if corner.size > 0:
+                # Get most common color in this corner
+                corner_flat = corner.reshape(-1, 3)
+                unique_colors, counts = np.unique(corner_flat, axis=0, return_counts=True)
+                most_common_color = unique_colors[np.argmax(counts)]
+                corner_samples.append(tuple(most_common_color))
+        
+        debug_log.append(f"   🎨 Corner samples: {corner_samples}")
+        
+        # Strategy 2: Find most frequent color in entire image
+        rgb_flat = rgb_array.reshape(-1, 3)
+        unique_colors, counts = np.unique(rgb_flat, axis=0, return_counts=True)
+        most_frequent_color = unique_colors[np.argmax(counts)]
+        most_frequent_count = counts[np.argmax(counts)]
+        most_frequent_ratio = most_frequent_count / len(rgb_flat)
+        
+        debug_log.append(f"   📊 Most frequent color: {tuple(most_frequent_color)} ({most_frequent_ratio:.1%} of image)")
+        
+        # Strategy 3: Check common transparent color keys (including retro game colors)
+        common_keys = [
+            (255, 0, 255),    # Magenta (very common)
+            (0, 255, 0),      # Bright green
+            (0, 255, 255),    # Cyan/Teal (common in retro games like Terranigma)
+            (255, 255, 0),    # Yellow
+            (255, 0, 0),      # Red
+            (0, 0, 255),      # Blue
+            (255, 255, 255),  # White
+            (0, 0, 0),        # Black
+            (128, 128, 128),  # Gray
+            (64, 128, 128),   # Darker teal variant
+            (0, 128, 128),    # Dark teal
+        ]
+        
+        # Collect all candidate colors
+        candidates = set(corner_samples)
+        candidates.add(tuple(most_frequent_color))
+        candidates.update(common_keys)
+        
+        # Test each candidate color
+        best_color = None
+        best_score = 0
+        best_mask = None
+        
+        for color in candidates:
+            # Try multiple tolerance levels to handle background color variations
+            for tolerance in [15, 25, 35, 50]:  # Progressive tolerance levels
+                mask = _test_color_key(rgb_array, color, tolerance=tolerance)
+                if mask is None:
+                    continue
+                    
+                # Score this color key based on:
+                # 1. How much of the image it covers (background should be significant for sprite atlases)
+                # 2. How many components it creates (more sprites = better)
+                background_ratio = 1 - (np.sum(mask) / mask.size)
+                sprite_ratio = np.sum(mask) / mask.size
+                
+                # For sprite atlases, expect high background coverage (60-95%)
+                if background_ratio < 0.5 or background_ratio > 0.95:  # Skip if unrealistic ratios
+                    debug_log.append(f"   🧪 Testing {color} (tol={tolerance}): {background_ratio:.1%} bg - SKIPPED (ratio)")
+                    continue
+                    
+                # Count components to see if it creates reasonable sprite separation
+                labeled_test, num_components = ndimage.label(mask)
+                
+                # Skip if too few or too many components
+                if num_components < 10 or num_components > 2000:
+                    debug_log.append(f"   🧪 Testing {color} (tol={tolerance}): {num_components} components - SKIPPED (count)")
+                    continue
+                
+                # Score: prefer high background coverage + many components for sprite atlases
+                # Favor 70-90% background (typical for game sprite atlases)
+                background_preference = 1 - abs(background_ratio - 0.8)  # Prefer ~80% background
+                sprite_separation = min(num_components / 500, 1.0)  # Favor more sprites up to 500
+                score = num_components * background_preference * sprite_separation
+                
+                debug_log.append(f"   🧪 Testing {color} (tol={tolerance}): {background_ratio:.1%} bg, {num_components} comp, score: {score:.1f}")
+                print(f"   🧪 Testing {color} (tol={tolerance}): {background_ratio:.1%} bg, {num_components} comp, score: {score:.1f}")
+                
+                if score > best_score:
+                    best_score = score
+                    best_color = color
+                    best_mask = mask
+                    best_tolerance = tolerance
+        
+        if best_color is not None:
+            debug_log.append(f"   ✅ Selected color key: {best_color} with tolerance {best_tolerance} (score: {best_score:.1f})")
+            print(f"   ✅ Selected color key: {best_color} with tolerance {best_tolerance}")
+            return best_mask
+        else:
+            debug_log.append(f"   ❌ No suitable color key found among {len(candidates)} candidates")
+            return None
+    
+    @staticmethod
+    def _test_color_key(rgb_array: np.ndarray, color_key: Tuple[int, int, int], tolerance: int = 10) -> Optional[np.ndarray]:
+        """Test a color key and return binary mask if suitable."""
+        try:
+            # Create mask where pixels NOT matching color key are kept (1), color key pixels are removed (0)
+            color_array = np.array(color_key, dtype=np.uint8)
+            
+            # Calculate color distance using simple RGB distance
+            diff = np.abs(rgb_array.astype(np.int16) - color_array.astype(np.int16))
+            distance = np.sum(diff, axis=2)  # Sum of RGB differences
+            
+            # Pixels with distance > tolerance are considered sprite pixels
+            mask = (distance > tolerance).astype(np.uint8)
+            
+            return mask
+        except Exception:
+            return None
+
+    @staticmethod
     def _merge_nearby_components(sprite_bounds: List[Tuple[int, int, int, int]], 
                                 merge_threshold: int, debug_log: List[str] = None) -> List[Tuple[int, int, int, int]]:
         """Merge nearby sprite components."""
@@ -175,16 +404,21 @@ try:
         debug_log.append(f"   🔀 Merging complete: {merge_count} groups merged, {len(merged)} final sprites")
         return merged
     
+    @staticmethod
     def _analyze_ccl_results(sprite_bounds: List[Tuple[int, int, int, int]], 
                             sheet_width: int, sheet_height: int, debug_log: List[str] = None) -> dict:
         """Analyze CCL results and suggest frame settings."""
         if debug_log is None:
             debug_log = []
             
-        debug_log.append(f"   📐 Analyzing {len(sprite_bounds)} sprites for layout...")
+        log_msg = f"   📐 Analyzing {len(sprite_bounds)} sprites for layout..."
+        debug_log.append(log_msg)
+        print(log_msg)
         
         if not sprite_bounds:
-            debug_log.append("   ❌ No sprites to analyze")
+            log_msg = "   ❌ No sprites to analyze"
+            debug_log.append(log_msg)
+            print(log_msg)
             return {'success': False, 'method': 'ccl_enhanced'}
         
         # Calculate statistics
@@ -196,14 +430,45 @@ try:
         width_std = np.std(widths)
         height_std = np.std(heights)
         
-        debug_log.append(f"   📊 Size analysis:")
-        debug_log.append(f"      Average: {avg_width}×{avg_height}")
-        debug_log.append(f"      Variation: ±{width_std:.1f}×±{height_std:.1f}")
-        debug_log.append(f"      Range: {min(widths)}-{max(widths)} × {min(heights)}-{max(heights)}")
+        log_msg = f"   📊 Size analysis:"
+        debug_log.append(log_msg)
+        print(log_msg)
+        log_msg = f"      Average: {avg_width}×{avg_height}"
+        debug_log.append(log_msg)
+        print(log_msg)
+        log_msg = f"      Variation: ±{width_std:.1f}×±{height_std:.1f}"
+        debug_log.append(log_msg)
+        print(log_msg)
+        log_msg = f"      Range: {min(widths)}-{max(widths)} × {min(heights)}-{max(heights)}"
+        debug_log.append(log_msg)
+        print(log_msg)
         
         # Check if layout is regular (increased tolerance for Lancer-style sprites)
         uniform_size = width_std < 8 and height_std < 8
-        debug_log.append(f"   🎯 Uniform size: {uniform_size} (std < 8px)")
+        log_msg = f"   🎯 Uniform size check: width_std={width_std:.2f} < 8px? {width_std < 8}"
+        debug_log.append(log_msg)
+        print(log_msg)
+        log_msg = f"   🎯 Uniform size check: height_std={height_std:.2f} < 8px? {height_std < 8}"
+        debug_log.append(log_msg)
+        print(log_msg)
+        log_msg = f"   🎯 Uniform size result: {uniform_size} (both must be < 8px)"
+        debug_log.append(log_msg)
+        print(log_msg)
+        
+        # Debug sprite count threshold
+        log_msg = f"   🎯 Sprite count: {len(sprite_bounds)} >= 2? {len(sprite_bounds) >= 2}"
+        debug_log.append(log_msg)
+        print(log_msg)
+        
+        # Show what path we're taking
+        if uniform_size and len(sprite_bounds) >= 2:
+            log_msg = f"   ✅ Taking SUCCESS path: uniform_size={uniform_size} and count={len(sprite_bounds)}>=2"
+            debug_log.append(log_msg)
+            print(log_msg)
+        else:
+            log_msg = f"   ❌ Taking FAILURE path: uniform_size={uniform_size} or count={len(sprite_bounds)}<2"
+            debug_log.append(log_msg)
+            print(log_msg)
         
         if uniform_size and len(sprite_bounds) >= 2:  # Lowered threshold from 4 to 2
             # Infer grid structure from sprite positions (not content bounds)
@@ -230,7 +495,18 @@ try:
                 return [sum(group) // len(group) for group in groups]  # Return group averages
             
             grouped_x = group_positions(centers_x, tolerance=15)
-            grouped_y = group_positions(centers_y, tolerance=15)
+            
+            # For Y grouping, detect obvious horizontal strips and use higher tolerance
+            y_range = max(centers_y) - min(centers_y)
+            avg_sprite_height = np.mean([h for x, y, w, h in sprite_bounds])
+            
+            # If Y variation is small relative to sprite height, it's likely a horizontal strip
+            if y_range <= avg_sprite_height * 0.4:  # Y variation < 40% of sprite height
+                grouped_y = [int(np.mean(centers_y))]  # Treat all as single row
+                debug_log.append(f"   📐 Horizontal strip detected (Y range: {y_range:.1f}px ≤ {avg_sprite_height*0.4:.1f}px), forcing single row")
+            else:
+                grouped_y = group_positions(centers_y, tolerance=15)
+                debug_log.append(f"   📐 Multi-row layout detected (Y range: {y_range:.1f}px > {avg_sprite_height*0.4:.1f}px)")
             cols = len(grouped_x)
             rows = len(grouped_y)
             debug_log.append(f"   🔗 Grouped centers: X={grouped_x}, Y={grouped_y}")
@@ -274,13 +550,193 @@ try:
                 'spacing_y': spacing_y,
                 'sprite_count': len(sprite_bounds),
                 'confidence': confidence,
-                'method': 'ccl_enhanced'
+                'method': 'ccl_enhanced',
+                'ccl_sprite_bounds': sprite_bounds,  # Store exact sprite boundaries for CCL mode
+                'irregular_collection': False  # Regular grid layout
             }
             
             debug_log.append(f"   🎉 CCL Success: {frame_width}×{frame_height}, {len(sprite_bounds)} sprites, confidence: {confidence}")
             return result
         else:
-            debug_log.append(f"   ❌ CCL Failed: irregular layout or insufficient sprites")
+            log_msg = f"   🔄 Uniform grid failed, trying irregular sprite analysis..."
+            debug_log.append(log_msg)
+            print(log_msg)
+            
+            # Fallback: Handle irregular sprite sheets (like Ark.png with many different sprite sizes)
+            if len(sprite_bounds) >= 4:  # Need reasonable number of sprites for analysis
+                log_msg = f"   📊 Irregular analysis: {len(sprite_bounds)} sprites detected"
+                debug_log.append(log_msg)
+                print(log_msg)
+                
+                # Find most common sprite size (mode)
+                size_frequency = {}
+                for w, h in zip(widths, heights):
+                    size_key = (w, h)
+                    size_frequency[size_key] = size_frequency.get(size_key, 0) + 1
+                
+                # Get most common size
+                most_common_size = max(size_frequency.items(), key=lambda x: x[1])
+                (common_width, common_height), frequency = most_common_size
+                
+                log_msg = f"   🎯 Most common size: {common_width}×{common_height} ({frequency}/{len(sprite_bounds)} sprites)"
+                debug_log.append(log_msg)
+                print(log_msg)
+                
+                # RPG-aware thresholds: very low for diverse character sprite sheets like Terranigma
+                min_threshold = 0.02  # 2% minimum for RPG sprite sheets (handles extreme variety)
+                common_percentage = frequency / len(sprite_bounds)
+                
+                log_msg = f"   🎮 RPG Analysis: {frequency}/{len(sprite_bounds)} = {common_percentage:.1%} (need ≥{min_threshold:.1%})"
+                debug_log.append(log_msg)
+                print(log_msg)
+                
+                if common_percentage >= min_threshold:
+                    log_msg = f"   ✅ Acceptable for RPG sprite sheet: {common_percentage:.1%} ≥ {min_threshold:.1%}"
+                    debug_log.append(log_msg)
+                    print(log_msg)
+                    
+                    # For RPG sheets, also provide size alternatives
+                    sorted_sizes = sorted(size_frequency.items(), key=lambda x: x[1], reverse=True)
+                    top_3_sizes = sorted_sizes[:3]
+                    
+                    log_msg = f"   📊 Top 3 sizes: {[(size, count) for size, count in top_3_sizes]}"
+                    debug_log.append(log_msg)
+                    print(log_msg)
+                    
+                    # Detect if this is an irregular sprite collection vs regular animation frames
+                    # Look for high size diversity and large sprite count
+                    size_range_w = max(widths) - min(widths)
+                    size_range_h = max(heights) - min(heights)
+                    size_diversity = (width_std + height_std) / 2
+                    
+                    # Check for mixed sprite types (small effects + medium characters + large objects)
+                    small_sprites = [(w, h) for w, h in zip(widths, heights) if w < 24 or h < 24]
+                    medium_sprites = [(w, h) for w, h in zip(widths, heights) if 24 <= w <= 64 and 24 <= h <= 64]
+                    large_sprites = [(w, h) for w, h in zip(widths, heights) if w > 64 or h > 64]
+                    
+                    # This is an irregular collection if:
+                    # 1. Many sprites (>50) with high diversity
+                    # 2. Wide size range (>3x difference)
+                    # 3. Mixed sprite categories
+                    is_irregular_collection = (
+                        len(sprite_bounds) > 50 and 
+                        size_diversity > 10 and
+                        (size_range_w > min(widths) * 3 or size_range_h > min(heights) * 3) and
+                        len(small_sprites) > 5 and len(medium_sprites) > 5
+                    )
+                    
+                    log_msg = f"   🔍 Collection analysis: diversity={size_diversity:.1f}, range={size_range_w}×{size_range_h}, sprites={len(small_sprites)}S+{len(medium_sprites)}M+{len(large_sprites)}L"
+                    debug_log.append(log_msg)
+                    print(log_msg)
+                    
+                    log_msg = f"   🎮 Irregular collection: {is_irregular_collection} (need: >50 sprites, >10 diversity, >3x range, mixed sizes)"
+                    debug_log.append(log_msg) 
+                    print(log_msg)
+                    
+                    if is_irregular_collection:
+                        # This is an irregular sprite collection - grid extraction won't work well
+                        log_msg = f"   ⚠️  IRREGULAR COLLECTION DETECTED"
+                        debug_log.append(log_msg)
+                        print(log_msg)
+                        
+                        log_msg = f"   📝 This appears to be a sprite atlas/collection with {len(sprite_bounds)} individual sprites"
+                        debug_log.append(log_msg)
+                        print(log_msg)
+                        
+                        log_msg = f"   🚫 Regular grid extraction will NOT align properly with these sprites"
+                        debug_log.append(log_msg)
+                        print(log_msg)
+                        
+                        log_msg = f"   💡 CCL detected exact boundaries for each sprite - individual extraction needed"
+                        debug_log.append(log_msg)
+                        print(log_msg)
+                        
+                        # Still provide a "best effort" frame size for those who want to try
+                        char_sprites = [(w, h) for w, h in zip(widths, heights) if 20 <= w <= 80 and 20 <= h <= 80]
+                        if len(char_sprites) >= 10:
+                            char_median_w = int(np.median([w for w, h in char_sprites]))
+                            char_median_h = int(np.median([h for w, h in char_sprites]))
+                            chosen_width, chosen_height = char_median_w, char_median_h
+                            chosen_method = "best_effort_warning"
+                            
+                            log_msg = f"   🎯 Best-effort size: {chosen_width}×{chosen_height} (median of {len(char_sprites)} character-sized sprites)"
+                            debug_log.append(log_msg)
+                            print(log_msg)
+                            
+                            log_msg = f"   ⚠️  WARNING: This size is unlikely to extract sprites correctly!"
+                            debug_log.append(log_msg)
+                            print(log_msg)
+                        else:
+                            # Even more conservative fallback
+                            chosen_width, chosen_height = 48, 48  # Safe default
+                            chosen_method = "fallback_warning"
+                            
+                            log_msg = f"   🎯 Fallback size: {chosen_width}×{chosen_height} (standard game sprite size)"
+                            debug_log.append(log_msg)
+                            print(log_msg)
+                            
+                            log_msg = f"   ⚠️  WARNING: Grid extraction not recommended for this sprite type!"
+                            debug_log.append(log_msg)
+                            print(log_msg)
+                    else:
+                        # Original RPG character sheet logic
+                        median_width = int(np.median(widths))
+                        median_height = int(np.median(heights))
+                        
+                        if abs(median_width - common_width) <= 10 and abs(median_height - common_height) <= 10:
+                            chosen_width, chosen_height = common_width, common_height
+                            chosen_method = "mode"
+                        else:
+                            chosen_width, chosen_height = median_width, median_height  
+                            chosen_method = "median"
+                    
+                    log_msg = f"   📐 Size options: Mode={common_width}×{common_height}, Avg={avg_width}×{avg_height}"
+                    debug_log.append(log_msg)
+                    print(log_msg)
+                    
+                    log_msg = f"   🎯 Chosen size: {chosen_width}×{chosen_height} ({chosen_method})"
+                    debug_log.append(log_msg)
+                    print(log_msg)
+                    
+                    result = {
+                        'success': True,
+                        'frame_width': chosen_width,
+                        'frame_height': chosen_height,
+                        'offset_x': 0,
+                        'offset_y': 0,
+                        'spacing_x': 0,
+                        'spacing_y': 0,
+                        'sprite_count': len(sprite_bounds),
+                        'confidence': 'low' if is_irregular_collection else 'medium',
+                        'method': f'ccl_enhanced_{chosen_method.replace("-", "_")}',
+                        'note': f'{"IRREGULAR COLLECTION - Grid extraction not recommended" if is_irregular_collection else "RPG sprite sheet"}: {chosen_method} size from {len(sprite_bounds)} varied sprites',
+                        'irregular_collection': is_irregular_collection,
+                        'ccl_sprite_bounds': sprite_bounds,  # Store exact sprite boundaries for CCL mode
+                        'size_alternatives': {
+                            'mode': (common_width, common_height),
+                            'median': (int(np.median(widths)), int(np.median(heights))), 
+                            'average': (avg_width, avg_height),
+                            'top_sizes': top_3_sizes[:3]
+                        }
+                    }
+                    
+                    if is_irregular_collection:
+                        success_type = "Irregular Collection (WARNING)"
+                        log_msg = f"   ⚠️  CCL {success_type}: {chosen_width}×{chosen_height}, {len(sprite_bounds)} sprites, {chosen_method}"
+                    else:
+                        success_type = "RPG Character"
+                        log_msg = f"   🎉 CCL {success_type} Success: {chosen_width}×{chosen_height}, {len(sprite_bounds)} sprites, {chosen_method}-based"
+                    debug_log.append(log_msg)
+                    print(log_msg)
+                    return result
+                else:
+                    log_msg = f"   ❌ Too irregular even for RPG: {common_percentage:.1%} < {min_threshold:.1%}"
+                    debug_log.append(log_msg)
+                    print(log_msg)
+            
+            log_msg = f"   ❌ CCL Failed: layout too irregular or insufficient sprites"
+            debug_log.append(log_msg)
+            print(log_msg)
             return {'success': False, 'method': 'ccl_enhanced'}
 
 except ImportError:
@@ -356,6 +812,14 @@ class SpriteModel(QObject):
         self._is_valid: bool = False
         self._error_message: str = ""
         self._sprite_sheet_info: str = ""
+        
+        # ============================================================================
+        # CCL MODE SUPPORT
+        # ============================================================================
+        
+        self._ccl_sprite_bounds: List[Tuple[int, int, int, int]] = []  # (x, y, w, h) for each sprite
+        self._extraction_mode: str = "grid"  # "grid" or "ccl"
+        self._ccl_available: bool = False
     
     # ============================================================================
     # FILE OPERATIONS (Will be implemented in Step 3.3)
@@ -561,6 +1025,107 @@ class SpriteModel(QObject):
                 return False, f"Frame height + Y offset ({offset_y + height}) exceeds sheet height ({sheet_height})"
         
         return True, ""
+    
+    def extract_ccl_frames(self) -> Tuple[bool, str, int]:
+        """
+        Extract frames using CCL-detected sprite boundaries (for irregular sprite collections).
+        Returns (success, error_message, frame_count).
+        """
+        if not self._original_sprite_sheet or self._original_sprite_sheet.isNull():
+            return False, "No sprite sheet loaded", 0
+        
+        if not self._ccl_sprite_bounds:
+            return False, "No CCL sprite boundaries available. Run auto-detection first.", 0
+        
+        try:
+            # Extract individual sprites using exact CCL boundaries
+            self._sprite_frames = []
+            
+            for i, (x, y, width, height) in enumerate(self._ccl_sprite_bounds):
+                # Ensure bounds are within sheet dimensions
+                sheet_width = self._original_sprite_sheet.width()
+                sheet_height = self._original_sprite_sheet.height()
+                
+                if x >= 0 and y >= 0 and x + width <= sheet_width and y + height <= sheet_height:
+                    frame_rect = QRect(x, y, width, height)
+                    frame = self._original_sprite_sheet.copy(frame_rect)
+                    
+                    if not frame.isNull():
+                        self._sprite_frames.append(frame)
+                else:
+                    # Log invalid bounds but continue
+                    print(f"Warning: Skipping sprite {i+1} with invalid bounds: ({x}, {y}) {width}×{height}")
+            
+            # Update frame count and metadata
+            self._total_frames = len(self._sprite_frames)
+            self._current_frame = 0
+            self._extraction_mode = "ccl"
+            
+            # Update sprite info with CCL extraction information
+            if self._total_frames > 0:
+                bounds_info = [(x, y, w, h) for x, y, w, h in self._ccl_sprite_bounds[:5]]  # Show first 5
+                bounds_preview = str(bounds_info) + ("..." if len(self._ccl_sprite_bounds) > 5 else "")
+                
+                frame_info = (
+                    f"<br><b>CCL Frames:</b> {self._total_frames} individual sprites<br>"
+                    f"<b>Extraction:</b> Connected-Component Labeling<br>"
+                    f"<b>Boundaries:</b> {bounds_preview}"
+                )
+                self._sprite_sheet_info = self._sprite_sheet_info.split('<br><b>Frames:</b>')[0].split('<br><b>CCL Frames:</b>')[0] + frame_info
+            else:
+                self._sprite_sheet_info = self._sprite_sheet_info.split('<br><b>Frames:</b>')[0].split('<br><b>CCL Frames:</b>')[0] + "<br><b>CCL Frames:</b> 0"
+            
+            # Emit extraction completed signal
+            self.extractionCompleted.emit(self._total_frames)
+            
+            return True, "", self._total_frames
+            
+        except Exception as e:
+            self._error_message = str(e)
+            return False, f"Error extracting CCL frames: {str(e)}", 0
+    
+    def get_extraction_mode(self) -> str:
+        """Get current extraction mode: 'grid' or 'ccl'."""
+        return self._extraction_mode
+    
+    def set_extraction_mode(self, mode: str) -> bool:
+        """
+        Set extraction mode and extract frames accordingly.
+        Returns True if successful.
+        """
+        if mode not in ["grid", "ccl"]:
+            return False
+        
+        if mode == "ccl" and not self._ccl_available:
+            return False
+        
+        old_mode = self._extraction_mode
+        self._extraction_mode = mode
+        
+        # Re-extract frames with new mode
+        if mode == "ccl":
+            success, error, count = self.extract_ccl_frames()
+        else:
+            success, error, count = self.extract_frames(
+                self._frame_width, self._frame_height,
+                self._offset_x, self._offset_y,
+                self._spacing_x, self._spacing_y
+            )
+        
+        if not success:
+            # Revert mode if extraction failed
+            self._extraction_mode = old_mode
+            return False
+        
+        return True
+    
+    def is_ccl_available(self) -> bool:
+        """Check if CCL extraction mode is available."""
+        return self._ccl_available and len(self._ccl_sprite_bounds) > 0
+    
+    def get_ccl_sprite_bounds(self) -> List[Tuple[int, int, int, int]]:
+        """Get the CCL-detected sprite boundaries."""
+        return self._ccl_sprite_bounds.copy()
     
     # ============================================================================
     # AUTO-DETECTION (Will be implemented in Step 3.5)
@@ -1455,6 +2020,20 @@ class SpriteModel(QObject):
                         results.append(success_msg)
                         print(success_msg)  # Console output
                         confidence_scores.append(0.98)  # CCL is most accurate
+                        
+                        # Store CCL sprite boundaries for CCL extraction mode
+                        if 'ccl_sprite_bounds' in ccl_result:
+                            self._ccl_sprite_bounds = ccl_result['ccl_sprite_bounds']
+                            self._ccl_available = True
+                            ccl_bounds_msg = f"   💾 Stored {len(self._ccl_sprite_bounds)} exact sprite boundaries for CCL mode"
+                            results.append(ccl_bounds_msg)
+                            print(ccl_bounds_msg)
+                            
+                            # Check if this is an irregular collection
+                            if ccl_result.get('irregular_collection', False):
+                                irregular_msg = f"   ⚠️  IRREGULAR COLLECTION: Consider switching to CCL extraction mode"
+                                results.append(irregular_msg)
+                                print(irregular_msg)
                         
                         # Skip other detection methods since CCL succeeded
                         skip_msg = f"   🎯 Skipping fallback methods - CCL provided excellent results"
