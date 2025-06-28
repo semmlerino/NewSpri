@@ -15,37 +15,43 @@ from PySide6.QtGui import QPixmap, QPainter, QColor, QImage
 
 from config import Config
 
-# Import extracted functionality
+# Import CCL functionality (always available when modules exist)
 try:
     from sprite_model.extraction.background_detector import detect_background_color
     from sprite_model.extraction.ccl_extractor import detect_sprites_ccl_enhanced
-    from sprite_model.extraction.grid_extractor import GridExtractor, GridConfig
-    from sprite_model.animation.state_manager import AnimationStateManager
     CCL_AVAILABLE = True
-    GRID_EXTRACTOR_AVAILABLE = True
-    ANIMATION_MANAGER_AVAILABLE = True
 except ImportError:
     CCL_AVAILABLE = False
-    GRID_EXTRACTOR_AVAILABLE = False
-    ANIMATION_MANAGER_AVAILABLE = False
-    
     def detect_background_color(image_path: str) -> Optional[Tuple[Tuple[int, int, int], int]]:
         return None
-    
     def detect_sprites_ccl_enhanced(image_path: str) -> Optional[dict]:
         return None
-    
+
+# Import grid extraction functionality
+try:
+    from sprite_model.extraction.grid_extractor import GridExtractor, GridConfig
+    GRID_EXTRACTOR_AVAILABLE = True
+except ImportError:
+    GRID_EXTRACTOR_AVAILABLE = False
     # Fallback GridExtractor class
     class GridExtractor:
         def extract_frames(self, *args, **kwargs):
             return False, "Grid extractor not available", []
         def validate_frame_settings(self, *args, **kwargs):
             return False, "Grid extractor not available"
+        def calculate_grid_layout(self, *args, **kwargs):
+            return None
     
     class GridConfig:
         def __init__(self, *args, **kwargs):
             pass
-    
+
+# Import animation state management
+try:
+    from sprite_model.animation.state_manager import AnimationStateManager
+    ANIMATION_MANAGER_AVAILABLE = True
+except ImportError:
+    ANIMATION_MANAGER_AVAILABLE = False
     # Fallback AnimationStateManager class
     from PySide6.QtCore import QObject, Signal
     
@@ -84,6 +90,84 @@ except ImportError:
         def fps(self): return 10
         @property
         def current_frame_pixmap(self): return None
+
+# Import detection modules
+try:
+    from sprite_model.detection.frame_detector import FrameDetector
+    from sprite_model.detection.margin_detector import MarginDetector
+    from sprite_model.detection.spacing_detector import SpacingDetector
+    from sprite_model.detection.coordinator import DetectionCoordinator, DetectionResult
+    DETECTION_AVAILABLE = True
+except ImportError:
+    DETECTION_AVAILABLE = False
+    # Fallback Detection classes
+    class FrameDetector:
+        def detect_frame_size(self, sprite_sheet): return False, 0, 0, "Frame detector not available"
+        def detect_rectangular_frames(self, sprite_sheet): return False, 0, 0, "Frame detector not available"
+        def detect_content_based(self, sprite_sheet): return False, 0, 0, "Frame detector not available"
+    
+    class MarginDetector:
+        def detect_margins(self, sprite_sheet, frame_width=None, frame_height=None): return False, 0, 0, "Margin detector not available"
+    
+    class SpacingDetector:
+        def detect_spacing(self, sprite_sheet, frame_width, frame_height, offset_x=0, offset_y=0): return False, 0, 0, "Spacing detector not available"
+    
+    class DetectionResult:
+        def __init__(self):
+            self.frame_width = 0
+            self.frame_height = 0
+            self.offset_x = 0
+            self.offset_y = 0
+            self.spacing_x = 0
+            self.spacing_y = 0
+            self.success = False
+            self.confidence = 0.0
+            self.messages = []
+    
+    class DetectionCoordinator:
+        def __init__(self):
+            print("Warning: Using fallback DetectionCoordinator")
+        def comprehensive_auto_detect(self, sprite_sheet, sprite_sheet_path=None): 
+            result = DetectionResult()
+            return False, "Detection coordinator not available", result
+
+# Import file operations modules
+try:
+    from sprite_model.file_operations.file_loader import FileLoader
+    from sprite_model.file_operations.metadata_extractor import MetadataExtractor
+    from sprite_model.file_operations.file_validator import FileValidator
+    FILE_OPERATIONS_AVAILABLE = True
+except ImportError:
+    FILE_OPERATIONS_AVAILABLE = False
+    # Fallback classes for file operations
+    class FileLoader:
+        def load_sprite_sheet(self, file_path): return False, None, {}, "File operations not available"
+        def reload_sprite_sheet(self, file_path): return False, None, {}, "File operations not available"
+    
+    class MetadataExtractor:
+        def extract_file_metadata(self, file_path, pixmap): return {}
+        def format_sprite_info(self, *args, **kwargs): return "Metadata extraction not available"
+        def update_sprite_info_with_frames(self, current_info, frame_count, frames_per_row=0, frames_per_col=0): return current_info
+    
+    class FileValidator:
+        def validate_file_path(self, file_path): return False, "File validation not available"
+
+# Import CCL operations module
+try:
+    from sprite_model.ccl.ccl_operations import CCLOperations
+    CCL_OPERATIONS_AVAILABLE = True
+except ImportError:
+    CCL_OPERATIONS_AVAILABLE = False
+    # Fallback CCL operations class
+    class CCLOperations:
+        def __init__(self): pass
+        def set_callbacks(self, *args): pass
+        def extract_ccl_frames(self, *args): return False, "CCL operations not available", 0, [], ""
+        def set_extraction_mode(self, *args): return False
+        def get_extraction_mode(self): return "grid"
+        def is_ccl_available(self, ccl_available): return False
+        def get_ccl_sprite_bounds(self): return []
+        def clear_ccl_data(self): pass
 
 
 class SpriteModel(QObject):
@@ -150,16 +234,6 @@ class SpriteModel(QObject):
         self._sprite_sheet_info: str = ""
         
         # ============================================================================
-        # CCL MODE SUPPORT
-        # ============================================================================
-        
-        self._ccl_sprite_bounds: List[Tuple[int, int, int, int]] = []  # (x, y, w, h) for each sprite
-        self._extraction_mode: str = "grid"  # "grid" or "ccl"
-        self._ccl_available: bool = False
-        self._ccl_background_color: Optional[Tuple[int, int, int]] = None  # RGB background color for transparency
-        self._ccl_color_tolerance: int = 10  # Tolerance for background color matching
-        
-        # ============================================================================
         # EXTRACTED FUNCTIONALITY
         # ============================================================================
         
@@ -169,6 +243,19 @@ class SpriteModel(QObject):
         # Initialize animation state manager for modular animation control
         self._animation_state = AnimationStateManager()
         self._animation_state.set_sprite_frames_getter(lambda: self._sprite_frames)
+        
+        # Initialize file operations modules for modular file handling
+        self._file_loader = FileLoader()
+        self._metadata_extractor = MetadataExtractor()
+        self._file_validator = FileValidator()
+        
+        # Initialize CCL operations module for modular CCL processing
+        self._ccl_operations = CCLOperations()
+        self._ccl_operations.set_callbacks(
+            get_original_sprite_sheet=lambda: self._original_sprite_sheet,
+            get_sprite_sheet_path=lambda: getattr(self, '_sprite_sheet_path', ''),
+            emit_extraction_completed=self.extractionCompleted.emit
+        )
         
         # Connect animation state signals to our signals for backwards compatibility
         self._animation_state.frameChanged.connect(self.frameChanged.emit)
@@ -180,71 +267,85 @@ class SpriteModel(QObject):
     
     def load_sprite_sheet(self, file_path: str) -> Tuple[bool, str]:
         """
-        Load and validate sprite sheet from file path.
+        Load and validate sprite sheet from file path using extracted file operations.
         Returns (success, error_message).
         """
         try:
-            # Load pixmap from file
-            pixmap = QPixmap(file_path)
-            if pixmap.isNull():
-                return False, "Failed to load image file"
-            
-            # Store original sprite sheet for re-slicing
-            self._original_sprite_sheet = pixmap
-            
-            # Extract file metadata
-            file_path_obj = Path(file_path)
-            self._file_path = file_path
-            self._sprite_sheet_path = file_path  # Store for CCL detection
-            self._file_name = file_path_obj.name
-            self._sheet_width = pixmap.width()
-            self._sheet_height = pixmap.height()
-            self._file_format = file_path_obj.suffix.upper()[1:] if file_path_obj.suffix else "UNKNOWN"
-            self._last_modified = os.path.getmtime(file_path)
-            
-            # Generate sprite sheet info string
-            self._sprite_sheet_info = (
-                f"<b>File:</b> {self._file_name}<br>"
-                f"<b>Size:</b> {self._sheet_width} × {self._sheet_height} px<br>"
-                f"<b>Format:</b> {self._file_format}"
-            )
-            
-            # Reset to first frame
-            self._current_frame = 0
-            self._is_valid = True
-            self._error_message = ""
-            
-            # Emit data loaded signal
-            self.dataLoaded.emit(file_path)
-            
-            return True, ""
-            
+            if FILE_OPERATIONS_AVAILABLE:
+                # Use extracted file loader
+                success, pixmap, metadata, error_msg = self._file_loader.load_sprite_sheet(file_path)
+                
+                if success and pixmap is not None:
+                    # Store the loaded data
+                    self._original_sprite_sheet = pixmap
+                    
+                    # Apply metadata
+                    self._file_path = metadata.get('file_path', file_path)
+                    self._sprite_sheet_path = file_path  # Store for CCL detection
+                    self._file_name = metadata.get('file_name', Path(file_path).name)
+                    self._sheet_width = metadata.get('sheet_width', pixmap.width())
+                    self._sheet_height = metadata.get('sheet_height', pixmap.height())
+                    self._file_format = metadata.get('file_format', 'UNKNOWN')
+                    self._last_modified = metadata.get('last_modified', 0.0)
+                    self._sprite_sheet_info = metadata.get('sprite_sheet_info', '')
+                    
+                    # Reset state
+                    self._current_frame = 0
+                    self._is_valid = True
+                    self._error_message = ""
+                    
+                    # Emit data loaded signal
+                    self.dataLoaded.emit(file_path)
+                    
+                    return True, ""
+                else:
+                    self._is_valid = False
+                    self._error_message = error_msg
+                    return False, error_msg
+            else:
+                # Fallback to basic implementation
+                return self._fallback_load_sprite_sheet(file_path)
         except Exception as e:
             self._is_valid = False
             self._error_message = str(e)
             return False, f"Error loading sprite sheet: {str(e)}"
     
     def reload_current_sheet(self) -> Tuple[bool, str]:
-        """Reload the current sprite sheet (for file changes)."""
+        """Reload the current sprite sheet (for file changes) using extracted file operations."""
         if not self._file_path:
             return False, "No sprite sheet currently loaded"
-        return self.load_sprite_sheet(self._file_path)
+        
+        if FILE_OPERATIONS_AVAILABLE:
+            # Use extracted file loader for consistency
+            return self.load_sprite_sheet(self._file_path)
+        else:
+            # Fallback implementation
+            return self._fallback_reload_sprite_sheet()
     
     def clear_sprite_data(self) -> None:
-        """Clear all sprite data and reset to empty state."""
+        """Clear all sprite data and reset to empty state using extracted functionality."""
+        # Clear image data
         self._original_sprite_sheet = None
         self._sprite_frames.clear()
+        
+        # Clear file metadata
         self._file_path = ""
         self._file_name = ""
         self._sprite_sheet_info = ""
-        # Reset animation state using animation state manager
-        self._animation_state.reset_state()
         self._sheet_width = 0
         self._sheet_height = 0
         self._file_format = ""
         self._last_modified = 0.0
+        
+        # Clear state
         self._is_valid = False
         self._error_message = ""
+        
+        # Reset animation state using extracted animation state manager
+        self._animation_state.reset_state()
+        
+        # Clear CCL data using extracted CCL operations module
+        self._ccl_operations.clear_ccl_data()
     
     # ============================================================================
     # FRAME EXTRACTION & PROCESSING (Will be implemented in Step 3.4)
@@ -326,58 +427,32 @@ class SpriteModel(QObject):
         Extract frames using CCL-detected sprite boundaries (for irregular sprite collections).
         Returns (success, error_message, frame_count).
         """
-        if not self._original_sprite_sheet or self._original_sprite_sheet.isNull():
-            return False, "No sprite sheet loaded", 0
-        
-        if not self._ccl_sprite_bounds:
-            return False, "No CCL sprite boundaries available. Run auto-detection first.", 0
-        
         try:
-            # Extract individual sprites using exact CCL boundaries
-            self._sprite_frames = []
+            # Use extracted CCL operations module
+            success, error, count, frames, info_update = self._ccl_operations.extract_ccl_frames(
+                CCL_AVAILABLE, detect_sprites_ccl_enhanced, detect_background_color
+            )
             
-            for i, (x, y, width, height) in enumerate(self._ccl_sprite_bounds):
-                # Ensure bounds are within sheet dimensions
-                sheet_width = self._original_sprite_sheet.width()
-                sheet_height = self._original_sprite_sheet.height()
+            if success:
+                # Update sprite model state with extracted frames
+                print(f"   🎯 CCL extracted {len(frames)} frames, updating self._sprite_frames")
+                self._sprite_frames = frames
+                print(f"   🎯 self._sprite_frames now has {len(self._sprite_frames)} items")
+                self._total_frames = count
+                self._current_frame = 0
                 
-                if x >= 0 and y >= 0 and x + width <= sheet_width and y + height <= sheet_height:
-                    frame_rect = QRect(x, y, width, height)
-                    frame = self._original_sprite_sheet.copy(frame_rect)
-                    
-                    if not frame.isNull():
-                        # Apply background color transparency if available
-                        if self._ccl_background_color is not None:
-                            frame = self._apply_background_transparency(frame, self._ccl_background_color, self._ccl_color_tolerance)
-                        
-                        self._sprite_frames.append(frame)
-                else:
-                    # Log invalid bounds but continue
-                    print(f"Warning: Skipping sprite {i+1} with invalid bounds: ({x}, {y}) {width}×{height}")
-            
-            # Update frame count and metadata
-            self._total_frames = len(self._sprite_frames)
-            self._current_frame = 0
-            self._extraction_mode = "ccl"
-            
-            # Update sprite info with CCL extraction information
-            if self._total_frames > 0:
-                bounds_info = [(x, y, w, h) for x, y, w, h in self._ccl_sprite_bounds[:5]]  # Show first 5
-                bounds_preview = str(bounds_info) + ("..." if len(self._ccl_sprite_bounds) > 5 else "")
+                # Update sprite sheet info with CCL information
+                if info_update:
+                    # Remove any existing frame info and add CCL info
+                    base_info = self._sprite_sheet_info.split('<br><b>Frames:</b>')[0].split('<br><b>CCL Frames:</b>')[0]
+                    self._sprite_sheet_info = base_info + info_update
                 
-                frame_info = (
-                    f"<br><b>CCL Frames:</b> {self._total_frames} individual sprites<br>"
-                    f"<b>Extraction:</b> Connected-Component Labeling<br>"
-                    f"<b>Boundaries:</b> {bounds_preview}"
-                )
-                self._sprite_sheet_info = self._sprite_sheet_info.split('<br><b>Frames:</b>')[0].split('<br><b>CCL Frames:</b>')[0] + frame_info
-            else:
-                self._sprite_sheet_info = self._sprite_sheet_info.split('<br><b>Frames:</b>')[0].split('<br><b>CCL Frames:</b>')[0] + "<br><b>CCL Frames:</b> 0"
+                # Update animation state with new frame count
+                print(f"   🔧 Before animation state update: self._total_frames={self._total_frames}, animation_state.total_frames={self._animation_state.total_frames}")
+                self._animation_state.update_frame_count(self._total_frames)
+                print(f"   🔧 After animation state update: self._total_frames={self._total_frames}, animation_state.total_frames={self._animation_state.total_frames}")
             
-            # Emit extraction completed signal
-            self.extractionCompleted.emit(self._total_frames)
-            
-            return True, "", self._total_frames
+            return success, error, count
             
         except Exception as e:
             self._error_message = str(e)
@@ -385,84 +460,53 @@ class SpriteModel(QObject):
     
     def get_extraction_mode(self) -> str:
         """Get current extraction mode: 'grid' or 'ccl'."""
-        return self._extraction_mode
+        return self._ccl_operations.get_extraction_mode()
     
     def set_extraction_mode(self, mode: str) -> bool:
         """
         Set extraction mode and extract frames accordingly.
         Returns True if successful.
         """
-        if mode not in ["grid", "ccl"]:
-            return False
-        
-        if mode == "ccl" and not self._ccl_available:
-            return False
-        
-        old_mode = self._extraction_mode
-        self._extraction_mode = mode
-        
-        # Re-extract frames with new mode
-        if mode == "ccl":
-            success, error, count = self.extract_ccl_frames()
-        else:
-            success, error, count = self.extract_frames(
+        # Create callback for grid frame extraction
+        def extract_grid_frames_callback():
+            return self.extract_frames(
                 self._frame_width, self._frame_height,
                 self._offset_x, self._offset_y,
                 self._spacing_x, self._spacing_y
             )
         
-        if not success:
-            # Revert mode if extraction failed
-            self._extraction_mode = old_mode
-            return False
+        # Use extracted CCL operations module for mode switching
+        success = self._ccl_operations.set_extraction_mode(
+            mode, CCL_AVAILABLE, extract_grid_frames_callback,
+            detect_sprites_ccl_enhanced, detect_background_color
+        )
         
-        return True
+        # If CCL mode was successful, retrieve the extracted frames
+        if success and mode == "ccl":
+            ccl_frames = self._ccl_operations.get_last_extracted_frames()
+            if ccl_frames:
+                print(f"🔄 Retrieved {len(ccl_frames)} CCL frames for main sprite model")
+                self._sprite_frames = ccl_frames
+                # Update animation state manager with new frame count
+                if hasattr(self, '_animation_state'):
+                    self._animation_state.update_frame_count(len(ccl_frames))
+                # Emit extraction completed signal
+                self.extractionCompleted.emit(len(ccl_frames))
+                print(f"✅ Main sprite model updated: {len(self._sprite_frames)} frames, total_frames: {self.total_frames}")
+        
+        return success
     
     def is_ccl_available(self) -> bool:
         """Check if CCL extraction mode is available."""
-        return self._ccl_available and len(self._ccl_sprite_bounds) > 0
+        return self._ccl_operations.is_ccl_available(CCL_AVAILABLE)
     
     def get_ccl_sprite_bounds(self) -> List[Tuple[int, int, int, int]]:
         """Get the CCL-detected sprite boundaries."""
-        return self._ccl_sprite_bounds.copy()
+        return self._ccl_operations.get_ccl_sprite_bounds()
     
     def _apply_background_transparency(self, pixmap: QPixmap, background_color: Tuple[int, int, int], tolerance: int) -> QPixmap:
-        """Apply background color transparency to a QPixmap."""
-        try:
-            # Convert QPixmap to QImage for pixel manipulation
-            image = pixmap.toImage()
-            
-            # Convert to ARGB format for transparency support
-            if image.format() != QImage.Format_ARGB32:
-                image = image.convertToFormat(QImage.Format_ARGB32)
-            
-            # Get image dimensions
-            width = image.width()
-            height = image.height()
-            
-            # Process each pixel
-            bg_r, bg_g, bg_b = background_color
-            for y in range(height):
-                for x in range(width):
-                    # Get pixel color
-                    pixel = image.pixel(x, y)
-                    r = (pixel >> 16) & 0xFF
-                    g = (pixel >> 8) & 0xFF
-                    b = pixel & 0xFF
-                    
-                    # Check if pixel matches background color within tolerance
-                    if (abs(r - bg_r) <= tolerance and 
-                        abs(g - bg_g) <= tolerance and 
-                        abs(b - bg_b) <= tolerance):
-                        # Make pixel transparent
-                        image.setPixel(x, y, 0x00000000)  # Fully transparent
-            
-            # Convert back to QPixmap
-            return QPixmap.fromImage(image)
-            
-        except Exception as e:
-            print(f"Warning: Failed to apply background transparency: {e}")
-            return pixmap  # Return original if processing fails
+        """Apply background color transparency to a QPixmap using extracted CCL operations."""
+        return self._ccl_operations._apply_background_transparency(pixmap, background_color, tolerance)
     
     # ============================================================================
     # AUTO-DETECTION (Will be implemented in Step 3.5)
@@ -491,35 +535,23 @@ class SpriteModel(QObject):
         if not self._original_sprite_sheet or self._original_sprite_sheet.isNull():
             return False, 0, 0, "No sprite sheet loaded"
         
-        width = self._original_sprite_sheet.width()
-        height = self._original_sprite_sheet.height()
-        
-        # Try common sprite sizes (exact same algorithm)
-        common_sizes = Config.FrameExtraction.AUTO_DETECT_SIZES
-        
-        for size in common_sizes:
-            if width % size == 0 and height % size == 0:
-                # Check if this produces a reasonable number of frames (exact same logic)
-                frames_x = width // size
-                frames_y = height // size
-                total_frames = frames_x * frames_y
+        try:
+            if DETECTION_AVAILABLE:
+                # Use extracted frame detector
+                frame_detector = FrameDetector()
+                success, width, height, msg = frame_detector.detect_frame_size(self._original_sprite_sheet)
                 
-                if Config.Animation.MIN_REASONABLE_FRAMES <= total_frames <= Config.Animation.MAX_REASONABLE_FRAMES:
+                if success:
                     # Store the detected size
-                    self._frame_width = size
-                    self._frame_height = size
-                    return True, size, size, f"Auto-detected frame size: {size}×{size}"
-        
-        # If no common size fits, try to find the GCD (exact same algorithm)
-        from math import gcd
-        frame_size = gcd(width, height)
-        if frame_size >= Config.FrameExtraction.MIN_SPRITE_SIZE:
-            # Store the detected size
-            self._frame_width = frame_size
-            self._frame_height = frame_size
-            return True, frame_size, frame_size, f"Auto-detected frame size: {frame_size}×{frame_size}"
-        
-        return False, 0, 0, "Could not auto-detect suitable frame size"
+                    self._frame_width = width
+                    self._frame_height = height
+                
+                return success, width, height, msg
+            else:
+                # Fallback to basic implementation
+                return self._fallback_frame_detection()
+        except Exception as e:
+            return False, 0, 0, f"Frame detection error: {str(e)}"
     
     def auto_detect_rectangular_frames(self) -> Tuple[bool, int, int, str]:
         """
@@ -531,97 +563,20 @@ class SpriteModel(QObject):
             return False, 0, 0, "No sprite sheet loaded"
         
         try:
-            # Get available area (accounting for margins)
-            available_width = self._original_sprite_sheet.width() - self._offset_x
-            available_height = self._original_sprite_sheet.height() - self._offset_y
-            sheet_aspect_ratio = available_width / available_height
-            
-            best_score = 0
-            best_width = 0
-            best_height = 0
-            candidates_tested = 0
-            detection_method = "standard"
-            
-            # PHASE 1: Check for horizontal animation strips (aspect ratio > 3:1)
-            if sheet_aspect_ratio > 3.0:
-                # Try horizontal strip detection first
-                strip_score, strip_width, strip_height, strip_tested = self._detect_horizontal_strip(available_width, available_height)
-                if strip_score > best_score:
-                    best_score = strip_score
-                    best_width = strip_width
-                    best_height = strip_height
-                    detection_method = "horizontal_strip"
-                candidates_tested += strip_tested
-            
-            # PHASE 2: Standard rectangular detection
-            # Test combinations of base sizes and aspect ratios
-            for base_size in Config.FrameExtraction.BASE_SIZES:
-                for width_ratio, height_ratio in Config.FrameExtraction.COMMON_ASPECT_RATIOS:
-                    width = base_size * width_ratio
-                    height = base_size * height_ratio
-                    
-                    # Skip if frames would be too large for the sprite sheet
-                    if width > available_width or height > available_height:
-                        continue
-                    
-                    # Calculate how many frames would fit
-                    frames_x = available_width // width
-                    frames_y = available_height // height
-                    total_frames = frames_x * frames_y
-                    
-                    if total_frames < Config.FrameExtraction.MIN_REASONABLE_FRAMES:
-                        continue
-                    
-                    candidates_tested += 1
-                    
-                    # Score this candidate
-                    score = self._calculate_frame_score(width, height, total_frames, sheet_aspect_ratio)
-                    
-                    # Use tie-breaking: prefer the size that uses more of the available space
-                    if score > best_score or (score == best_score and self._is_better_fit(width, height, best_width, best_height)):
-                        best_score = score
-                        best_width = width
-                        best_height = height
-                        detection_method = "standard"
-            
-            # Also test exact divisors of sheet dimensions for edge cases
-            for width in [available_width // i for i in range(2, 21) if available_width % i == 0]:
-                for height in [available_height // j for j in range(2, 21) if available_height % j == 0]:
-                    if width < Config.FrameExtraction.MIN_SPRITE_SIZE or height < Config.FrameExtraction.MIN_SPRITE_SIZE:
-                        continue
-                    if width > 512 or height > 512:
-                        continue
-                    
-                    total_frames = (available_width // width) * (available_height // height)
-                    
-                    if total_frames < Config.FrameExtraction.MIN_REASONABLE_FRAMES:
-                        continue
-                    
-                    candidates_tested += 1
-                    score = self._calculate_frame_score(width, height, total_frames, sheet_aspect_ratio)
-                    
-                    if score > best_score or (score == best_score and self._is_better_fit(width, height, best_width, best_height)):
-                        best_score = score
-                        best_width = width
-                        best_height = height
-                        detection_method = "divisor"
-            
-            if best_width > 0 and best_height > 0:
-                # Calculate confidence based on score
-                confidence = min(100, max(0, (best_score - 100) * 2))  # Normalize score to 0-100%
-                confidence_text = "high" if confidence >= 80 else "medium" if confidence >= 50 else "low"
+            if DETECTION_AVAILABLE:
+                # Use extracted frame detector
+                frame_detector = FrameDetector()
+                success, width, height, msg = frame_detector.detect_rectangular_frames(self._original_sprite_sheet)
                 
-                # Store the detected size
-                self._frame_width = best_width
-                self._frame_height = best_height
+                if success:
+                    # Store the detected size
+                    self._frame_width = width
+                    self._frame_height = height
                 
-                return True, best_width, best_height, (
-                    f"Auto-detected frame size: {best_width}×{best_height} "
-                    f"(confidence: {confidence_text}, score: {best_score:.1f}, method: {detection_method}, tested: {candidates_tested})"
-                )
-            
-            return False, 0, 0, f"Could not detect suitable frame size (tested {candidates_tested} candidates)"
-            
+                return success, width, height, msg
+            else:
+                # Fallback to basic implementation
+                return self._fallback_rectangular_detection()
         except Exception as e:
             return False, 0, 0, f"Error in rectangular frame detection: {str(e)}"
     
@@ -635,99 +590,20 @@ class SpriteModel(QObject):
             return False, 0, 0, "No sprite sheet loaded"
         
         try:
-            from content_based_sprite_detection import ContentBasedSpriteDetector
-            
-            # Create temporary file to pass to detector
-            temp_path = "temp_sprite_sheet.png"
-            self._original_sprite_sheet.save(temp_path)
-            
-            try:
-                # Detect actual sprite regions
-                detector = ContentBasedSpriteDetector()
-                sprites = detector.detect_sprites(temp_path)
-                pattern_info = detector.analyze_grid_pattern(sprites)
+            if DETECTION_AVAILABLE:
+                # Use extracted frame detector
+                frame_detector = FrameDetector()
+                success, width, height, msg = frame_detector.detect_content_based(self._original_sprite_sheet)
                 
-                if not sprites:
-                    return False, 0, 0, "No sprites detected in content analysis"
+                if success:
+                    # Store the detected size
+                    self._frame_width = width
+                    self._frame_height = height
                 
-                # Analyze detected sprites to determine frame size
-                if len(sprites) == 1:
-                    # Single sprite - use its dimensions
-                    sprite = sprites[0]
-                    frame_width = sprite.width
-                    frame_height = sprite.height
-                    grid_info = "1×1"
-                    
-                elif pattern_info["pattern"] == "regular_grid":
-                    # Regular grid - use most common sprite size
-                    sizes = [(s.width, s.height) for s in sprites]
-                    most_common_size = max(set(sizes), key=sizes.count)
-                    frame_width, frame_height = most_common_size
-                    grid_info = pattern_info["grid"]
-                    
-                elif pattern_info["pattern"] in ["horizontal_strip", "vertical_strip"]:
-                    # Strip layout - use average sprite size
-                    avg_width = sum(s.width for s in sprites) // len(sprites)
-                    avg_height = sum(s.height for s in sprites) // len(sprites)
-                    frame_width = avg_width
-                    frame_height = avg_height
-                    grid_info = pattern_info["grid"]
-                    
-                else:
-                    # Irregular - use most common size or average
-                    if len(sprites) > 1:
-                        sizes = [(s.width, s.height) for s in sprites]
-                        most_common_size = max(set(sizes), key=sizes.count)
-                        frame_width, frame_height = most_common_size
-                        grid_info = f"{pattern_info['cols']}×{pattern_info['rows']} irregular"
-                    else:
-                        sprite = sprites[0]
-                        frame_width = sprite.width
-                        frame_height = sprite.height
-                        grid_info = "1×1"
-                
-                # Store detected dimensions
-                self._frame_width = frame_width
-                self._frame_height = frame_height
-                
-                # Calculate margins to position the grid at the top-left sprite
-                if sprites:
-                    # Find the top-left sprite (minimum x and y coordinates)
-                    min_x = min(s.x for s in sprites)
-                    min_y = min(s.y for s in sprites)
-                    self._offset_x = min_x
-                    self._offset_y = min_y
-                else:
-                    self._offset_x = 0
-                    self._offset_y = 0
-                
-                # Detect spacing from sprite positions
-                if len(sprites) > 1:
-                    spacing_x, spacing_y = self._calculate_spacing_from_sprites(sprites)
-                    self._spacing_x = spacing_x
-                    self._spacing_y = spacing_y
-                else:
-                    self._spacing_x = 0
-                    self._spacing_y = 0
-                
-                # Store the actual detected grid layout for accurate frame extraction
-                self._detected_grid_cols = pattern_info['cols']
-                self._detected_grid_rows = pattern_info['rows']
-                self._detected_sprites = sprites
-                self._is_content_based_detection = True
-                
-                status_msg = (f"Content-based detection: {frame_width}×{frame_height} frames, "
-                            f"grid {pattern_info['cols']}×{pattern_info['rows']}, {len(sprites)} sprites found, "
-                            f"pattern: {pattern_info['pattern']}")
-                
-                return True, frame_width, frame_height, status_msg
-                
-            finally:
-                # Clean up temp file
-                import os
-                if os.path.exists(temp_path):
-                    os.remove(temp_path)
-            
+                return success, width, height, msg
+            else:
+                # Fallback to basic implementation
+                return self._fallback_content_detection()
         except Exception as e:
             return False, 0, 0, f"Error in content-based detection: {str(e)}"
     
@@ -981,35 +857,21 @@ class SpriteModel(QObject):
             return False, 0, 0, "No sprite sheet loaded"
         
         try:
-            # Convert to QImage for pixel analysis
-            image = self._original_sprite_sheet.toImage()
-            width = image.width()
-            height = image.height()
-            
-            # Get raw margin measurements
-            raw_left, raw_right, raw_top, raw_bottom = self._detect_raw_margins(image)
-            
-            # Apply validation and reasonableness checks
-            validated_left, validated_top, validation_msg = self._validate_margins(
-                raw_left, raw_right, raw_top, raw_bottom, width, height)
-            
-            # Store the validated margins
-            self._offset_x = validated_left
-            self._offset_y = validated_top
-            
-            # Calculate final content area
-            content_width = width - validated_left - (raw_right if validated_left == raw_left else 0)
-            content_height = height - validated_top - (raw_bottom if validated_top == raw_top else 0)
-            
-            status_msg = (f"Margins: L={raw_left}, R={raw_right}, T={raw_top}, B={raw_bottom} | "
-                         f"Validated: X={validated_left}, Y={validated_top} | "
-                         f"Content: {content_width}×{content_height}")
-            
-            if validation_msg:
-                status_msg += f" | {validation_msg}"
-            
-            return True, validated_left, validated_top, status_msg
-            
+            if DETECTION_AVAILABLE:
+                # Use extracted margin detector
+                margin_detector = MarginDetector()
+                success, offset_x, offset_y, msg = margin_detector.detect_margins(
+                    self._original_sprite_sheet, self._frame_width, self._frame_height)
+                
+                if success:
+                    # Store the validated margins
+                    self._offset_x = offset_x
+                    self._offset_y = offset_y
+                
+                return success, offset_x, offset_y, msg
+            else:
+                # Fallback to basic implementation
+                return self._fallback_margin_detection()
         except Exception as e:
             return False, 0, 0, f"Error detecting margins: {str(e)}"
     
@@ -1151,141 +1013,22 @@ class SpriteModel(QObject):
             return False, 0, 0, "Frame size must be set before detecting spacing"
         
         try:
-            image = self._original_sprite_sheet.toImage()
-            available_width = image.width() - self._offset_x
-            available_height = image.height() - self._offset_y
-            
-            # Test spacing values from 0-10 pixels
-            best_spacing_x = 0
-            best_score_x = 0
-            best_spacing_y = 0
-            best_score_y = 0
-            
-            # Horizontal spacing detection
-            for test_spacing in range(0, 11):
-                score = 0
-                positions_checked = 0
+            if DETECTION_AVAILABLE:
+                # Use extracted spacing detector
+                spacing_detector = SpacingDetector()
+                success, spacing_x, spacing_y, msg = spacing_detector.detect_spacing(
+                    self._original_sprite_sheet, self._frame_width, self._frame_height,
+                    self._offset_x, self._offset_y)
                 
-                # Calculate how many frames we could check with this spacing
-                frames_per_row = (available_width + test_spacing) // (self._frame_width + test_spacing) if test_spacing > 0 else available_width // self._frame_width
-                positions_to_check = min(3, frames_per_row - 1)  # Check up to 3 gap positions
+                if success:
+                    # Store detected spacing
+                    self._spacing_x = spacing_x
+                    self._spacing_y = spacing_y
                 
-                if positions_to_check <= 0:
-                    continue
-                
-                for position in range(positions_to_check):
-                    x_gap_start = self._offset_x + (position + 1) * self._frame_width + position * test_spacing
-                    x_gap_end = x_gap_start + test_spacing
-                    x_next_frame = x_gap_end
-                    
-                    # Check bounds
-                    if x_next_frame + self._frame_width > image.width():
-                        break
-                        
-                    positions_checked += 1
-                    
-                    # Check if gap is empty (for non-zero spacing)
-                    gap_valid = True
-                    if test_spacing > 0:
-                        for y in range(self._offset_y, min(self._offset_y + self._frame_height, image.height()), 5):
-                            for x in range(x_gap_start, x_gap_end):
-                                if x < image.width():
-                                    pixel = image.pixel(x, y)
-                                    alpha = (pixel >> 24) & 0xFF
-                                    if alpha > Config.FrameExtraction.MARGIN_DETECTION_ALPHA_THRESHOLD:
-                                        gap_valid = False
-                                        break
-                            if not gap_valid:
-                                break
-                    
-                    # Check if frame exists at expected position
-                    frame_exists = False
-                    if gap_valid:
-                        for y in range(self._offset_y, min(self._offset_y + 20, image.height()), 5):
-                            pixel = image.pixel(x_next_frame, y)
-                            alpha = (pixel >> 24) & 0xFF
-                            if alpha > Config.FrameExtraction.MARGIN_DETECTION_ALPHA_THRESHOLD:
-                                frame_exists = True
-                                break
-                    
-                    if gap_valid and frame_exists:
-                        score += 1
-                
-                # Calculate consistency score
-                consistency = score / positions_checked if positions_checked > 0 else 0
-                if consistency > best_score_x:
-                    best_score_x = consistency
-                    best_spacing_x = test_spacing
-            
-            # Vertical spacing detection
-            for test_spacing in range(0, 11):
-                score = 0
-                positions_checked = 0
-                
-                # Calculate how many frames we could check with this spacing
-                frames_per_col = (available_height + test_spacing) // (self._frame_height + test_spacing) if test_spacing > 0 else available_height // self._frame_height
-                positions_to_check = min(3, frames_per_col - 1)  # Check up to 3 gap positions
-                
-                if positions_to_check <= 0:
-                    continue
-                
-                for position in range(positions_to_check):
-                    y_gap_start = self._offset_y + (position + 1) * self._frame_height + position * test_spacing
-                    y_gap_end = y_gap_start + test_spacing
-                    y_next_frame = y_gap_end
-                    
-                    # Check bounds
-                    if y_next_frame + self._frame_height > image.height():
-                        break
-                        
-                    positions_checked += 1
-                    
-                    # Check if gap is empty (for non-zero spacing)
-                    gap_valid = True
-                    if test_spacing > 0:
-                        for x in range(self._offset_x, min(self._offset_x + self._frame_width, image.width()), 5):
-                            for y in range(y_gap_start, y_gap_end):
-                                if y < image.height():
-                                    pixel = image.pixel(x, y)
-                                    alpha = (pixel >> 24) & 0xFF
-                                    if alpha > Config.FrameExtraction.MARGIN_DETECTION_ALPHA_THRESHOLD:
-                                        gap_valid = False
-                                        break
-                            if not gap_valid:
-                                break
-                    
-                    # Check if frame exists at expected position
-                    frame_exists = False
-                    if gap_valid:
-                        for x in range(self._offset_x, min(self._offset_x + 20, image.width()), 5):
-                            pixel = image.pixel(x, y_next_frame)
-                            alpha = (pixel >> 24) & 0xFF
-                            if alpha > Config.FrameExtraction.MARGIN_DETECTION_ALPHA_THRESHOLD:
-                                frame_exists = True
-                                break
-                    
-                    if gap_valid and frame_exists:
-                        score += 1
-                
-                # Calculate consistency score
-                consistency = score / positions_checked if positions_checked > 0 else 0
-                if consistency > best_score_y:
-                    best_score_y = consistency
-                    best_spacing_y = test_spacing
-            
-            # Store detected spacing
-            self._spacing_x = best_spacing_x
-            self._spacing_y = best_spacing_y
-            
-            # Calculate confidence based on consistency scores
-            avg_confidence = (best_score_x + best_score_y) / 2
-            confidence_text = "high" if avg_confidence >= 0.8 else "medium" if avg_confidence >= 0.5 else "low"
-            
-            return True, best_spacing_x, best_spacing_y, (
-                f"Auto-detected spacing: X={best_spacing_x}, Y={best_spacing_y} "
-                f"(confidence: {confidence_text}, consistency: {avg_confidence:.2f})"
-            )
-            
+                return success, spacing_x, spacing_y, msg
+            else:
+                # Fallback to basic implementation
+                return self._fallback_spacing_detection()
         except Exception as e:
             return False, 0, 0, f"Error in enhanced spacing detection: {str(e)}"
     
@@ -1303,246 +1046,28 @@ class SpriteModel(QObject):
         if not self._original_sprite_sheet or self._original_sprite_sheet.isNull():
             return False, "No sprite sheet loaded"
         
-        results = []
-        overall_success = True
-        confidence_scores = []
-        
         try:
-            # Step 1: Detect margins first (affects all other calculations)
-            results.append("🔍 Step 1: Detecting margins...")
-            
-            try:
-                margin_success, offset_x, offset_y, margin_msg = self.auto_detect_margins()
-            except Exception as e:
-                margin_success, offset_x, offset_y, margin_msg = False, 0, 0, f"Error: {str(e)}"
-            
-            if margin_success:
-                results.append(f"   ✓ {margin_msg}")
-                confidence_scores.append(0.9)  # Margin detection is usually reliable
-            else:
-                results.append(f"   ⚠ Margin detection failed: {margin_msg}")
-                results.append("   → Using default margins (0, 0)")
-                confidence_scores.append(0.3)
-            
-            # Step 2: Detect optimal frame size (content-based detection with fallback)
-            results.append("\n🔍 Step 2: Detecting frame size...")
-            frame_success = False
-            ccl_used = False
-            
-            # Try CCL detection first (if available)
-            if CCL_AVAILABLE and hasattr(self, '_sprite_sheet_path'):
-                try:
-                    ccl_msg = f"   🧪 Attempting CCL (Connected-Component Labeling) detection [NumPy+SciPy available]..."
-                    results.append(ccl_msg)
-                    print(ccl_msg)  # Console output
-                    ccl_result = detect_sprites_ccl_enhanced(self._sprite_sheet_path)
-                    
-                    # Add CCL debug log to results
-                    if ccl_result and 'debug_log' in ccl_result:
-                        for log_line in ccl_result['debug_log']:
-                            results.append(log_line)
-                    
-                    if ccl_result and ccl_result.get('success', False):
-                        self._frame_width = ccl_result['frame_width']
-                        self._frame_height = ccl_result['frame_height']
-                        self._offset_x = ccl_result['offset_x']
-                        self._offset_y = ccl_result['offset_y']
-                        self._spacing_x = ccl_result['spacing_x']
-                        self._spacing_y = ccl_result['spacing_y']
-                        
-                        frame_success = True
-                        confidence = ccl_result.get('confidence', 'high')
-                        sprite_count = ccl_result.get('sprite_count', 0)
-                        success_msg = f"   ✅ CCL SUCCESS: {self._frame_width}×{self._frame_height}, {sprite_count} sprites, confidence: {confidence}"
-                        results.append(success_msg)
-                        print(success_msg)  # Console output
-                        confidence_scores.append(0.98)  # CCL is most accurate
-                        
-                        # Store CCL sprite boundaries for CCL extraction mode
-                        if 'ccl_sprite_bounds' in ccl_result:
-                            self._ccl_sprite_bounds = ccl_result['ccl_sprite_bounds']
-                            self._ccl_available = True
-                            
-                            ccl_bounds_msg = f"   💾 Stored {len(self._ccl_sprite_bounds)} exact sprite boundaries for CCL mode"
-                            results.append(ccl_bounds_msg)
-                            print(ccl_bounds_msg)
-                            
-                            # Detect background color separately (clean approach)
-                            bg_detection_msg = f"   🔍 Running separate background color detection..."
-                            results.append(bg_detection_msg)
-                            print(bg_detection_msg)
-                            
-                            bg_color_info = detect_background_color(self._sprite_sheet_path)
-                            if bg_color_info is not None:
-                                self._ccl_background_color = bg_color_info[0]  # RGB color tuple  
-                                self._ccl_color_tolerance = bg_color_info[1]   # Tolerance
-                                bg_color_msg = f"   🎨 Detected background color {self._ccl_background_color} (tolerance: {self._ccl_color_tolerance}px) for transparency"
-                                results.append(bg_color_msg)
-                                print(bg_color_msg)
-                            else:
-                                bg_none_msg = f"   ℹ️  No background color detected (transparent image or detection failed)"
-                                results.append(bg_none_msg)
-                                print(bg_none_msg)
-                                self._ccl_background_color = None
-                                self._ccl_color_tolerance = 0
-                            
-                            # Check if this is an irregular collection
-                            if ccl_result.get('irregular_collection', False):
-                                irregular_msg = f"   ⚠️  IRREGULAR COLLECTION: Consider switching to CCL extraction mode"
-                                results.append(irregular_msg)
-                                print(irregular_msg)
-                        
-                        # Skip other detection methods since CCL succeeded
-                        skip_msg = f"   🎯 Skipping fallback methods - CCL provided excellent results"
-                        results.append(skip_msg)
-                        print(skip_msg)  # Console output
-                        ccl_used = True
-                    else:
-                        error_msg = ccl_result.get('error', 'unknown reason') if ccl_result else 'no result returned'
-                        fail_msg = f"   ❌ CCL detection failed ({error_msg}), falling back to content-based..."
-                        results.append(fail_msg)
-                        print(fail_msg)  # Console output
-                except Exception as e:
-                    error_msg = f"   💥 CCL detection error: {str(e)}, falling back..."
-                    results.append(error_msg)
-                    print(error_msg)  # Console output
-            else:
-                if not CCL_AVAILABLE:
-                    unavail_msg = f"   ⚠ CCL detection unavailable (NumPy/SciPy not installed), using traditional methods..."
-                    results.append(unavail_msg)
-                    print(unavail_msg)  # Console output
-                else:
-                    skip_msg = f"   ⚠ CCL detection skipped (no sprite sheet path), using traditional methods..."
-                    results.append(skip_msg)
-                    print(skip_msg)  # Console output
-            
-            # Try content-based detection if CCL failed
-            if not frame_success:
-                try:
-                    content_success, frame_width, frame_height, content_msg = self.auto_detect_content_based()
-                    
-                    if content_success:
-                        frame_success = True
-                        results.append(f"   ✓ {content_msg}")
-                        confidence_scores.append(0.95)  # Content-based detection is very reliable
-                    else:
-                        results.append(f"   ⚠ Content-based detection failed: {content_msg}")
-                        results.append("   → Falling back to mathematical detection...")
-                        
-                        # Fall back to rectangular detection
-                        try:
-                            rect_success, frame_width, frame_height, frame_msg = self.auto_detect_rectangular_frames()
-                            
-                            if rect_success:
-                                frame_success = True
-                                results.append(f"   ✓ {frame_msg}")
-                                # Extract confidence from message if available
-                                if "confidence: high" in frame_msg:
-                                    confidence_scores.append(0.9)
-                                elif "confidence: medium" in frame_msg:
-                                    confidence_scores.append(0.7)
-                                else:
-                                    confidence_scores.append(0.5)
-                            else:
-                                results.append(f"   ⚠ Rectangular detection failed: {frame_msg}")
-                                results.append("   → Falling back to legacy square detection...")
-                                
-                                # Try legacy square detection as final fallback
-                                try:
-                                    legacy_success, legacy_width, legacy_height, legacy_msg = self.auto_detect_frame_size()
-                                    if legacy_success:
-                                        frame_success = True
-                                        results.append(f"   ✓ Legacy detection: {legacy_msg}")
-                                        confidence_scores.append(0.6)
-                                    else:
-                                        results.append(f"   ✗ All frame detection failed: {legacy_msg}")
-                                        overall_success = False
-                                        confidence_scores.append(0.1)
-                                except Exception as e:
-                                    results.append(f"   ✗ Legacy detection error: {str(e)}")
-                                    overall_success = False
-                                    confidence_scores.append(0.1)
-                        except Exception as e:
-                            results.append(f"   ✗ Rectangular detection error: {str(e)}")
-                            overall_success = False
-                            confidence_scores.append(0.1)
-                except Exception as e:
-                    results.append(f"   ✗ Content-based detection error: {str(e)}")
-                    overall_success = False
-                    confidence_scores.append(0.1)
-            
-            # Step 3: Detect spacing (only if frame size detection succeeded and CCL wasn't used)
-            if self._frame_width > 0 and self._frame_height > 0:
-                if ccl_used:
-                    results.append("\n🔍 Step 3: Frame spacing...")
-                    results.append(f"   ✅ Spacing already detected by CCL: ({self._spacing_x}, {self._spacing_y})")
-                    confidence_scores.append(0.95)  # CCL spacing is very reliable
-                else:
-                    results.append("\n🔍 Step 3: Detecting frame spacing...")
-                    
-                    try:
-                        spacing_success, spacing_x, spacing_y, spacing_msg = self.auto_detect_spacing_enhanced()
-                        
-                        if spacing_success:
-                            results.append(f"   ✓ {spacing_msg}")
-                            # Extract confidence from message
-                            if "confidence: high" in spacing_msg:
-                                confidence_scores.append(0.9)
-                            elif "confidence: medium" in spacing_msg:
-                                confidence_scores.append(0.7)
-                            else:
-                                confidence_scores.append(0.5)
-                        else:
-                            results.append(f"   ⚠ Spacing detection failed: {spacing_msg}")
-                            results.append("   → Using default spacing (0, 0)")
-                            confidence_scores.append(0.3)
-                    except Exception as e:
-                        results.append(f"   ✗ Spacing detection error: {str(e)}")
-                        results.append("   → Using default spacing (0, 0)")
-                        confidence_scores.append(0.2)
-            else:
-                results.append("\n⚠ Step 3: Skipped spacing detection (no valid frame size)")
-                confidence_scores.append(0.1)
-            
-            # Step 4: Cross-validation and final verification
-            results.append("\n🔍 Step 4: Cross-validation...")
-            try:
-                validation_success, validation_msg = self._validate_detection_consistency()
+            if DETECTION_AVAILABLE:
+                # Use extracted detection coordinator
+                detection_coordinator = DetectionCoordinator()
+                success, msg, result = detection_coordinator.comprehensive_auto_detect(
+                    self._original_sprite_sheet, getattr(self, '_sprite_sheet_path', None))
                 
-                if validation_success:
-                    results.append(f"   ✓ {validation_msg}")
-                    confidence_scores.append(0.8)
-                else:
-                    results.append(f"   ⚠ {validation_msg}")
-                    confidence_scores.append(0.4)
-            except Exception as e:
-                results.append(f"   ✗ Validation error: {str(e)}")
-                confidence_scores.append(0.3)
-            
-            # Step 5: Calculate overall confidence and summary
-            overall_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
-            confidence_text = "high" if overall_confidence >= 0.8 else "medium" if overall_confidence >= 0.6 else "low"
-            
-            results.append(f"\n📊 Overall Result:")
-            results.append(f"   • Frame Size: {self._frame_width}×{self._frame_height}")
-            results.append(f"   • Margins: X={self._offset_x}, Y={self._offset_y}")
-            results.append(f"   • Spacing: X={self._spacing_x}, Y={self._spacing_y}")
-            results.append(f"   • Confidence: {confidence_text} ({overall_confidence:.1%})")
-            
-            if overall_success and overall_confidence >= 0.6:
-                results.append("   🎉 Auto-detection completed successfully!")
-            elif overall_confidence >= 0.4:
-                results.append("   ⚠ Auto-detection completed with warnings")
+                if success:
+                    # Store detected parameters
+                    self._frame_width = result.frame_width
+                    self._frame_height = result.frame_height
+                    self._offset_x = result.offset_x
+                    self._offset_y = result.offset_y
+                    self._spacing_x = result.spacing_x
+                    self._spacing_y = result.spacing_y
+                
+                return success, msg
             else:
-                results.append("   ❌ Auto-detection completed with low confidence")
-                overall_success = False
-            
-            return overall_success, "\n".join(results)
-            
+                # Fallback to basic implementation
+                return self._fallback_comprehensive_detection()
         except Exception as e:
-            error_msg = f"❌ Comprehensive auto-detection failed: {str(e)}"
-            results.append(error_msg)
-            return False, "\n".join(results)
+            return False, f"❌ Comprehensive auto-detection failed: {str(e)}"
     
     def _validate_detection_consistency(self) -> Tuple[bool, str]:
         """
@@ -1715,6 +1240,82 @@ class SpriteModel(QObject):
     def file_name(self) -> str:
         """Get loaded file name."""
         return self._file_name
+
+    # ============================================================================
+    # FALLBACK DETECTION METHODS (for when extracted modules are unavailable)
+    # ============================================================================
+    
+    def _fallback_frame_detection(self) -> Tuple[bool, int, int, str]:
+        """Fallback frame detection when FrameDetector is unavailable."""
+        return False, 0, 0, "Frame detection modules not available"
+    
+    def _fallback_rectangular_detection(self) -> Tuple[bool, int, int, str]:
+        """Fallback rectangular detection when FrameDetector is unavailable."""
+        return False, 0, 0, "Rectangular detection modules not available"
+    
+    def _fallback_content_detection(self) -> Tuple[bool, int, int, str]:
+        """Fallback content detection when FrameDetector is unavailable."""
+        return False, 0, 0, "Content-based detection modules not available"
+    
+    def _fallback_margin_detection(self) -> Tuple[bool, int, int, str]:
+        """Fallback margin detection when MarginDetector is unavailable."""
+        return False, 0, 0, "Margin detection modules not available"
+    
+    def _fallback_spacing_detection(self) -> Tuple[bool, int, int, str]:
+        """Fallback spacing detection when SpacingDetector is unavailable."""
+        return False, 0, 0, "Spacing detection modules not available"
+    
+    def _fallback_comprehensive_detection(self) -> Tuple[bool, str]:
+        """Fallback comprehensive detection when DetectionCoordinator is unavailable."""
+        return False, "Comprehensive detection modules not available"
+    
+    # ============================================================================
+    # FALLBACK FILE OPERATIONS METHODS (for when extracted modules are unavailable)
+    # ============================================================================
+    
+    def _fallback_load_sprite_sheet(self, file_path: str) -> Tuple[bool, str]:
+        """Fallback file loading when FileLoader is unavailable."""
+        try:
+            # Basic file loading without validation
+            pixmap = QPixmap(file_path)
+            if pixmap.isNull():
+                return False, "Failed to load image file"
+            
+            # Store basic data
+            self._original_sprite_sheet = pixmap
+            file_path_obj = Path(file_path)
+            self._file_path = file_path
+            self._sprite_sheet_path = file_path
+            self._file_name = file_path_obj.name
+            self._sheet_width = pixmap.width()
+            self._sheet_height = pixmap.height()
+            self._file_format = file_path_obj.suffix.upper()[1:] if file_path_obj.suffix else "UNKNOWN"
+            self._last_modified = os.path.getmtime(file_path) if os.path.exists(file_path) else 0.0
+            
+            # Basic info string
+            self._sprite_sheet_info = (
+                f"<b>File:</b> {self._file_name}<br>"
+                f"<b>Size:</b> {self._sheet_width} × {self._sheet_height} px<br>"
+                f"<b>Format:</b> {self._file_format}"
+            )
+            
+            self._current_frame = 0
+            self._is_valid = True
+            self._error_message = ""
+            
+            self.dataLoaded.emit(file_path)
+            return True, ""
+            
+        except Exception as e:
+            self._is_valid = False
+            self._error_message = str(e)
+            return False, f"Error loading sprite sheet: {str(e)}"
+    
+    def _fallback_reload_sprite_sheet(self) -> Tuple[bool, str]:
+        """Fallback reload when FileLoader is unavailable."""
+        if not self._file_path:
+            return False, "No sprite sheet currently loaded"
+        return self._fallback_load_sprite_sheet(self._file_path)
 
 
 # Export for easy importing
