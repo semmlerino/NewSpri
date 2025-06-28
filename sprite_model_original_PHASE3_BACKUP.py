@@ -15,33 +15,19 @@ from PySide6.QtGui import QPixmap, QPainter, QColor, QImage
 
 from config import Config
 
-# Import extracted functionality
+# Import extracted CCL detection functionality
 try:
     from sprite_model.extraction.background_detector import detect_background_color
     from sprite_model.extraction.ccl_extractor import detect_sprites_ccl_enhanced
-    from sprite_model.extraction.grid_extractor import GridExtractor, GridConfig
     CCL_AVAILABLE = True
-    GRID_EXTRACTOR_AVAILABLE = True
 except ImportError:
     CCL_AVAILABLE = False
-    GRID_EXTRACTOR_AVAILABLE = False
     
     def detect_background_color(image_path: str) -> Optional[Tuple[Tuple[int, int, int], int]]:
         return None
     
     def detect_sprites_ccl_enhanced(image_path: str) -> Optional[dict]:
         return None
-    
-    # Fallback GridExtractor class
-    class GridExtractor:
-        def extract_frames(self, *args, **kwargs):
-            return False, "Grid extractor not available", []
-        def validate_frame_settings(self, *args, **kwargs):
-            return False, "Grid extractor not available"
-    
-    class GridConfig:
-        def __init__(self, *args, **kwargs):
-            pass
 
 
 class SpriteModel(QObject):
@@ -120,13 +106,6 @@ class SpriteModel(QObject):
         self._ccl_available: bool = False
         self._ccl_background_color: Optional[Tuple[int, int, int]] = None  # RGB background color for transparency
         self._ccl_color_tolerance: int = 10  # Tolerance for background color matching
-        
-        # ============================================================================
-        # EXTRACTED FUNCTIONALITY
-        # ============================================================================
-        
-        # Initialize grid extractor for modular frame extraction
-        self._grid_extractor = GridExtractor()
     
     # ============================================================================
     # FILE OPERATIONS (Will be implemented in Step 3.3)
@@ -208,12 +187,17 @@ class SpriteModel(QObject):
     def extract_frames(self, width: int, height: int, offset_x: int = 0, offset_y: int = 0, 
                       spacing_x: int = 0, spacing_y: int = 0) -> Tuple[bool, str, int]:
         """
-        Extract frames from sprite sheet with given parameters using modular grid extractor.
+        Extract frames from sprite sheet with given parameters.
         Now supports frame spacing for sprite sheets with gaps between frames.
         Returns (success, error_message, frame_count).
         """
         if not self._original_sprite_sheet or self._original_sprite_sheet.isNull():
             return False, "No sprite sheet loaded", 0
+        
+        # Validate frame settings (will be updated to include spacing)
+        valid, error_msg = self.validate_frame_settings(width, height, offset_x, offset_y, spacing_x, spacing_y)
+        if not valid:
+            return False, error_msg, 0
         
         try:
             # Store extraction settings
@@ -224,28 +208,49 @@ class SpriteModel(QObject):
             self._spacing_x = spacing_x
             self._spacing_y = spacing_y
             
-            # Create grid configuration
-            config = GridConfig(width, height, offset_x, offset_y, spacing_x, spacing_y)
+            sheet_width = self._original_sprite_sheet.width()
+            sheet_height = self._original_sprite_sheet.height()
             
-            # Use extracted grid extractor module
-            success, error_msg, frames = self._grid_extractor.extract_frames(self._original_sprite_sheet, config)
+            # Calculate available area after margins
+            available_width = sheet_width - offset_x
+            available_height = sheet_height - offset_y
             
-            if not success:
-                return False, error_msg, 0
+            # Calculate how many frames fit (now accounting for spacing)
+            # For N frames, we have N-1 gaps between them
+            if spacing_x > 0:
+                frames_per_row = (available_width + spacing_x) // (width + spacing_x)
+            else:
+                frames_per_row = available_width // width if width > 0 else 0
+                
+            if spacing_y > 0:
+                frames_per_col = (available_height + spacing_y) // (height + spacing_y)
+            else:
+                frames_per_col = available_height // height if height > 0 else 0
             
-            # Store extracted frames
-            self._sprite_frames = frames
+            # Extract individual frames with spacing
+            self._sprite_frames = []
+            for row in range(frames_per_col):
+                for col in range(frames_per_row):
+                    x = offset_x + (col * (width + spacing_x))
+                    y = offset_y + (row * (height + spacing_y))
+                    
+                    # Ensure we don't exceed sheet boundaries
+                    if x + width <= sheet_width and y + height <= sheet_height:
+                        frame_rect = QRect(x, y, width, height)
+                        frame = self._original_sprite_sheet.copy(frame_rect)
+                        
+                        if not frame.isNull():
+                            self._sprite_frames.append(frame)
+            
+            # Update frame count and metadata
             self._total_frames = len(self._sprite_frames)
             self._current_frame = 0  # Reset to first frame
             
-            # Calculate layout for info display
-            layout = self._grid_extractor.calculate_grid_layout(self._original_sprite_sheet, config)
-            
             # Update sprite info with frame information
-            if layout and self._total_frames > 0:
+            if self._total_frames > 0:
                 frame_info = (
                     f"<br><b>Frames:</b> {self._total_frames} "
-                    f"({layout.frames_per_row}×{layout.frames_per_col})<br>"
+                    f"({frames_per_row}×{frames_per_col})<br>"
                     f"<b>Frame size:</b> {width}×{height} px"
                 )
                 self._sprite_sheet_info = self._sprite_sheet_info.split('<br><b>Frames:</b>')[0] + frame_info
@@ -263,16 +268,49 @@ class SpriteModel(QObject):
     
     def validate_frame_settings(self, width: int, height: int, offset_x: int = 0, offset_y: int = 0,
                                spacing_x: int = 0, spacing_y: int = 0) -> Tuple[bool, str]:
-        """Validate frame extraction parameters using modular grid extractor validation."""
-        try:
-            # Create grid configuration
-            config = GridConfig(width, height, offset_x, offset_y, spacing_x, spacing_y)
+        """Validate frame extraction parameters including offsets and spacing."""
+        # Basic dimension validation
+        if width <= 0:
+            return False, "Frame width must be greater than 0"
+        if height <= 0:
+            return False, "Frame height must be greater than 0"
+        if width > Config.FrameExtraction.MAX_FRAME_SIZE:
+            return False, f"Frame width cannot exceed {Config.FrameExtraction.MAX_FRAME_SIZE}"
+        if height > Config.FrameExtraction.MAX_FRAME_SIZE:
+            return False, f"Frame height cannot exceed {Config.FrameExtraction.MAX_FRAME_SIZE}"
+        
+        # Validate offsets
+        if offset_x < 0:
+            return False, "X offset cannot be negative"
+        if offset_y < 0:
+            return False, "Y offset cannot be negative"
+        if offset_x > Config.FrameExtraction.MAX_OFFSET:
+            return False, f"X offset cannot exceed {Config.FrameExtraction.MAX_OFFSET}"
+        if offset_y > Config.FrameExtraction.MAX_OFFSET:
+            return False, f"Y offset cannot exceed {Config.FrameExtraction.MAX_OFFSET}"
             
-            # Use extracted grid extractor validation
-            return self._grid_extractor.validate_frame_settings(self._original_sprite_sheet, config)
+        # Validate spacing
+        if spacing_x < 0:
+            return False, "X spacing cannot be negative"
+        if spacing_y < 0:
+            return False, "Y spacing cannot be negative"
+        if spacing_x > Config.FrameExtraction.MAX_SPACING:
+            return False, f"X spacing cannot exceed {Config.FrameExtraction.MAX_SPACING}"
+        if spacing_y > Config.FrameExtraction.MAX_SPACING:
+            return False, f"Y spacing cannot exceed {Config.FrameExtraction.MAX_SPACING}"
+        
+        # Check if frame size is reasonable for the sprite sheet
+        if self._original_sprite_sheet and not self._original_sprite_sheet.isNull():
+            sheet_width = self._original_sprite_sheet.width()
+            sheet_height = self._original_sprite_sheet.height()
             
-        except Exception as e:
-            return False, f"Validation error: {str(e)}"
+            # At minimum, one frame must fit after applying offset
+            if offset_x + width > sheet_width:
+                return False, f"Frame width + X offset ({offset_x + width}) exceeds sheet width ({sheet_width})"
+            if offset_y + height > sheet_height:
+                return False, f"Frame height + Y offset ({offset_y + height}) exceeds sheet height ({sheet_height})"
+        
+        return True, ""
     
     def extract_ccl_frames(self) -> Tuple[bool, str, int]:
         """
