@@ -20,11 +20,14 @@ try:
     from sprite_model.extraction.background_detector import detect_background_color
     from sprite_model.extraction.ccl_extractor import detect_sprites_ccl_enhanced
     from sprite_model.extraction.grid_extractor import GridExtractor, GridConfig
+    from sprite_model.animation.state_manager import AnimationStateManager
     CCL_AVAILABLE = True
     GRID_EXTRACTOR_AVAILABLE = True
+    ANIMATION_MANAGER_AVAILABLE = True
 except ImportError:
     CCL_AVAILABLE = False
     GRID_EXTRACTOR_AVAILABLE = False
+    ANIMATION_MANAGER_AVAILABLE = False
     
     def detect_background_color(image_path: str) -> Optional[Tuple[Tuple[int, int, int], int]]:
         return None
@@ -42,6 +45,45 @@ except ImportError:
     class GridConfig:
         def __init__(self, *args, **kwargs):
             pass
+    
+    # Fallback AnimationStateManager class
+    from PySide6.QtCore import QObject, Signal
+    
+    class AnimationStateManager(QObject):
+        frameChanged = Signal(int, int)
+        playbackStateChanged = Signal(bool)
+        
+        def __init__(self):
+            super().__init__()
+            print("Warning: Using fallback AnimationStateManager")
+        
+        def set_sprite_frames_getter(self, getter): pass
+        def update_frame_count(self, total_frames): pass
+        def set_current_frame(self, frame): return False
+        def next_frame(self): return 0, False
+        def previous_frame(self): return 0
+        def first_frame(self): return 0
+        def last_frame(self): return 0
+        def play(self): return False
+        def pause(self): pass
+        def stop(self): pass
+        def toggle_playback(self): return False
+        def set_fps(self, fps): return False
+        def set_loop_enabled(self, enabled): pass
+        def reset_state(self): pass
+        
+        @property
+        def current_frame(self): return 0
+        @property
+        def total_frames(self): return 0
+        @property
+        def is_playing(self): return False
+        @property
+        def is_loop_enabled(self): return True
+        @property
+        def fps(self): return 10
+        @property
+        def current_frame_pixmap(self): return None
 
 
 class SpriteModel(QObject):
@@ -85,14 +127,10 @@ class SpriteModel(QObject):
         self._spacing_y: int = Config.FrameExtraction.DEFAULT_SPACING
         
         # ============================================================================
-        # ANIMATION STATE
+        # ANIMATION STATE (Now managed by AnimationStateManager)
         # ============================================================================
         
-        self._current_frame: int = 0
-        self._total_frames: int = 0
-        self._is_playing: bool = False
-        self._loop_enabled: bool = True
-        self._fps: int = Config.Animation.DEFAULT_FPS
+        # Animation state is now handled by self._animation_state
         
         # ============================================================================
         # METADATA
@@ -127,6 +165,14 @@ class SpriteModel(QObject):
         
         # Initialize grid extractor for modular frame extraction
         self._grid_extractor = GridExtractor()
+        
+        # Initialize animation state manager for modular animation control
+        self._animation_state = AnimationStateManager()
+        self._animation_state.set_sprite_frames_getter(lambda: self._sprite_frames)
+        
+        # Connect animation state signals to our signals for backwards compatibility
+        self._animation_state.frameChanged.connect(self.frameChanged.emit)
+        self._animation_state.playbackStateChanged.connect(self.playbackStateChanged.emit)
     
     # ============================================================================
     # FILE OPERATIONS (Will be implemented in Step 3.3)
@@ -191,9 +237,8 @@ class SpriteModel(QObject):
         self._file_path = ""
         self._file_name = ""
         self._sprite_sheet_info = ""
-        self._current_frame = 0
-        self._total_frames = 0
-        self._is_playing = False
+        # Reset animation state using animation state manager
+        self._animation_state.reset_state()
         self._sheet_width = 0
         self._sheet_height = 0
         self._file_format = ""
@@ -233,18 +278,20 @@ class SpriteModel(QObject):
             if not success:
                 return False, error_msg, 0
             
-            # Store extracted frames
+            # Store extracted frames and update animation state
             self._sprite_frames = frames
-            self._total_frames = len(self._sprite_frames)
-            self._current_frame = 0  # Reset to first frame
+            total_frames = len(self._sprite_frames)
+            
+            # Update animation state manager with new frame count
+            self._animation_state.update_frame_count(total_frames)
             
             # Calculate layout for info display
             layout = self._grid_extractor.calculate_grid_layout(self._original_sprite_sheet, config)
             
             # Update sprite info with frame information
-            if layout and self._total_frames > 0:
+            if layout and total_frames > 0:
                 frame_info = (
-                    f"<br><b>Frames:</b> {self._total_frames} "
+                    f"<br><b>Frames:</b> {total_frames} "
                     f"({layout.frames_per_row}×{layout.frames_per_col})<br>"
                     f"<b>Frame size:</b> {width}×{height} px"
                 )
@@ -253,9 +300,9 @@ class SpriteModel(QObject):
                 self._sprite_sheet_info = self._sprite_sheet_info.split('<br><b>Frames:</b>')[0] + "<br><b>Frames:</b> 0"
             
             # Emit extraction completed signal
-            self.extractionCompleted.emit(self._total_frames)
+            self.extractionCompleted.emit(total_frames)
             
-            return True, "", self._total_frames
+            return True, "", total_frames
             
         except Exception as e:
             self._error_message = str(e)
@@ -1553,106 +1600,52 @@ class SpriteModel(QObject):
     # ============================================================================
     
     def set_current_frame(self, frame: int) -> bool:
-        """Set the current animation frame with bounds checking."""
-        if not self._sprite_frames:
-            return False
-        
-        if 0 <= frame < len(self._sprite_frames):
-            self._current_frame = frame
-            self.frameChanged.emit(self._current_frame, self._total_frames)
-            return True
-        return False
+        """Set the current animation frame with bounds checking using animation state manager."""
+        return self._animation_state.set_current_frame(frame)
     
     def next_frame(self) -> Tuple[int, bool]:
-        """
-        Advance to next frame, handling looping.
-        Returns (new_frame_index, should_continue_playing).
-        """
-        if not self._sprite_frames:
-            return 0, False
-        
-        # Core animation advancement logic (exact same algorithm)
-        self._current_frame += 1
-        
-        if self._current_frame >= len(self._sprite_frames):
-            if self._loop_enabled:
-                self._current_frame = 0
-                should_continue = True
-            else:
-                self._current_frame = len(self._sprite_frames) - 1
-                should_continue = False  # Stop playback when not looping
-        else:
-            should_continue = True
-        
-        # Emit frame change signal
-        self.frameChanged.emit(self._current_frame, self._total_frames)
-        
-        return self._current_frame, should_continue
+        """Advance to next frame, handling looping using animation state manager."""
+        return self._animation_state.next_frame()
     
     def previous_frame(self) -> int:
-        """Go to previous frame with bounds checking."""
-        if self._sprite_frames and self._current_frame > 0:
-            self._current_frame -= 1
-            self.frameChanged.emit(self._current_frame, self._total_frames)
-        return self._current_frame
+        """Go to previous frame with bounds checking using animation state manager."""
+        return self._animation_state.previous_frame()
     
     def first_frame(self) -> int:
-        """Jump to first frame."""
-        if self._sprite_frames:
-            self._current_frame = 0
-            self.frameChanged.emit(self._current_frame, self._total_frames)
-        return self._current_frame
+        """Jump to first frame using animation state manager."""
+        return self._animation_state.first_frame()
     
     def last_frame(self) -> int:
-        """Jump to last frame."""
-        if self._sprite_frames:
-            self._current_frame = len(self._sprite_frames) - 1
-            self.frameChanged.emit(self._current_frame, self._total_frames)
-        return self._current_frame
+        """Jump to last frame using animation state manager."""
+        return self._animation_state.last_frame()
     
     # ============================================================================
     # PLAYBACK CONTROL (Will be implemented in Step 3.6)
     # ============================================================================
     
     def play(self) -> bool:
-        """Start animation playback. Returns success status."""
-        if not self._sprite_frames:
-            return False
-        self._is_playing = True
-        self.playbackStateChanged.emit(True)
-        return True
+        """Start animation playback using animation state manager."""
+        return self._animation_state.play()
     
     def pause(self) -> None:
-        """Pause animation playback."""
-        self._is_playing = False
-        self.playbackStateChanged.emit(False)
+        """Pause animation playback using animation state manager."""
+        self._animation_state.pause()
     
     def stop(self) -> None:
-        """Stop animation and reset to first frame."""
-        self._is_playing = False
-        if self._sprite_frames:
-            self._current_frame = 0
-            self.frameChanged.emit(self._current_frame, self._total_frames)
-        self.playbackStateChanged.emit(False)
+        """Stop animation and reset to first frame using animation state manager."""
+        self._animation_state.stop()
     
     def toggle_playback(self) -> bool:
-        """Toggle playback state. Returns new playing state."""
-        if self._is_playing:
-            self.pause()
-        else:
-            self.play()
-        return self._is_playing
+        """Toggle playback state using animation state manager."""
+        return self._animation_state.toggle_playback()
     
     def set_fps(self, fps: int) -> bool:
-        """Set animation speed with validation."""
-        if Config.Animation.MIN_FPS <= fps <= Config.Animation.MAX_FPS:
-            self._fps = fps
-            return True
-        return False
+        """Set animation speed with validation using animation state manager."""
+        return self._animation_state.set_fps(fps)
     
     def set_loop_enabled(self, enabled: bool) -> None:
-        """Set animation loop mode."""
-        self._loop_enabled = enabled
+        """Set animation loop mode using animation state manager."""
+        self._animation_state.set_loop_enabled(enabled)
     
     # ============================================================================
     # DATA ACCESS PROPERTIES (Will be implemented in Step 3.2)
@@ -1660,10 +1653,8 @@ class SpriteModel(QObject):
     
     @property
     def current_frame_pixmap(self) -> Optional[QPixmap]:
-        """Get the currently selected frame as QPixmap."""
-        if 0 <= self._current_frame < len(self._sprite_frames):
-            return self._sprite_frames[self._current_frame]
-        return None
+        """Get the currently selected frame as QPixmap using animation state manager."""
+        return self._animation_state.current_frame_pixmap
     
     @property
     def sprite_info(self) -> str:
@@ -1692,28 +1683,28 @@ class SpriteModel(QObject):
     
     @property
     def current_frame(self) -> int:
-        """Get current frame index."""
-        return self._current_frame
+        """Get current frame index using animation state manager."""
+        return self._animation_state.current_frame
     
     @property
     def total_frames(self) -> int:
-        """Get total frame count."""
-        return self._total_frames
+        """Get total frame count using animation state manager."""
+        return self._animation_state.total_frames
     
     @property
     def is_playing(self) -> bool:
-        """Get animation playback state."""
-        return self._is_playing
+        """Get animation playback state using animation state manager."""
+        return self._animation_state.is_playing
     
     @property
     def fps(self) -> int:
-        """Get current FPS setting."""
-        return self._fps
+        """Get current FPS setting using animation state manager."""
+        return self._animation_state.fps
     
     @property
     def loop_enabled(self) -> bool:
-        """Get animation loop setting."""
-        return self._loop_enabled
+        """Get animation loop setting using animation state manager."""
+        return self._animation_state.is_loop_enabled
     
     @property
     def file_path(self) -> str:
