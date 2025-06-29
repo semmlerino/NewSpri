@@ -16,6 +16,8 @@ from PySide6.QtCore import Signal, Qt
 
 from config import Config
 from styles import StyleManager
+from ui_common import AutoButtonManager
+from extraction_modes import ExtractionModeStateMachine
 
 
 class FrameExtractor(QGroupBox):
@@ -28,6 +30,9 @@ class FrameExtractor(QGroupBox):
     def __init__(self):
         super().__init__("Frame Extraction")
         self.setStyleSheet(StyleManager.get_frame_extractor_groupbox())
+        
+        # Initialize button manager
+        self._button_manager = AutoButtonManager()
         
         layout = QVBoxLayout(self)
         
@@ -68,8 +73,8 @@ class FrameExtractor(QGroupBox):
         mode_layout.addWidget(self.grid_mode_btn)
         
         self.ccl_mode_btn = QRadioButton("CCL Extraction")
-        self.ccl_mode_btn.setToolTip("Connected-Component Labeling for irregular sprite collections (requires auto-detection)")
-        self.ccl_mode_btn.setEnabled(False)  # Initially disabled until CCL data available
+        self.ccl_mode_btn.setToolTip("Connected-Component Labeling for irregular sprite collections")
+        self.ccl_mode_btn.setEnabled(False)  # Initially disabled until sprite sheet loaded
         self.mode_group.addButton(self.ccl_mode_btn, 1)
         mode_layout.addWidget(self.ccl_mode_btn)
         
@@ -167,6 +172,7 @@ class FrameExtractor(QGroupBox):
         self.auto_btn.setMaximumWidth(Config.UI.AUTO_BUTTON_MAX_WIDTH)
         self.auto_btn.setToolTip("Auto-detect frame size")
         size_layout.addWidget(self.auto_btn)
+        self._button_manager.register_button('frame', self.auto_btn)
         
         layout.addLayout(size_layout)
         
@@ -201,6 +207,7 @@ class FrameExtractor(QGroupBox):
         self.auto_margins_btn.setMaximumWidth(Config.UI.AUTO_BUTTON_MAX_WIDTH)
         self.auto_margins_btn.setToolTip("Auto-detect margins")
         advanced_layout.addWidget(self.auto_margins_btn, 0, 5)
+        self._button_manager.register_button('margins', self.auto_margins_btn)
         
         # Row 2: Spacing controls
         advanced_layout.addWidget(QLabel("Spacing:"), 1, 0)
@@ -226,6 +233,7 @@ class FrameExtractor(QGroupBox):
         self.auto_spacing_btn.setMaximumWidth(Config.UI.AUTO_BUTTON_MAX_WIDTH)
         self.auto_spacing_btn.setToolTip("Auto-detect frame spacing")
         advanced_layout.addWidget(self.auto_spacing_btn, 1, 5)
+        self._button_manager.register_button('spacing', self.auto_spacing_btn)
         
         layout.addLayout(advanced_layout)
         
@@ -287,9 +295,12 @@ class FrameExtractor(QGroupBox):
         """Enable/disable CCL mode based on availability."""
         self.ccl_mode_btn.setEnabled(available)
         if available:
-            self.ccl_mode_btn.setToolTip(f"CCL Extraction: {sprite_count} individual sprites detected")
+            if sprite_count > 0:
+                self.ccl_mode_btn.setToolTip(f"CCL Extraction: Ready (auto-detection found {sprite_count} sprites)")
+            else:
+                self.ccl_mode_btn.setToolTip("CCL Extraction: Ready for irregular sprite collections")
         else:
-            self.ccl_mode_btn.setToolTip("CCL Extraction: Not available (run auto-detection first)")
+            self.ccl_mode_btn.setToolTip("CCL Extraction: Load a sprite sheet first")
     
     def get_extraction_mode(self) -> str:
         """Get current extraction mode."""
@@ -398,112 +409,11 @@ class FrameExtractor(QGroupBox):
             confidence: 'high', 'medium', 'low', or 'failed'
             message: Optional detailed message for tooltip
         """
-        # Map button types to actual button objects
-        button_map = {
-            'frame': self.auto_btn,
-            'margins': self.auto_margins_btn,
-            'spacing': self.auto_spacing_btn
-        }
-        
-        button = button_map.get(button_type)
-        if not button:
-            return
-        
-        # Define confidence styles
-        styles = {
-            'high': {
-                'color': '#2e7d32',  # Green
-                'background': '#e8f5e9',
-                'border': '#4caf50',
-                'icon': '✓'
-            },
-            'medium': {
-                'color': '#ef6c00',  # Orange
-                'background': '#fff3e0',
-                'border': '#ff9800',
-                'icon': '⚠'
-            },
-            'low': {
-                'color': '#c62828',  # Red
-                'background': '#ffebee',
-                'border': '#f44336',
-                'icon': '!'
-            },
-            'failed': {
-                'color': '#424242',  # Gray
-                'background': '#f5f5f5',
-                'border': '#9e9e9e',
-                'icon': '✗'
-            }
-        }
-        
-        style_info = styles.get(confidence, styles['failed'])
-        
-        # Update button style
-        button.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {style_info['background']};
-                border: 2px solid {style_info['border']};
-                color: {style_info['color']};
-                font-weight: bold;
-                border-radius: 4px;
-                padding: 4px 8px;
-            }}
-            QPushButton:hover {{
-                background-color: {style_info['border']};
-                color: white;
-            }}
-        """)
-        
-        # Update button text with icon
-        original_text = "Auto"
-        button.setText(f"{style_info['icon']} {original_text}")
-        
-        # Update tooltip with detailed information
-        if message:
-            base_tooltip = {
-                'frame': "Auto-detect frame size",
-                'margins': "Auto-detect margins",
-                'spacing': "Auto-detect frame spacing"
-            }.get(button_type, "Auto-detect")
-            
-            confidence_desc = {
-                'high': "High confidence",
-                'medium': "Medium confidence", 
-                'low': "Low confidence",
-                'failed': "Detection failed"
-            }.get(confidence, "Unknown")
-            
-            button.setToolTip(f"{base_tooltip}\n{confidence_desc}: {message}")
-        else:
-            # Reset to default tooltip
-            default_tooltips = {
-                'frame': "Auto-detect frame size",
-                'margins': "Auto-detect margins", 
-                'spacing': "Auto-detect frame spacing"
-            }
-            button.setToolTip(default_tooltips.get(button_type, "Auto-detect"))
+        self._button_manager.update_confidence(button_type, confidence, message)
     
     def reset_auto_button_style(self, button_type: str):
         """Reset auto-detect button to default appearance."""
-        button_map = {
-            'frame': self.auto_btn,
-            'margins': self.auto_margins_btn,
-            'spacing': self.auto_spacing_btn
-        }
-        
-        button = button_map.get(button_type)
-        if button:
-            button.setStyleSheet("")  # Reset to default style
-            button.setText("Auto")
-            
-            # Reset to default tooltip
-            default_tooltips = {
-                'frame': "Auto-detect frame size",
-                'margins': "Auto-detect margins",
-                'spacing': "Auto-detect frame spacing"
-            }
-            button.setToolTip(default_tooltips.get(button_type, "Auto-detect"))
+        self._button_manager.reset_button(button_type)
 
 
 # Export for easy importing

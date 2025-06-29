@@ -20,6 +20,77 @@ from scipy import ndimage
 from .background_detector import _detect_color_key_mask
 
 
+class CCLExtractor:
+    """
+    Connected Component Labeling extractor class.
+    Provides object-oriented interface for CCL sprite extraction.
+    """
+    
+    def __init__(self):
+        """Initialize CCL extractor."""
+        pass
+    
+    def extract_sprites(self, sprite_sheet):
+        """
+        Extract sprites from sprite sheet using CCL.
+        
+        Args:
+            sprite_sheet: QPixmap sprite sheet
+            
+        Returns:
+            Tuple of (sprites_list, info_string)
+        """
+        try:
+            # Save QPixmap to temporary file for processing
+            import tempfile
+            import os
+            
+            # Create temporary file
+            with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
+                temp_path = tmp_file.name
+            
+            # Save sprite sheet to temp file
+            if not sprite_sheet.save(temp_path, 'PNG'):
+                return [], "Failed to save sprite sheet for CCL processing"
+            
+            try:
+                # Run CCL detection
+                ccl_result = detect_sprites_ccl_enhanced(temp_path)
+                
+                # Ensure we got a dictionary result
+                if not isinstance(ccl_result, dict):
+                    return [], f"CCL detection returned unexpected type: {type(ccl_result)}"
+                
+                if ccl_result and ccl_result.get('success', False):
+                    sprite_bounds = ccl_result.get('ccl_sprite_bounds', [])
+                    sprite_count = len(sprite_bounds)
+                    
+                    if sprite_count >= 2:
+                        # Create list of individual sprite QPixmaps
+                        sprites = []
+                        for x, y, w, h in sprite_bounds:
+                            sprite_pixmap = sprite_sheet.copy(x, y, w, h)
+                            sprites.append(sprite_pixmap)
+                        
+                        info_string = f"CCL detected {sprite_count} sprites"
+                        return sprites, info_string
+                    else:
+                        return [], f"CCL detected only {sprite_count} sprites (need at least 2)"
+                else:
+                    error_msg = ccl_result.get('error', 'Unknown error') if ccl_result else 'No result returned'
+                    return [], f"CCL detection failed: {error_msg}"
+                    
+            finally:
+                # Clean up temporary file
+                try:
+                    os.unlink(temp_path)
+                except:
+                    pass
+                    
+        except Exception as e:
+            return [], f"CCL extraction error: {str(e)}"
+
+
 def detect_sprites_ccl_enhanced(image_path: str) -> Optional[dict]:
     """
     Enhanced CCL detection for sprite boundary detection.

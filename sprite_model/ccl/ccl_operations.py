@@ -88,6 +88,11 @@ class CCLOperations:
                     # Try to run CCL detection automatically
                     try:
                         ccl_result = detect_sprites_ccl_enhanced(sprite_sheet_path)
+                        
+                        # Ensure we got a dictionary result
+                        if not isinstance(ccl_result, dict):
+                            return False, f"CCL auto-detection returned unexpected type: {type(ccl_result)}", 0, [], ""
+                        
                         if ccl_result and ccl_result.get('success', False):
                             # Store CCL sprite boundaries
                             if 'ccl_sprite_bounds' in ccl_result:

@@ -90,6 +90,20 @@ class SpriteViewer(QMainWindow):
         # Use QSplitter for flexible resizing
         main_splitter = QSplitter(Qt.Horizontal)
         
+        # Create main sections
+        self._create_canvas_section(main_splitter)
+        self._create_controls_section(main_splitter)
+        
+        # Configure splitter
+        main_splitter.setStretchFactor(0, 3)  # Canvas gets 3x stretch
+        main_splitter.setStretchFactor(1, 1)  # Controls get 1x stretch
+        main_splitter.setSizes([900, 400])    # Initial sizes
+        
+        # Add splitter to main layout
+        main_layout.addWidget(main_splitter)
+    
+    def _create_canvas_section(self, parent_splitter):
+        """Create the canvas display section."""
         # Left side - Canvas
         canvas_container = QWidget()
         canvas_layout = QVBoxLayout(canvas_container)
@@ -101,8 +115,10 @@ class SpriteViewer(QMainWindow):
         self._canvas.frameChanged.connect(self._on_canvas_frame_changed)
         canvas_layout.addWidget(self._canvas)
         
-        main_splitter.addWidget(canvas_container)
-        
+        parent_splitter.addWidget(canvas_container)
+    
+    def _create_controls_section(self, parent_splitter):
+        """Create the controls panel section."""
         # Right side - Controls with better sizing
         controls_scroll = QScrollArea()
         controls_scroll.setWidgetResizable(True)
@@ -116,7 +132,25 @@ class SpriteViewer(QMainWindow):
         controls_layout.setSpacing(8)
         controls_layout.setContentsMargins(10, 10, 10, 10)
         
-        # 1. Sprite Sheet Info (compact)
+        # Create individual control sections
+        self._create_info_section(controls_layout)
+        self._create_frame_extraction_section(controls_layout)
+        self._create_playback_section(controls_layout)
+        self._create_view_options_section(controls_layout)
+        
+        # Add stretch to push everything to top
+        controls_layout.addStretch()
+        
+        # Help text at bottom
+        self._create_help_text(controls_layout)
+        
+        # Set the controls widget
+        controls_scroll.setWidget(controls_container)
+        parent_splitter.addWidget(controls_scroll)
+    
+    def _create_info_section(self, parent_layout):
+        """Create the sprite sheet information section."""
+        # Sprite Sheet Info (compact)
         info_group = QGroupBox("Sprite Sheet Info")
         info_group.setMaximumHeight(100)
         info_layout = QVBoxLayout(info_group)
@@ -126,25 +160,37 @@ class SpriteViewer(QMainWindow):
         self._info_label.setWordWrap(True)
         self._info_label.setStyleSheet(StyleManager.get_info_label())
         info_layout.addWidget(self._info_label)
-        controls_layout.addWidget(info_group)
-        
-        # 2. Frame Extraction (with size policy)
+        parent_layout.addWidget(info_group)
+    
+    def _create_frame_extraction_section(self, parent_layout):
+        """Create the frame extraction controls section."""
+        # Frame Extraction (with size policy)
         self._frame_extractor = FrameExtractor()
         self._frame_extractor.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-        controls_layout.addWidget(self._frame_extractor)
-        
-        # 3. Playback Controls (compact)
+        parent_layout.addWidget(self._frame_extractor)
+    
+    def _create_playback_section(self, parent_layout):
+        """Create the playback controls section."""
+        # Playback Controls (compact)
         self._playback_controls = PlaybackControls()
         self._playback_controls.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-        controls_layout.addWidget(self._playback_controls)
-        
-        # 4. View Options (compact)
+        parent_layout.addWidget(self._playback_controls)
+    
+    def _create_view_options_section(self, parent_layout):
+        """Create the view options section."""
+        # View Options (compact)
         view_group = QGroupBox("View Options")
         view_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         view_layout = QVBoxLayout(view_group)
         view_layout.setContentsMargins(5, 5, 5, 5)
         
         # Background selector
+        self._create_background_selector(view_layout)
+        
+        parent_layout.addWidget(view_group)
+    
+    def _create_background_selector(self, parent_layout):
+        """Create the background selection controls."""
         bg_layout = QHBoxLayout()
         bg_layout.setSpacing(5)
         bg_label = QLabel("Background:")
@@ -163,29 +209,14 @@ class SpriteViewer(QMainWindow):
         self._color_button.setEnabled(False)
         bg_layout.addWidget(self._color_button)
         
-        view_layout.addLayout(bg_layout)
-        controls_layout.addWidget(view_group)
-        
-        # Add stretch to push everything to top
-        controls_layout.addStretch()
-        
-        # Help text at bottom
+        parent_layout.addLayout(bg_layout)
+    
+    def _create_help_text(self, parent_layout):
+        """Create the help text at the bottom of controls."""
         help_label = QLabel("💡 Drag & drop sprite sheets or use File→Open")
         help_label.setAlignment(Qt.AlignCenter)
         help_label.setStyleSheet("QLabel { color: #666; font-size: 11px; padding: 5px; }")
-        controls_layout.addWidget(help_label)
-        
-        # Set the controls widget
-        controls_scroll.setWidget(controls_container)
-        main_splitter.addWidget(controls_scroll)
-        
-        # Configure splitter
-        main_splitter.setStretchFactor(0, 3)  # Canvas gets 3x stretch
-        main_splitter.setStretchFactor(1, 1)  # Controls get 1x stretch
-        main_splitter.setSizes([900, 400])    # Initial sizes
-        
-        # Add splitter to main layout
-        main_layout.addWidget(main_splitter)
+        parent_layout.addWidget(help_label)
     
     def _setup_toolbar(self):
         """Set up main toolbar with common actions."""
@@ -286,23 +317,36 @@ class SpriteViewer(QMainWindow):
     
     def _connect_signals(self):
         """Connect all widget signals."""
-        # ============================================================================
-        # MODEL SIGNAL CONNECTIONS (Phase 3.7: Event-driven architecture)
-        # ============================================================================
+        # Connect signals from all layers
+        self._connect_model_signals()
+        self._connect_controller_signals()
+        self._connect_ui_widget_signals()
+    
+    def _connect_model_signals(self):
+        """Connect SpriteModel signals to UI update methods.
         
-        # Connect SpriteModel signals to UI update methods
+        Phase 3.7: Event-driven architecture
+        """
         self._sprite_model.frameChanged.connect(self._on_model_frame_changed)
         self._sprite_model.dataLoaded.connect(self._on_model_data_loaded)
         self._sprite_model.extractionCompleted.connect(self._on_model_extraction_completed)
         self._sprite_model.playbackStateChanged.connect(self._on_model_playback_state_changed)
         self._sprite_model.errorOccurred.connect(self._on_model_error_occurred)
         self._sprite_model.configurationChanged.connect(self._on_model_configuration_changed)
+    
+    def _connect_controller_signals(self):
+        """Connect controller signals to UI update methods."""
+        # Animation Controller signals (Phase 4.2: Timer extraction)
+        self._connect_animation_controller_signals()
         
-        # ============================================================================
-        # ANIMATION CONTROLLER SIGNAL CONNECTIONS (Phase 4.2: Timer extraction)
-        # ============================================================================
+        # Auto-detection Controller signals (Extracted workflow management)
+        self._connect_auto_detection_signals()
+    
+    def _connect_animation_controller_signals(self):
+        """Connect AnimationController signals.
         
-        # Connect AnimationController signals to UI update methods
+        Phase 4.2: Timer extraction
+        """
         self._animation_controller.frameAdvanced.connect(self._on_controller_frame_advanced)
         self._animation_controller.animationStarted.connect(self._on_controller_animation_started)
         self._animation_controller.animationPaused.connect(self._on_controller_animation_paused)
@@ -310,24 +354,32 @@ class SpriteViewer(QMainWindow):
         self._animation_controller.animationCompleted.connect(self._on_controller_animation_completed)
         self._animation_controller.errorOccurred.connect(self._on_controller_error_occurred)
         self._animation_controller.statusChanged.connect(self._on_controller_status_changed)
+    
+    def _connect_auto_detection_signals(self):
+        """Connect AutoDetectionController signals.
         
-        # ============================================================================
-        # AUTO-DETECTION CONTROLLER SIGNAL CONNECTIONS (Extracted workflow management)
-        # ============================================================================
-        
-        # Connect AutoDetectionController signals to UI update methods
+        Extracted workflow management
+        """
         self._auto_detection_controller.frameSettingsDetected.connect(self._on_frame_settings_detected)
         self._auto_detection_controller.marginSettingsDetected.connect(self._on_margin_settings_detected)
         self._auto_detection_controller.spacingSettingsDetected.connect(self._on_spacing_settings_detected)
         self._auto_detection_controller.buttonConfidenceUpdate.connect(self._on_button_confidence_update)
         self._auto_detection_controller.statusUpdate.connect(self._on_detection_status_update)
         self._auto_detection_controller.workflowStateChanged.connect(self._on_detection_workflow_state_changed)
+    
+    def _connect_ui_widget_signals(self):
+        """Connect UI widget signals.
         
-        # ============================================================================
-        # UI WIDGET SIGNAL CONNECTIONS (Phase 5: Extracted components)
-        # ============================================================================
+        Phase 5: Extracted components
+        """
+        # Frame extractor signals
+        self._connect_frame_extractor_signals()
         
-        # Frame extractor signals (updated to use AutoDetectionController)
+        # Playback control signals
+        self._connect_playback_control_signals()
+    
+    def _connect_frame_extractor_signals(self):
+        """Connect frame extractor widget signals."""
         self._frame_extractor.settingsChanged.connect(self._update_frame_slicing)
         self._frame_extractor.presetSelected.connect(self._frame_extractor.set_frame_size)
         self._frame_extractor.auto_btn.clicked.connect(self._auto_detection_controller.run_frame_detection)
@@ -336,8 +388,9 @@ class SpriteViewer(QMainWindow):
         self._frame_extractor.comprehensive_auto_btn.clicked.connect(self._auto_detection_controller.run_comprehensive_detection_with_dialog)
         self._frame_extractor.grid_checkbox.toggled.connect(self._toggle_grid)
         self._frame_extractor.modeChanged.connect(self._on_extraction_mode_changed)
-        
-        # Playback control signals (updated for Phase 4.2: Controller integration)
+    
+    def _connect_playback_control_signals(self):
+        """Connect playback control widget signals."""
         self._playback_controls.playPauseClicked.connect(self._animation_controller.toggle_playback)
         self._playback_controls.frameChanged.connect(self._on_frame_slider_changed)
         self._playback_controls.fpsChanged.connect(self._animation_controller.set_fps)
@@ -366,6 +419,10 @@ class SpriteViewer(QMainWindow):
     
     def _on_model_extraction_completed(self, frame_count: int):
         """Handle frame extraction completion from model."""
+        print(f"🎬 UI received extraction completed: {frame_count} frames")
+        print(f"🎬 Model total_frames property: {self._sprite_model.total_frames}")
+        print(f"🎬 Model extraction mode: {self._sprite_model.get_extraction_mode()}")
+        
         self._info_label.setText(self._sprite_model.sprite_info)
         if frame_count > 0:
             self._playback_controls.set_frame_range(frame_count - 1)
@@ -529,6 +586,9 @@ class SpriteViewer(QMainWindow):
         # Update UI with sprite sheet info from model
         self._info_label.setText(self._sprite_model.sprite_info)
         
+        # Update CCL availability immediately after sprite sheet loading
+        self._update_ccl_availability()
+        
         # Handle new sprite sheet workflow with proper auto-detection
         self._auto_detection_controller.handle_new_sprite_sheet_loaded()
         
@@ -610,15 +670,17 @@ class SpriteViewer(QMainWindow):
     
     def _on_extraction_mode_changed(self, mode: str):
         """Handle extraction mode change between grid and CCL."""
+        print(f"🔧 DEBUG: _on_extraction_mode_changed() called with mode: {mode}")
         try:
             # Set the extraction mode in the sprite model
             success = self._sprite_model.set_extraction_mode(mode)
+            print(f"🔧 DEBUG: sprite_model.set_extraction_mode({mode}) returned: {success}")
             
             if success:
                 # Update display with new extraction
                 self._update_display()
-                # Update playback controls
-                self._playback_controls.set_total_frames(self._sprite_model.total_frames)
+                # Update playback controls  
+                self._playback_controls.set_frame_range(self._sprite_model.total_frames - 1 if self._sprite_model.total_frames > 0 else 0)
                 if self._sprite_model.total_frames > 0:
                     self._sprite_model.set_current_frame(0)  # Reset to first frame
                 
@@ -630,6 +692,7 @@ class SpriteViewer(QMainWindow):
             else:
                 # Revert UI if mode change failed
                 current_mode = self._sprite_model.get_extraction_mode()
+                print(f"🔧 DEBUG: Mode change FAILED! Reverting to: {current_mode}")
                 self._frame_extractor.set_extraction_mode(current_mode)
                 self.statusBar().showMessage(f"Failed to switch to {mode} mode", 3000)
         
@@ -774,6 +837,9 @@ class SpriteViewer(QMainWindow):
         """Handle frame settings detected by AutoDetectionController."""
         self._frame_extractor.set_frame_size(width, height)
         self._slice_sprite_sheet()  # Re-slice with new settings
+        
+        # Update CCL availability after auto-detection
+        self._update_ccl_availability()
     
     def _on_margin_settings_detected(self, offset_x: int, offset_y: int):
         """Handle margin settings detected by AutoDetectionController."""
@@ -809,6 +875,8 @@ class SpriteViewer(QMainWindow):
             self._frame_extractor.comprehensive_auto_btn.setEnabled(False)
         else:
             self._frame_extractor.comprehensive_auto_btn.setEnabled(True)
+            # Update CCL availability when detection workflow completes
+            self._update_ccl_availability()
     
     def _update_comprehensive_button_style(self, confidence: str):
         """Update comprehensive button style based on confidence level."""

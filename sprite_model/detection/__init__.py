@@ -1,22 +1,18 @@
 """
-Auto-Detection Module
-====================
+Detection Module
+================
 
-Intelligent algorithms for automatically detecting sprite sheet parameters:
-- Margin detection: Find sprite sheet borders
-- Spacing detection: Detect gaps between frames
-- Frame size detection: Determine optimal frame dimensions
-- Comprehensive detection: Combined workflow with validation
+Automatic detection algorithms for sprite sheets including frame size, margins, and spacing.
 """
 
-from .margin_detector import MarginDetector
-from .spacing_detector import SpacingDetector  
-from .frame_detector import FrameDetector
-from .comprehensive_detector import ComprehensiveDetector
+from .frame_detector import FrameDetector, detect_frame_size, detect_rectangular_frames, detect_content_based
+from .margin_detector import MarginDetector, detect_margins
+from .spacing_detector import SpacingDetector, detect_spacing
+from .coordinator import DetectionCoordinator, DetectionResult, comprehensive_auto_detect
 
 __all__ = [
-    'MarginDetector',
-    'SpacingDetector',
-    'FrameDetector', 
-    'ComprehensiveDetector'
+    'FrameDetector', 'detect_frame_size', 'detect_rectangular_frames', 'detect_content_based',
+    'MarginDetector', 'detect_margins',
+    'SpacingDetector', 'detect_spacing', 
+    'DetectionCoordinator', 'DetectionResult', 'comprehensive_auto_detect'
 ]

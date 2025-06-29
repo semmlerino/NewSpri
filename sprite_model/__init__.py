@@ -19,7 +19,32 @@ from .core import SpriteModel
 # Import standalone functions that external code expects
 from .extraction.background_detector import detect_background_color
 from .extraction.ccl_extractor import detect_sprites_ccl_enhanced
-from .file_operations import FileOperations, load_sprite_sheet, validate_image_file
+
+# Phase 6: Import file operations with fallback handling
+try:
+    # Try Phase 6 module structure first
+    from .file_operations import FileLoader, load_sprite_sheet, validate_file_path
+    FileOperations = FileLoader  # Backwards compatibility alias
+    validate_image_file = validate_file_path  # Backwards compatibility alias
+except ImportError:
+    try:
+        # Fallback to legacy file_operations.py
+        from .file_operations import FileOperations, load_sprite_sheet, validate_image_file
+    except ImportError:
+        # Final fallback - create minimal stub implementations
+        class FileOperations:
+            def __init__(self):
+                pass
+            def load_sprite_sheet(self, file_path): 
+                return False, "File operations not available - PySide6 required", {}
+            def reload_sprite_sheet(self, file_path): 
+                return False, "File operations not available - PySide6 required", {}
+        
+        def load_sprite_sheet(file_path): 
+            return False, "File operations not available - PySide6 required", {}
+        
+        def validate_image_file(file_path): 
+            return False, "File operations not available - PySide6 required"
 
 # Version info
 __version__ = "2.0.0-refactored"

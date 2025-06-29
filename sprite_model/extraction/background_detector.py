@@ -12,6 +12,29 @@ from typing import Optional, Tuple
 import numpy as np
 from PIL import Image
 
+
+class BackgroundDetector:
+    """
+    Background color detector class.
+    Provides object-oriented interface for background color detection.
+    """
+    
+    def __init__(self):
+        """Initialize background detector."""
+        pass
+    
+    def detect_background_color(self, image_path: str) -> Optional[Tuple[Tuple[int, int, int], int]]:
+        """
+        Detect background color for transparency application.
+        
+        Args:
+            image_path: Path to the sprite sheet image
+            
+        Returns:
+            Tuple of (rgb_color, tolerance) or None if no background color detected
+        """
+        return detect_background_color(image_path)
+
 def detect_background_color(image_path: str) -> Optional[Tuple[Tuple[int, int, int], int]]:
     """
     Detect background color for transparency application.

@@ -10,6 +10,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox
 
 from config import Config
+from ui_common import DetectionResult, parse_detection_tuple, extract_confidence_from_message
 
 
 class AutoDetectionController(QObject):
@@ -178,20 +179,23 @@ class AutoDetectionController(QObject):
         
         try:
             # Try enhanced rectangular detection first
-            success, width, height, message = self._sprite_model.auto_detect_rectangular_frames()
+            result_tuple = self._sprite_model.auto_detect_rectangular_frames()
+            result = parse_detection_tuple(result_tuple)
             
-            if success:
+            if result.success:
+                width = result.parameters.get('value1', 0)
+                height = result.parameters.get('value2', 0)
                 self.frameSettingsDetected.emit(width, height)
                 
                 # Extract confidence and update button
-                confidence = self._extract_confidence_from_message(message)
-                self.buttonConfidenceUpdate.emit('frame', confidence, message)
-                self.statusUpdate.emit(message, 3000)
-                self.detectionCompleted.emit("frame", True, message)
+                result.confidence = extract_confidence_from_message(result.message)
+                self.buttonConfidenceUpdate.emit('frame', result.confidence, result.message)
+                self.statusUpdate.emit(result.message, 3000)
+                self.detectionCompleted.emit("frame", True, result.message)
             else:
-                self.buttonConfidenceUpdate.emit('frame', 'failed', message)
-                self.statusUpdate.emit(f"Frame detection failed: {message}", 3000)
-                self.detectionFailed.emit("frame", message)
+                self.buttonConfidenceUpdate.emit('frame', 'failed', result.message)
+                self.statusUpdate.emit(f"Frame detection failed: {result.message}", 3000)
+                self.detectionFailed.emit("frame", result.message)
                 
         except Exception as e:
             self.detectionFailed.emit("frame", str(e))
@@ -205,20 +209,23 @@ class AutoDetectionController(QObject):
         self.detectionStarted.emit("margins")
         
         try:
-            success, offset_x, offset_y, message = self._sprite_model.auto_detect_margins()
+            result_tuple = self._sprite_model.auto_detect_margins()
+            result = parse_detection_tuple(result_tuple)
             
-            if success:
+            if result.success:
+                offset_x = result.parameters.get('value1', 0)
+                offset_y = result.parameters.get('value2', 0)
                 self.marginSettingsDetected.emit(offset_x, offset_y)
                 
                 # Margin detection confidence based on results
-                confidence = "high" if offset_x > 0 or offset_y > 0 else "medium"
-                self.buttonConfidenceUpdate.emit('margins', confidence, message)
-                self.statusUpdate.emit(message, 3000)
-                self.detectionCompleted.emit("margins", True, message)
+                result.confidence = "high" if offset_x > 0 or offset_y > 0 else "medium"
+                self.buttonConfidenceUpdate.emit('margins', result.confidence, result.message)
+                self.statusUpdate.emit(result.message, 3000)
+                self.detectionCompleted.emit("margins", True, result.message)
             else:
-                self.buttonConfidenceUpdate.emit('margins', 'failed', message)
-                self.statusUpdate.emit(f"Margin detection failed: {message}", 3000)
-                self.detectionFailed.emit("margins", message)
+                self.buttonConfidenceUpdate.emit('margins', 'failed', result.message)
+                self.statusUpdate.emit(f"Margin detection failed: {result.message}", 3000)
+                self.detectionFailed.emit("margins", result.message)
                 
         except Exception as e:
             self.detectionFailed.emit("margins", str(e))
@@ -232,20 +239,23 @@ class AutoDetectionController(QObject):
         self.detectionStarted.emit("spacing")
         
         try:
-            success, spacing_x, spacing_y, message = self._sprite_model.auto_detect_spacing_enhanced()
+            result_tuple = self._sprite_model.auto_detect_spacing_enhanced()
+            result = parse_detection_tuple(result_tuple)
             
-            if success:
+            if result.success:
+                spacing_x = result.parameters.get('value1', 0)
+                spacing_y = result.parameters.get('value2', 0)
                 self.spacingSettingsDetected.emit(spacing_x, spacing_y)
                 
                 # Extract confidence from message
-                confidence = self._extract_confidence_from_message(message)
-                self.buttonConfidenceUpdate.emit('spacing', confidence, message)
-                self.statusUpdate.emit(message, 3000)
-                self.detectionCompleted.emit("spacing", True, message)
+                result.confidence = extract_confidence_from_message(result.message)
+                self.buttonConfidenceUpdate.emit('spacing', result.confidence, result.message)
+                self.statusUpdate.emit(result.message, 3000)
+                self.detectionCompleted.emit("spacing", True, result.message)
             else:
-                self.buttonConfidenceUpdate.emit('spacing', 'failed', message)
-                self.statusUpdate.emit(f"Spacing detection failed: {message}", 3000)
-                self.detectionFailed.emit("spacing", message)
+                self.buttonConfidenceUpdate.emit('spacing', 'failed', result.message)
+                self.statusUpdate.emit(f"Spacing detection failed: {result.message}", 3000)
+                self.detectionFailed.emit("spacing", result.message)
                 
         except Exception as e:
             self.detectionFailed.emit("spacing", str(e))
@@ -282,7 +292,7 @@ class AutoDetectionController(QObject):
         
         for line in report_lines:
             if "Auto-detected frame size:" in line or "Format-suggested size confirmed:" in line:
-                confidence = self._extract_confidence_from_message(line)
+                confidence = extract_confidence_from_message(line)
                 message = line.split('✓ ')[1] if '✓ ' in line else line
                 self.buttonConfidenceUpdate.emit('frame', confidence, message)
                 
@@ -291,20 +301,10 @@ class AutoDetectionController(QObject):
                 self.buttonConfidenceUpdate.emit('margins', 'high', message)
                 
             elif "Auto-detected spacing:" in line:
-                confidence = self._extract_confidence_from_message(line)
+                confidence = extract_confidence_from_message(line)
                 message = line.split('✓ ')[1] if '✓ ' in line else line
                 self.buttonConfidenceUpdate.emit('spacing', confidence, message)
     
-    def _extract_confidence_from_message(self, message: str) -> str:
-        """Extract confidence level from detection message."""
-        if "confidence: high" in message:
-            return "high"
-        elif "confidence: medium" in message:
-            return "medium"
-        elif "confidence: low" in message:
-            return "low"
-        else:
-            return "medium"  # default
     
     def _show_detection_results_dialog(self, success: bool, detailed_report: str):
         """Show detailed detection results in a dialog."""
