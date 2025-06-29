@@ -1,0 +1,1 @@
+"""UI component tests requiring Qt display."""
