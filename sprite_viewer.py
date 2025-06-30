@@ -267,6 +267,7 @@ class SpriteViewer(QMainWindow):
         self._grid_view.segmentCreated.connect(self._on_segment_created)
         self._grid_view.segmentDeleted.connect(self._on_segment_deleted)
         self._grid_view.segmentSelected.connect(self._on_segment_selected)
+        self._grid_view.segmentPreviewRequested.connect(self._on_segment_preview_requested)
         self._grid_view.exportRequested.connect(self._export_animation_segment)
         
         # Add refresh button for debugging
@@ -851,11 +852,19 @@ class SpriteViewer(QMainWindow):
     
     def _on_segment_selected(self, segment):
         """Handle selection of animation segment."""
-        # Switch to canvas view and play the segment
+        # Just show the segment is selected - DON'T switch tabs automatically
+        # User can use "Export Selected" button or double-click to preview
+        self._status_manager.show_message(
+            f"Selected segment '{segment.name}' (frames {segment.start_frame}-{segment.end_frame}) - Use 'Export Selected' to export"
+        )
+    
+    def _on_segment_preview_requested(self, segment):
+        """Handle segment preview request (double-click)."""
+        # Switch to canvas view and show the segment
         self._tab_widget.setCurrentIndex(0)  # Switch to Frame View tab
         self._sprite_model.set_current_frame(segment.start_frame)
         self._status_manager.show_message(
-            f"Selected segment '{segment.name}' (frames {segment.start_frame}-{segment.end_frame})"
+            f"Previewing segment '{segment.name}' (frames {segment.start_frame}-{segment.end_frame})"
         )
     
     def _export_animation_segment(self, segment):

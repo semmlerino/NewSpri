@@ -181,11 +181,15 @@ class SegmentListWidget(QListWidget):
     segmentSelected = Signal(str)  # segment_name
     segmentDeleted = Signal(str)   # segment_name
     segmentRenamed = Signal(str, str)  # old_name, new_name
+    segmentDoubleClicked = Signal(str)  # segment_name (for preview)
     
     def __init__(self):
         super().__init__()
         self.setMaximumWidth(200)
         self.setMinimumWidth(150)
+        
+        # Connect double-click for preview
+        self.itemDoubleClicked.connect(self._on_item_double_clicked)
         
     def add_segment(self, segment: AnimationSegment):
         """Add a segment to the list."""
@@ -240,6 +244,13 @@ class SegmentListWidget(QListWidget):
                 )
                 if reply == QMessageBox.Yes:
                     self.segmentDeleted.emit(segment_name)
+    
+    def _on_item_double_clicked(self, item):
+        """Handle double-click on segment item for preview."""
+        if item:
+            segment_name = item.data(Qt.UserRole)
+            if segment_name:
+                self.segmentDoubleClicked.emit(segment_name)
 
 
 class AnimationGridView(QWidget):
@@ -252,6 +263,7 @@ class AnimationGridView(QWidget):
     segmentCreated = Signal(AnimationSegment)  # new_segment
     segmentDeleted = Signal(str)  # segment_name
     segmentSelected = Signal(AnimationSegment)  # selected_segment
+    segmentPreviewRequested = Signal(AnimationSegment)  # segment_to_preview (double-click)
     exportRequested = Signal(AnimationSegment)  # segment_to_export
     
     def __init__(self):
@@ -381,14 +393,27 @@ class AnimationGridView(QWidget):
         title.setFont(QFont("Arial", 10, QFont.Bold))
         panel_layout.addWidget(title)
         
+        # Instructions
+        instructions = QLabel("Click to select • Double-click to preview")
+        instructions.setStyleSheet("""
+            QLabel {
+                font-size: 9px;
+                color: #666;
+                margin-bottom: 5px;
+            }
+        """)
+        instructions.setWordWrap(True)
+        panel_layout.addWidget(instructions)
+        
         # Segment list
         self._segment_list = SegmentListWidget()
         panel_layout.addWidget(self._segment_list)
         
         # Panel buttons
-        export_btn = QPushButton("Export Selected")
-        export_btn.clicked.connect(self._export_selected_segment)
-        panel_layout.addWidget(export_btn)
+        self._export_btn = QPushButton("Export Selected")
+        self._export_btn.setEnabled(False)  # Disabled until segment selected
+        self._export_btn.clicked.connect(self._export_selected_segment)
+        panel_layout.addWidget(self._export_btn)
         
         parent.addWidget(panel_widget)
     
@@ -397,6 +422,10 @@ class AnimationGridView(QWidget):
         self._segment_list.segmentSelected.connect(self._on_segment_selected)
         self._segment_list.segmentDeleted.connect(self._delete_segment)
         self._segment_list.segmentRenamed.connect(self._rename_segment)
+        self._segment_list.segmentDoubleClicked.connect(self._on_segment_double_clicked)
+        
+        # Connect to selection changes to update export button
+        self._segment_list.itemSelectionChanged.connect(self._on_segment_list_selection_changed)
     
     def set_frames(self, frames: List[QPixmap]):
         """Set the frames to display in the grid."""
@@ -684,6 +713,28 @@ class AnimationGridView(QWidget):
         if segment_name in self._segments:
             segment = self._segments[segment_name]
             self.segmentSelected.emit(segment)
+    
+    def _on_segment_double_clicked(self, segment_name: str):
+        """Handle segment double-click for preview."""
+        if segment_name in self._segments:
+            segment = self._segments[segment_name]
+            self.segmentPreviewRequested.emit(segment)
+    
+    def _on_segment_list_selection_changed(self):
+        """Handle changes in segment list selection to update export button."""
+        current_item = self._segment_list.currentItem()
+        if current_item:
+            segment_name = current_item.data(Qt.UserRole)
+            if segment_name and segment_name in self._segments:
+                segment = self._segments[segment_name]
+                self._export_btn.setEnabled(True)
+                self._export_btn.setText(f"Export '{segment.name}'")
+            else:
+                self._export_btn.setEnabled(False)
+                self._export_btn.setText("Export Selected")
+        else:
+            self._export_btn.setEnabled(False)
+            self._export_btn.setText("Export Selected")
     
     def _export_selected_segment(self):
         """Export the currently selected segment."""
