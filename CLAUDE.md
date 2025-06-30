@@ -8,9 +8,22 @@ Python Sprite Viewer is a professional PySide6-based application for previewing 
 
 ## Development Environment Setup
 
-### Dependencies Installation
+### Virtual Environment Setup
+The project has a virtual environment in the `venv/` directory with all dependencies pre-installed:
+
 ```bash
-# Create and activate virtual environment
+# Activate the existing virtual environment
+source venv/bin/activate  # Linux/Mac/WSL
+# or
+venv\Scripts\activate     # Windows
+
+# Verify PySide6 installation
+python -c "import PySide6; print('PySide6 version:', PySide6.__version__)"
+```
+
+### Manual Dependencies Installation (if needed)
+```bash
+# Create new virtual environment if venv/ doesn't exist
 python3 -m venv venv
 source venv/bin/activate  # Linux/Mac
 # or
@@ -26,6 +39,20 @@ pip install -r requirements.txt
 - Pillow>=8.0.0 (Image handling)
 - scipy>=1.7.0 (Scientific computations)
 - pytest>=6.0.0 (Testing framework)
+
+### Testing with PySide6
+For testing UI components and running the full application:
+
+```bash
+# Activate virtual environment first
+source venv/bin/activate
+
+# Run the main application
+python sprite_viewer.py
+
+# Test animation splitting functionality
+python test_animation_splitting.py
+```
 
 ## Running the Application
 

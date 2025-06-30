@@ -589,6 +589,10 @@ class SpriteModel(QObject):
         """Get list of extracted frames."""
         return self._sprite_frames
     
+    def get_all_frames(self) -> List[QPixmap]:
+        """Get all extracted frames (convenience method for animation splitting)."""
+        return self._sprite_frames
+    
     @property
     def original_sprite_sheet(self) -> Optional[QPixmap]:
         """Get original sprite sheet pixmap."""
