@@ -36,7 +36,7 @@ class CCLOperations:
         self._ccl_color_tolerance: int = 10  # Tolerance for background color matching
         
         # Mode state
-        self._extraction_mode: str = "grid"  # "grid" or "ccl"
+        self._extraction_mode: str = "ccl"  # "grid" or "ccl" - CCL is now the default
         
         # Callbacks for integration with main model
         self._get_original_sprite_sheet: Optional[Callable[[], QPixmap]] = None

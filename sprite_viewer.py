@@ -1,27 +1,41 @@
-#!/usr/bin/env python3
 """
-Python Sprite Viewer - Main Application
-A lightweight PySide6-based application for previewing sprite sheet animations.
-Phase 5: UI Component Extraction Complete - Clean Component-Based Architecture.
+Sprite Viewer - Main application window (REFACTORED)
+Modern sprite sheet animation viewer with improved usability.
+Refactored to use centralized managers for better maintainability.
 """
 
 import sys
-from pathlib import Path
+import os
+from typing import Optional
 
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QLabel, QPushButton, QFileDialog, QGroupBox, QColorDialog, 
-    QComboBox, QStatusBar, QToolBar, QMessageBox, QScrollArea,
-    QSplitter, QSizePolicy
+    QApplication, QMainWindow, QHBoxLayout, QVBoxLayout, QWidget,
+    QSplitter, QLabel, QSizePolicy, QMessageBox
 )
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap, QAction, QDragEnterEvent, QDropEvent
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent
 
 from config import Config
 from styles import StyleManager
+
+# Core MVC Components
 from sprite_model import SpriteModel
 from animation_controller import AnimationController
 from auto_detection_controller import AutoDetectionController
+
+# Managers (Phase 5 refactoring)
+from shortcut_manager import get_shortcut_manager
+from action_manager import get_action_manager
+from menu_manager import get_menu_manager
+
+# UI Managers
+from settings_manager import get_settings_manager
+from recent_files_manager import get_recent_files_manager
+from enhanced_status_bar import EnhancedStatusBar, StatusBarManager
+
+# Export System
+from export_dialog import ExportDialog
+from frame_exporter import get_frame_exporter
 
 # Phase 5: Extracted UI Components
 from sprite_canvas import SpriteCanvas
@@ -30,927 +44,679 @@ from frame_extractor import FrameExtractor
 
 
 class SpriteViewer(QMainWindow):
-    """Main sprite viewer application window."""
+    """
+    Main sprite viewer application window.
+    Refactored to use centralized managers for better maintainability.
     
+    Responsibilities (after refactoring):
+    - Component coordination and integration
+    - High-level event handling
+    - Window state management
+    - Signal routing between components
+    """
+
     def __init__(self):
+        """Initialize sprite viewer with manager-based architecture."""
         super().__init__()
-        self.setWindowTitle(Config.App.WINDOW_TITLE)
         
-        # Set up window geometry with optimized sizing
-        self.setGeometry(
-            Config.UI.DEFAULT_WINDOW_X, 
-            Config.UI.DEFAULT_WINDOW_Y,
-            Config.UI.DEFAULT_WINDOW_WIDTH,  # Optimized default width
-            Config.UI.DEFAULT_WINDOW_HEIGHT  # Optimized default height
-        )
+        # Initialize managers first
+        self._init_managers()
         
-        # Set minimum size from config for consistency
-        self.setMinimumSize(Config.UI.MIN_WINDOW_WIDTH, Config.UI.MIN_WINDOW_HEIGHT)
+        # Initialize core MVC components
+        self._init_core_components()
         
-        # Sprite data model (Phase 3: Data extraction complete)
-        self._sprite_model = SpriteModel()
-        
-        # Animation controller (Phase 4: Animation timing extraction)
-        self._animation_controller = AnimationController()
-        self._animation_controller.initialize(self._sprite_model, self)
-        
-        # Auto-detection controller (extracted for workflow management)
-        self._auto_detection_controller = AutoDetectionController()
-        
-        # UI setup
+        # Set up UI using managers
         self._setup_ui()
-        self._setup_toolbar()
-        self._setup_menu()
+        self._setup_managers()
+        
+        # Connect all signals
         self._connect_signals()
         
         # Initialize auto-detection controller after UI setup
         self._auto_detection_controller.initialize(self._sprite_model, self._frame_extractor)
         
-        # Enable drag and drop
-        self.setAcceptDrops(True)
-        
-        # Status bar
-        self._status_bar = QStatusBar()
-        self.setStatusBar(self._status_bar)
+        # Apply settings and show welcome
+        self._apply_settings()
         self._show_welcome_message()
+    
+    def _init_managers(self):
+        """Initialize all centralized managers."""
+        # Get manager instances (singletons)
+        self._shortcut_manager = get_shortcut_manager(self)
+        self._action_manager = get_action_manager(self)
+        self._menu_manager = get_menu_manager(self)
+        self._settings_manager = get_settings_manager()
+        self._recent_files = get_recent_files_manager()
+    
+    def _init_core_components(self):
+        """Initialize core MVC components."""
+        # Model layer
+        self._sprite_model = SpriteModel()
         
-        # Load test sprites if available
-        self._load_test_sprites()
+        # Controller layer
+        self._animation_controller = AnimationController()
+        self._animation_controller.initialize(self._sprite_model, self)
+        
+        self._auto_detection_controller = AutoDetectionController()
+        
+        # Status management will be initialized after status bar is created
+        self._status_manager = None
     
     def _setup_ui(self):
-        """Set up the user interface with improved layout."""
+        """Set up user interface using manager-based architecture."""
+        self.setWindowTitle("Python Sprite Viewer")
+        self.setMinimumSize(Config.UI.MIN_WINDOW_WIDTH, Config.UI.MIN_WINDOW_HEIGHT)
+        
+        # Enable drag & drop
+        self.setAcceptDrops(True)
+        
+        # Set up managers
+        self._setup_menu_bar()
+        self._setup_toolbar() 
+        self._setup_status_bar()
+        
+        # Set up main content area
+        self._setup_main_content()
+    
+    def _setup_managers(self):
+        """Configure managers with application-specific settings."""
+        # Configure action manager with callbacks
+        self._setup_action_callbacks()
+        
+        # Configure shortcut manager context
+        self._update_manager_context()
+        
+        # Configure menu manager with recent files
+        self._menu_manager.set_recent_files_handler(
+            lambda menu: self._recent_files.create_recent_files_menu(menu)
+        )
+    
+    def _setup_action_callbacks(self):
+        """Set up action callbacks using ActionManager."""
+        # File actions
+        self._action_manager.set_action_callback('file_open', self._load_sprites)
+        self._action_manager.set_action_callback('file_quit', self.close)
+        self._action_manager.set_action_callback('file_export_frames', self._export_frames)
+        self._action_manager.set_action_callback('file_export_current', self._export_current_frame)
+        
+        # View actions
+        self._action_manager.set_action_callback('view_zoom_in', self._zoom_in)
+        self._action_manager.set_action_callback('view_zoom_out', self._zoom_out)
+        self._action_manager.set_action_callback('view_zoom_fit', self._zoom_fit)
+        self._action_manager.set_action_callback('view_zoom_reset', self._zoom_reset)
+        self._action_manager.set_action_callback('view_toggle_grid', self._toggle_grid)
+        
+        # Animation actions
+        self._action_manager.set_action_callback('animation_toggle', 
+                                               lambda: self._animation_controller.toggle_playback())
+        self._action_manager.set_action_callback('animation_prev_frame', self._go_to_prev_frame)
+        self._action_manager.set_action_callback('animation_next_frame', self._go_to_next_frame)
+        self._action_manager.set_action_callback('animation_first_frame', self._go_to_first_frame)
+        self._action_manager.set_action_callback('animation_last_frame', self._go_to_last_frame)
+        
+        # Toolbar actions (reuse same callbacks)
+        self._action_manager.set_action_callback('toolbar_export', self._export_frames)
+        
+        # Help actions  
+        self._action_manager.set_action_callback('help_shortcuts', self._show_shortcuts)
+        self._action_manager.set_action_callback('help_about', self._show_about)
+    
+    def _setup_menu_bar(self):
+        """Set up menu bar using MenuManager."""
+        menubar = self.menuBar()
+        self._menus = self._menu_manager.create_menu_bar(menubar)
+    
+    def _setup_toolbar(self):
+        """Set up toolbar using MenuManager."""
+        # Create main toolbar
+        self._main_toolbar = self._menu_manager.create_toolbar('main')
+        
+        # Apply styling
+        if self._main_toolbar:
+            self._main_toolbar.setStyleSheet(StyleManager.get_main_toolbar())
+            
+            # Add zoom display widget
+            self._main_toolbar.addSeparator()
+            self._zoom_label = QLabel("100%")
+            self._zoom_label.setMinimumWidth(Config.UI.ZOOM_LABEL_MIN_WIDTH)
+            self._zoom_label.setAlignment(Qt.AlignCenter)
+            self._zoom_label.setStyleSheet(StyleManager.get_zoom_display())
+            self._main_toolbar.addWidget(self._zoom_label)
+    
+    def _setup_status_bar(self):
+        """Set up status bar."""
+        status_bar = EnhancedStatusBar(self)
+        self.setStatusBar(status_bar)
+        self._status_manager = StatusBarManager(status_bar)
+    
+    def _setup_main_content(self):
+        """Set up main content area."""
+        # Create central widget
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
-        # Main layout with proper margins
+        # Main horizontal layout
         main_layout = QHBoxLayout(central_widget)
         main_layout.setContentsMargins(5, 5, 5, 5)
         main_layout.setSpacing(5)
         
-        # Use QSplitter for flexible resizing
-        main_splitter = QSplitter(Qt.Horizontal)
+        # Create splitter for responsive layout
+        splitter = QSplitter(Qt.Horizontal)
+        main_layout.addWidget(splitter)
         
-        # Create main sections
-        self._create_canvas_section(main_splitter)
-        self._create_controls_section(main_splitter)
-        
-        # Configure splitter
-        main_splitter.setStretchFactor(0, 3)  # Canvas gets 3x stretch
-        main_splitter.setStretchFactor(1, 1)  # Controls get 1x stretch
-        main_splitter.setSizes([900, 400])    # Initial sizes
-        
-        # Add splitter to main layout
-        main_layout.addWidget(main_splitter)
-    
-    def _create_canvas_section(self, parent_splitter):
-        """Create the canvas display section."""
         # Left side - Canvas
-        canvas_container = QWidget()
-        canvas_layout = QVBoxLayout(canvas_container)
-        canvas_layout.setContentsMargins(0, 0, 0, 0)
+        self._canvas = self._create_canvas_section()
+        splitter.addWidget(self._canvas)
         
-        # Canvas with proper size policy
-        self._canvas = SpriteCanvas()
-        self._canvas.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self._canvas.frameChanged.connect(self._on_canvas_frame_changed)
-        canvas_layout.addWidget(self._canvas)
+        # Right side - Controls
+        controls_widget = self._create_controls_section()
+        splitter.addWidget(controls_widget)
         
-        parent_splitter.addWidget(canvas_container)
-    
-    def _create_controls_section(self, parent_splitter):
-        """Create the controls panel section."""
-        # Right side - Controls with better sizing
-        controls_scroll = QScrollArea()
-        controls_scroll.setWidgetResizable(True)
-        controls_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        controls_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        controls_scroll.setMinimumWidth(300)
-        controls_scroll.setMaximumWidth(500)
+        # Set splitter proportions
+        splitter.setSizes([700, 300])  # Canvas gets more space
+        splitter.setCollapsible(0, False)  # Canvas not collapsible
+        splitter.setCollapsible(1, False)  # Controls not collapsible
         
-        controls_container = QWidget()
-        controls_layout = QVBoxLayout(controls_container)
-        controls_layout.setSpacing(8)
-        controls_layout.setContentsMargins(10, 10, 10, 10)
-        
-        # Create individual control sections
-        self._create_info_section(controls_layout)
-        self._create_frame_extraction_section(controls_layout)
-        self._create_playback_section(controls_layout)
-        self._create_view_options_section(controls_layout)
-        
-        # Add stretch to push everything to top
-        controls_layout.addStretch()
-        
-        # Help text at bottom
-        self._create_help_text(controls_layout)
-        
-        # Set the controls widget
-        controls_scroll.setWidget(controls_container)
-        parent_splitter.addWidget(controls_scroll)
-    
-    def _create_info_section(self, parent_layout):
-        """Create the sprite sheet information section."""
-        # Sprite Sheet Info (compact)
-        info_group = QGroupBox("Sprite Sheet Info")
-        info_group.setMaximumHeight(100)
-        info_layout = QVBoxLayout(info_group)
-        info_layout.setContentsMargins(5, 5, 5, 5)
-        
-        self._info_label = QLabel("No sprite sheet loaded")
+        # Info label at bottom
+        self._info_label = QLabel("Ready - Drag and drop a sprite sheet or use File > Open")
         self._info_label.setWordWrap(True)
         self._info_label.setStyleSheet(StyleManager.get_info_label())
-        info_layout.addWidget(self._info_label)
-        parent_layout.addWidget(info_group)
+        main_layout.addWidget(self._info_label)
     
-    def _create_frame_extraction_section(self, parent_layout):
-        """Create the frame extraction controls section."""
-        # Frame Extraction (with size policy)
-        self._frame_extractor = FrameExtractor()
-        self._frame_extractor.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-        parent_layout.addWidget(self._frame_extractor)
+    def _create_canvas_section(self) -> QWidget:
+        """Create canvas section."""
+        self._canvas = SpriteCanvas()
+        # Set sprite model reference for canvas to get current frame
+        self._canvas.set_sprite_model(self._sprite_model)
+        return self._canvas
     
-    def _create_playback_section(self, parent_layout):
-        """Create the playback controls section."""
-        # Playback Controls (compact)
+    def _create_controls_section(self) -> QWidget:
+        """Create controls section."""
+        controls_widget = QWidget()
+        controls_layout = QVBoxLayout(controls_widget)
+        controls_layout.setContentsMargins(0, 0, 0, 0)
+        controls_layout.setSpacing(10)
+        
+        # Playback controls
         self._playback_controls = PlaybackControls()
-        self._playback_controls.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-        parent_layout.addWidget(self._playback_controls)
-    
-    def _create_view_options_section(self, parent_layout):
-        """Create the view options section."""
-        # View Options (compact)
-        view_group = QGroupBox("View Options")
-        view_group.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-        view_layout = QVBoxLayout(view_group)
-        view_layout.setContentsMargins(5, 5, 5, 5)
+        controls_layout.addWidget(self._playback_controls)
         
-        # Background selector
-        self._create_background_selector(view_layout)
+        # Frame extractor
+        self._frame_extractor = FrameExtractor()
+        controls_layout.addWidget(self._frame_extractor)
         
-        parent_layout.addWidget(view_group)
-    
-    def _create_background_selector(self, parent_layout):
-        """Create the background selection controls."""
-        bg_layout = QHBoxLayout()
-        bg_layout.setSpacing(5)
-        bg_label = QLabel("Background:")
-        bg_label.setMinimumWidth(70)
-        bg_layout.addWidget(bg_label)
+        # Stretch to push everything to top
+        controls_layout.addStretch()
         
-        self._bg_combo = QComboBox()
-        self._bg_combo.addItems(["Checkerboard", "Solid Color"])
-        self._bg_combo.currentTextChanged.connect(self._change_background)
-        self._bg_combo.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
-        bg_layout.addWidget(self._bg_combo)
-        
-        self._color_button = QPushButton("Color")
-        self._color_button.setMaximumWidth(60)
-        self._color_button.clicked.connect(self._choose_background_color)
-        self._color_button.setEnabled(False)
-        bg_layout.addWidget(self._color_button)
-        
-        parent_layout.addLayout(bg_layout)
-    
-    def _create_help_text(self, parent_layout):
-        """Create the help text at the bottom of controls."""
-        help_label = QLabel("💡 Drag & drop sprite sheets or use File→Open")
-        help_label.setAlignment(Qt.AlignCenter)
-        help_label.setStyleSheet("QLabel { color: #666; font-size: 11px; padding: 5px; }")
-        parent_layout.addWidget(help_label)
-    
-    def _setup_toolbar(self):
-        """Set up main toolbar with common actions."""
-        toolbar = QToolBar("Main Toolbar")
-        toolbar.setMovable(False)
-        toolbar.setStyleSheet(StyleManager.get_main_toolbar())
-        self.addToolBar(toolbar)
-        
-        # File actions
-        open_action = QAction("📁 Open", self)
-        open_action.setShortcut("Ctrl+O")
-        open_action.setToolTip("Open sprite sheet (Ctrl+O)")
-        open_action.triggered.connect(self._load_sprites)
-        toolbar.addAction(open_action)
-        
-        toolbar.addSeparator()
-        
-        # View actions
-        self._zoom_in_action = QAction("🔍+", self)
-        self._zoom_in_action.setShortcut("Ctrl++")
-        self._zoom_in_action.setToolTip("Zoom in (Ctrl++)")
-        self._zoom_in_action.triggered.connect(self._zoom_in)
-        toolbar.addAction(self._zoom_in_action)
-        
-        self._zoom_out_action = QAction("🔍-", self)
-        self._zoom_out_action.setShortcut("Ctrl+-")
-        self._zoom_out_action.setToolTip("Zoom out (Ctrl+-)")
-        self._zoom_out_action.triggered.connect(self._zoom_out)
-        toolbar.addAction(self._zoom_out_action)
-        
-        self._zoom_fit_action = QAction("🔍⇄", self)
-        self._zoom_fit_action.setShortcut("Ctrl+0")
-        self._zoom_fit_action.setToolTip("Fit to window (Ctrl+0)")
-        self._zoom_fit_action.triggered.connect(self._zoom_fit)
-        toolbar.addAction(self._zoom_fit_action)
-        
-        self._zoom_reset_action = QAction("🔍1:1", self)
-        self._zoom_reset_action.setShortcut("Ctrl+1")
-        self._zoom_reset_action.setToolTip("Reset zoom (Ctrl+1)")
-        self._zoom_reset_action.triggered.connect(self._zoom_reset)
-        toolbar.addAction(self._zoom_reset_action)
-        
-        toolbar.addSeparator()
-        
-        # Add current zoom display
-        self._zoom_label = QLabel("100%")
-        self._zoom_label.setMinimumWidth(Config.UI.ZOOM_LABEL_MIN_WIDTH)
-        self._zoom_label.setAlignment(Qt.AlignCenter)
-        self._zoom_label.setStyleSheet(StyleManager.get_zoom_display())
-        toolbar.addWidget(self._zoom_label)
-    
-    def _setup_menu(self):
-        """Set up menu bar."""
-        menubar = self.menuBar()
-        
-        # File menu
-        file_menu = menubar.addMenu("File")
-        
-        open_action = QAction("Open...", self)
-        open_action.setShortcut("Ctrl+O")
-        open_action.triggered.connect(self._load_sprites)
-        file_menu.addAction(open_action)
-        
-        file_menu.addSeparator()
-        
-        quit_action = QAction("Quit", self)
-        quit_action.setShortcut("Ctrl+Q")
-        quit_action.triggered.connect(self.close)
-        file_menu.addAction(quit_action)
-        
-        # View menu
-        view_menu = menubar.addMenu("View")
-        
-        view_menu.addAction(self._zoom_in_action)
-        view_menu.addAction(self._zoom_out_action)
-        view_menu.addAction(self._zoom_fit_action)
-        view_menu.addAction(self._zoom_reset_action)
-        view_menu.addSeparator()
-        
-        grid_action = QAction("Toggle Grid", self)
-        grid_action.setShortcut("G")
-        grid_action.setCheckable(True)
-        grid_action.triggered.connect(self._toggle_grid)
-        view_menu.addAction(grid_action)
-        
-        # Help menu
-        help_menu = menubar.addMenu("Help")
-        
-        shortcuts_action = QAction("Keyboard Shortcuts", self)
-        shortcuts_action.triggered.connect(self._show_shortcuts)
-        help_menu.addAction(shortcuts_action)
-        
-        help_menu.addSeparator()
-        
-        about_action = QAction("About", self)
-        about_action.triggered.connect(self._show_about)
-        help_menu.addAction(about_action)
+        return controls_widget
     
     def _connect_signals(self):
-        """Connect all widget signals."""
-        # Connect signals from all layers
-        self._connect_model_signals()
-        self._connect_controller_signals()
-        self._connect_ui_widget_signals()
-    
-    def _connect_model_signals(self):
-        """Connect SpriteModel signals to UI update methods.
+        """Connect signals between components."""
+        # Sprite model signals
+        self._sprite_model.frameChanged.connect(self._on_frame_changed)
+        self._sprite_model.dataLoaded.connect(self._on_sprite_loaded)
+        self._sprite_model.extractionCompleted.connect(self._on_extraction_completed)
         
-        Phase 3.7: Event-driven architecture
-        """
-        self._sprite_model.frameChanged.connect(self._on_model_frame_changed)
-        self._sprite_model.dataLoaded.connect(self._on_model_data_loaded)
-        self._sprite_model.extractionCompleted.connect(self._on_model_extraction_completed)
-        self._sprite_model.playbackStateChanged.connect(self._on_model_playback_state_changed)
-        self._sprite_model.errorOccurred.connect(self._on_model_error_occurred)
-        self._sprite_model.configurationChanged.connect(self._on_model_configuration_changed)
-    
-    def _connect_controller_signals(self):
-        """Connect controller signals to UI update methods."""
-        # Animation Controller signals (Phase 4.2: Timer extraction)
-        self._connect_animation_controller_signals()
+        # Animation controller signals
+        self._animation_controller.animationStarted.connect(self._on_playback_started)
+        self._animation_controller.animationPaused.connect(self._on_playback_paused)
+        self._animation_controller.animationStopped.connect(self._on_playback_stopped)
+        self._animation_controller.animationCompleted.connect(self._on_playback_completed)
+        self._animation_controller.frameAdvanced.connect(self._on_frame_advanced)
+        self._animation_controller.errorOccurred.connect(self._on_animation_error)
+        self._animation_controller.statusChanged.connect(self._status_manager.show_message)
         
-        # Auto-detection Controller signals (Extracted workflow management)
-        self._connect_auto_detection_signals()
-    
-    def _connect_animation_controller_signals(self):
-        """Connect AnimationController signals.
-        
-        Phase 4.2: Timer extraction
-        """
-        self._animation_controller.frameAdvanced.connect(self._on_controller_frame_advanced)
-        self._animation_controller.animationStarted.connect(self._on_controller_animation_started)
-        self._animation_controller.animationPaused.connect(self._on_controller_animation_paused)
-        self._animation_controller.animationStopped.connect(self._on_controller_animation_stopped)
-        self._animation_controller.animationCompleted.connect(self._on_controller_animation_completed)
-        self._animation_controller.errorOccurred.connect(self._on_controller_error_occurred)
-        self._animation_controller.statusChanged.connect(self._on_controller_status_changed)
-    
-    def _connect_auto_detection_signals(self):
-        """Connect AutoDetectionController signals.
-        
-        Extracted workflow management
-        """
+        # Auto-detection controller signals
         self._auto_detection_controller.frameSettingsDetected.connect(self._on_frame_settings_detected)
-        self._auto_detection_controller.marginSettingsDetected.connect(self._on_margin_settings_detected)
-        self._auto_detection_controller.spacingSettingsDetected.connect(self._on_spacing_settings_detected)
-        self._auto_detection_controller.buttonConfidenceUpdate.connect(self._on_button_confidence_update)
         self._auto_detection_controller.statusUpdate.connect(self._on_detection_status_update)
-        self._auto_detection_controller.workflowStateChanged.connect(self._on_detection_workflow_state_changed)
-    
-    def _connect_ui_widget_signals(self):
-        """Connect UI widget signals.
         
-        Phase 5: Extracted components
-        """
+        # Canvas signals
+        self._canvas.zoomChanged.connect(self._on_zoom_changed)
+        self._canvas.mouseMoved.connect(self._status_manager.update_mouse_position)
+        
         # Frame extractor signals
-        self._connect_frame_extractor_signals()
-        
-        # Playback control signals
-        self._connect_playback_control_signals()
-    
-    def _connect_frame_extractor_signals(self):
-        """Connect frame extractor widget signals."""
         self._frame_extractor.settingsChanged.connect(self._update_frame_slicing)
-        self._frame_extractor.presetSelected.connect(self._frame_extractor.set_frame_size)
-        self._frame_extractor.auto_btn.clicked.connect(self._auto_detection_controller.run_frame_detection)
-        self._frame_extractor.auto_margins_btn.clicked.connect(self._auto_detection_controller.run_margin_detection)
-        self._frame_extractor.auto_spacing_btn.clicked.connect(self._auto_detection_controller.run_spacing_detection)
-        self._frame_extractor.comprehensive_auto_btn.clicked.connect(self._auto_detection_controller.run_comprehensive_detection_with_dialog)
-        self._frame_extractor.grid_checkbox.toggled.connect(self._toggle_grid)
         self._frame_extractor.modeChanged.connect(self._on_extraction_mode_changed)
-    
-    def _connect_playback_control_signals(self):
-        """Connect playback control widget signals."""
+        
+        # Playback controls signals
         self._playback_controls.playPauseClicked.connect(self._animation_controller.toggle_playback)
-        self._playback_controls.frameChanged.connect(self._on_frame_slider_changed)
+        self._playback_controls.frameChanged.connect(self._sprite_model.set_current_frame)
         self._playback_controls.fpsChanged.connect(self._animation_controller.set_fps)
         self._playback_controls.loopToggled.connect(self._animation_controller.set_loop_mode)
         
+        # Navigation button signals (need to connect the actual buttons)
         self._playback_controls.prev_btn.clicked.connect(self._go_to_prev_frame)
         self._playback_controls.next_btn.clicked.connect(self._go_to_next_frame)
     
-    # ============================================================================
-    # MODEL SIGNAL HANDLERS (Phase 3.7: Event-driven architecture)
-    # ============================================================================
+    def _apply_settings(self):
+        """Apply saved settings."""
+        # Restore window geometry
+        self._settings_manager.restore_window_geometry(self)
     
-    def _on_model_frame_changed(self, current_frame: int, total_frames: int):
-        """Handle frame change from model."""
-        # Update canvas display
-        if self._sprite_model.sprite_frames and 0 <= current_frame < len(self._sprite_model.sprite_frames):
-            # Preserve zoom level during animation playback - don't auto-fit frames
-            self._canvas.set_pixmap(self._sprite_model.sprite_frames[current_frame], auto_fit=False)
-            self._canvas.set_frame_info(current_frame, total_frames)
-            self._playback_controls.set_current_frame(current_frame)
-    
-    def _on_model_data_loaded(self, file_path: str):
-        """Handle data loaded from model."""
-        self._info_label.setText(self._sprite_model.sprite_info)
-        self._status_bar.showMessage(f"Loaded: {self._sprite_model.file_name}")
-    
-    def _on_model_extraction_completed(self, frame_count: int):
-        """Handle frame extraction completion from model."""
-        print(f"🎬 UI received extraction completed: {frame_count} frames")
-        print(f"🎬 Model total_frames property: {self._sprite_model.total_frames}")
-        print(f"🎬 Model extraction mode: {self._sprite_model.get_extraction_mode()}")
+    def _update_manager_context(self):
+        """Update manager context based on current state."""
+        has_frames = bool(self._sprite_model.sprite_frames)
+        is_playing = self._animation_controller.is_playing
         
-        self._info_label.setText(self._sprite_model.sprite_info)
-        if frame_count > 0:
-            self._playback_controls.set_frame_range(frame_count - 1)
-            self._playback_controls.update_button_states(True, True, False)
-        else:
-            self._playback_controls.set_frame_range(0)
-            self._playback_controls.update_button_states(False, False, False)
-        
-        # Update CCL mode availability after extraction
-        self._update_ccl_availability()
+        # Update both managers
+        self._shortcut_manager.update_context(
+            has_frames=has_frames,
+            is_playing=is_playing
+        )
+        self._action_manager.update_context(
+            has_frames=has_frames,
+            is_playing=is_playing
+        )
     
-    def _on_model_playback_state_changed(self, is_playing: bool):
-        """Handle playback state change from model."""
-        # Update UI to reflect model's playback state
-        # Timer control is now handled by AnimationController
-        self._playback_controls.set_playing(is_playing)
-    
-    def _on_model_error_occurred(self, error_message: str):
-        """Handle error from model."""
-        QMessageBox.warning(self, "Sprite Model Error", error_message)
-        self._status_bar.showMessage(f"Error: {error_message}")
-    
-    def _on_model_configuration_changed(self):
-        """Handle configuration change from model."""
-        # Trigger re-extraction of frames with new settings
-        self._update_frame_slicing()
     
     # ============================================================================
-    # ANIMATION CONTROLLER SIGNAL HANDLERS (Phase 4.2: Timer extraction)
+    # FILE OPERATIONS
     # ============================================================================
-    
-    def _on_controller_frame_advanced(self, frame_index: int):
-        """Handle frame advancement from animation controller."""
-        # Update display for new frame (controller drives this during playback)
-        self._update_display()
-    
-    def _on_controller_animation_started(self):
-        """Handle animation start from controller."""
-        # Update UI state for animation start
-        self._status_bar.showMessage("Animation started")
-    
-    def _on_controller_animation_paused(self):
-        """Handle animation pause from controller."""
-        # Update UI state for animation pause
-        self._status_bar.showMessage("Animation paused")
-    
-    def _on_controller_animation_stopped(self):
-        """Handle animation stop from controller."""
-        # Update UI state for animation stop
-        self._status_bar.showMessage("Animation stopped")
-    
-    def _on_controller_animation_completed(self):
-        """Handle animation completion from controller."""
-        # Update UI state for animation completion
-        self._status_bar.showMessage("Animation completed")
-    
-    def _on_controller_error_occurred(self, error_message: str):
-        """Handle error from animation controller."""
-        # Display controller error to user
-        self._status_bar.showMessage(f"Animation error: {error_message}")
-    
-    def _on_controller_status_changed(self, status_message: str):
-        """Handle status updates from animation controller."""
-        # Display controller status in status bar
-        self._status_bar.showMessage(status_message)
-    
-    def _show_welcome_message(self):
-        """Show welcome message in status bar."""
-        self._status_bar.showMessage("Welcome! Drag & drop sprite sheets or click Open to get started")
-        # Reset model to default state
-        self._sprite_model.clear_sprite_data()
-        self._info_label.setText("No sprite sheet loaded")
-    
-    def _on_canvas_frame_changed(self, current: int, total: int):
-        """Handle frame info change from canvas."""
-        if total > 0:
-            self._status_bar.showMessage(f"Frame {current + 1} of {total}")
-    
-    def _zoom_in(self):
-        """Zoom in by 20%."""
-        self._canvas.set_zoom(self._canvas._zoom_factor * Config.Canvas.ZOOM_FACTOR)
-        self._update_zoom_label()
-    
-    def _zoom_out(self):
-        """Zoom out by 20%."""
-        self._canvas.set_zoom(self._canvas._zoom_factor / Config.Canvas.ZOOM_FACTOR)
-        self._update_zoom_label()
-    
-    def _zoom_fit(self):
-        """Fit sprite to window."""
-        self._canvas.fit_to_window()
-        self._update_zoom_label()
-    
-    def _zoom_reset(self):
-        """Reset zoom to 100%."""
-        self._canvas.set_zoom(1.0)
-        self._update_zoom_label()
-    
-    def _update_zoom_label(self):
-        """Update zoom percentage display."""
-        zoom_percent = int(self._canvas.get_zoom_factor() * 100)
-        self._zoom_label.setText(f"{zoom_percent}%")
-    
-    def _show_shortcuts(self):
-        """Show keyboard shortcuts dialog."""
-        shortcuts = """
-<h3>Keyboard Shortcuts</h3>
-<table>
-<tr><td><b>Space</b></td><td>Play/Pause animation</td></tr>
-<tr><td><b>← / →</b></td><td>Previous/Next frame</td></tr>
-<tr><td><b>Home/End</b></td><td>First/Last frame</td></tr>
-<tr><td><b>Ctrl+O</b></td><td>Open sprite sheet</td></tr>
-<tr><td><b>Ctrl++/-</b></td><td>Zoom in/out</td></tr>
-<tr><td><b>Ctrl+0</b></td><td>Fit to window</td></tr>
-<tr><td><b>Ctrl+1</b></td><td>Reset zoom (100%)</td></tr>
-<tr><td><b>G</b></td><td>Toggle grid overlay</td></tr>
-<tr><td><b>Mouse wheel</b></td><td>Zoom in/out</td></tr>
-<tr><td><b>Click+drag</b></td><td>Pan view</td></tr>
-</table>
-        """
-        QMessageBox.information(self, "Keyboard Shortcuts", shortcuts)
-    
-    def _show_about(self):
-        """Show about dialog."""
-        about_text = """
-<h3>Python Sprite Viewer</h3>
-<p>Version 2.0</p>
-<p>A modern sprite sheet animation viewer with improved usability.</p>
-<p>Features:</p>
-<ul>
-<li>Automatic frame extraction</li>
-<li>Smooth animation playback</li>
-<li>Intuitive controls</li>
-<li>Smart size detection</li>
-</ul>
-        """
-        QMessageBox.about(self, "About Sprite Viewer", about_text)
     
     def _load_sprites(self):
         """Load sprite files or sprite sheet."""
+        from PySide6.QtWidgets import QFileDialog
+        
         file_dialog = QFileDialog()
         file_path, _ = file_dialog.getOpenFileName(
             self, "Load Sprite Sheet", "", 
-            "Image Files (*.png *.jpg *.jpeg *.bmp *.gif);;All Files (*)"
+            f"Images ({Config.File.IMAGE_FILTER})"
         )
         
         if file_path:
-            self._load_sprite_sheet(file_path)
+            self._load_sprite_file(file_path)
     
-    def _load_sprite_sheet(self, file_path: str):
-        """Load and slice a sprite sheet using SpriteModel."""
-        # Load sprite sheet through model (Phase 3.3: File loading extraction)
+    def _load_sprite_file(self, file_path: str):
+        """Load a sprite file."""
         success, error_message = self._sprite_model.load_sprite_sheet(file_path)
         
-        if not success:
-            # Handle loading error with UI feedback
-            QMessageBox.warning(self, "Error", error_message)
-            self._show_welcome_message()
+        if success:
+            # Add to recent files
+            self._recent_files.add_file_to_recent(file_path)
+            
+            # Update context for managers
+            self._update_manager_context()
+            
+            # Update display first (fast)
+            self._canvas.update()
+            self._info_label.setText(self._sprite_model.sprite_info)
+            
+            # Trigger appropriate detection based on current extraction mode
+            current_mode = self._frame_extractor.get_extraction_mode()
+            if current_mode == "ccl":
+                # For CCL mode, try direct CCL extraction without grid auto-detection
+                self._status_manager.show_message("Running CCL extraction...")
+                self._update_frame_slicing()  # This will trigger CCL extraction
+            else:
+                # For grid mode, run comprehensive grid auto-detection
+                self._auto_detection_controller.run_comprehensive_detection_with_dialog()
+        else:
+            QMessageBox.critical(self, "Load Error", error_message)
+    
+    # ============================================================================
+    # EXPORT OPERATIONS
+    # ============================================================================
+    
+    def _export_frames(self):
+        """Show export dialog for exporting frames."""
+        if not self._sprite_model.sprite_frames:
+            QMessageBox.warning(self, "No Frames", "No frames to export.")
             return
         
-        # Update UI with sprite sheet info from model
-        self._info_label.setText(self._sprite_model.sprite_info)
-        
-        # Update CCL availability immediately after sprite sheet loading
-        self._update_ccl_availability()
-        
-        # Handle new sprite sheet workflow with proper auto-detection
-        self._auto_detection_controller.handle_new_sprite_sheet_loaded()
-        
-        # Slice the sprite sheet and update display  
-        self._slice_sprite_sheet()
-        self._update_display()
-        
-        # Update status bar
-        self._status_bar.showMessage(f"Loaded: {self._sprite_model.file_name}")
+        dialog = ExportDialog(
+            self,
+            frame_count=len(self._sprite_model.sprite_frames),
+            current_frame=self._sprite_model.current_frame
+        )
+        dialog.exportRequested.connect(self._handle_export_request)
+        dialog.exec()
     
-    def _load_test_sprites(self):
-        """Load test sprites from various common locations."""
-        test_paths = [
-            Path("test_sprite_sheet.png"),
-            Path("Archer") / "*.png",
-            Path("sprites") / "*.png",
-            Path("assets") / "*.png"
-        ]
+    def _export_current_frame(self):
+        """Export only the current frame."""
+        if not self._sprite_model.sprite_frames:
+            QMessageBox.warning(self, "No Frames", "No frames to export.")
+            return
         
-        for path_pattern in test_paths:
-            if path_pattern.parent.exists():
-                sprite_files = list(path_pattern.parent.glob(path_pattern.name))
-                if sprite_files:
-                    self._load_sprite_sheet(str(sprite_files[0]))
-                    break
-            elif path_pattern.exists():
-                self._load_sprite_sheet(str(path_pattern))
-                break
+        dialog = ExportDialog(
+            self,
+            frame_count=len(self._sprite_model.sprite_frames),
+            current_frame=self._sprite_model.current_frame
+        )
+        
+        # Pre-configure for single frame export
+        dialog.selected_radio.setChecked(True)
+        dialog._update_ui_state()
+        
+        dialog.exportRequested.connect(self._handle_export_request)
+        dialog.exec()
     
-    def _slice_sprite_sheet(self):
-        """Slice the original sprite sheet into individual frames using SpriteModel."""
-        # Get frame extraction settings from UI
-        frame_width, frame_height = self._frame_extractor.get_frame_size()
-        offset_x, offset_y = self._frame_extractor.get_offset()
-        spacing_x, spacing_y = self._frame_extractor.get_spacing()
+    def _handle_export_request(self, settings: dict):
+        """Handle export request from dialog."""
+        exporter = get_frame_exporter()
         
-        # Extract frames through model (Phase 3.4: Frame extraction)
-        success, error_message, total_frames = self._sprite_model.extract_frames(
-            frame_width, frame_height, offset_x, offset_y, spacing_x, spacing_y
+        success = exporter.export_frames(
+            frames=self._sprite_model.sprite_frames,
+            output_dir=settings['output_dir'],
+            base_name=settings['base_name'],
+            format=settings['format'],
+            mode=settings['mode'],
+            scale_factor=settings['scale_factor'],
+            pattern=settings.get('pattern', Config.Export.DEFAULT_PATTERN),
+            selected_indices=settings.get('selected_indices', None)
         )
         
         if not success:
-            # Handle extraction error
-            self._info_label.setText(self._sprite_model.sprite_info)
-            QMessageBox.warning(self, "Frame Extraction Error", error_message)
-            return
+            QMessageBox.critical(self, "Export Failed", "Failed to start export.")
+    
+    # ============================================================================
+    # VIEW OPERATIONS
+    # ============================================================================
+    
+    def _zoom_in(self):
+        """Zoom in on canvas."""
+        self._canvas.zoom_in()
+    
+    def _zoom_out(self):
+        """Zoom out on canvas."""
+        self._canvas.zoom_out()
+    
+    def _zoom_fit(self):
+        """Fit canvas to window."""
+        self._canvas.fit_to_window()
+    
+    def _zoom_reset(self):
+        """Reset canvas zoom to 100%."""
+        self._canvas.reset_view()
+    
+    def _toggle_grid(self):
+        """Toggle grid overlay."""
+        self._canvas.toggle_grid()
+    
+    def _on_zoom_changed(self, zoom_factor: float):
+        """Handle zoom change."""
+        percentage = int(zoom_factor * 100)
+        self._zoom_label.setText(f"{percentage}%")
+    
+    # ============================================================================
+    # ANIMATION OPERATIONS
+    # ============================================================================
+    
+    def _go_to_prev_frame(self):
+        """Go to previous frame."""
+        self._sprite_model.previous_frame()
+    
+    def _go_to_next_frame(self):
+        """Go to next frame."""
+        self._sprite_model.next_frame()
+    
+    def _go_to_first_frame(self):
+        """Go to first frame."""
+        self._sprite_model.first_frame()
+    
+    def _go_to_last_frame(self):
+        """Go to last frame."""
+        self._sprite_model.last_frame()
+    
+    # ============================================================================
+    # SIGNAL HANDLERS
+    # ============================================================================
+    
+    def _on_frame_changed(self, frame_index: int, total_frames: int):
+        """Handle frame change."""
+        # Update canvas frame info and trigger repaint with new frame
+        self._canvas.set_frame_info(frame_index, total_frames)
+        self._canvas.update_with_current_frame()
         
-        # Update UI with extraction results
-        self._info_label.setText(self._sprite_model.sprite_info)
+        # Update playback controls
+        self._playback_controls.set_current_frame(frame_index)
+    
+    def _on_sprite_loaded(self, file_path: str):
+        """Handle sprite loaded."""
+        self._canvas.reset_view()
+        self._canvas.update()
         
-        if total_frames > 0:
-            # Update playback controls for successful extraction
-            self._playback_controls.set_frame_range(total_frames - 1)
+        # Update managers context
+        self._update_manager_context()
+        
+        # Enable CCL mode - always available when sprite is loaded
+        self._frame_extractor.set_ccl_available(True, 0)
+    
+    def _on_extraction_completed(self, frame_count: int):
+        """Handle extraction completion."""
+        if frame_count > 0:
+            self._playback_controls.set_frame_range(frame_count - 1)
             self._playback_controls.update_button_states(True, True, False)
+            
+            # Update canvas with frame info
+            current_frame = self._sprite_model.current_frame
+            self._canvas.set_frame_info(current_frame, frame_count)
         else:
-            # No frames extracted - reset playback controls
             self._playback_controls.set_frame_range(0)
             self._playback_controls.update_button_states(False, False, False)
+            self._canvas.set_frame_info(0, 0)
+        
+        # Update managers context
+        self._update_manager_context()
+        
+        # Update display with current frame
+        self._canvas.update_with_current_frame()
+    
+    def _on_playback_started(self):
+        """Handle playback start."""
+        self._playback_controls.update_button_states(False, True, True)
+        self._update_manager_context()
+    
+    def _on_playback_paused(self):
+        """Handle playback pause."""
+        self._playback_controls.update_button_states(True, True, True)
+        self._update_manager_context()
+    
+    def _on_playback_stopped(self):
+        """Handle playback stop."""
+        self._playback_controls.update_button_states(True, True, False)
+        self._update_manager_context()
+    
+    def _on_playback_completed(self):
+        """Handle playback completion."""
+        self._playback_controls.update_button_states(True, True, False)
+        self._update_manager_context()
+    
+    def _on_frame_advanced(self, frame_index: int):
+        """Handle frame advancement from animation controller."""
+        # Frame advancement is handled by the animation controller
+        # UI updates happen through sprite model frameChanged signal
+        pass
+    
+    def _on_animation_error(self, error_message: str):
+        """Handle animation controller error."""
+        QMessageBox.warning(self, "Animation Error", error_message)
+    
+    def _on_frame_settings_detected(self, width: int, height: int):
+        """Handle frame settings detected."""
+        self._frame_extractor.set_frame_size(width, height)
+        self._update_frame_slicing()
+    
+    def _on_detection_status_update(self, message: str):
+        """Handle detection status update."""
+        self._status_manager.show_message(message)
+    
+    def _on_extraction_mode_changed(self, mode: str):
+        """Handle extraction mode change (grid vs CCL)."""
+        if not self._sprite_model.original_sprite_sheet:
+            return
+        
+        # Update sprite model extraction mode
+        self._sprite_model.set_extraction_mode(mode)
+        
+        # Update info label immediately to reflect mode change
+        self._info_label.setText(self._sprite_model.sprite_info)
+        
+        # Re-extract frames with new mode
+        self._update_frame_slicing()
+        
+        # Update status
+        mode_name = "CCL" if mode == "ccl" else "Grid"
+        self._status_manager.show_message(f"Switched to {mode_name} extraction mode")
     
     def _update_frame_slicing(self):
         """Update frame slicing based on current settings."""
         if not self._sprite_model.original_sprite_sheet:
             return
         
-        # Re-slice with new dimensions
-        self._slice_sprite_sheet()
+        # Get current extraction mode
+        mode = self._frame_extractor.get_extraction_mode()
         
-        # Reset to first frame if current is out of bounds
-        if self._sprite_model.current_frame >= len(self._sprite_model.sprite_frames):
-            self._sprite_model.set_current_frame(0)
-        
-        # Update display
-        self._update_display()
-        
-        # Update grid
-        if self._frame_extractor.grid_checkbox.isChecked():
+        if mode == "ccl":
+            # Use CCL extraction
+            success, error_message, total_frames = self._sprite_model.extract_ccl_frames()
+        else:
+            # Get frame extraction settings for grid mode
             frame_width, frame_height = self._frame_extractor.get_frame_size()
-            self._canvas.set_grid_overlay(True, max(frame_width, frame_height))
-    
-    def _on_extraction_mode_changed(self, mode: str):
-        """Handle extraction mode change between grid and CCL."""
-        print(f"🔧 DEBUG: _on_extraction_mode_changed() called with mode: {mode}")
-        try:
-            # Set the extraction mode in the sprite model
-            success = self._sprite_model.set_extraction_mode(mode)
-            print(f"🔧 DEBUG: sprite_model.set_extraction_mode({mode}) returned: {success}")
+            offset_x, offset_y = self._frame_extractor.get_offset()
+            spacing_x, spacing_y = self._frame_extractor.get_spacing()
             
-            if success:
-                # Update display with new extraction
-                self._update_display()
-                # Update playback controls  
-                self._playback_controls.set_frame_range(self._sprite_model.total_frames - 1 if self._sprite_model.total_frames > 0 else 0)
-                if self._sprite_model.total_frames > 0:
-                    self._sprite_model.set_current_frame(0)  # Reset to first frame
-                
-                # Show status message
-                if mode == "ccl":
-                    self.statusBar().showMessage(f"Switched to CCL mode: {self._sprite_model.total_frames} individual sprites", 3000)
-                else:
-                    self.statusBar().showMessage(f"Switched to Grid mode: {self._sprite_model.total_frames} frames", 3000)
-            else:
-                # Revert UI if mode change failed
-                current_mode = self._sprite_model.get_extraction_mode()
-                print(f"🔧 DEBUG: Mode change FAILED! Reverting to: {current_mode}")
-                self._frame_extractor.set_extraction_mode(current_mode)
-                self.statusBar().showMessage(f"Failed to switch to {mode} mode", 3000)
+            # Extract frames using grid mode
+            success, error_message, total_frames = self._sprite_model.extract_frames(
+                frame_width, frame_height, offset_x, offset_y, spacing_x, spacing_y
+            )
         
-        except Exception as e:
-            self.statusBar().showMessage(f"Error switching extraction mode: {str(e)}", 5000)
-    
-    def _update_ccl_availability(self):
-        """Update CCL mode availability based on model state."""
-        available = self._sprite_model.is_ccl_available()
-        sprite_count = len(self._sprite_model.get_ccl_sprite_bounds()) if available else 0
-        self._frame_extractor.set_ccl_available(available, sprite_count)
-    
-    def _update_display(self):
-        """Update the canvas display."""
-        if self._sprite_model.sprite_frames and 0 <= self._sprite_model.current_frame < len(self._sprite_model.sprite_frames):
-            # Preserve zoom level during frame updates - don't auto-fit
-            self._canvas.set_pixmap(self._sprite_model.sprite_frames[self._sprite_model.current_frame], auto_fit=False)
-            self._canvas.set_frame_info(self._sprite_model.current_frame, len(self._sprite_model.sprite_frames))
-            self._playback_controls.set_current_frame(self._sprite_model.current_frame)
-            self._update_navigation_buttons()
-            # Update zoom label to reflect current zoom level
-            self._update_zoom_label()
-        else:
-            self._canvas.set_pixmap(QPixmap())
-            self._canvas.set_frame_info(0, 0)
-            self._playback_controls.set_current_frame(0)
-            self._update_navigation_buttons()
-            # Update zoom label for empty state
-            self._update_zoom_label()
-            # If no sprite sheet is loaded, show welcome message
-            if not self._sprite_model.original_sprite_sheet:
-                self._show_welcome_message()
-    
-    def _update_navigation_buttons(self):
-        """Update navigation button states."""
-        has_frames = bool(self._sprite_model.sprite_frames)
-        at_start = self._sprite_model.current_frame == 0
-        at_end = self._sprite_model.current_frame == len(self._sprite_model.sprite_frames) - 1 if has_frames else True
+        if not success:
+            QMessageBox.warning(self, "Frame Extraction Error", error_message)
+            return
         
-        self._playback_controls.update_button_states(has_frames, at_start, at_end)
+        # Update info
+        self._info_label.setText(self._sprite_model.sprite_info)
+        
+        # Update managers context
+        self._update_manager_context()
+        
+        # Ensure first frame is displayed after extraction
+        if total_frames > 0:
+            self._sprite_model.set_current_frame(0)
+            self._canvas.update_with_current_frame()
     
-    def _toggle_grid(self, checked: bool = None):
-        """Toggle grid overlay."""
-        if checked is None:
-            checked = self._frame_extractor.grid_checkbox.isChecked()
-            self._frame_extractor.grid_checkbox.setChecked(not checked)
-        else:
-            frame_width, frame_height = self._frame_extractor.get_frame_size()
-            self._canvas.set_grid_overlay(checked, max(frame_width, frame_height))
+    # ============================================================================
+    # HELP DIALOGS
+    # ============================================================================
     
-    def _on_frame_slider_changed(self, value: int):
-        """Handle frame slider change using SpriteModel."""
-        if self._sprite_model.sprite_frames and 0 <= value < len(self._sprite_model.sprite_frames):
-            if self._sprite_model.is_playing:
-                self._animation_controller.pause_animation()
-            self._sprite_model.set_current_frame(value)
-            self._update_display()
+    def _show_shortcuts(self):
+        """Show keyboard shortcuts dialog using ShortcutManager."""
+        help_html = self._shortcut_manager.generate_help_html()
+        QMessageBox.information(self, "Keyboard Shortcuts", help_html)
     
+    def _show_about(self):
+        """Show about dialog."""
+        about_text = """
+<h3>Python Sprite Viewer</h3>
+<p>Version 2.0 (Refactored)</p>
+<p>A modern sprite sheet animation viewer with improved usability and architecture.</p>
+<p>Features:</p>
+<ul>
+<li>Automatic frame extraction</li>
+<li>Smooth animation playback</li>
+<li>Intuitive controls</li>
+<li>Smart size detection</li>
+<li>Frame export (PNG, JPG, BMP, GIF)</li>
+<li>Sprite sheet generation</li>
+<li>Centralized manager architecture</li>
+</ul>
+        """
+        QMessageBox.about(self, "About Sprite Viewer", about_text)
     
-    def _go_to_prev_frame(self):
-        """Go to previous frame using SpriteModel."""
-        if self._sprite_model.sprite_frames and self._sprite_model.current_frame > 0:
-            if self._sprite_model.is_playing:
-                self._animation_controller.pause_animation()
-            self._sprite_model.previous_frame()
-            self._update_display()
+    def _show_welcome_message(self):
+        """Show welcome message."""
+        self._info_label.setText("Ready - Drag and drop a sprite sheet or use File > Open")
     
-    def _go_to_next_frame(self):
-        """Go to next frame using SpriteModel."""
-        if self._sprite_model.sprite_frames and self._sprite_model.current_frame < len(self._sprite_model.sprite_frames) - 1:
-            if self._sprite_model.is_playing:
-                self._animation_controller.pause_animation()
-            self._sprite_model.next_frame()
-            self._update_display()
-    
-    def _change_background(self, bg_type: str):
-        """Change background type."""
-        if bg_type == "Checkerboard":
-            self._canvas.set_background_mode(True)
-            self._color_button.setEnabled(False)
-        else:
-            self._canvas.set_background_mode(False)
-            self._color_button.setEnabled(True)
-    
-    def _choose_background_color(self):
-        """Choose background color."""
-        color = QColorDialog.getColor(Qt.gray, self)
-        if color.isValid():
-            self._canvas.set_background_mode(False, color)
+    # ============================================================================
+    # EVENT HANDLERS
+    # ============================================================================
     
     def dragEnterEvent(self, event: QDragEnterEvent):
         """Handle drag enter event."""
         if event.mimeData().hasUrls():
-            for url in event.mimeData().urls():
-                if url.toLocalFile().lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
-                    event.acceptProposedAction()
-                    self._canvas.setStyleSheet(StyleManager.get_canvas_drag_hover())
-                    self._status_bar.showMessage("Drop sprite sheet to load...")
-                    return
-    
-    def dropEvent(self, event: QDropEvent):
-        """Handle file drop event."""
-        # Reset canvas style
-        self._canvas.setStyleSheet(StyleManager.get_canvas_normal())
-        
-        urls = event.mimeData().urls()
-        if urls:
-            file_path = urls[0].toLocalFile()
-            if file_path.lower().endswith(('.png', '.jpg', '.jpeg', '.bmp', '.gif')):
-                self._load_sprite_sheet(file_path)
-                event.acceptProposedAction()
+            event.acceptProposedAction()
+            self._canvas.setStyleSheet(StyleManager.get_canvas_drag_hover())
     
     def dragLeaveEvent(self, event):
         """Handle drag leave event."""
         self._canvas.setStyleSheet(StyleManager.get_canvas_normal())
         self._show_welcome_message()
     
-    def keyPressEvent(self, event):
-        """Handle keyboard shortcuts."""
-        key = event.key()
+    def dropEvent(self, event: QDropEvent):
+        """Handle drop event."""
+        self._canvas.setStyleSheet(StyleManager.get_canvas_normal())
         
+        if event.mimeData().hasUrls():
+            file_path = event.mimeData().urls()[0].toLocalFile()
+            self._load_sprite_file(file_path)
+            event.acceptProposedAction()
+    
+    def keyPressEvent(self, event):
+        """Handle keyboard shortcuts using ShortcutManager."""
+        key = event.key()
+        modifiers = event.modifiers()
+        
+        # Create key sequence string
+        key_sequence = ""
+        if modifiers & Qt.ControlModifier:
+            key_sequence += "Ctrl+"
+        if modifiers & Qt.ShiftModifier:
+            key_sequence += "Shift+"
+        if modifiers & Qt.AltModifier:
+            key_sequence += "Alt+"
+        
+        # Add key name
         if key == Qt.Key_Space:
-            self._animation_controller.toggle_playback()
+            key_sequence += "Space"
+        elif key == Qt.Key_Left:
+            key_sequence += "Left"
+        elif key == Qt.Key_Right:
+            key_sequence += "Right"
+        elif key == Qt.Key_Home:
+            key_sequence += "Home"
+        elif key == Qt.Key_End:
+            key_sequence += "End"
         elif key == Qt.Key_G:
-            self._toggle_grid()
-        elif key == Qt.Key_Left and self._sprite_model.sprite_frames:
-            self._go_to_prev_frame()
-        elif key == Qt.Key_Right and self._sprite_model.sprite_frames:
-            self._go_to_next_frame()
-        elif key == Qt.Key_Home and self._sprite_model.sprite_frames:
-            self._go_to_first_frame()
-        elif key == Qt.Key_End and self._sprite_model.sprite_frames:
-            self._go_to_last_frame()
+            key_sequence += "G"
+        elif key == Qt.Key_Plus:
+            key_sequence += "+"
+        elif key == Qt.Key_Minus:
+            key_sequence += "-"
+        elif key == Qt.Key_0:
+            key_sequence += "0"
+        elif key == Qt.Key_1:
+            key_sequence += "1"
+        elif key == Qt.Key_O:
+            key_sequence += "O"
+        elif key == Qt.Key_Q:
+            key_sequence += "Q"
+        elif key == Qt.Key_E:
+            key_sequence += "E"
+        else:
+            # Let parent handle other keys
+            super().keyPressEvent(event)
+            return
+        
+        # Try to handle with shortcut manager
+        if self._shortcut_manager.handle_key_press(key_sequence):
+            event.accept()
         else:
             super().keyPressEvent(event)
     
-    # ============================================================================
-    # AUTO-DETECTION CONTROLLER SIGNAL HANDLERS
-    # ============================================================================
-    
-    def _on_frame_settings_detected(self, width: int, height: int):
-        """Handle frame settings detected by AutoDetectionController."""
-        self._frame_extractor.set_frame_size(width, height)
-        self._slice_sprite_sheet()  # Re-slice with new settings
+    def closeEvent(self, event):
+        """Handle close event."""
+        # Save settings
+        self._settings_manager.save_window_geometry(self)
         
-        # Update CCL availability after auto-detection
-        self._update_ccl_availability()
-    
-    def _on_margin_settings_detected(self, offset_x: int, offset_y: int):
-        """Handle margin settings detected by AutoDetectionController."""
-        self._frame_extractor.offset_x.setValue(offset_x)
-        self._frame_extractor.offset_y.setValue(offset_y)
-        self._slice_sprite_sheet()  # Re-slice with new settings
-    
-    def _on_spacing_settings_detected(self, spacing_x: int, spacing_y: int):
-        """Handle spacing settings detected by AutoDetectionController."""
-        self._frame_extractor.spacing_x.setValue(spacing_x)
-        self._frame_extractor.spacing_y.setValue(spacing_y)
-        self._slice_sprite_sheet()  # Re-slice with new settings
-    
-    def _on_button_confidence_update(self, button_type: str, confidence: str, message: str):
-        """Handle button confidence updates from AutoDetectionController."""
-        if button_type == 'comprehensive':
-            self._update_comprehensive_button_style(confidence)
-        else:
-            # Handle individual button confidence updates
-            if confidence == 'reset':
-                self._frame_extractor.reset_auto_button_style(button_type)
-            else:
-                self._frame_extractor.update_auto_button_confidence(button_type, confidence, message)
-    
-    def _on_detection_status_update(self, message: str, timeout_ms: int):
-        """Handle status updates from AutoDetectionController."""
-        self._status_bar.showMessage(message, timeout_ms)
-    
-    def _on_detection_workflow_state_changed(self, state: str):
-        """Handle workflow state changes from AutoDetectionController."""
-        if state == "working":
-            self._frame_extractor.comprehensive_auto_btn.setText("🔄 Working...")
-            self._frame_extractor.comprehensive_auto_btn.setEnabled(False)
-        else:
-            self._frame_extractor.comprehensive_auto_btn.setEnabled(True)
-            # Update CCL availability when detection workflow completes
-            self._update_ccl_availability()
-    
-    def _update_comprehensive_button_style(self, confidence: str):
-        """Update comprehensive button style based on confidence level."""
-        if confidence == 'success':
-            self._frame_extractor.comprehensive_auto_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #2e7d32;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    padding: 10px 20px;
-                    font-weight: bold;
-                    font-size: 14px;
-                }
-            """)
-            self._frame_extractor.comprehensive_auto_btn.setText("✓ Auto-Detected")
-        elif confidence == 'reset':
-            self._frame_extractor.comprehensive_auto_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #1976d2;
-                    color: white;
-                    border: none;
-                    border-radius: 6px;
-                    padding: 10px 20px;
-                    font-weight: bold;
-                    font-size: 14px;
-                }
-                QPushButton:hover {
-                    background-color: #1565c0;
-                }
-            """)
-            self._frame_extractor.comprehensive_auto_btn.setText("🔍 Auto-Detect All")
-    
-    def _update_playback_ui(self, is_playing: bool):
-        """Update UI based on playback state."""
-        # This method is for toolbar updates if we add play/pause to toolbar
-        pass
-    
-    def _update_controls_width(self):
-        """Update controls panel width based on current window size with optimized ratios."""
-        if hasattr(self, '_controls_container'):
-            window_width = self.width()
-            
-            # Calculate responsive width with optimized breakpoints
-            if window_width < 800:
-                # Small screens: need more controls space for usability
-                ratio = 0.35
-            elif window_width < 1000:
-                # Medium screens: use optimized ratio
-                ratio = Config.UI.CONTROLS_WIDTH_RATIO  # 0.22
-            else:
-                # Large screens: minimize controls dominance
-                ratio = 0.20
-            
-            calculated_width = int(window_width * ratio)
-            responsive_width = max(
-                Config.UI.CONTROLS_MIN_WIDTH,
-                min(calculated_width, Config.UI.CONTROLS_MAX_WIDTH)
-            )
-            
-            # Apply width to the scroll area (which contains the controls)
-            self._controls_container.setMinimumWidth(responsive_width)
-            self._controls_container.setMaximumWidth(responsive_width)
-    
-    def resizeEvent(self, event):
-        """Handle window resize events."""
-        super().resizeEvent(event)
+        # Accept close
+        event.accept()
 
 
 def main():
     """Main application entry point."""
     app = QApplication(sys.argv)
     app.setApplicationName("Python Sprite Viewer")
-    app.setApplicationVersion("2.0")
+    app.setApplicationVersion("2.0 (Refactored)")
     
     # Set application style
     app.setStyle("Fusion")

@@ -244,12 +244,15 @@ class SpriteModel(QObject):
         def ccl_available_callback():
             return self.is_ccl_available()
         
-        def detect_sprites_callback(sprite_sheet):
-            # Use CCLExtractor
-            return self._ccl_extractor.extract_sprites(sprite_sheet)
+        def detect_sprites_callback(sprite_sheet_path):
+            # Import the actual CCL detection function to return dictionary format
+            from sprite_model.extraction.ccl_extractor import detect_sprites_ccl_enhanced
+            return detect_sprites_ccl_enhanced(sprite_sheet_path)
         
-        def detect_background_callback(sprite_sheet):
-            return self._background_detector.detect_background_color(sprite_sheet)
+        def detect_background_callback(sprite_sheet_path):
+            # Import the actual background detection function
+            from sprite_model.extraction.background_detector import detect_background_color
+            return detect_background_color(sprite_sheet_path)
         
         # Call CCLOperations with callbacks
         success, message, frame_count, frames, info = self._ccl_operations.extract_ccl_frames(
@@ -470,17 +473,27 @@ class SpriteModel(QObject):
             
             self.configurationChanged.emit()
             
-            # Auto-extract frames
-            extract_success, extract_msg, count = self.extract_frames(
-                self._frame_width, self._frame_height,
-                self._offset_x, self._offset_y,
-                self._spacing_x, self._spacing_y
-            )
+            # Auto-extract frames using grid mode (since we detected grid parameters)
+            # Save current extraction mode
+            original_mode = self._ccl_operations.get_extraction_mode()
             
-            if extract_success:
-                return True, f"{message}. {extract_msg}"
-            else:
-                return True, message
+            # Temporarily switch to grid mode for testing detected parameters
+            self._ccl_operations._extraction_mode = "grid"
+            
+            try:
+                extract_success, extract_msg, count = self.extract_frames(
+                    self._frame_width, self._frame_height,
+                    self._offset_x, self._offset_y,
+                    self._spacing_x, self._spacing_y
+                )
+                
+                if extract_success:
+                    return True, f"{message}. {extract_msg}"
+                else:
+                    return True, message
+            finally:
+                # Always restore original mode
+                self._ccl_operations._extraction_mode = original_mode
         
         return False, message
     
@@ -556,6 +569,8 @@ class SpriteModel(QObject):
         mode = self.get_extraction_mode()
         if mode == 'ccl':
             info_parts.append("Mode: CCL")
+        else:
+            info_parts.append("Mode: Grid")
         
         return " | ".join(info_parts)
     

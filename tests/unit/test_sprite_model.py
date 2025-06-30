@@ -6,7 +6,7 @@ Tests the main model class and its modular components.
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from PySide6.QtGui import QPixmap
-from PySide6.QtCore import QSignalSpy
+from PySide6.QtTest import QSignalSpy
 
 from sprite_model import SpriteModel
 

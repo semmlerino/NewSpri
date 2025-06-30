@@ -7,7 +7,7 @@ import pytest
 from pathlib import Path
 from unittest.mock import Mock, patch
 from PySide6.QtGui import QPixmap
-from PySide6.QtCore import QSignalSpy
+from PySide6.QtTest import QSignalSpy
 
 from sprite_model import SpriteModel
 from animation_controller import AnimationController

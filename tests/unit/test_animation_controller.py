@@ -5,7 +5,8 @@ Tests animation timing, state management, and signal coordination.
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock
-from PySide6.QtCore import QTimer, QSignalSpy
+from PySide6.QtCore import QTimer
+from PySide6.QtTest import QSignalSpy
 
 from animation_controller import AnimationController
 from config import Config

@@ -421,3 +421,226 @@ def pytest_runtest_setup(item):
     # Skip tests requiring PySide6 if not available
     if item.get_closest_marker("requires_display") and not PYSIDE6_AVAILABLE:
         pytest.skip("PySide6 not available for UI tests")
+
+
+# ============================================================================
+# ENHANCED FIXTURES FOR FOUNDATION TESTS (Added for Option A)
+# ============================================================================
+
+@pytest.fixture
+def export_temp_dir(temp_dir) -> Path:
+    """Temporary directory specifically for export testing."""
+    export_dir = temp_dir / "exports"
+    export_dir.mkdir()
+    return export_dir
+
+
+@pytest.fixture  
+def keyboard_test_helper(qapp):
+    """Helper for simulating keyboard events in tests."""
+    if not PYSIDE6_AVAILABLE:
+        return MagicMock()
+    
+    from PySide6.QtGui import QKeyEvent
+    from PySide6.QtCore import Qt
+    
+    class KeyboardTestHelper:
+        def __init__(self, app):
+            self.app = app
+        
+        def create_key_event(self, key, modifiers=Qt.NoModifier):
+            """Create a QKeyEvent for testing."""
+            return QKeyEvent(QKeyEvent.KeyPress, key, modifiers)
+        
+        def simulate_key_press(self, widget, key, modifiers=Qt.NoModifier):
+            """Simulate a key press on a widget."""
+            event = self.create_key_event(key, modifiers)
+            widget.keyPressEvent(event)
+            self.app.processEvents()
+        
+        def simulate_shortcut(self, widget, key_sequence):
+            """Simulate a keyboard shortcut (e.g., 'Ctrl+O')."""
+            # Parse common shortcut formats
+            if key_sequence == "Ctrl+O":
+                self.simulate_key_press(widget, Qt.Key_O, Qt.ControlModifier)
+            elif key_sequence == "Ctrl+Q":
+                self.simulate_key_press(widget, Qt.Key_Q, Qt.ControlModifier)
+            elif key_sequence == "Ctrl++":
+                self.simulate_key_press(widget, Qt.Key_Plus, Qt.ControlModifier)
+            elif key_sequence == "Ctrl+-":
+                self.simulate_key_press(widget, Qt.Key_Minus, Qt.ControlModifier)
+            elif key_sequence == "Ctrl+0":
+                self.simulate_key_press(widget, Qt.Key_0, Qt.ControlModifier)
+            elif key_sequence == "Ctrl+1":
+                self.simulate_key_press(widget, Qt.Key_1, Qt.ControlModifier)
+            else:
+                # For simple keys without modifiers
+                key_map = {
+                    "Space": Qt.Key_Space,
+                    "G": Qt.Key_G,
+                    "Left": Qt.Key_Left,
+                    "Right": Qt.Key_Right,
+                    "Home": Qt.Key_Home,
+                    "End": Qt.Key_End
+                }
+                if key_sequence in key_map:
+                    self.simulate_key_press(widget, key_map[key_sequence])
+    
+    return KeyboardTestHelper(qapp)
+
+
+@pytest.fixture
+def menu_test_helper(qapp):
+    """Helper for testing menu actions and structure."""
+    if not PYSIDE6_AVAILABLE:
+        return MagicMock()
+    
+    class MenuTestHelper:
+        def __init__(self, app):
+            self.app = app
+        
+        def find_menu(self, menubar, menu_name):
+            """Find a menu by name in a menubar."""
+            for action in menubar.actions():
+                if action.text() == menu_name:
+                    return action.menu()
+            return None
+        
+        def find_action(self, menu, action_text):
+            """Find an action by text in a menu."""
+            for action in menu.actions():
+                if action_text in action.text():
+                    return action
+            return None
+        
+        def trigger_action(self, action):
+            """Trigger a menu action and process events."""
+            action.trigger()
+            self.app.processEvents()
+        
+        def get_menu_structure(self, menubar):
+            """Get the complete menu structure for testing."""
+            structure = {}
+            for menu_action in menubar.actions():
+                menu = menu_action.menu()
+                if menu:
+                    actions = []
+                    for action in menu.actions():
+                        if not action.isSeparator():
+                            actions.append({
+                                'text': action.text(),
+                                'shortcut': action.shortcut().toString() if hasattr(action, 'shortcut') else '',
+                                'checkable': action.isCheckable(),
+                                'has_submenu': action.menu() is not None
+                            })
+                    structure[menu_action.text()] = actions
+            return structure
+    
+    return MenuTestHelper(qapp)
+
+
+@pytest.fixture
+def settings_test_helper(temp_dir):
+    """Helper for testing settings persistence."""
+    if not PYSIDE6_AVAILABLE:
+        return MagicMock()
+    
+    from PySide6.QtCore import QSettings
+    
+    class SettingsTestHelper:
+        def __init__(self, temp_dir):
+            self.temp_dir = temp_dir
+            self.settings_file = temp_dir / "test_settings.ini"
+        
+        def create_test_settings(self):
+            """Create a QSettings instance for testing."""
+            # Use INI format for easier testing
+            return QSettings(str(self.settings_file), QSettings.IniFormat)
+        
+        def clear_settings(self):
+            """Clear all test settings."""
+            if self.settings_file.exists():
+                self.settings_file.unlink()
+        
+        def get_all_settings(self):
+            """Get all settings as a dictionary."""
+            settings = self.create_test_settings()
+            result = {}
+            for key in settings.allKeys():
+                result[key] = settings.value(key)
+            return result
+    
+    return SettingsTestHelper(temp_dir)
+
+
+@pytest.fixture
+def signal_test_helper():
+    """Helper for testing Qt signals and slots."""
+    if not PYSIDE6_AVAILABLE:
+        return MagicMock()
+    
+    from PySide6.QtTest import QSignalSpy
+    from PySide6.QtCore import QObject, Signal
+    
+    class SignalTestHelper:
+        def __init__(self):
+            self.spies = []
+        
+        def create_spy(self, signal):
+            """Create a QSignalSpy for testing signal emissions."""
+            spy = QSignalSpy(signal)
+            self.spies.append(spy)
+            return spy
+        
+        def wait_for_signal(self, spy, timeout=1000):
+            """Wait for a signal to be emitted."""
+            return spy.wait(timeout)
+        
+        def assert_signal_emitted(self, spy, expected_count=1):
+            """Assert that a signal was emitted the expected number of times."""
+            assert len(spy) == expected_count, f"Expected {expected_count} emissions, got {len(spy)}"
+        
+        def assert_signal_not_emitted(self, spy):
+            """Assert that a signal was not emitted."""
+            assert len(spy) == 0, f"Expected no emissions, got {len(spy)}"
+        
+        def cleanup(self):
+            """Cleanup signal spies."""
+            self.spies.clear()
+    
+    helper = SignalTestHelper()
+    yield helper
+    helper.cleanup()
+
+
+@pytest.fixture
+def mock_file_operations():
+    """Mock file operations for testing without affecting real filesystem."""
+    class MockFileOperations:
+        def __init__(self):
+            self.mock_files = {}
+            self.operations_log = []
+        
+        def add_mock_file(self, path, content=None):
+            """Add a mock file that can be 'opened' during tests."""
+            self.mock_files[str(path)] = content
+        
+        def log_operation(self, operation, path, **kwargs):
+            """Log file operations for verification."""
+            self.operations_log.append({
+                'operation': operation,
+                'path': str(path),
+                **kwargs
+            })
+        
+        def get_operations(self, operation_type=None):
+            """Get logged operations, optionally filtered by type."""
+            if operation_type:
+                return [op for op in self.operations_log if op['operation'] == operation_type]
+            return self.operations_log.copy()
+        
+        def clear_log(self):
+            """Clear the operations log."""
+            self.operations_log.clear()
+    
+    return MockFileOperations()

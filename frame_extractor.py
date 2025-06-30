@@ -68,21 +68,22 @@ class FrameExtractor(QGroupBox):
         
         self.grid_mode_btn = QRadioButton("Grid Extraction")
         self.grid_mode_btn.setToolTip("Traditional grid-based extraction for regular animation frames")
-        self.grid_mode_btn.setChecked(True)  # Default mode
+        self.grid_mode_btn.setChecked(False)  # No longer default
         self.mode_group.addButton(self.grid_mode_btn, 0)
         mode_layout.addWidget(self.grid_mode_btn)
         
         self.ccl_mode_btn = QRadioButton("CCL Extraction")
         self.ccl_mode_btn.setToolTip("Connected-Component Labeling for irregular sprite collections")
-        self.ccl_mode_btn.setEnabled(False)  # Initially disabled until sprite sheet loaded
+        self.ccl_mode_btn.setChecked(True)  # Now the default mode
+        self.ccl_mode_btn.setEnabled(True)  # Enable by default
         self.mode_group.addButton(self.ccl_mode_btn, 1)
         mode_layout.addWidget(self.ccl_mode_btn)
         
         # Mode status indicator
-        self.mode_status = QLabel("🔲 Grid mode active")
+        self.mode_status = QLabel("🎯 CCL mode active")
         self.mode_status.setStyleSheet("""
             QLabel {
-                color: #2e7d32;
+                color: #d32f2f;
                 font-size: 11px;
                 font-style: italic;
             }
@@ -244,6 +245,9 @@ class FrameExtractor(QGroupBox):
         
         # Connect mode change signals
         self.mode_group.buttonClicked.connect(self._on_mode_changed)
+        
+        # Set initial state for CCL default mode (disable grid controls)
+        self._set_grid_controls_enabled(False)
     
     def _on_mode_changed(self, button):
         """Handle extraction mode change."""

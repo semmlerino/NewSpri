@@ -297,6 +297,71 @@ class AppConfig:
     }
 
 
+class SettingsConfig:
+    """Settings persistence and application preferences."""
+    
+    # QSettings configuration
+    ORGANIZATION_NAME = "PythonSpriteViewer"
+    APPLICATION_NAME = "SpriteViewer"
+    
+    # Recent files
+    MAX_RECENT_FILES = 10
+    THUMBNAIL_CACHE_SIZE_MB = 50
+    
+    # Auto-save settings
+    AUTOSAVE_DELAY_MS = 1000  # Debounce delay before saving
+    
+    # Default values for settings that don't exist
+    DEFAULTS = {
+        # Window geometry (will be set by application)
+        'window/geometry': None,
+        'window/state': None,
+        'window/splitter_state': None,
+        
+        # Frame extraction defaults
+        'extraction/last_width': 32,
+        'extraction/last_height': 32,
+        'extraction/last_offset_x': 0,
+        'extraction/last_offset_y': 0,
+        'extraction/last_spacing_x': 0,
+        'extraction/last_spacing_y': 0,
+        'extraction/last_mode': 'grid',
+        
+        # Display preferences
+        'display/grid_visible': False,
+        'display/last_zoom': 1.0,
+        'display/zoom_fit_tiny': True,
+        
+        # Animation preferences
+        'animation/last_fps': 10,
+        'animation/loop_mode': True,
+        
+        # Recent files
+        'recent/files': [],
+        'recent/max_count': 10,
+    }
+
+
+class ExportConfig:
+    """Export functionality settings."""
+    
+    # Supported image formats
+    IMAGE_FORMATS = ['PNG', 'JPG', 'BMP']
+    DEFAULT_FORMAT = 'PNG'
+    
+    # GIF export settings
+    GIF_OPTIMIZATION = True
+    GIF_DEFAULT_LOOP = 0  # Infinite loop
+    GIF_MAX_COLORS = 256
+    
+    # Default naming patterns
+    DEFAULT_PATTERN = "{name}_{index:03d}"
+    DEFAULT_SCALE_FACTORS = [1.0, 2.0, 4.0]
+    
+    # Export directories
+    DEFAULT_EXPORT_DIR = "exports"
+
+
 # Convenience access to all configs
 class Config:
     """Main configuration class providing access to all settings."""
@@ -311,6 +376,8 @@ class Config:
     Color = ColorConfig
     Font = FontConfig
     App = AppConfig
+    Settings = SettingsConfig
+    Export = ExportConfig
 
 
 # Export for easy importing
@@ -325,5 +392,7 @@ __all__ = [
     'SliderConfig',
     'ColorConfig',
     'FontConfig',
-    'AppConfig'
+    'AppConfig',
+    'SettingsConfig',
+    'ExportConfig'
 ]

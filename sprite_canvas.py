@@ -17,6 +17,8 @@ class SpriteCanvas(QLabel):
     """Custom canvas widget for displaying sprites with zoom and pan capabilities."""
     
     frameChanged = Signal(int, int)  # current_frame, total_frames
+    mouseMoved = Signal(int, int)  # mouse x, y coordinates in sprite space
+    zoomChanged = Signal(float)  # zoom factor
     
     def __init__(self):
         super().__init__()
@@ -41,8 +43,15 @@ class SpriteCanvas(QLabel):
         self._current_frame = 0
         self._total_frames = 0
         
-        # Enable mouse tracking for pan
+        # Sprite model reference
+        self._sprite_model = None
+        
+        # Enable mouse tracking for pan and coordinate tracking
         self.setMouseTracking(True)
+    
+    def set_sprite_model(self, sprite_model):
+        """Set reference to sprite model for getting current frame."""
+        self._sprite_model = sprite_model
     
     def set_pixmap(self, pixmap: QPixmap, auto_fit=None):
         """Set the sprite pixmap to display."""
@@ -57,6 +66,21 @@ class SpriteCanvas(QLabel):
         else:
             self.update()
     
+    def update_with_current_frame(self):
+        """Update canvas with current frame from sprite model."""
+        # Get current frame from sprite model if available
+        if self._sprite_model:
+            current_pixmap = self._sprite_model.current_frame_pixmap
+            if current_pixmap and not current_pixmap.isNull():
+                self._pixmap = current_pixmap
+        
+        # Call parent update to trigger repaint
+        super().update()
+    
+    def update(self):
+        """Standard update - just trigger repaint without fetching frame."""
+        super().update()
+    
     def set_frame_info(self, current: int, total: int):
         """Update frame information."""
         self._current_frame = current
@@ -67,12 +91,14 @@ class SpriteCanvas(QLabel):
         """Set zoom factor."""
         self._zoom_factor = max(Config.Canvas.ZOOM_MIN, min(Config.Canvas.ZOOM_MAX, factor))
         self.update()
+        self.zoomChanged.emit(self._zoom_factor)
     
     def reset_view(self):
         """Reset zoom and pan to default."""
         self._zoom_factor = 1.0
         self._pan_offset = Config.Canvas.DEFAULT_PAN_OFFSET.copy()
         self.update()
+        self.zoomChanged.emit(self._zoom_factor)
     
     def fit_to_window(self):
         """Zoom to fit the sprite in the window."""
@@ -82,6 +108,7 @@ class SpriteCanvas(QLabel):
         self._zoom_factor = self._calculate_fit_zoom()
         self._pan_offset = Config.Canvas.DEFAULT_PAN_OFFSET.copy()
         self.update()
+        self.zoomChanged.emit(self._zoom_factor)
     
     def auto_fit_sprite(self):
         """Auto-fit sprite with smart minimum zoom for tiny sprites."""
@@ -104,6 +131,7 @@ class SpriteCanvas(QLabel):
         self._zoom_factor = max(min_zoom, fit_zoom)
         self._pan_offset = Config.Canvas.DEFAULT_PAN_OFFSET.copy()
         self.update()
+        self.zoomChanged.emit(self._zoom_factor)
     
     def _calculate_fit_zoom(self, margin=None):
         """Calculate zoom factor to fit sprite in window."""
@@ -229,13 +257,21 @@ class SpriteCanvas(QLabel):
             self.setCursor(Qt.ClosedHandCursor)
     
     def mouseMoveEvent(self, event):
-        """Handle mouse move for panning."""
+        """Handle mouse move for panning and coordinate tracking."""
+        mouse_pos = event.position().toPoint()
+        
+        # Handle panning if left button is pressed
         if self._last_pan_point and (event.buttons() & Qt.LeftButton):
-            delta = event.position().toPoint() - self._last_pan_point
+            delta = mouse_pos - self._last_pan_point
             self._pan_offset[0] += delta.x()
             self._pan_offset[1] += delta.y()
-            self._last_pan_point = event.position().toPoint()
+            self._last_pan_point = mouse_pos
             self.update()
+        
+        # Emit mouse coordinates in sprite space
+        sprite_coords = self._screen_to_sprite_coords(mouse_pos)
+        if sprite_coords:
+            self.mouseMoved.emit(sprite_coords[0], sprite_coords[1])
     
     def mouseReleaseEvent(self, event):
         """Handle mouse release."""
@@ -255,6 +291,57 @@ class SpriteCanvas(QLabel):
         
         self._zoom_factor = max(Config.Canvas.ZOOM_MIN, min(Config.Canvas.ZOOM_MAX, self._zoom_factor))
         self.update()
+        
+        # Emit zoom change signal
+        self.zoomChanged.emit(self._zoom_factor)
+    
+    def _screen_to_sprite_coords(self, screen_pos):
+        """
+        Convert screen coordinates to sprite coordinates.
+        
+        Args:
+            screen_pos: QPoint with screen coordinates
+            
+        Returns:
+            Tuple of (x, y) sprite coordinates, or None if outside sprite
+        """
+        if not self._pixmap:
+            return None
+        
+        # Get widget dimensions
+        widget_rect = self.rect()
+        
+        # Calculate sprite rectangle on screen
+        pixmap_size = self._pixmap.size()
+        scaled_width = pixmap_size.width() * self._zoom_factor
+        scaled_height = pixmap_size.height() * self._zoom_factor
+        
+        # Calculate sprite position with pan offset
+        sprite_x = (widget_rect.width() - scaled_width) // 2 + self._pan_offset[0]
+        sprite_y = (widget_rect.height() - scaled_height) // 2 + self._pan_offset[1]
+        
+        # Check if mouse is within sprite bounds
+        sprite_rect = QRect(sprite_x, sprite_y, int(scaled_width), int(scaled_height))
+        if not sprite_rect.contains(screen_pos):
+            return None
+        
+        # Convert to sprite coordinates
+        relative_x = screen_pos.x() - sprite_x
+        relative_y = screen_pos.y() - sprite_y
+        
+        # Scale back to original sprite coordinates
+        sprite_coord_x = int(relative_x / self._zoom_factor)
+        sprite_coord_y = int(relative_y / self._zoom_factor)
+        
+        # Ensure coordinates are within sprite bounds
+        if 0 <= sprite_coord_x < pixmap_size.width() and 0 <= sprite_coord_y < pixmap_size.height():
+            return (sprite_coord_x, sprite_coord_y)
+        
+        return None
+    
+    def get_zoom_factor(self):
+        """Get current zoom factor."""
+        return self._zoom_factor
 
 
 # Export for easy importing

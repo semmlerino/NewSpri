@@ -25,6 +25,7 @@ pip install -r requirements.txt
 - numpy>=1.21.0 (Numerical processing)
 - Pillow>=8.0.0 (Image handling)
 - scipy>=1.7.0 (Scientific computations)
+- pytest>=6.0.0 (Testing framework)
 
 ## Running the Application
 
@@ -34,9 +35,25 @@ python sprite_viewer.py
 ```
 
 ### Testing
-The project uses Python's built-in unittest framework (pytest is not available):
+The project uses pytest as the primary testing framework with unittest-style tests:
 ```bash
-# Run main test suite
+# Run all tests
+python -m pytest
+
+# Run specific test categories
+python -m pytest -m unit              # Unit tests only
+python -m pytest -m integration       # Integration tests only
+python -m pytest tests/unit/          # All unit tests
+python -m pytest tests/ui/            # UI component tests
+
+# Run specific test files
+python -m pytest tests/unit/test_config.py
+python -m pytest tests/unit/test_settings_config.py
+
+# Run with coverage
+python -m pytest --cov=. --cov-report=html
+
+# Alternative: Run main test suite using direct execution
 python tests/test_sprite_viewer.py
 
 # Run specific component tests
@@ -186,6 +203,24 @@ Use `test_comprehensive.py` for full application testing with real sprite sheets
 - `assets/` and `spritetests/` contain test sprite sheets
 - `Archer/` contains sample animation sprites
 - Support for PNG, JPG, JPEG, BMP, GIF formats
+
+## Export Functionality (Phase 4)
+
+The application includes comprehensive frame export capabilities:
+- **Individual Frames**: Export each frame as a separate file
+- **Sprite Sheet**: Export all frames as a single sprite sheet
+- **Selected Frames**: Export only selected frames
+- **Animated GIF**: Export frames as an animated GIF (requires Pillow)
+
+### Export System Components
+- `frame_exporter.py` - Core export engine with threading support
+- `export_dialog.py` - User interface for export configuration
+
+### Export Settings (Config.Export)
+- Supported formats: PNG, JPG, BMP, GIF
+- Default scale factors: 1.0, 2.0, 4.0
+- Naming pattern: `{name}_{index:03d}`
+- Keyboard shortcuts: Ctrl+E (export all), Ctrl+Shift+E (export current)
 
 ## Common Development Tasks
 
