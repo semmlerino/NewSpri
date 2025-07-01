@@ -19,7 +19,7 @@ from config import Config
 from utils import StyleManager
 
 # Coordinator system (Phase 1 refactoring)
-from coordinators import CoordinatorRegistry, UISetupHelper, ViewCoordinator
+from coordinators import CoordinatorRegistry, UISetupHelper, ViewCoordinator, ExportCoordinator
 
 # Core MVC Components
 from sprite_model import SpriteModel
@@ -38,7 +38,7 @@ from ui import (
 )
 
 # Export System
-from export import ExportDialog, get_frame_exporter, ExportHandler
+from export import get_frame_exporter, ExportHandler
 
 
 class SpriteViewer(QMainWindow):
@@ -111,6 +111,18 @@ class SpriteViewer(QMainWindow):
             'zoom_label': self._zoom_label
         }
         self._view_coordinator.initialize(view_dependencies)
+        
+        # Initialize Export Coordinator (Phase 4 refactoring)
+        self._export_coordinator = ExportCoordinator(self)
+        self._coordinator_registry.register('export', self._export_coordinator)
+        
+        # Initialize export coordinator with dependencies
+        export_dependencies = {
+            'sprite_model': self._sprite_model,
+            'segment_manager': self._segment_manager,
+            'export_handler': self._export_handler
+        }
+        self._export_coordinator.initialize(export_dependencies)
         
         # Set up managers with UI components
         self._setup_managers()
@@ -187,8 +199,8 @@ class SpriteViewer(QMainWindow):
         # File actions
         self._action_manager.set_action_callback('file_open', self._load_sprites)
         self._action_manager.set_action_callback('file_quit', self.close)
-        self._action_manager.set_action_callback('file_export_frames', self._export_frames)
-        self._action_manager.set_action_callback('file_export_current', self._export_current_frame)
+        self._action_manager.set_action_callback('file_export_frames', self._export_coordinator.export_frames)
+        self._action_manager.set_action_callback('file_export_current', self._export_coordinator.export_current_frame)
         
         # View actions (Phase 3 refactoring - use ViewCoordinator)
         self._action_manager.set_action_callback('view_zoom_in', self._view_coordinator.zoom_in)
@@ -206,7 +218,7 @@ class SpriteViewer(QMainWindow):
         self._action_manager.set_action_callback('animation_last_frame', self._go_to_last_frame)
         
         # Toolbar actions (reuse same callbacks)
-        self._action_manager.set_action_callback('toolbar_export', self._export_frames)
+        self._action_manager.set_action_callback('toolbar_export', self._export_coordinator.export_frames)
         
         # Help actions  
         self._action_manager.set_action_callback('help_shortcuts', self._show_shortcuts)
@@ -328,54 +340,6 @@ class SpriteViewer(QMainWindow):
     def _on_file_load_failed(self, error_message: str):
         """Handle file load failure from FileController."""
         QMessageBox.critical(self, "Load Error", error_message)
-    
-    # ============================================================================
-    # EXPORT OPERATIONS
-    # ============================================================================
-    
-    def _export_frames(self):
-        """Show enhanced export dialog for exporting frames and animation segments."""
-        if not self._sprite_model.sprite_frames:
-            QMessageBox.warning(self, "No Frames", "No frames to export.")
-            return
-        
-        dialog = ExportDialog(
-            self,
-            frame_count=len(self._sprite_model.sprite_frames),
-            current_frame=self._sprite_model.current_frame,
-            segment_manager=self._segment_manager
-        )
-        
-        # Set sprites for visual preview (Phase 4 enhancement)
-        dialog.set_sprites(self._sprite_model.sprite_frames)
-        
-        dialog.exportRequested.connect(self._handle_unified_export_request)
-        dialog.exec()
-    
-    def _export_current_frame(self):
-        """Export only the current frame."""
-        if not self._sprite_model.sprite_frames:
-            QMessageBox.warning(self, "No Frames", "No frames to export.")
-            return
-        
-        dialog = ExportDialog(
-            self,
-            frame_count=len(self._sprite_model.sprite_frames),
-            current_frame=self._sprite_model.current_frame,
-            segment_manager=self._segment_manager
-        )
-        
-        # Set sprites for visual preview (Phase 4 enhancement)
-        dialog.set_sprites(self._sprite_model.sprite_frames)
-        
-        # The new dialog will automatically handle single frame export via presets
-        dialog.exportRequested.connect(self._handle_unified_export_request)
-        dialog.exec()
-    
-    def _handle_unified_export_request(self, settings: dict):
-        """Handle unified export request from new dialog (handles both frames and segments)."""
-        self._export_handler.handle_unified_export_request(settings, self._sprite_model, self._segment_manager)
-    
     
     # ============================================================================
     # ANIMATION OPERATIONS

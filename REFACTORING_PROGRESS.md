@@ -36,6 +36,17 @@ Systematic refactoring of the 814-line SpriteViewer class using the Coordinator 
 **Testing**: 15/15 unit tests passing, 75/75 UI tests passing  
 **Impact**: SpriteViewer reduced from 712 → 698 lines
 
+### ✅ Phase 4: Extract ExportCoordinator
+**Status**: Complete  
+**Changes**:
+- Created `ExportCoordinator` for export operations
+- Moved export dialog creation and configuration
+- Extracted export validation and request handling
+- Centralized coordination between sprite model, segment manager, and export handler
+
+**Testing**: 16/16 unit tests passing  
+**Impact**: SpriteViewer reduced from 698 → 662 lines
+
 ## Metrics
 
 | Phase | Before | After | Lines Removed | Tests Added |
@@ -43,13 +54,10 @@ Systematic refactoring of the 814-line SpriteViewer class using the Coordinator 
 | Phase 1 | 814 | 814 | 0 (foundation) | 14 |
 | Phase 2 | 814 | 712 | 102 | 7 |
 | Phase 3 | 712 | 698 | 14 | 15 |
-| **Total** | **814** | **698** | **116 (14.2%)** | **36** |
+| Phase 4 | 698 | 662 | 36 | 16 |
+| **Total** | **814** | **662** | **152 (18.7%)** | **52** |
 
 ## Remaining Phases
-
-### ⏳ Phase 4: Extract ExportCoordinator
-**Estimated Impact**: ~50 lines  
-**Scope**: Export dialog handling, frame export methods
 
 ### ⏳ Phase 5: Extract AnimationCoordinator  
 **Estimated Impact**: ~60 lines  
