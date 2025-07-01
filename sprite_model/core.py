@@ -16,7 +16,7 @@ Architecture:
 
 # Direct import of the integrated modular implementation
 try:
-    from .core_integrated import SpriteModel
+    from sprite_model.core_integrated import SpriteModel
     
 except ImportError as e:
     # Critical error - the modular implementation should always be available

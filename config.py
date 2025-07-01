@@ -212,6 +212,25 @@ class FileConfig:
     
     # Common frame sizes for auto-detection (ordered by preference)
     COMMON_FRAME_SIZES = [16, 32, 64, 128, 192, 256]
+    
+    @staticmethod
+    def get_default_export_directory():
+        """Get default export directory."""
+        from pathlib import Path
+        import os
+        
+        # Try Desktop first
+        desktop = Path.home() / "Desktop"
+        if desktop.exists() and os.access(desktop, os.W_OK):
+            return desktop / "sprite_exports"
+        
+        # Fallback to Documents
+        documents = Path.home() / "Documents"
+        if documents.exists() and os.access(documents, os.W_OK):
+            return documents / "sprite_exports"
+        
+        # Last resort: current directory
+        return Path.cwd() / "sprite_exports"
 
 
 class SliderConfig:
@@ -240,6 +259,9 @@ class ColorConfig:
     WARNING_COLOR = "#ff9800"
     ERROR_COLOR = "#f44336"
     INFO_COLOR = "#2196F3"
+    
+    # Transparency
+    TRANSPARENT = QColor(0, 0, 0, 0)  # Fully transparent
     
     # UI element colors
     BORDER_COLOR = "#ccc"
@@ -360,6 +382,52 @@ class ExportConfig:
     
     # Export directories
     DEFAULT_EXPORT_DIR = "exports"
+    
+    # Enhanced Sprite Sheet Layout Configuration
+    # ==========================================
+    
+    # Layout calculation modes
+    LAYOUT_MODES = ['auto', 'rows', 'columns', 'square', 'custom']
+    DEFAULT_LAYOUT_MODE = 'auto'
+    
+    # Spacing and padding settings
+    DEFAULT_SPRITE_SPACING = 0      # Pixels between sprites
+    MIN_SPRITE_SPACING = 0          # Minimum spacing allowed
+    MAX_SPRITE_SPACING = 50         # Maximum spacing allowed
+    SPRITE_SPACING_STEP = 1         # Increment step for UI controls
+    
+    DEFAULT_SHEET_PADDING = 0       # Padding around entire sheet
+    MIN_SHEET_PADDING = 0           # Minimum padding allowed
+    MAX_SHEET_PADDING = 100         # Maximum padding allowed
+    SHEET_PADDING_STEP = 5          # Increment step for UI controls
+    
+    # Grid configuration constraints
+    DEFAULT_MAX_COLUMNS = 10        # Default max columns for 'rows' mode
+    DEFAULT_MAX_ROWS = 10           # Default max rows for 'columns' mode
+    MIN_GRID_SIZE = 1               # Minimum grid dimension
+    MAX_GRID_SIZE = 50              # Maximum grid dimension (reasonable limit)
+    
+    # Background fill options
+    BACKGROUND_MODES = ['transparent', 'solid', 'checkerboard']
+    DEFAULT_BACKGROUND_MODE = 'transparent'
+    DEFAULT_BACKGROUND_COLOR = (255, 255, 255, 255)  # White with full alpha
+    
+    # Checkerboard pattern settings (for background)
+    CHECKERBOARD_TILE_SIZE = 16     # Size of checkerboard tiles
+    CHECKERBOARD_LIGHT_COLOR = (255, 255, 255, 255)  # Light checkerboard color
+    CHECKERBOARD_DARK_COLOR = (192, 192, 192, 255)   # Dark checkerboard color
+    
+    # Layout calculation preferences
+    PREFER_HORIZONTAL = False       # For auto mode: prefer horizontal vs vertical layouts
+    ASPECT_RATIO_TOLERANCE = 0.25   # Tolerance for "square-ish" layouts in auto mode
+    
+    # Export quality settings for sprite sheets
+    SPRITE_SHEET_QUALITY_MODE = 'balanced'  # 'speed', 'balanced', 'quality'
+    ENABLE_ANTIALIASING = True      # Enable antialiasing for scaled sprites
+    
+    # File size estimation factors
+    SPACING_SIZE_FACTOR = 1.1       # Multiplier for size estimation with spacing
+    PADDING_SIZE_FACTOR = 1.05      # Multiplier for size estimation with padding
 
 
 # Convenience access to all configs

@@ -22,8 +22,8 @@ sys.path.insert(0, str(PROJECT_ROOT))
 # Import project modules for testing
 from config import Config
 from sprite_model import SpriteModel
-from animation_controller import AnimationController
-from auto_detection_controller import AutoDetectionController
+from core.animation_controller import AnimationController
+from core.auto_detection_controller import AutoDetectionController
 
 
 # ============================================================================

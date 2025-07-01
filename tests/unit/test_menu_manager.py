@@ -6,7 +6,7 @@ Tests the centralized menu and toolbar construction system.
 import pytest
 from unittest.mock import MagicMock
 
-from menu_manager import (
+from managers.menu_manager import (
     MenuManager, MenuDefinition, ToolbarDefinition, 
     MenuItemDefinition, MenuItemType,
     get_menu_manager, reset_menu_manager

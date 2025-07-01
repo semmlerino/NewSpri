@@ -44,7 +44,7 @@ class TestCCLExtractionWithRealData:
         
         assert success, f"Failed to load sprite sheet: {error}"
         assert sprite_model.original_sprite_sheet is not None
-        assert sprite_model.sprite_file_path == ark_sprite_path
+        assert sprite_model.file_path == ark_sprite_path
         
         # Verify the image was loaded correctly
         width = sprite_model.original_sprite_sheet.width()

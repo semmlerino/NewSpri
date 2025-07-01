@@ -21,7 +21,7 @@ from PySide6.QtTest import QSignalSpy
 from sprite_model.detection.frame_detector import FrameDetector, detect_frame_size, detect_rectangular_frames, detect_content_based
 from sprite_model.detection.margin_detector import MarginDetector, detect_margins
 from sprite_model.detection.spacing_detector import SpacingDetector, detect_spacing
-from auto_detection_controller import AutoDetectionController
+from core.auto_detection_controller import AutoDetectionController
 from config import Config
 
 

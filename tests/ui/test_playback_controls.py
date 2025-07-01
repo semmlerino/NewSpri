@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QSignalSpy
 from PySide6.QtWidgets import QApplication, QPushButton, QSlider, QLabel, QCheckBox
 
-from playback_controls import PlaybackControls
+from ui.playback_controls import PlaybackControls
 from config import Config
 
 

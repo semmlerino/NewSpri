@@ -10,7 +10,7 @@ import os
 from PySide6.QtWidgets import QApplication, QDialogButtonBox
 from PySide6.QtCore import Qt
 
-from export_dialog import ExportDialog, ExportMode
+from export.export_dialog import ExportDialog, ExportMode
 from config import Config
 
 

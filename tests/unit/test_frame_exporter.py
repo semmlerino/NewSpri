@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 
-from frame_exporter import (
+from export.frame_exporter import (
     FrameExporter, ExportTask, ExportMode, ExportFormat,
     get_frame_exporter
 )
@@ -25,14 +25,12 @@ class TestExportFormat:
         assert ExportFormat.PNG.value == "PNG"
         assert ExportFormat.JPG.value == "JPG"
         assert ExportFormat.BMP.value == "BMP"
-        assert ExportFormat.GIF.value == "GIF"
     
     def test_export_format_extension(self):
         """Test that export formats return correct extensions."""
         assert ExportFormat.PNG.extension == ".png"
         assert ExportFormat.JPG.extension == ".jpg"
         assert ExportFormat.BMP.extension == ".bmp"
-        assert ExportFormat.GIF.extension == ".gif"
     
     def test_export_format_from_string(self):
         """Test creating export format from string."""
@@ -113,7 +111,6 @@ class TestFrameExporter:
         assert "PNG" in formats
         assert "JPG" in formats
         assert "BMP" in formats
-        assert "GIF" in formats
     
     def test_supported_modes(self):
         """Test getting supported export modes."""
@@ -122,8 +119,7 @@ class TestFrameExporter:
         
         assert "individual" in modes
         assert "sheet" in modes
-        assert "gif" in modes
-        assert "selected" in modes
+        # Note: 'selected' mode was consolidated into 'individual' with frame filtering
     
     def test_export_frames_validation(self):
         """Test export_frames validation."""
@@ -244,26 +240,31 @@ class TestExportWorker:
                     "PNG"
                 )
     
-    def test_selected_frames_export(self, mock_frames, tmp_path):
-        """Test exporting selected frames only."""
+    def test_frame_filtering_workflow(self, mock_frames, tmp_path):
+        """Test frame filtering workflow (replaces selected frames export)."""
         from frame_exporter import ExportWorker
         
+        # Pre-filter frames like sprite_viewer.py does
+        selected_indices = [0, 2]  # Select first and third frame
+        filtered_frames = [mock_frames[i] for i in selected_indices]
+        
         task = ExportTask(
-            frames=mock_frames,
+            frames=filtered_frames,  # Pre-filtered frames
             output_dir=tmp_path,
-            base_name="selected",
+            base_name="filtered",
             format=ExportFormat.PNG,
-            mode=ExportMode.SELECTED_FRAMES,
-            selected_indices=[0, 2]  # Select first and third frame
+            mode=ExportMode.INDIVIDUAL_FRAMES,  # Use individual mode with filtered frames
+            pattern="{name}_{index:03d}"
         )
         
         worker = ExportWorker(task)
-        worker._export_selected_frames()
+        worker._export_individual_frames()
         
-        # Check that only selected frames were saved
-        mock_frames[0].save.assert_called_once()
-        mock_frames[1].save.assert_not_called()
-        mock_frames[2].save.assert_called_once()
+        # Check that filtered frames were saved
+        # Note: These are now mock_frames[0] and mock_frames[2] as filtered_frames[0] and filtered_frames[1]
+        assert len(filtered_frames) == 2
+        for frame in filtered_frames:
+            frame.save.assert_called_once()
     
     def test_scale_factor_application(self, mock_frames, tmp_path):
         """Test that scale factor is applied correctly."""

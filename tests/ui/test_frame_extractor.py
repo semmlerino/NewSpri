@@ -9,7 +9,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QSignalSpy
 from PySide6.QtWidgets import QApplication, QRadioButton, QSpinBox, QPushButton, QCheckBox, QButtonGroup
 
-from frame_extractor import FrameExtractor
+from ui.frame_extractor import FrameExtractor
 from config import Config
 
 

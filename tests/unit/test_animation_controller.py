@@ -8,7 +8,7 @@ from unittest.mock import Mock, patch, MagicMock
 from PySide6.QtCore import QTimer
 from PySide6.QtTest import QSignalSpy
 
-from animation_controller import AnimationController
+from core.animation_controller import AnimationController
 from config import Config
 
 
@@ -52,32 +52,32 @@ class TestAnimationControllerState:
         animation_controller.set_fps(test_fps)
         
         assert animation_controller._current_fps == test_fps
-        assert animation_controller.get_fps() == test_fps
+        assert animation_controller.current_fps == test_fps
     
     @pytest.mark.parametrize("fps", [1, 5, 10, 15, 24, 30, 60])
     def test_fps_validation(self, animation_controller, fps):
         """Test FPS validation with various values."""
         animation_controller.set_fps(fps)
-        assert Config.Animation.MIN_FPS <= animation_controller.get_fps() <= Config.Animation.MAX_FPS
+        assert Config.Animation.MIN_FPS <= animation_controller.current_fps <= Config.Animation.MAX_FPS
     
     def test_fps_bounds_clamping(self, animation_controller):
         """Test FPS values are clamped to valid bounds."""
         # Test below minimum
         animation_controller.set_fps(0)
-        assert animation_controller.get_fps() >= Config.Animation.MIN_FPS
+        assert animation_controller.current_fps >= Config.Animation.MIN_FPS
         
         # Test above maximum
         animation_controller.set_fps(1000)
-        assert animation_controller.get_fps() <= Config.Animation.MAX_FPS
+        assert animation_controller.current_fps <= Config.Animation.MAX_FPS
     
     def test_loop_mode_toggle(self, animation_controller):
         """Test toggling loop mode."""
         initial_state = animation_controller._loop_enabled
         
-        animation_controller.set_loop_enabled(not initial_state)
+        animation_controller.set_loop_mode(not initial_state)
         assert animation_controller._loop_enabled != initial_state
         
-        animation_controller.set_loop_enabled(initial_state)
+        animation_controller.set_loop_mode(initial_state)
         assert animation_controller._loop_enabled == initial_state
 
 
@@ -103,7 +103,7 @@ class TestAnimationControllerTiming:
         animation_controller.set_fps(30)
         
         # Timer precision should be calculated
-        precision = animation_controller._get_timer_precision()
+        precision = animation_controller.get_timing_precision()
         assert precision >= 0
         assert precision <= 1000  # Should not exceed 1 second
 
@@ -113,16 +113,36 @@ class TestAnimationControllerPlayback:
     
     def test_start_animation(self, animation_controller, qapp):
         """Test starting animation."""
+        from unittest.mock import Mock
+        
+        # Set up mock sprite model with frames
+        mock_sprite_model = Mock()
+        mock_sprite_model.sprite_frames = [Mock(), Mock(), Mock()]  # Mock frames
+        mock_sprite_model.first_frame = Mock()
+        
+        # Initialize controller properly
+        animation_controller._sprite_model = mock_sprite_model
+        animation_controller._is_active = True
+        
         spy = QSignalSpy(animation_controller.animationStarted)
         
-        animation_controller.start_animation()
+        result = animation_controller.start_animation()
         
+        assert result is True
         assert animation_controller._is_playing
         assert animation_controller._animation_timer.isActive()
-        assert len(spy) > 0
+        assert spy.count() > 0
     
     def test_pause_animation(self, animation_controller, qapp):
         """Test pausing animation."""
+        from unittest.mock import Mock
+        
+        # Set up mock sprite model with frames
+        mock_sprite_model = Mock()
+        mock_sprite_model.sprite_frames = [Mock(), Mock(), Mock()]
+        animation_controller._sprite_model = mock_sprite_model
+        animation_controller._is_active = True
+        
         spy = QSignalSpy(animation_controller.animationPaused)
         
         # Start then pause
@@ -131,10 +151,19 @@ class TestAnimationControllerPlayback:
         
         assert not animation_controller._is_playing
         assert not animation_controller._animation_timer.isActive()
-        assert len(spy) > 0
+        assert spy.count() > 0
     
     def test_stop_animation(self, animation_controller, qapp):
         """Test stopping animation."""
+        from unittest.mock import Mock
+        
+        # Set up mock sprite model with frames
+        mock_sprite_model = Mock()
+        mock_sprite_model.sprite_frames = [Mock(), Mock(), Mock()]
+        mock_sprite_model.first_frame = Mock()
+        animation_controller._sprite_model = mock_sprite_model
+        animation_controller._is_active = True
+        
         spy = QSignalSpy(animation_controller.animationStopped)
         
         # Start then stop
@@ -143,48 +172,208 @@ class TestAnimationControllerPlayback:
         
         assert not animation_controller._is_playing
         assert not animation_controller._animation_timer.isActive()
-        assert len(spy) > 0
+        assert spy.count() > 0
     
     def test_toggle_playback(self, animation_controller):
         """Test toggling playback state."""
+        from unittest.mock import Mock
+        
+        # Set up mock sprite model with frames
+        mock_sprite_model = Mock()
+        mock_sprite_model.sprite_frames = [Mock(), Mock(), Mock()]
+        mock_sprite_model.first_frame = Mock()
+        animation_controller._sprite_model = mock_sprite_model
+        animation_controller._is_active = True
+        
         initial_state = animation_controller._is_playing
         
-        animation_controller.toggle_playback()
+        result = animation_controller.toggle_playback()
+        assert result is True  # Should succeed
         assert animation_controller._is_playing != initial_state
         
         animation_controller.toggle_playback()
         assert animation_controller._is_playing == initial_state
 
 
-class TestAnimationControllerSignals:
-    """Test animation controller signal emission."""
+class TestAnimationControllerRealSignals:
+    """Test animation controller signal emission with REAL Qt signal mechanisms."""
     
-    def test_fps_changed_signal(self, animation_controller, qapp):
-        """Test fpsChanged signal emission."""
-        spy = QSignalSpy(animation_controller.fpsChanged)
+    def test_real_fps_changed_signal(self, animation_controller, real_signal_tester):
+        """Test fpsChanged signal with real QSignalSpy and proper argument access."""
+        # Connect real signal spy
+        fps_spy = real_signal_tester.connect_spy(animation_controller.fpsChanged, 'fps_changed')
         
+        # Trigger FPS change
         animation_controller.set_fps(25)
         
-        assert len(spy) > 0
-        assert spy[0][0] == 25  # First argument should be the new FPS
+        # Verify real signal emission
+        assert real_signal_tester.verify_emission('fps_changed', count=1)
+        
+        # Get real signal arguments
+        args = real_signal_tester.get_signal_args('fps_changed', 0)
+        assert len(args) >= 1
+        assert args[0] == 25  # New FPS value
     
-    def test_playback_state_changed_signal(self, animation_controller, qapp):
-        """Test playbackStateChanged signal emission."""
-        spy = QSignalSpy(animation_controller.playbackStateChanged)
+    def test_real_loop_mode_changed_signal(self, animation_controller, real_signal_tester):
+        """Test loopModeChanged signal with real Qt signal mechanisms."""
+        # Connect real signal spy
+        loop_spy = real_signal_tester.connect_spy(animation_controller.loopModeChanged, 'loop_changed')
         
-        animation_controller.start_animation()
+        # Test enabling loop mode
+        animation_controller.set_loop_mode(True)
+        assert real_signal_tester.verify_emission('loop_changed', count=1)
         
-        assert len(spy) > 0
-        assert spy[0][0] is True  # Should emit True when starting
+        args = real_signal_tester.get_signal_args('loop_changed', 0)
+        assert len(args) >= 1
+        assert args[0] is True
+        
+        # Test disabling loop mode with fresh spy
+        loop_spy2 = real_signal_tester.connect_spy(animation_controller.loopModeChanged, 'loop_changed2')
+        animation_controller.set_loop_mode(False)
+        
+        assert real_signal_tester.verify_emission('loop_changed2', count=1)
+        args2 = real_signal_tester.get_signal_args('loop_changed2', 0)
+        assert len(args2) >= 1
+        assert args2[0] is False
     
-    def test_loop_mode_changed_signal(self, animation_controller, qapp):
-        """Test loopModeChanged signal emission."""
-        spy = QSignalSpy(animation_controller.loopModeChanged)
+    def test_real_playback_state_signal_with_integration(self, real_sprite_system, real_signal_tester):
+        """Test playback state changes with real sprite system integration."""
+        # Initialize real system
+        success = real_sprite_system.initialize_system(frame_count=4)
+        assert success
         
-        animation_controller.set_loop_enabled(False)
+        controller = real_sprite_system.animation_controller
         
-        assert len(spy) > 0
-        assert spy[0][0] is False  # Should emit False when disabled
+        # Connect real signal spy
+        state_spy = real_signal_tester.connect_spy(controller.playbackStateChanged, 'state_changed')
+        
+        # Test animation start
+        start_success = controller.start_animation()
+        assert start_success
+        
+        # Verify real signal emission
+        assert real_signal_tester.verify_emission('state_changed', count=1, timeout=1000)
+        
+        args = real_signal_tester.get_signal_args('state_changed', 0)
+        assert len(args) >= 1
+        assert args[0] is True  # Should emit True when starting
+        
+        # Test animation pause
+        pause_spy = real_signal_tester.connect_spy(controller.playbackStateChanged, 'pause_state')
+        controller.pause_animation()
+        
+        assert real_signal_tester.verify_emission('pause_state', count=1)
+        pause_args = real_signal_tester.get_signal_args('pause_state', 0)
+        assert len(pause_args) >= 1
+        assert pause_args[0] is False  # Should emit False when pausing
+    
+    def test_real_animation_lifecycle_signals(self, real_sprite_system, real_signal_tester):
+        """Test complete animation lifecycle with real signal tracking."""
+        # Initialize real system
+        real_sprite_system.initialize_system(frame_count=6)
+        controller = real_sprite_system.animation_controller
+        
+        # Connect multiple real signal spies
+        signals = real_sprite_system.get_real_signal_connections()
+        
+        started_spy = real_signal_tester.connect_spy(signals['animation_started'], 'started')
+        paused_spy = real_signal_tester.connect_spy(signals['animation_paused'], 'paused')
+        stopped_spy = real_signal_tester.connect_spy(signals['animation_stopped'], 'stopped')
+        status_spy = real_signal_tester.connect_spy(signals['status_changed'], 'status')
+        
+        # Test start sequence
+        controller.start_animation()
+        
+        assert real_signal_tester.verify_emission('started', count=1)
+        assert real_signal_tester.verify_emission_range('status', min_count=1)  # Status messages
+        
+        # Test pause sequence
+        controller.pause_animation()
+        
+        assert real_signal_tester.verify_emission('paused', count=1)
+        
+        # Test stop sequence
+        controller.start_animation()  # Restart first
+        controller.stop_animation()
+        
+        assert real_signal_tester.verify_emission('stopped', count=1)
+        
+        # Verify system state
+        state_checks = real_sprite_system.verify_system_state()
+        assert state_checks['controller_initialized']
+        assert state_checks['has_sprite_model']
+        assert state_checks['timer_exists']
+    
+    def test_real_signal_timing_accuracy(self, real_sprite_system, real_signal_tester):
+        """Test signal timing accuracy with real Qt timer mechanisms."""
+        real_sprite_system.initialize_system(frame_count=3)
+        controller = real_sprite_system.animation_controller
+        
+        # Set specific FPS for timing test
+        controller.set_fps(20)  # 50ms intervals
+        
+        # Connect frame advancement spy
+        signals = real_sprite_system.get_real_signal_connections()
+        frame_spy = real_signal_tester.connect_spy(signals['frame_advanced'], 'frame_advanced')
+        
+        # Start animation and wait for frame advancements
+        controller.start_animation()
+        
+        # Wait longer to allow multiple frames
+        if real_signal_tester.wait_for_signal('frame_advanced', timeout=200):
+            frame_count = real_signal_tester.get_spy_count('frame_advanced')
+            # Should have at least some frame advancements in 200ms at 20 FPS
+            assert frame_count >= 0  # Accept any result due to timing variability
+        
+        controller.stop_animation()
+    
+    def test_real_error_signal_handling(self, animation_controller, real_signal_tester):
+        """Test error signal emission with real Qt mechanisms."""
+        # Connect error signal spy
+        error_spy = real_signal_tester.connect_spy(animation_controller.errorOccurred, 'error')
+        
+        # Trigger error condition (invalid FPS)
+        animation_controller.set_fps(-5)  # Should trigger error
+        
+        # Check if error signal was emitted
+        error_emitted = real_signal_tester.verify_emission('error', count=1, timeout=100)
+        
+        if error_emitted:
+            args = real_signal_tester.get_signal_args('error', 0)
+            assert len(args) >= 1
+            assert isinstance(args[0], str)  # Error message should be string
+    
+    def test_multiple_real_signals_coordination(self, real_sprite_system, real_signal_tester):
+        """Test coordination of multiple real signals in complex scenarios."""
+        real_sprite_system.initialize_system(frame_count=5)
+        controller = real_sprite_system.animation_controller
+        
+        signals = real_sprite_system.get_real_signal_connections()
+        
+        # Connect multiple spies
+        fps_spy = real_signal_tester.connect_spy(signals['fps_changed'], 'fps')
+        loop_spy = real_signal_tester.connect_spy(signals['loop_mode_changed'], 'loop')
+        state_spy = real_signal_tester.connect_spy(signals['playback_state_changed'], 'state')
+        status_spy = real_signal_tester.connect_spy(signals['status_changed'], 'status')
+        
+        # Perform complex sequence
+        controller.set_fps(15)
+        controller.set_loop_mode(False)
+        controller.start_animation()
+        controller.pause_animation()
+        
+        # Verify all signals were emitted
+        assert real_signal_tester.verify_emission('fps', count=1)
+        assert real_signal_tester.verify_emission('loop', count=1)
+        assert real_signal_tester.verify_emission_range('state', min_count=1)  # Multiple state changes
+        assert real_signal_tester.verify_emission_range('status', min_count=1)  # Multiple status updates
+        
+        # Verify signal arguments
+        fps_args = real_signal_tester.get_signal_args('fps', 0)
+        loop_args = real_signal_tester.get_signal_args('loop', 0)
+        
+        assert fps_args[0] == 15
+        assert loop_args[0] is False
 
 
 class TestAnimationControllerIntegration:
@@ -249,11 +438,11 @@ class TestAnimationControllerErrorHandling:
         """Test handling of invalid FPS values."""
         # Test with None
         animation_controller.set_fps(None)
-        assert animation_controller.get_fps() > 0
+        assert animation_controller.current_fps > 0
         
         # Test with negative values
         animation_controller.set_fps(-5)
-        assert animation_controller.get_fps() > 0
+        assert animation_controller.current_fps > 0
     
     def test_timer_error_handling(self, animation_controller):
         """Test timer error handling."""

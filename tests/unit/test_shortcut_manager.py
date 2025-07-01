@@ -6,7 +6,7 @@ Tests the centralized keyboard shortcut management system.
 import pytest
 from unittest.mock import MagicMock
 
-from shortcut_manager import (
+from managers.shortcut_manager import (
     ShortcutManager, ShortcutDefinition, ShortcutContext,
     get_shortcut_manager, reset_shortcut_manager
 )

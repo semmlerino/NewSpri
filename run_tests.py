@@ -1,299 +1,313 @@
 #!/usr/bin/env python3
 """
-Test runner for Python Sprite Viewer
-=====================================
-
-Professional test runner with multiple execution modes and reporting options.
-
-Usage:
-    python run_tests.py                    # Run all tests
-    python run_tests.py --unit             # Run only unit tests
-    python run_tests.py --integration      # Run only integration tests
-    python run_tests.py --coverage         # Run with coverage report
-    python run_tests.py --performance      # Run performance tests
-    python run_tests.py --smoke            # Run smoke tests only
-    python run_tests.py --watch            # Watch mode for development
+Comprehensive Test Runner for Python Sprite Viewer
+Runs tests with coverage analysis and generates reports.
 """
 
 import sys
-import argparse
+import os
 import subprocess
+import argparse
 from pathlib import Path
+import json
+import time
 
 
 class TestRunner:
-    """Professional test runner with multiple execution modes."""
+    """Manages test execution with various options and reporting."""
     
     def __init__(self):
         self.project_root = Path(__file__).parent
-        self.tests_dir = self.project_root / "tests"
+        self.venv_path = self.project_root / "venv"
+        self.python_cmd = self._get_python_cmd()
+        
+    def _get_python_cmd(self):
+        """Get the appropriate Python command."""
+        if sys.platform == "win32":
+            python_exe = self.venv_path / "Scripts" / "python.exe"
+        else:
+            python_exe = self.venv_path / "bin" / "python"
+        
+        if python_exe.exists():
+            return str(python_exe)
+        return sys.executable
     
-    def run_unit_tests(self, extra_args=None):
-        """Run unit tests only."""
-        cmd = [
-            "python", "-m", "pytest",
-            "-m", "unit",
-            "--tb=short",
-            "-v"
-        ]
-        if extra_args:
-            cmd.extend(extra_args)
+    def run_command(self, cmd, capture_output=False):
+        """Run a command and optionally capture output."""
+        print(f"Running: {' '.join(cmd)}")
         
-        print("🧪 Running Unit Tests...")
-        return subprocess.run(cmd, cwd=self.project_root)
+        if capture_output:
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            return result.returncode, result.stdout, result.stderr
+        else:
+            return subprocess.run(cmd).returncode, "", ""
     
-    def run_integration_tests(self, extra_args=None):
-        """Run integration tests only."""
-        cmd = [
-            "python", "-m", "pytest", 
-            "-m", "integration",
-            "--tb=short",
-            "-v"
-        ]
-        if extra_args:
-            cmd.extend(extra_args)
+    def install_dependencies(self):
+        """Ensure test dependencies are installed."""
+        print("\n🔧 Checking test dependencies...")
         
-        print("🔗 Running Integration Tests...")
-        return subprocess.run(cmd, cwd=self.project_root)
+        deps = ["pytest", "pytest-qt", "pytest-cov", "pytest-benchmark", "coverage"]
+        cmd = [self.python_cmd, "-m", "pip", "install"] + deps
+        
+        returncode, _, _ = self.run_command(cmd)
+        if returncode == 0:
+            print("✅ Dependencies installed successfully")
+        else:
+            print("❌ Failed to install dependencies")
+            sys.exit(1)
     
-    def run_ui_tests(self, extra_args=None):
-        """Run UI tests (requires display)."""
-        cmd = [
-            "python", "-m", "pytest",
-            "-m", "ui",
-            "--tb=short", 
-            "-v"
-        ]
-        if extra_args:
-            cmd.extend(extra_args)
+    def run_tests(self, args):
+        """Run tests with specified options."""
+        print(f"\n🧪 Running tests...")
         
-        print("🖥️  Running UI Tests...")
-        return subprocess.run(cmd, cwd=self.project_root)
+        # Base pytest command
+        cmd = [self.python_cmd, "-m", "pytest"]
+        
+        # Add common options
+        cmd.extend(["-v", "--tb=short"])
+        
+        # Coverage options
+        if args.coverage:
+            cmd.extend([
+                "--cov=.",
+                "--cov-report=html:htmlcov",
+                "--cov-report=term-missing",
+                "--cov-report=json",
+                f"--cov-config={self.project_root}/pytest.ini"
+            ])
+        
+        # Test selection
+        if args.unit:
+            cmd.extend(["-m", "unit"])
+        elif args.integration:
+            cmd.extend(["-m", "integration"])
+        elif args.ui:
+            cmd.extend(["-m", "ui"])
+        elif args.performance:
+            cmd.extend(["-m", "performance"])
+        elif args.smoke:
+            cmd.extend(["-m", "smoke"])
+        
+        # Specific test files/patterns
+        if args.tests:
+            cmd.extend(args.tests)
+        else:
+            cmd.append("tests/")
+        
+        # Additional pytest options
+        if args.verbose:
+            cmd.append("-vv")
+        
+        if args.quiet:
+            cmd.append("-q")
+        
+        if args.exitfirst:
+            cmd.append("-x")
+        
+        if args.lf:
+            cmd.append("--lf")
+        
+        if args.parallel:
+            cmd.extend(["-n", str(args.parallel)])
+            # Install pytest-xdist if needed
+            subprocess.run([self.python_cmd, "-m", "pip", "install", "pytest-xdist"], 
+                         capture_output=True)
+        
+        # Exclude archived tests
+        cmd.extend(["--ignore=archive/", "--ignore=build/", "--ignore=dist/"])
+        
+        # Run the tests
+        start_time = time.time()
+        returncode, stdout, stderr = self.run_command(cmd)
+        duration = time.time() - start_time
+        
+        print(f"\n⏱️  Test execution time: {duration:.2f} seconds")
+        
+        # Generate reports
+        if args.coverage and returncode == 0:
+            self.generate_coverage_report()
+        
+        return returncode
     
-    def run_performance_tests(self, extra_args=None):
-        """Run performance tests."""
-        cmd = [
-            "python", "-m", "pytest",
-            "-m", "performance",
-            "--tb=short",
-            "-v",
-            "--benchmark-only"
-        ]
-        if extra_args:
-            cmd.extend(extra_args)
+    def generate_coverage_report(self):
+        """Generate and display coverage report."""
+        print("\n📊 Coverage Report Summary:")
         
-        print("⚡ Running Performance Tests...")
-        return subprocess.run(cmd, cwd=self.project_root)
+        # Read JSON coverage report
+        coverage_file = Path("coverage.json")
+        if coverage_file.exists():
+            with open(coverage_file) as f:
+                coverage_data = json.load(f)
+            
+            total_coverage = coverage_data.get("totals", {}).get("percent_covered", 0)
+            print(f"\n✨ Total Coverage: {total_coverage:.1f}%")
+            
+            # Show file coverage
+            print("\n📁 File Coverage:")
+            files = coverage_data.get("files", {})
+            
+            # Sort by coverage percentage
+            sorted_files = sorted(
+                files.items(), 
+                key=lambda x: x[1]["summary"]["percent_covered"],
+                reverse=True
+            )
+            
+            for filepath, data in sorted_files[:20]:  # Show top 20
+                # Skip test files and __pycache__
+                if "test" in filepath or "__pycache__" in filepath:
+                    continue
+                
+                percent = data["summary"]["percent_covered"]
+                # Show relative path
+                rel_path = Path(filepath).relative_to(self.project_root)
+                print(f"  {percent:5.1f}% - {rel_path}")
+            
+            print(f"\n📈 HTML report generated at: htmlcov/index.html")
     
-    def run_smoke_tests(self, extra_args=None):
-        """Run smoke tests for critical functionality."""
-        cmd = [
-            "python", "-m", "pytest",
-            "-m", "smoke",
-            "--tb=short",
-            "-v",
-            "--maxfail=1"
-        ]
-        if extra_args:
-            cmd.extend(extra_args)
+    def run_specific_test_suites(self):
+        """Run specific test suites with descriptions."""
+        test_suites = {
+            "wizard": {
+                "desc": "Export Wizard Tests",
+                "pattern": "tests/ui/test_export_wizard.py tests/unit/test_wizard_components.py"
+            },
+            "export": {
+                "desc": "All Export System Tests",
+                "pattern": "tests/**/test_export*.py tests/**/test_frame_exporter.py"
+            },
+            "ui": {
+                "desc": "UI Component Tests",
+                "pattern": "tests/ui/"
+            },
+            "core": {
+                "desc": "Core Functionality Tests",
+                "pattern": "tests/unit/test_sprite_model.py tests/unit/test_*controller.py"
+            },
+            "integration": {
+                "desc": "Integration Tests",
+                "pattern": "tests/integration/"
+            }
+        }
         
-        print("💨 Running Smoke Tests...")
-        return subprocess.run(cmd, cwd=self.project_root)
+        print("\n🎯 Available Test Suites:")
+        for name, info in test_suites.items():
+            print(f"  {name}: {info['desc']}")
+        
+        return test_suites
     
-    def run_all_tests(self, extra_args=None):
-        """Run all tests."""
-        cmd = [
-            "python", "-m", "pytest",
-            "--tb=short",
-            "-v"
-        ]
-        if extra_args:
-            cmd.extend(extra_args)
+    def run_watch_mode(self):
+        """Run tests in watch mode (requires pytest-watch)."""
+        print("\n👁️  Running tests in watch mode...")
         
-        print("🚀 Running All Tests...")
-        return subprocess.run(cmd, cwd=self.project_root)
-    
-    def run_with_coverage(self, test_type="all", extra_args=None):
-        """Run tests with coverage reporting."""
-        cmd = [
-            "python", "-m", "pytest",
-            "--cov=.",
-            "--cov-report=term-missing",
-            "--cov-report=html:htmlcov",
-            "--cov-report=xml",
-            "--tb=short",
-            "-v"
-        ]
+        # Install pytest-watch
+        subprocess.run([self.python_cmd, "-m", "pip", "install", "pytest-watch"],
+                      capture_output=True)
         
-        # Add marker filter based on test type
-        if test_type != "all":
-            cmd.extend(["-m", test_type])
-        
-        if extra_args:
-            cmd.extend(extra_args)
-        
-        print(f"📊 Running {test_type.title()} Tests with Coverage...")
-        result = subprocess.run(cmd, cwd=self.project_root)
-        
-        if result.returncode == 0:
-            print("\n📈 Coverage report generated in htmlcov/index.html")
-        
-        return result
-    
-    def run_parallel_tests(self, workers=4, extra_args=None):
-        """Run tests in parallel using pytest-xdist."""
-        cmd = [
-            "python", "-m", "pytest",
-            f"-n{workers}",
-            "--tb=short",
-            "-v"
-        ]
-        if extra_args:
-            cmd.extend(extra_args)
-        
-        print(f"⚡ Running Tests in Parallel ({workers} workers)...")
-        return subprocess.run(cmd, cwd=self.project_root)
-    
-    def watch_tests(self):
-        """Run tests in watch mode for development."""
-        try:
-            cmd = [
-                "python", "-m", "pytest-watch",
-                "--",
-                "-m", "unit",
-                "--tb=short"
-            ]
-            print("👀 Starting test watch mode (Ctrl+C to stop)...")
-            return subprocess.run(cmd, cwd=self.project_root)
-        except KeyboardInterrupt:
-            print("\n🛑 Test watch mode stopped.")
-            return subprocess.CompletedProcess([], 0)
-    
-    def run_quality_checks(self):
-        """Run code quality checks alongside tests."""
-        print("🔍 Running Code Quality Checks...")
-        
-        # Run tests with additional quality plugins
-        cmd = [
-            "python", "-m", "pytest",
-            "--flake8",
-            "--mypy", 
-            "--black",
-            "--tb=short",
-            "-v"
-        ]
-        
-        return subprocess.run(cmd, cwd=self.project_root)
+        cmd = [self.python_cmd, "-m", "ptw", "--", "-v", "--tb=short"]
+        subprocess.run(cmd)
     
     def generate_test_report(self):
-        """Generate comprehensive test report."""
+        """Generate a comprehensive test report."""
+        print("\n📝 Generating Test Report...")
+        
+        # Run tests with JSON report
         cmd = [
-            "python", "-m", "pytest",
-            "--html=test_report.html",
-            "--json-report",
-            "--json-report-file=test_report.json",
-            "--cov=.",
-            "--cov-report=html",
-            "--tb=short",
-            "-v"
+            self.python_cmd, "-m", "pytest",
+            "--json-report", "--json-report-file=test_report.json",
+            "-v", "tests/"
         ]
         
-        print("📋 Generating Comprehensive Test Report...")
-        result = subprocess.run(cmd, cwd=self.project_root)
+        # Install pytest-json-report if needed
+        subprocess.run([self.python_cmd, "-m", "pip", "install", "pytest-json-report"],
+                      capture_output=True)
         
-        if result.returncode == 0:
-            print("\n📄 Test report generated:")
-            print("  - HTML: test_report.html")
-            print("  - JSON: test_report.json") 
-            print("  - Coverage: htmlcov/index.html")
+        returncode, _, _ = self.run_command(cmd, capture_output=True)
         
-        return result
+        if returncode == 0 and Path("test_report.json").exists():
+            with open("test_report.json") as f:
+                report = json.load(f)
+            
+            print("\n📊 Test Summary:")
+            summary = report.get("summary", {})
+            print(f"  Total tests: {summary.get('total', 0)}")
+            print(f"  Passed: {summary.get('passed', 0)}")
+            print(f"  Failed: {summary.get('failed', 0)}")
+            print(f"  Skipped: {summary.get('skipped', 0)}")
+            print(f"  Duration: {report.get('duration', 0):.2f}s")
 
 
 def main():
-    """Main entry point for test runner."""
+    """Main entry point."""
     parser = argparse.ArgumentParser(
-        description="Python Sprite Viewer Test Runner",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python run_tests.py                     # Run all tests
-  python run_tests.py --unit --coverage   # Unit tests with coverage
-  python run_tests.py --smoke             # Quick smoke tests
-  python run_tests.py --parallel 8        # Parallel execution
-  python run_tests.py --watch             # Development watch mode
-        """
+        description="Comprehensive test runner for Python Sprite Viewer"
     )
     
-    # Test type selection
-    parser.add_argument("--unit", action="store_true", help="Run unit tests only")
-    parser.add_argument("--integration", action="store_true", help="Run integration tests only")
-    parser.add_argument("--ui", action="store_true", help="Run UI tests only")
-    parser.add_argument("--performance", action="store_true", help="Run performance tests only")
-    parser.add_argument("--smoke", action="store_true", help="Run smoke tests only")
+    # Test selection
+    parser.add_argument("tests", nargs="*", help="Specific test files or patterns")
+    parser.add_argument("-u", "--unit", action="store_true", 
+                       help="Run only unit tests")
+    parser.add_argument("-i", "--integration", action="store_true",
+                       help="Run only integration tests")
+    parser.add_argument("--ui", action="store_true",
+                       help="Run only UI tests")
+    parser.add_argument("-p", "--performance", action="store_true",
+                       help="Run performance tests")
+    parser.add_argument("-s", "--smoke", action="store_true",
+                       help="Run smoke tests only")
+    
+    # Coverage options
+    parser.add_argument("-c", "--coverage", action="store_true",
+                       help="Generate coverage report")
+    
+    # Output options
+    parser.add_argument("-v", "--verbose", action="store_true",
+                       help="Verbose output")
+    parser.add_argument("-q", "--quiet", action="store_true",
+                       help="Minimal output")
     
     # Execution options
-    parser.add_argument("--coverage", action="store_true", help="Run with coverage reporting")
-    parser.add_argument("--parallel", type=int, metavar="N", help="Run tests in parallel with N workers")
-    parser.add_argument("--watch", action="store_true", help="Watch mode for development")
-    parser.add_argument("--quality", action="store_true", help="Run code quality checks")
-    parser.add_argument("--report", action="store_true", help="Generate comprehensive test report")
+    parser.add_argument("-x", "--exitfirst", action="store_true",
+                       help="Exit on first failure")
+    parser.add_argument("--lf", action="store_true",
+                       help="Run last failed tests")
+    parser.add_argument("-n", "--parallel", type=int,
+                       help="Run tests in parallel")
     
-    # Additional pytest arguments
-    parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
-    parser.add_argument("--maxfail", type=int, metavar="N", help="Stop after N failures")
-    parser.add_argument("--timeout", type=int, metavar="SECONDS", help="Timeout for individual tests")
-    parser.add_argument("pytest_args", nargs="*", help="Additional arguments to pass to pytest")
+    # Special modes
+    parser.add_argument("-w", "--watch", action="store_true",
+                       help="Run tests in watch mode")
+    parser.add_argument("--install", action="store_true",
+                       help="Install test dependencies")
+    parser.add_argument("--report", action="store_true",
+                       help="Generate detailed test report")
+    parser.add_argument("--suites", action="store_true",
+                       help="Show available test suites")
     
     args = parser.parse_args()
     
-    # Create test runner
     runner = TestRunner()
     
-    # Build extra arguments
-    extra_args = args.pytest_args or []
-    if args.verbose:
-        extra_args.append("-v")
-    if args.maxfail:
-        extra_args.extend(["--maxfail", str(args.maxfail)])
-    if args.timeout:
-        extra_args.extend(["--timeout", str(args.timeout)])
+    # Handle special modes
+    if args.install:
+        runner.install_dependencies()
+        return
     
-    # Determine execution mode
+    if args.suites:
+        runner.run_specific_test_suites()
+        return
+    
     if args.watch:
-        result = runner.watch_tests()
-    elif args.quality:
-        result = runner.run_quality_checks()
-    elif args.report:
-        result = runner.generate_test_report()
-    elif args.parallel:
-        result = runner.run_parallel_tests(args.parallel, extra_args)
-    elif args.coverage:
-        test_type = "all"
-        if args.unit:
-            test_type = "unit"
-        elif args.integration:
-            test_type = "integration"
-        elif args.ui:
-            test_type = "ui"
-        elif args.performance:
-            test_type = "performance"
-        result = runner.run_with_coverage(test_type, extra_args)
-    elif args.unit:
-        result = runner.run_unit_tests(extra_args)
-    elif args.integration:
-        result = runner.run_integration_tests(extra_args)
-    elif args.ui:
-        result = runner.run_ui_tests(extra_args)
-    elif args.performance:
-        result = runner.run_performance_tests(extra_args)
-    elif args.smoke:
-        result = runner.run_smoke_tests(extra_args)
-    else:
-        result = runner.run_all_tests(extra_args)
+        runner.run_watch_mode()
+        return
     
-    # Exit with test result code
-    sys.exit(result.returncode)
+    if args.report:
+        runner.generate_test_report()
+        return
+    
+    # Run tests
+    returncode = runner.run_tests(args)
+    sys.exit(returncode)
 
 
 if __name__ == "__main__":

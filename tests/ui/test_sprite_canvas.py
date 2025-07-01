@@ -10,7 +10,7 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QSignalSpy
 
-from sprite_canvas import SpriteCanvas
+from ui.sprite_canvas import SpriteCanvas
 from config import Config
 
 
