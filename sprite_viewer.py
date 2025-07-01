@@ -19,7 +19,7 @@ from config import Config
 from utils import StyleManager
 
 # Coordinator system (Phase 1 refactoring)
-from coordinators import CoordinatorRegistry, UISetupHelper
+from coordinators import CoordinatorRegistry, UISetupHelper, ViewCoordinator
 
 # Core MVC Components
 from sprite_model import SpriteModel
@@ -101,6 +101,17 @@ class SpriteViewer(QMainWindow):
         self._status_manager = ui_components['status_manager']
         self._menus = ui_components['menus']
         
+        # Initialize View Coordinator (Phase 3 refactoring)
+        self._view_coordinator = ViewCoordinator(self)
+        self._coordinator_registry.register('view', self._view_coordinator)
+        
+        # Initialize view coordinator with dependencies
+        view_dependencies = {
+            'canvas': self._canvas,
+            'zoom_label': self._zoom_label
+        }
+        self._view_coordinator.initialize(view_dependencies)
+        
         # Set up managers with UI components
         self._setup_managers()
         
@@ -179,12 +190,12 @@ class SpriteViewer(QMainWindow):
         self._action_manager.set_action_callback('file_export_frames', self._export_frames)
         self._action_manager.set_action_callback('file_export_current', self._export_current_frame)
         
-        # View actions
-        self._action_manager.set_action_callback('view_zoom_in', self._zoom_in)
-        self._action_manager.set_action_callback('view_zoom_out', self._zoom_out)
-        self._action_manager.set_action_callback('view_zoom_fit', self._zoom_fit)
-        self._action_manager.set_action_callback('view_zoom_reset', self._zoom_reset)
-        self._action_manager.set_action_callback('view_toggle_grid', self._toggle_grid)
+        # View actions (Phase 3 refactoring - use ViewCoordinator)
+        self._action_manager.set_action_callback('view_zoom_in', self._view_coordinator.zoom_in)
+        self._action_manager.set_action_callback('view_zoom_out', self._view_coordinator.zoom_out)
+        self._action_manager.set_action_callback('view_zoom_fit', self._view_coordinator.zoom_fit)
+        self._action_manager.set_action_callback('view_zoom_reset', self._view_coordinator.zoom_reset)
+        self._action_manager.set_action_callback('view_toggle_grid', self._view_coordinator.toggle_grid)
         
         # Animation actions
         self._action_manager.set_action_callback('animation_toggle', 
@@ -229,8 +240,8 @@ class SpriteViewer(QMainWindow):
         self._auto_detection_controller.frameSettingsDetected.connect(self._on_frame_settings_detected)
         self._auto_detection_controller.statusUpdate.connect(self._on_detection_status_update)
         
-        # Canvas signals
-        self._canvas.zoomChanged.connect(self._on_zoom_changed)
+        # Canvas signals (Phase 3 refactoring - zoom handled by ViewCoordinator)
+        # self._canvas.zoomChanged is now connected in ViewCoordinator
         self._canvas.mouseMoved.connect(self._status_manager.update_mouse_position)
         
         # Frame extractor signals
@@ -298,8 +309,8 @@ class SpriteViewer(QMainWindow):
             # Update context for managers
             self._update_manager_context()
             
-            # Update display first (fast)
-            self._canvas.update()
+            # Update display first (fast) - Phase 3 refactoring
+            self._view_coordinator.update_canvas()
             self._info_label.setText(self._sprite_model.sprite_info)
             
             # Trigger appropriate detection based on current extraction mode
@@ -365,34 +376,6 @@ class SpriteViewer(QMainWindow):
         """Handle unified export request from new dialog (handles both frames and segments)."""
         self._export_handler.handle_unified_export_request(settings, self._sprite_model, self._segment_manager)
     
-    # ============================================================================
-    # VIEW OPERATIONS
-    # ============================================================================
-    
-    def _zoom_in(self):
-        """Zoom in on canvas."""
-        self._canvas.zoom_in()
-    
-    def _zoom_out(self):
-        """Zoom out on canvas."""
-        self._canvas.zoom_out()
-    
-    def _zoom_fit(self):
-        """Fit canvas to window."""
-        self._canvas.fit_to_window()
-    
-    def _zoom_reset(self):
-        """Reset canvas zoom to 100%."""
-        self._canvas.reset_view()
-    
-    def _toggle_grid(self):
-        """Toggle grid overlay."""
-        self._canvas.toggle_grid()
-    
-    def _on_zoom_changed(self, zoom_factor: float):
-        """Handle zoom change."""
-        percentage = int(zoom_factor * 100)
-        self._zoom_label.setText(f"{percentage}%")
     
     # ============================================================================
     # ANIMATION OPERATIONS
@@ -420,17 +403,17 @@ class SpriteViewer(QMainWindow):
     
     def _on_frame_changed(self, frame_index: int, total_frames: int):
         """Handle frame change."""
-        # Update canvas frame info and trigger repaint with new frame
-        self._canvas.set_frame_info(frame_index, total_frames)
-        self._canvas.update_with_current_frame()
+        # Update canvas frame info and trigger repaint with new frame (Phase 3 refactoring)
+        self._view_coordinator.set_frame_info(frame_index, total_frames)
+        self._view_coordinator.update_with_current_frame()
         
         # Update playback controls
         self._playback_controls.set_current_frame(frame_index)
     
     def _on_sprite_loaded(self, file_path: str):
         """Handle sprite loaded."""
-        self._canvas.reset_view()
-        self._canvas.update()
+        # Reset and update canvas view (Phase 3 refactoring)
+        self._view_coordinator.reset_view()
         
         # Update managers context
         self._update_manager_context()
@@ -452,16 +435,16 @@ class SpriteViewer(QMainWindow):
             self._playback_controls.set_frame_range(frame_count - 1)
             self._playback_controls.update_button_states(True, True, False)
             
-            # Update canvas with frame info
+            # Update canvas with frame info (Phase 3 refactoring)
             current_frame = self._sprite_model.current_frame
-            self._canvas.set_frame_info(current_frame, frame_count)
+            self._view_coordinator.set_frame_info(current_frame, frame_count)
             
             # Update grid view with new frames
             self._segment_controller.update_grid_view_frames()
         else:
             self._playback_controls.set_frame_range(0)
             self._playback_controls.update_button_states(False, False, False)
-            self._canvas.set_frame_info(0, 0)
+            self._view_coordinator.set_frame_info(0, 0)
             
             # Clear grid view if no frames
             if self._grid_view:
@@ -470,8 +453,8 @@ class SpriteViewer(QMainWindow):
         # Update managers context
         self._update_manager_context()
         
-        # Update display with current frame
-        self._canvas.update_with_current_frame()
+        # Update display with current frame (Phase 3 refactoring)
+        self._view_coordinator.update_with_current_frame()
     
     def _on_playback_started(self):
         """Handle playback start."""
@@ -562,10 +545,10 @@ class SpriteViewer(QMainWindow):
         # Update managers context
         self._update_manager_context()
         
-        # Ensure first frame is displayed after extraction
+        # Ensure first frame is displayed after extraction (Phase 3 refactoring)
         if total_frames > 0:
             self._sprite_model.set_current_frame(0)
-            self._canvas.update_with_current_frame()
+            self._view_coordinator.update_with_current_frame()
     
     # ============================================================================
     # HELP DIALOGS
@@ -607,16 +590,19 @@ class SpriteViewer(QMainWindow):
         """Handle drag enter event."""
         if self._file_controller.is_valid_drop(event.mimeData()):
             event.acceptProposedAction()
-            self._canvas.setStyleSheet(StyleManager.get_canvas_drag_hover())
+            # Update canvas style for drag hover (Phase 3 refactoring)
+            self._view_coordinator.set_drag_hover_style(StyleManager.get_canvas_drag_hover())
     
     def dragLeaveEvent(self, event):
         """Handle drag leave event."""
-        self._canvas.setStyleSheet(StyleManager.get_canvas_normal())
+        # Reset canvas style (Phase 3 refactoring)
+        self._view_coordinator.reset_canvas_style(StyleManager.get_canvas_normal())
         self._show_welcome_message()
     
     def dropEvent(self, event: QDropEvent):
         """Handle drop event."""
-        self._canvas.setStyleSheet(StyleManager.get_canvas_normal())
+        # Reset canvas style (Phase 3 refactoring)
+        self._view_coordinator.reset_canvas_style(StyleManager.get_canvas_normal())
         
         file_path = self._file_controller.extract_file_from_drop(event)
         if file_path:

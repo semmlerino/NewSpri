@@ -5,5 +5,6 @@ Provides base classes and implementations for extracting responsibilities from m
 
 from .base import CoordinatorBase, CoordinatorRegistry
 from .ui_setup_helper import UISetupHelper
+from .view_coordinator import ViewCoordinator
 
-__all__ = ['CoordinatorBase', 'CoordinatorRegistry', 'UISetupHelper']
+__all__ = ['CoordinatorBase', 'CoordinatorRegistry', 'UISetupHelper', 'ViewCoordinator']
