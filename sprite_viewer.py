@@ -10,7 +10,7 @@ from typing import Optional
 
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QHBoxLayout, QVBoxLayout, QWidget,
-    QSplitter, QLabel, QSizePolicy, QMessageBox, QTabWidget, QPushButton, QDialog
+    QSplitter, QLabel, QSizePolicy, QTabWidget, QPushButton, QDialog
 )
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent, QKeySequence
@@ -19,7 +19,7 @@ from config import Config
 from utils import StyleManager
 
 # Coordinator system (Phase 1 refactoring)
-from coordinators import CoordinatorRegistry, UISetupHelper, ViewCoordinator, ExportCoordinator, AnimationCoordinator, EventCoordinator
+from coordinators import CoordinatorRegistry, UISetupHelper, ViewCoordinator, ExportCoordinator, AnimationCoordinator, EventCoordinator, DialogCoordinator
 
 # Core MVC Components
 from sprite_model import SpriteModel
@@ -152,6 +152,16 @@ class SpriteViewer(QMainWindow):
         }
         self._event_coordinator.initialize(event_dependencies)
         
+        # Initialize Dialog Coordinator (Phase 7 refactoring)
+        self._dialog_coordinator = DialogCoordinator(self)
+        self._coordinator_registry.register('dialog', self._dialog_coordinator)
+        
+        # Initialize dialog coordinator with dependencies
+        dialog_dependencies = {
+            'shortcut_manager': self._shortcut_manager
+        }
+        self._dialog_coordinator.initialize(dialog_dependencies)
+        
         # Set up managers with UI components
         self._setup_managers()
         
@@ -247,9 +257,9 @@ class SpriteViewer(QMainWindow):
         # Toolbar actions (reuse same callbacks)
         self._action_manager.set_action_callback('toolbar_export', self._export_coordinator.export_frames)
         
-        # Help actions  
-        self._action_manager.set_action_callback('help_shortcuts', self._show_shortcuts)
-        self._action_manager.set_action_callback('help_about', self._show_about)
+        # Help actions (Phase 7 refactoring - use DialogCoordinator)
+        self._action_manager.set_action_callback('help_shortcuts', self._dialog_coordinator.show_shortcuts)
+        self._action_manager.set_action_callback('help_about', self._dialog_coordinator.show_about)
     
     
     
@@ -277,7 +287,7 @@ class SpriteViewer(QMainWindow):
         
         # Auto-detection controller signals
         self._auto_detection_controller.frameSettingsDetected.connect(self._on_frame_settings_detected)
-        self._auto_detection_controller.statusUpdate.connect(self._on_detection_status_update)
+        self._auto_detection_controller.statusUpdate.connect(self._status_manager.show_message)
         
         # Canvas signals (Phase 3 refactoring - zoom handled by ViewCoordinator)
         # self._canvas.zoomChanged is now connected in ViewCoordinator
@@ -362,7 +372,7 @@ class SpriteViewer(QMainWindow):
                 # For grid mode, run comprehensive grid auto-detection
                 self._auto_detection_controller.run_comprehensive_detection_with_dialog()
         else:
-            QMessageBox.critical(self, "Load Error", error_message)
+            self._dialog_coordinator.show_error("Load Error", error_message)
     
     def _on_file_load_failed(self, error_message: str):
         """Handle file load failure from FileController."""
@@ -431,9 +441,6 @@ class SpriteViewer(QMainWindow):
         self._frame_extractor.set_frame_size(width, height)
         self._update_frame_slicing()
     
-    def _on_detection_status_update(self, message: str):
-        """Handle detection status update."""
-        self._status_manager.show_message(message)
     
     def _on_extraction_mode_changed(self, mode: str):
         """Handle extraction mode change (grid vs CCL)."""
@@ -476,7 +483,7 @@ class SpriteViewer(QMainWindow):
             )
         
         if not success:
-            QMessageBox.warning(self, "Frame Extraction Error", error_message)
+            self._dialog_coordinator.show_warning("Frame Extraction Error", error_message)
             return
         
         # Update info
@@ -494,29 +501,6 @@ class SpriteViewer(QMainWindow):
     # HELP DIALOGS
     # ============================================================================
     
-    def _show_shortcuts(self):
-        """Show keyboard shortcuts dialog using ShortcutManager."""
-        help_html = self._shortcut_manager.generate_help_html()
-        QMessageBox.information(self, "Keyboard Shortcuts", help_html)
-    
-    def _show_about(self):
-        """Show about dialog."""
-        about_text = """
-<h3>Python Sprite Viewer</h3>
-<p>Version 2.0 (Refactored)</p>
-<p>A modern sprite sheet animation viewer with improved usability and architecture.</p>
-<p>Features:</p>
-<ul>
-<li>Automatic frame extraction</li>
-<li>Smooth animation playback</li>
-<li>Intuitive controls</li>
-<li>Smart size detection</li>
-<li>Frame export (PNG, JPG, BMP, GIF)</li>
-<li>Sprite sheet generation</li>
-<li>Centralized manager architecture</li>
-</ul>
-        """
-        QMessageBox.about(self, "About Sprite Viewer", about_text)
     
     def _show_welcome_message(self):
         """Show welcome message."""
