@@ -47,6 +47,18 @@ Systematic refactoring of the 814-line SpriteViewer class using the Coordinator 
 **Testing**: 16/16 unit tests passing  
 **Impact**: SpriteViewer reduced from 698 → 662 lines
 
+### ✅ Phase 5: Extract AnimationCoordinator
+**Status**: Complete  
+**Changes**:
+- Created `AnimationCoordinator` for animation control and navigation
+- Moved frame navigation methods (prev/next/first/last)
+- Extracted playback state handlers and updates
+- Centralized coordination between animation controller, playback controls, and sprite model
+- Moved FPS and loop mode settings
+
+**Testing**: 20/20 unit tests passing, 48/48 playback controls tests passing  
+**Impact**: SpriteViewer reduced from 662 → 624 lines
+
 ## Metrics
 
 | Phase | Before | After | Lines Removed | Tests Added |
@@ -55,13 +67,10 @@ Systematic refactoring of the 814-line SpriteViewer class using the Coordinator 
 | Phase 2 | 814 | 712 | 102 | 7 |
 | Phase 3 | 712 | 698 | 14 | 15 |
 | Phase 4 | 698 | 662 | 36 | 16 |
-| **Total** | **814** | **662** | **152 (18.7%)** | **52** |
+| Phase 5 | 662 | 624 | 38 | 20 |
+| **Total** | **814** | **624** | **190 (23.3%)** | **72** |
 
 ## Remaining Phases
-
-### ⏳ Phase 5: Extract AnimationCoordinator  
-**Estimated Impact**: ~60 lines  
-**Scope**: Animation navigation, playback state handling
 
 ### ⏳ Phase 6: Extract EventCoordinator
 **Estimated Impact**: ~40 lines  

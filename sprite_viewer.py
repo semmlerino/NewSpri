@@ -19,7 +19,7 @@ from config import Config
 from utils import StyleManager
 
 # Coordinator system (Phase 1 refactoring)
-from coordinators import CoordinatorRegistry, UISetupHelper, ViewCoordinator, ExportCoordinator
+from coordinators import CoordinatorRegistry, UISetupHelper, ViewCoordinator, ExportCoordinator, AnimationCoordinator
 
 # Core MVC Components
 from sprite_model import SpriteModel
@@ -124,6 +124,20 @@ class SpriteViewer(QMainWindow):
         }
         self._export_coordinator.initialize(export_dependencies)
         
+        # Initialize Animation Coordinator (Phase 5 refactoring)
+        self._animation_coordinator = AnimationCoordinator(self)
+        self._coordinator_registry.register('animation', self._animation_coordinator)
+        
+        # Initialize animation coordinator with dependencies
+        animation_dependencies = {
+            'sprite_model': self._sprite_model,
+            'animation_controller': self._animation_controller,
+            'playback_controls': self._playback_controls,
+            'action_manager': self._action_manager,
+            'status_manager': self._status_manager
+        }
+        self._animation_coordinator.initialize(animation_dependencies)
+        
         # Set up managers with UI components
         self._setup_managers()
         
@@ -209,13 +223,12 @@ class SpriteViewer(QMainWindow):
         self._action_manager.set_action_callback('view_zoom_reset', self._view_coordinator.zoom_reset)
         self._action_manager.set_action_callback('view_toggle_grid', self._view_coordinator.toggle_grid)
         
-        # Animation actions
-        self._action_manager.set_action_callback('animation_toggle', 
-                                               lambda: self._animation_controller.toggle_playback())
-        self._action_manager.set_action_callback('animation_prev_frame', self._go_to_prev_frame)
-        self._action_manager.set_action_callback('animation_next_frame', self._go_to_next_frame)
-        self._action_manager.set_action_callback('animation_first_frame', self._go_to_first_frame)
-        self._action_manager.set_action_callback('animation_last_frame', self._go_to_last_frame)
+        # Animation actions (Phase 5 refactoring - use AnimationCoordinator)
+        self._action_manager.set_action_callback('animation_toggle', self._animation_coordinator.toggle_playback)
+        self._action_manager.set_action_callback('animation_prev_frame', self._animation_coordinator.go_to_prev_frame)
+        self._action_manager.set_action_callback('animation_next_frame', self._animation_coordinator.go_to_next_frame)
+        self._action_manager.set_action_callback('animation_first_frame', self._animation_coordinator.go_to_first_frame)
+        self._action_manager.set_action_callback('animation_last_frame', self._animation_coordinator.go_to_last_frame)
         
         # Toolbar actions (reuse same callbacks)
         self._action_manager.set_action_callback('toolbar_export', self._export_coordinator.export_frames)
@@ -239,13 +252,13 @@ class SpriteViewer(QMainWindow):
         self._sprite_model.dataLoaded.connect(self._on_sprite_loaded)
         self._sprite_model.extractionCompleted.connect(self._on_extraction_completed)
         
-        # Animation controller signals
-        self._animation_controller.animationStarted.connect(self._on_playback_started)
-        self._animation_controller.animationPaused.connect(self._on_playback_paused)
-        self._animation_controller.animationStopped.connect(self._on_playback_stopped)
-        self._animation_controller.animationCompleted.connect(self._on_playback_completed)
-        self._animation_controller.frameAdvanced.connect(self._on_frame_advanced)
-        self._animation_controller.errorOccurred.connect(self._on_animation_error)
+        # Animation controller signals (Phase 5 refactoring - use AnimationCoordinator)
+        self._animation_controller.animationStarted.connect(self._animation_coordinator.on_playback_started)
+        self._animation_controller.animationPaused.connect(self._animation_coordinator.on_playback_paused)
+        self._animation_controller.animationStopped.connect(self._animation_coordinator.on_playback_stopped)
+        self._animation_controller.animationCompleted.connect(self._animation_coordinator.on_playback_completed)
+        self._animation_controller.frameAdvanced.connect(self._animation_coordinator.on_frame_advanced)
+        self._animation_controller.errorOccurred.connect(self._animation_coordinator.on_animation_error)
         self._animation_controller.statusChanged.connect(self._status_manager.show_message)
         
         # Auto-detection controller signals
@@ -260,15 +273,15 @@ class SpriteViewer(QMainWindow):
         self._frame_extractor.settingsChanged.connect(self._update_frame_slicing)
         self._frame_extractor.modeChanged.connect(self._on_extraction_mode_changed)
         
-        # Playback controls signals
-        self._playback_controls.playPauseClicked.connect(self._animation_controller.toggle_playback)
-        self._playback_controls.frameChanged.connect(self._sprite_model.set_current_frame)
-        self._playback_controls.fpsChanged.connect(self._animation_controller.set_fps)
-        self._playback_controls.loopToggled.connect(self._animation_controller.set_loop_mode)
+        # Playback controls signals (Phase 5 refactoring - use AnimationCoordinator)
+        self._playback_controls.playPauseClicked.connect(self._animation_coordinator.toggle_playback)
+        self._playback_controls.frameChanged.connect(self._animation_coordinator.go_to_frame)
+        self._playback_controls.fpsChanged.connect(self._animation_coordinator.set_fps)
+        self._playback_controls.loopToggled.connect(self._animation_coordinator.set_loop_mode)
         
-        # Navigation button signals (need to connect the actual buttons)
-        self._playback_controls.prev_btn.clicked.connect(self._go_to_prev_frame)
-        self._playback_controls.next_btn.clicked.connect(self._go_to_next_frame)
+        # Navigation button signals (Phase 5 refactoring - use AnimationCoordinator)
+        self._playback_controls.prev_btn.clicked.connect(self._animation_coordinator.go_to_prev_frame)
+        self._playback_controls.next_btn.clicked.connect(self._animation_coordinator.go_to_next_frame)
         
         # Grid view signals (Phase 2 refactoring - moved from _create_grid_tab)
         if self._grid_view:
@@ -290,7 +303,7 @@ class SpriteViewer(QMainWindow):
     def _update_manager_context(self):
         """Update manager context based on current state."""
         has_frames = bool(self._sprite_model.sprite_frames)
-        is_playing = self._animation_controller.is_playing
+        is_playing = self._animation_coordinator.is_playing()  # Phase 5 refactoring
         
         # Update both managers
         self._shortcut_manager.update_context(
@@ -342,26 +355,6 @@ class SpriteViewer(QMainWindow):
         QMessageBox.critical(self, "Load Error", error_message)
     
     # ============================================================================
-    # ANIMATION OPERATIONS
-    # ============================================================================
-    
-    def _go_to_prev_frame(self):
-        """Go to previous frame."""
-        self._sprite_model.previous_frame()
-    
-    def _go_to_next_frame(self):
-        """Go to next frame."""
-        self._sprite_model.next_frame()
-    
-    def _go_to_first_frame(self):
-        """Go to first frame."""
-        self._sprite_model.first_frame()
-    
-    def _go_to_last_frame(self):
-        """Go to last frame."""
-        self._sprite_model.last_frame()
-    
-    # ============================================================================
     # SIGNAL HANDLERS
     # ============================================================================
     
@@ -395,10 +388,10 @@ class SpriteViewer(QMainWindow):
     
     def _on_extraction_completed(self, frame_count: int):
         """Handle extraction completion."""
+        # Update playback controls (Phase 5 refactoring - use AnimationCoordinator)
+        self._animation_coordinator.on_extraction_completed(frame_count)
+        
         if frame_count > 0:
-            self._playback_controls.set_frame_range(frame_count - 1)
-            self._playback_controls.update_button_states(True, True, False)
-            
             # Update canvas with frame info (Phase 3 refactoring)
             current_frame = self._sprite_model.current_frame
             self._view_coordinator.set_frame_info(current_frame, frame_count)
@@ -406,8 +399,6 @@ class SpriteViewer(QMainWindow):
             # Update grid view with new frames
             self._segment_controller.update_grid_view_frames()
         else:
-            self._playback_controls.set_frame_range(0)
-            self._playback_controls.update_button_states(False, False, False)
             self._view_coordinator.set_frame_info(0, 0)
             
             # Clear grid view if no frames
@@ -420,35 +411,6 @@ class SpriteViewer(QMainWindow):
         # Update display with current frame (Phase 3 refactoring)
         self._view_coordinator.update_with_current_frame()
     
-    def _on_playback_started(self):
-        """Handle playback start."""
-        self._playback_controls.update_button_states(False, True, True)
-        self._update_manager_context()
-    
-    def _on_playback_paused(self):
-        """Handle playback pause."""
-        self._playback_controls.update_button_states(True, True, True)
-        self._update_manager_context()
-    
-    def _on_playback_stopped(self):
-        """Handle playback stop."""
-        self._playback_controls.update_button_states(True, True, False)
-        self._update_manager_context()
-    
-    def _on_playback_completed(self):
-        """Handle playback completion."""
-        self._playback_controls.update_button_states(True, True, False)
-        self._update_manager_context()
-    
-    def _on_frame_advanced(self, frame_index: int):
-        """Handle frame advancement from animation controller."""
-        # Frame advancement is handled by the animation controller
-        # UI updates happen through sprite model frameChanged signal
-        pass
-    
-    def _on_animation_error(self, error_message: str):
-        """Handle animation controller error."""
-        QMessageBox.warning(self, "Animation Error", error_message)
     
     def _on_frame_settings_detected(self, width: int, height: int):
         """Handle frame settings detected."""
