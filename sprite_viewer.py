@@ -19,7 +19,7 @@ from config import Config
 from utils import StyleManager
 
 # Coordinator system (Phase 1 refactoring)
-from coordinators import CoordinatorRegistry, UISetupHelper, ViewCoordinator, ExportCoordinator, AnimationCoordinator
+from coordinators import CoordinatorRegistry, UISetupHelper, ViewCoordinator, ExportCoordinator, AnimationCoordinator, EventCoordinator
 
 # Core MVC Components
 from sprite_model import SpriteModel
@@ -137,6 +137,20 @@ class SpriteViewer(QMainWindow):
             'status_manager': self._status_manager
         }
         self._animation_coordinator.initialize(animation_dependencies)
+        
+        # Initialize Event Coordinator (Phase 6 refactoring)
+        self._event_coordinator = EventCoordinator(self)
+        self._coordinator_registry.register('event', self._event_coordinator)
+        
+        # Initialize event coordinator with dependencies
+        event_dependencies = {
+            'shortcut_manager': self._shortcut_manager,
+            'file_controller': self._file_controller,
+            'view_coordinator': self._view_coordinator,
+            'status_manager': self._status_manager,
+            'show_welcome_message': self._show_welcome_message
+        }
+        self._event_coordinator.initialize(event_dependencies)
         
         # Set up managers with UI components
         self._setup_managers()
@@ -283,9 +297,9 @@ class SpriteViewer(QMainWindow):
         self._playback_controls.prev_btn.clicked.connect(self._animation_coordinator.go_to_prev_frame)
         self._playback_controls.next_btn.clicked.connect(self._animation_coordinator.go_to_next_frame)
         
-        # Grid view signals (Phase 2 refactoring - moved from _create_grid_tab)
+        # Grid view signals (Phase 6 refactoring - use EventCoordinator)
         if self._grid_view:
-            self._grid_view.frameSelected.connect(self._on_grid_frame_selected)
+            self._grid_view.frameSelected.connect(self._event_coordinator.handle_grid_frame_selected)
             self._grid_view.framePreviewRequested.connect(self._on_grid_frame_preview)
             self._grid_view.segmentCreated.connect(self._segment_controller.create_segment)
             self._grid_view.segmentDeleted.connect(self._segment_controller.delete_segment)
@@ -514,33 +528,20 @@ class SpriteViewer(QMainWindow):
     
     def dragEnterEvent(self, event: QDragEnterEvent):
         """Handle drag enter event."""
-        if self._file_controller.is_valid_drop(event.mimeData()):
-            event.acceptProposedAction()
-            # Update canvas style for drag hover (Phase 3 refactoring)
-            self._view_coordinator.set_drag_hover_style(StyleManager.get_canvas_drag_hover())
+        # Phase 6 refactoring - use EventCoordinator
+        self._event_coordinator.handle_drag_enter(event)
     
     def dragLeaveEvent(self, event):
         """Handle drag leave event."""
-        # Reset canvas style (Phase 3 refactoring)
-        self._view_coordinator.reset_canvas_style(StyleManager.get_canvas_normal())
-        self._show_welcome_message()
+        # Phase 6 refactoring - use EventCoordinator
+        self._event_coordinator.handle_drag_leave(event)
     
     def dropEvent(self, event: QDropEvent):
         """Handle drop event."""
-        # Reset canvas style (Phase 3 refactoring)
-        self._view_coordinator.reset_canvas_style(StyleManager.get_canvas_normal())
-        
-        file_path = self._file_controller.extract_file_from_drop(event)
-        if file_path:
-            self._file_controller.load_file(file_path)
-            event.acceptProposedAction()
+        # Phase 6 refactoring - use EventCoordinator
+        self._event_coordinator.handle_drop(event)
     
     # Animation Grid View Signal Handlers
-    def _on_grid_frame_selected(self, frame_index: int):
-        """Handle frame selection from grid view - just update status, don't switch tabs."""
-        # Update status to show selected frame but don't switch tabs
-        self._status_manager.show_message(f"Selected frame {frame_index}")
-    
     def _on_grid_frame_preview(self, frame_index: int):
         """Handle frame preview request (double-click) - switch to main view."""
         # Switch to canvas view and show selected frame
@@ -548,48 +549,10 @@ class SpriteViewer(QMainWindow):
         self._sprite_model.set_current_frame(frame_index)
         self._status_manager.show_message(f"Previewing frame {frame_index}")
     
-    # Key mapping for special keys
-    _KEY_MAPPING = {
-        Qt.Key_Space: "Space",
-        Qt.Key_Left: "Left",
-        Qt.Key_Right: "Right",
-        Qt.Key_Home: "Home",
-        Qt.Key_End: "End",
-        Qt.Key_Plus: "+",
-        Qt.Key_Minus: "-",
-    }
-    
     def keyPressEvent(self, event):
-        """Handle keyboard shortcuts using ShortcutManager."""
-        key = event.key()
-        modifiers = event.modifiers()
-        
-        # Build key sequence using Qt's built-in functionality
-        q_key_sequence = QKeySequence(key | modifiers.value if hasattr(modifiers, 'value') else int(modifiers))
-        key_sequence_str = q_key_sequence.toString()
-        
-        # For special keys not handled well by QKeySequence, use our mapping
-        if key in self._KEY_MAPPING:
-            # Build custom sequence for special keys
-            parts = []
-            if modifiers & Qt.ControlModifier:
-                parts.append("Ctrl")
-            if modifiers & Qt.ShiftModifier:
-                parts.append("Shift")
-            if modifiers & Qt.AltModifier:
-                parts.append("Alt")
-            parts.append(self._KEY_MAPPING[key])
-            key_sequence_str = "+".join(parts)
-        elif Qt.Key_A <= key <= Qt.Key_Z or Qt.Key_0 <= key <= Qt.Key_9:
-            # Letter and number keys are handled well by QKeySequence
-            pass
-        else:
-            # Let parent handle other keys
-            super().keyPressEvent(event)
-            return
-        
-        # Try to handle with shortcut manager
-        if self._shortcut_manager.handle_key_press(key_sequence_str):
+        """Handle keyboard shortcuts using EventCoordinator."""
+        # Phase 6 refactoring - use EventCoordinator
+        if self._event_coordinator.handle_key_press(event.key(), event.modifiers()):
             event.accept()
         else:
             super().keyPressEvent(event)

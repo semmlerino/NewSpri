@@ -59,6 +59,18 @@ Systematic refactoring of the 814-line SpriteViewer class using the Coordinator 
 **Testing**: 20/20 unit tests passing, 48/48 playback controls tests passing  
 **Impact**: SpriteViewer reduced from 662 → 624 lines
 
+### ✅ Phase 6: Extract EventCoordinator
+**Status**: Complete  
+**Changes**:
+- Created `EventCoordinator` for event handling
+- Moved keyboard shortcut processing logic
+- Extracted drag/drop event handlers
+- Moved KEY_MAPPING constant and key sequence building
+- Centralized coordination between shortcut manager, file controller, and view coordinator
+
+**Testing**: 20/20 unit tests passing  
+**Impact**: SpriteViewer reduced from 624 → 587 lines
+
 ## Metrics
 
 | Phase | Before | After | Lines Removed | Tests Added |
@@ -68,13 +80,10 @@ Systematic refactoring of the 814-line SpriteViewer class using the Coordinator 
 | Phase 3 | 712 | 698 | 14 | 15 |
 | Phase 4 | 698 | 662 | 36 | 16 |
 | Phase 5 | 662 | 624 | 38 | 20 |
-| **Total** | **814** | **624** | **190 (23.3%)** | **72** |
+| Phase 6 | 624 | 587 | 37 | 20 |
+| **Total** | **814** | **587** | **227 (27.9%)** | **92** |
 
 ## Remaining Phases
-
-### ⏳ Phase 6: Extract EventCoordinator
-**Estimated Impact**: ~40 lines  
-**Scope**: Keyboard shortcuts, drag/drop events
 
 ### ⏳ Phase 7: Final Integration
 **Estimated Impact**: Optimization and cleanup  

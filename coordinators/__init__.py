@@ -8,5 +8,6 @@ from .ui_setup_helper import UISetupHelper
 from .view_coordinator import ViewCoordinator
 from .export_coordinator import ExportCoordinator
 from .animation_coordinator import AnimationCoordinator
+from .event_coordinator import EventCoordinator
 
-__all__ = ['CoordinatorBase', 'CoordinatorRegistry', 'UISetupHelper', 'ViewCoordinator', 'ExportCoordinator', 'AnimationCoordinator']
+__all__ = ['CoordinatorBase', 'CoordinatorRegistry', 'UISetupHelper', 'ViewCoordinator', 'ExportCoordinator', 'AnimationCoordinator', 'EventCoordinator']
