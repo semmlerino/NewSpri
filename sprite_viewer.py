@@ -13,14 +13,17 @@ from PySide6.QtWidgets import (
     QSplitter, QLabel, QSizePolicy, QMessageBox, QTabWidget, QPushButton, QDialog
 )
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent, QKeySequence
 
 from config import Config
 from utils import StyleManager
 
+# Coordinator system (Phase 1 refactoring)
+from coordinators import CoordinatorRegistry
+
 # Core MVC Components
 from sprite_model import SpriteModel
-from core import AnimationController, AutoDetectionController
+from core import AnimationController, AutoDetectionController, FileController, AnimationSegmentController
 
 # Managers (Phase 5 refactoring)
 from managers import (
@@ -35,7 +38,7 @@ from ui import (
 )
 
 # Export System
-from export import ExportDialog, get_frame_exporter
+from export import ExportDialog, get_frame_exporter, ExportHandler
 
 
 class SpriteViewer(QMainWindow):
@@ -54,11 +57,19 @@ class SpriteViewer(QMainWindow):
         """Initialize sprite viewer with manager-based architecture."""
         super().__init__()
         
+        # Initialize coordinator registry (Phase 1 refactoring)
+        self._coordinator_registry = CoordinatorRegistry()
+        
         # Initialize managers first
         self._init_managers()
         
         # Initialize core MVC components
         self._init_core_components()
+        
+        # Set up recent files handler BEFORE creating menus
+        self._menu_manager.set_recent_files_handler(
+            lambda menu: self._recent_files.populate_recent_files_directly(menu)
+        )
         
         # Set up UI using managers
         self._setup_ui()
@@ -92,7 +103,15 @@ class SpriteViewer(QMainWindow):
         self._animation_controller = AnimationController()
         self._animation_controller.initialize(self._sprite_model, self)
         
+        # File operations controller
+        self._file_controller = FileController()
+        self._file_controller.file_loaded.connect(self._on_file_loaded)
+        self._file_controller.file_load_failed.connect(self._on_file_load_failed)
+        
         self._auto_detection_controller = AutoDetectionController()
+        
+        # Animation segment controller
+        self._segment_controller = AnimationSegmentController(self)
         
         # Animation splitting components
         self._segment_manager = AnimationSegmentManager()
@@ -100,6 +119,9 @@ class SpriteViewer(QMainWindow):
         
         # Status management will be initialized after status bar is created
         self._status_manager = None
+        
+        # Export handler for centralized export logic
+        self._export_handler = ExportHandler(self)
     
     def _setup_ui(self):
         """Set up user interface using manager-based architecture."""
@@ -122,13 +144,18 @@ class SpriteViewer(QMainWindow):
         # Configure action manager with callbacks
         self._setup_action_callbacks()
         
+        # Configure segment controller dependencies
+        self._segment_controller.set_segment_manager(self._segment_manager)
+        self._segment_controller.set_export_handler(self._export_handler)
+        self._segment_controller.set_grid_view(self._grid_view)
+        self._segment_controller.set_sprite_model(self._sprite_model)
+        self._segment_controller.set_tab_widget(self._tab_widget)
+        
+        # Connect segment controller status messages
+        self._segment_controller.statusMessage.connect(self._status_manager.show_message)
+        
         # Configure shortcut manager context
         self._update_manager_context()
-        
-        # Configure menu manager with recent files
-        self._menu_manager.set_recent_files_handler(
-            lambda menu: self._recent_files.create_recent_files_menu(menu)
-        )
     
     def _setup_action_callbacks(self):
         """Set up action callbacks using ActionManager."""
@@ -201,7 +228,7 @@ class SpriteViewer(QMainWindow):
         
         # Create tab widget for different views
         self._tab_widget = QTabWidget()
-        self._tab_widget.currentChanged.connect(self._on_tab_changed)
+        self._tab_widget.currentChanged.connect(self._segment_controller.on_tab_changed)
         main_layout.addWidget(self._tab_widget)
         
         # Canvas view tab
@@ -254,11 +281,13 @@ class SpriteViewer(QMainWindow):
         # Connect grid view signals
         self._grid_view.frameSelected.connect(self._on_grid_frame_selected)
         self._grid_view.framePreviewRequested.connect(self._on_grid_frame_preview)
-        self._grid_view.segmentCreated.connect(self._on_segment_created)
-        self._grid_view.segmentDeleted.connect(self._on_segment_deleted)
-        self._grid_view.segmentSelected.connect(self._on_segment_selected)
-        self._grid_view.segmentPreviewRequested.connect(self._on_segment_preview_requested)
-        self._grid_view.exportRequested.connect(self._export_animation_segment)
+        self._grid_view.segmentCreated.connect(self._segment_controller.create_segment)
+        self._grid_view.segmentDeleted.connect(self._segment_controller.delete_segment)
+        self._grid_view.segmentSelected.connect(self._segment_controller.select_segment)
+        self._grid_view.segmentPreviewRequested.connect(self._segment_controller.preview_segment)
+        self._grid_view.exportRequested.connect(
+            lambda segment: self._segment_controller.export_segment(segment, self)
+        )
         
         # Synchronize grid view with existing segments
         self._grid_view.sync_segments_with_manager(self._segment_manager)
@@ -269,7 +298,7 @@ class SpriteViewer(QMainWindow):
         layout = QVBoxLayout(container)
         
         refresh_btn = QPushButton("🔄 Refresh Grid View")
-        refresh_btn.clicked.connect(self._force_refresh_grid_view)
+        refresh_btn.clicked.connect(self._segment_controller.update_grid_view_frames)
         layout.addWidget(refresh_btn)
         
         layout.addWidget(self._grid_view)
@@ -368,25 +397,15 @@ class SpriteViewer(QMainWindow):
     
     def _load_sprites(self):
         """Load sprite files or sprite sheet."""
-        from PySide6.QtWidgets import QFileDialog
-        
-        file_dialog = QFileDialog()
-        file_path, _ = file_dialog.getOpenFileName(
-            self, "Load Sprite Sheet", "", 
-            f"Images ({Config.File.IMAGE_FILTER})"
-        )
-        
+        file_path = self._file_controller.open_file_dialog(self)
         if file_path:
-            self._load_sprite_file(file_path)
+            self._file_controller.load_file(file_path)
     
-    def _load_sprite_file(self, file_path: str):
-        """Load a sprite file."""
+    def _on_file_loaded(self, file_path: str):
+        """Handle successful file load from FileController."""
         success, error_message = self._sprite_model.load_sprite_sheet(file_path)
         
         if success:
-            # Add to recent files
-            self._recent_files.add_file_to_recent(file_path)
-            
             # Update context for managers
             self._update_manager_context()
             
@@ -405,6 +424,10 @@ class SpriteViewer(QMainWindow):
                 self._auto_detection_controller.run_comprehensive_detection_with_dialog()
         else:
             QMessageBox.critical(self, "Load Error", error_message)
+    
+    def _on_file_load_failed(self, error_message: str):
+        """Handle file load failure from FileController."""
+        QMessageBox.critical(self, "Load Error", error_message)
     
     # ============================================================================
     # EXPORT OPERATIONS
@@ -451,237 +474,7 @@ class SpriteViewer(QMainWindow):
     
     def _handle_unified_export_request(self, settings: dict):
         """Handle unified export request from new dialog (handles both frames and segments)."""
-        # Check if this is a segment export
-        if settings.get('mode') == 'segments' and 'selected_segments' in settings:
-            self._handle_segment_export_request(settings)
-        else:
-            self._handle_export_request(settings)
-    
-    def _handle_export_request(self, settings: dict):
-        """Handle export request from dialog."""
-        try:
-            exporter = get_frame_exporter()
-            
-            # Validate required settings
-            required_keys = ['output_dir', 'base_name', 'format', 'mode', 'scale_factor']
-            for key in required_keys:
-                if key not in settings:
-                    QMessageBox.critical(self, "Export Error", f"Missing required setting: {key}")
-                    return
-            
-            # Get the appropriate frames based on export mode
-            all_frames = self._sprite_model.sprite_frames
-            if not all_frames:
-                QMessageBox.warning(self, "Export Error", "No frames available to export.")
-                return
-            
-            frames_to_export = all_frames
-            export_mode = settings['mode']
-            selected_indices = None
-            
-            # For frame selection, filter frames to only the selected ones
-            selected_indices = settings.get('selected_indices', [])
-            if selected_indices:
-                if not selected_indices:
-                    QMessageBox.warning(self, "Export Error", "No frames selected for export.")
-                    return
-                
-                # Validate selected indices
-                valid_indices = [i for i in selected_indices if 0 <= i < len(all_frames)]
-                if not valid_indices:
-                    QMessageBox.warning(self, "Export Error", "No valid frames selected for export.")
-                    return
-                
-                frames_to_export = [all_frames[i] for i in valid_indices]
-                # Ensure we use individual mode since we're pre-filtering frames
-                export_mode = 'individual'
-                
-                if len(valid_indices) != len(selected_indices):
-                    # Some indices were invalid, warn user
-                    invalid_count = len(selected_indices) - len(valid_indices)
-                    QMessageBox.information(
-                        self, "Selection Adjusted", 
-                        f"Exported {len(valid_indices)} frames. "
-                        f"{invalid_count} invalid frame selection(s) were skipped."
-                    )
-            
-            success = exporter.export_frames(
-                frames=frames_to_export,
-                output_dir=settings['output_dir'],
-                base_name=settings['base_name'],
-                format=settings['format'],
-                mode=export_mode,
-                scale_factor=settings['scale_factor'],
-                pattern=settings.get('pattern', Config.Export.DEFAULT_PATTERN),
-                selected_indices=selected_indices,
-                sprite_sheet_layout=settings.get('sprite_sheet_layout')
-            )
-            
-            if not success:
-                QMessageBox.critical(self, "Export Failed", "Failed to start export.")
-                
-        except Exception as e:
-            QMessageBox.critical(self, "Export Error", f"Unexpected error during export: {str(e)}")
-            import traceback
-            traceback.print_exc()
-    
-    def _handle_segment_specific_export_request(self, settings: dict, segment_frames: list, segment_name: str):
-        """Handle export request for a specific animation segment."""
-        try:
-            exporter = get_frame_exporter()
-            
-            # Validate required settings
-            required_keys = ['output_dir', 'base_name', 'format', 'mode', 'scale_factor']
-            for key in required_keys:
-                if key not in settings:
-                    QMessageBox.critical(self, "Export Error", f"Missing required setting: {key}")
-                    return
-            
-            if not segment_frames:
-                QMessageBox.warning(self, "Export Error", f"No frames available for segment '{segment_name}'.")
-                return
-            
-            frames_to_export = segment_frames
-            export_mode = settings['mode']
-            selected_indices = None
-            
-            # For frame selection, filter segment frames to only the selected ones
-            selected_indices = settings.get('selected_indices', [])
-            if selected_indices:
-                if not selected_indices:
-                    QMessageBox.warning(self, "Export Error", "No frames selected for export.")
-                    return
-                
-                # Validate selected indices against segment frame count
-                valid_indices = [i for i in selected_indices if 0 <= i < len(segment_frames)]
-                if not valid_indices:
-                    QMessageBox.warning(self, "Export Error", "No valid frames selected for export.")
-                    return
-                
-                frames_to_export = [segment_frames[i] for i in valid_indices]
-                # Ensure we use individual mode since we're pre-filtering frames
-                export_mode = 'individual'
-                
-                if len(valid_indices) != len(selected_indices):
-                    # Some indices were invalid, warn user
-                    invalid_count = len(selected_indices) - len(valid_indices)
-                    QMessageBox.information(
-                        self, "Selection Adjusted", 
-                        f"Exported {len(valid_indices)} frames from segment '{segment_name}'. "
-                        f"{invalid_count} invalid frame selection(s) were skipped."
-                    )
-            
-            # Update base name to include segment name
-            base_name = f"{settings['base_name']}_{segment_name}"
-            
-            success = exporter.export_frames(
-                frames=frames_to_export,
-                output_dir=settings['output_dir'],
-                base_name=base_name,
-                format=settings['format'],
-                mode=export_mode,
-                scale_factor=settings['scale_factor'],
-                pattern=settings.get('pattern', Config.Export.DEFAULT_PATTERN),
-                selected_indices=selected_indices,
-                sprite_sheet_layout=settings.get('sprite_sheet_layout')
-            )
-            
-            if not success:
-                QMessageBox.critical(self, "Export Failed", f"Failed to start export for segment '{segment_name}'.")
-                
-        except Exception as e:
-            QMessageBox.critical(self, "Export Error", f"Unexpected error during segment export: {str(e)}")
-            import traceback
-            traceback.print_exc()
-
-    def _handle_segment_export_request(self, settings: dict):
-        """Handle animation segment export request from enhanced dialog."""
-        selected_segments = settings.get('selected_segments', [])
-        
-        if not selected_segments:
-            QMessageBox.warning(self, "No Segments", "No animation segments selected for export.")
-            return
-        
-        exporter = get_frame_exporter()
-        all_frames = self._sprite_model.sprite_frames
-        
-        for segment_name in selected_segments:
-            segment = self._segment_manager.get_segment(segment_name)
-            if not segment:
-                continue
-            
-            # Extract frames for this segment
-            segment_frames = self._segment_manager.extract_frames_for_segment(
-                segment_name, all_frames
-            )
-            
-            if not segment_frames:
-                continue
-            
-            # Determine output directory and naming
-            base_output_dir = settings['output_dir']
-            segment_output_dir = os.path.join(base_output_dir, segment_name)
-            os.makedirs(segment_output_dir, exist_ok=True)
-            
-            # Export based on mode
-            mode_index = settings.get('mode_index', 0)
-            
-            if mode_index == 0:  # Individual segments (separate folders)
-                success = exporter.export_frames(
-                    frames=segment_frames,
-                    output_dir=segment_output_dir,
-                    base_name=settings.get('base_name', segment_name),
-                    format=settings['format'],
-                    mode='individual',
-                    scale_factor=settings['scale_factor']
-                )
-            elif mode_index == 1:  # Combined sprite sheet
-                success = exporter.export_frames(
-                    frames=segment_frames,
-                    output_dir=segment_output_dir,
-                    base_name=f"{segment_name}_sheet",
-                    format=settings['format'],
-                    mode='sheet',
-                    scale_factor=settings['scale_factor']
-                )
-            elif mode_index == 2:  # Animated GIF per segment
-                success = exporter.export_frames(
-                    frames=segment_frames,
-                    output_dir=segment_output_dir,
-                    base_name=segment_name,
-                    format='GIF',
-                    mode='gif',
-                    scale_factor=settings['scale_factor'],
-                    fps=settings.get('fps', 10),
-                    loop=settings.get('loop', True)
-                )
-            else:  # Individual frames (all segments)
-                success = exporter.export_frames(
-                    frames=segment_frames,
-                    output_dir=base_output_dir,
-                    base_name=f"{segment_name}_{settings.get('base_name', 'frame')}",
-                    format=settings['format'],
-                    mode='individual',
-                    scale_factor=settings['scale_factor']
-                )
-            
-            if not success:
-                QMessageBox.warning(
-                    self, "Export Warning", 
-                    f"Failed to export segment '{segment_name}'"
-                )
-        
-        # Save metadata if requested
-        if settings.get('include_metadata', False):
-            metadata_file = os.path.join(base_output_dir, 'animation_segments.json')
-            success, error = self._segment_manager.save_segments_to_file(metadata_file)
-            if not success:
-                QMessageBox.warning(self, "Metadata Export", f"Failed to save metadata: {error}")
-        
-        QMessageBox.information(
-            self, "Export Complete", 
-            f"Successfully exported {len(selected_segments)} animation segment(s)"
-        )
+        self._export_handler.handle_unified_export_request(settings, self._sprite_model, self._segment_manager)
     
     # ============================================================================
     # VIEW OPERATIONS
@@ -760,7 +553,7 @@ class SpriteViewer(QMainWindow):
         if hasattr(self._sprite_model, 'sprite_frames'):
             frame_count = len(self._sprite_model.sprite_frames)
             if frame_count > 0:
-                self._update_grid_view_frames()
+                self._segment_controller.update_grid_view_frames()
         
         self._status_manager.show_message(f"Loaded sprite sheet: {file_path}")
     
@@ -775,7 +568,7 @@ class SpriteViewer(QMainWindow):
             self._canvas.set_frame_info(current_frame, frame_count)
             
             # Update grid view with new frames
-            self._update_grid_view_frames()
+            self._segment_controller.update_grid_view_frames()
         else:
             self._playback_controls.set_frame_range(0)
             self._playback_controls.update_button_states(False, False, False)
@@ -923,7 +716,7 @@ class SpriteViewer(QMainWindow):
     
     def dragEnterEvent(self, event: QDragEnterEvent):
         """Handle drag enter event."""
-        if event.mimeData().hasUrls():
+        if self._file_controller.is_valid_drop(event.mimeData()):
             event.acceptProposedAction()
             self._canvas.setStyleSheet(StyleManager.get_canvas_drag_hover())
     
@@ -936,9 +729,9 @@ class SpriteViewer(QMainWindow):
         """Handle drop event."""
         self._canvas.setStyleSheet(StyleManager.get_canvas_normal())
         
-        if event.mimeData().hasUrls():
-            file_path = event.mimeData().urls()[0].toLocalFile()
-            self._load_sprite_file(file_path)
+        file_path = self._file_controller.extract_file_from_drop(event)
+        if file_path:
+            self._file_controller.load_file(file_path)
             event.acceptProposedAction()
     
     # Animation Grid View Signal Handlers
@@ -954,218 +747,48 @@ class SpriteViewer(QMainWindow):
         self._sprite_model.set_current_frame(frame_index)
         self._status_manager.show_message(f"Previewing frame {frame_index}")
     
-    def _on_segment_created(self, segment):
-        """Handle creation of new animation segment."""
-        original_name = segment.name
-        
-        # Try to add segment to manager
-        success, error = self._segment_manager.add_segment(
-            segment.name, segment.start_frame, segment.end_frame, 
-            segment.color, getattr(segment, 'description', '')
-        )
-        
-        if not success and "already exists" in error:
-            # Try to auto-resolve name conflict
-            base_name = original_name.split('_')[0] if '_' in original_name else original_name
-            retry_count = 0
-            max_retries = 10
-            
-            while not success and retry_count < max_retries:
-                retry_count += 1
-                # Generate new unique name
-                import time
-                timestamp = int(time.time() * 1000) % 10000
-                new_name = f"{base_name}_{timestamp}"
-                
-                success, error = self._segment_manager.add_segment(
-                    new_name, segment.start_frame, segment.end_frame, 
-                    segment.color, getattr(segment, 'description', '')
-                )
-                
-                if success:
-                    # Update the segment name in grid view
-                    if hasattr(self, '_grid_view') and hasattr(self._grid_view, '_segments'):
-                        if original_name in self._grid_view._segments:
-                            # Remove old entry and add new one
-                            segment_data = self._grid_view._segments.pop(original_name)
-                            segment_data.name = new_name
-                            self._grid_view._segments[new_name] = segment_data
-                            
-                            # Update the segment list widget
-                            self._grid_view._segment_list.remove_segment(original_name)
-                            self._grid_view._segment_list.add_segment(segment_data)
-                    
-                    self._status_manager.show_message(
-                        f"Created animation segment '{new_name}' with {segment.frame_count} frames "
-                        f"(renamed from '{original_name}' to resolve conflict)"
-                    )
-                    return
-        
-        if not success:
-            # Remove from grid view if it was added there but failed in manager
-            if hasattr(self, '_grid_view') and hasattr(self._grid_view, '_segments'):
-                if original_name in self._grid_view._segments:
-                    del self._grid_view._segments[original_name]
-                    self._grid_view._segment_list.remove_segment(original_name)
-            
-            QMessageBox.warning(self, "Segment Creation Error", f"{error}\n\nPlease try a different name.")
-        else:
-            self._status_manager.show_message(
-                f"Created animation segment '{segment.name}' with {segment.frame_count} frames"
-            )
+    # Key mapping for special keys
+    _KEY_MAPPING = {
+        Qt.Key_Space: "Space",
+        Qt.Key_Left: "Left",
+        Qt.Key_Right: "Right",
+        Qt.Key_Home: "Home",
+        Qt.Key_End: "End",
+        Qt.Key_Plus: "+",
+        Qt.Key_Minus: "-",
+    }
     
-    def _on_segment_deleted(self, segment_name: str):
-        """Handle deletion of animation segment."""
-        if self._segment_manager.remove_segment(segment_name):
-            self._status_manager.show_message(f"Deleted animation segment '{segment_name}'")
-    
-    def _on_segment_selected(self, segment):
-        """Handle selection of animation segment."""
-        # Just show the segment is selected - DON'T switch tabs automatically
-        # User can use "Export Selected" button or double-click to preview
-        self._status_manager.show_message(
-            f"Selected segment '{segment.name}' (frames {segment.start_frame}-{segment.end_frame}) - Use 'Export Selected' to export"
-        )
-    
-    def _on_segment_preview_requested(self, segment):
-        """Handle segment preview request (double-click)."""
-        # Stay in current view and show the segment start frame
-        self._sprite_model.set_current_frame(segment.start_frame)
-        self._status_manager.show_message(
-            f"Segment '{segment.name}' selected (frames {segment.start_frame}-{segment.end_frame})"
-        )
-    
-    def _export_animation_segment(self, segment):
-        """Export a specific animation segment."""
-        # Get frames for the segment
-        all_frames = self._sprite_model.get_all_frames()
-        segment_frames = self._segment_manager.extract_frames_for_segment(
-            segment.name, all_frames
-        )
-        
-        if not segment_frames:
-            QMessageBox.warning(
-                self, "Export Error", 
-                f"No frames available for segment '{segment.name}'"
-            )
-            return
-        
-        # Open export dialog
-        dialog = ExportDialog(
-            self, 
-            frame_count=len(segment_frames),
-            current_frame=0,
-            segment_manager=self._segment_manager
-        )
-        
-        # Set sprites for visual preview (Phase 4 enhancement)
-        dialog.set_sprites(segment_frames)
-        
-        # Create custom export handler for this segment
-        def handle_segment_export(settings):
-            self._handle_segment_specific_export_request(settings, segment_frames, segment.name)
-        
-        dialog.exportRequested.connect(handle_segment_export)
-        if dialog.exec() == QDialog.Accepted:
-            self._status_manager.show_message(f"Exported segment '{segment.name}'")
-    
-    def _update_grid_view_frames(self):
-        """Update grid view with current frames."""
-        if self._grid_view:
-            # Try multiple ways to get frames for backward compatibility
-            frames = []
-            
-            # Method 1: Try get_all_frames if available
-            if hasattr(self._sprite_model, 'get_all_frames'):
-                frames = self._sprite_model.get_all_frames()
-            
-            # Method 2: Try sprite_frames property as fallback
-            if not frames and hasattr(self._sprite_model, 'sprite_frames'):
-                frames = self._sprite_model.sprite_frames
-            
-            # Method 3: Try _sprite_frames attribute as last resort
-            if not frames and hasattr(self._sprite_model, '_sprite_frames'):
-                frames = self._sprite_model._sprite_frames
-            
-            print(f"DEBUG: Found {len(frames)} frames for grid view")
-            
-            if frames:
-                self._grid_view.set_frames(frames)
-                print(f"DEBUG: Grid view updated with {len(frames)} frames")
-                
-                # Update segment manager context
-                sprite_path = ""
-                if hasattr(self._sprite_model, '_file_path'):
-                    sprite_path = self._sprite_model._file_path
-                elif hasattr(self._sprite_model, '_sprite_sheet_path'):
-                    sprite_path = self._sprite_model._sprite_sheet_path
-                
-                if sprite_path:
-                    self._segment_manager.set_sprite_context(sprite_path, len(frames))
-                    print(f"DEBUG: Segment manager updated for {sprite_path}")
-            else:
-                print("DEBUG: No frames available for grid view")
-                self._grid_view.set_frames([])  # Clear grid view
-    
-    def _force_refresh_grid_view(self):
-        """Force refresh the grid view (for debugging)."""
-        print("DEBUG: Force refreshing grid view...")
-        self._update_grid_view_frames()
-    
-    def _on_tab_changed(self, index: int):
-        """Handle tab change - refresh grid view when switching to animation splitting."""
-        if index == 1 and self._grid_view:  # Animation Splitting tab
-            print("DEBUG: Switched to Animation Splitting tab, refreshing grid view...")
-            self._update_grid_view_frames()
-
     def keyPressEvent(self, event):
         """Handle keyboard shortcuts using ShortcutManager."""
         key = event.key()
         modifiers = event.modifiers()
         
-        # Create key sequence string
-        key_sequence = ""
-        if modifiers & Qt.ControlModifier:
-            key_sequence += "Ctrl+"
-        if modifiers & Qt.ShiftModifier:
-            key_sequence += "Shift+"
-        if modifiers & Qt.AltModifier:
-            key_sequence += "Alt+"
+        # Build key sequence using Qt's built-in functionality
+        q_key_sequence = QKeySequence(key | modifiers.value if hasattr(modifiers, 'value') else int(modifiers))
+        key_sequence_str = q_key_sequence.toString()
         
-        # Add key name
-        if key == Qt.Key_Space:
-            key_sequence += "Space"
-        elif key == Qt.Key_Left:
-            key_sequence += "Left"
-        elif key == Qt.Key_Right:
-            key_sequence += "Right"
-        elif key == Qt.Key_Home:
-            key_sequence += "Home"
-        elif key == Qt.Key_End:
-            key_sequence += "End"
-        elif key == Qt.Key_G:
-            key_sequence += "G"
-        elif key == Qt.Key_Plus:
-            key_sequence += "+"
-        elif key == Qt.Key_Minus:
-            key_sequence += "-"
-        elif key == Qt.Key_0:
-            key_sequence += "0"
-        elif key == Qt.Key_1:
-            key_sequence += "1"
-        elif key == Qt.Key_O:
-            key_sequence += "O"
-        elif key == Qt.Key_Q:
-            key_sequence += "Q"
-        elif key == Qt.Key_E:
-            key_sequence += "E"
+        # For special keys not handled well by QKeySequence, use our mapping
+        if key in self._KEY_MAPPING:
+            # Build custom sequence for special keys
+            parts = []
+            if modifiers & Qt.ControlModifier:
+                parts.append("Ctrl")
+            if modifiers & Qt.ShiftModifier:
+                parts.append("Shift")
+            if modifiers & Qt.AltModifier:
+                parts.append("Alt")
+            parts.append(self._KEY_MAPPING[key])
+            key_sequence_str = "+".join(parts)
+        elif Qt.Key_A <= key <= Qt.Key_Z or Qt.Key_0 <= key <= Qt.Key_9:
+            # Letter and number keys are handled well by QKeySequence
+            pass
         else:
             # Let parent handle other keys
             super().keyPressEvent(event)
             return
         
         # Try to handle with shortcut manager
-        if self._shortcut_manager.handle_key_press(key_sequence):
+        if self._shortcut_manager.handle_key_press(key_sequence_str):
             event.accept()
         else:
             super().keyPressEvent(event)
@@ -1174,6 +797,9 @@ class SpriteViewer(QMainWindow):
         """Handle close event."""
         # Save settings
         self._settings_manager.save_window_geometry(self)
+        
+        # Clean up coordinators (Phase 1 refactoring)
+        self._coordinator_registry.cleanup_all()
         
         # Accept close
         event.accept()
