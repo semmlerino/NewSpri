@@ -19,7 +19,7 @@ from config import Config
 from utils import StyleManager
 
 # Coordinator system (Phase 1 refactoring)
-from coordinators import CoordinatorRegistry
+from coordinators import CoordinatorRegistry, UISetupHelper
 
 # Core MVC Components
 from sprite_model import SpriteModel
@@ -71,8 +71,37 @@ class SpriteViewer(QMainWindow):
             lambda menu: self._recent_files.populate_recent_files_directly(menu)
         )
         
-        # Set up UI using managers
-        self._setup_ui()
+        # Initialize UI Setup Helper (Phase 2 refactoring)
+        self._ui_helper = UISetupHelper(self)
+        self._coordinator_registry.register('ui_setup', self._ui_helper)
+        
+        # Initialize UI helper with dependencies
+        ui_dependencies = {
+            'menu_manager': self._menu_manager,
+            'action_manager': self._action_manager,
+            'shortcut_manager': self._shortcut_manager,
+            'segment_manager': self._segment_manager,
+            'sprite_model': self._sprite_model,
+            'segment_controller': self._segment_controller
+        }
+        self._ui_helper.initialize(ui_dependencies)
+        
+        # Set up UI using UI helper
+        ui_components = self._ui_helper.setup_ui()
+        
+        # Extract UI components from helper
+        self._tab_widget = ui_components['tab_widget']
+        self._canvas = ui_components['canvas']
+        self._playback_controls = ui_components['playback_controls']
+        self._frame_extractor = ui_components['frame_extractor']
+        self._grid_view = ui_components['grid_view']
+        self._info_label = ui_components['info_label']
+        self._zoom_label = ui_components['zoom_label']
+        self._main_toolbar = ui_components['main_toolbar']
+        self._status_manager = ui_components['status_manager']
+        self._menus = ui_components['menus']
+        
+        # Set up managers with UI components
         self._setup_managers()
         
         # Connect all signals
@@ -123,21 +152,6 @@ class SpriteViewer(QMainWindow):
         # Export handler for centralized export logic
         self._export_handler = ExportHandler(self)
     
-    def _setup_ui(self):
-        """Set up user interface using manager-based architecture."""
-        self.setWindowTitle("Python Sprite Viewer")
-        self.setMinimumSize(Config.UI.MIN_WINDOW_WIDTH, Config.UI.MIN_WINDOW_HEIGHT)
-        
-        # Enable drag & drop
-        self.setAcceptDrops(True)
-        
-        # Set up managers
-        self._setup_menu_bar()
-        self._setup_toolbar() 
-        self._setup_status_bar()
-        
-        # Set up main content area
-        self._setup_main_content()
     
     def _setup_managers(self):
         """Configure managers with application-specific settings."""
@@ -187,150 +201,13 @@ class SpriteViewer(QMainWindow):
         self._action_manager.set_action_callback('help_shortcuts', self._show_shortcuts)
         self._action_manager.set_action_callback('help_about', self._show_about)
     
-    def _setup_menu_bar(self):
-        """Set up menu bar using MenuManager."""
-        menubar = self.menuBar()
-        self._menus = self._menu_manager.create_menu_bar(menubar)
     
-    def _setup_toolbar(self):
-        """Set up toolbar using MenuManager."""
-        # Create main toolbar
-        self._main_toolbar = self._menu_manager.create_toolbar('main')
-        
-        # Apply styling
-        if self._main_toolbar:
-            self._main_toolbar.setStyleSheet(StyleManager.get_main_toolbar())
-            
-            # Add zoom display widget
-            self._main_toolbar.addSeparator()
-            self._zoom_label = QLabel("100%")
-            self._zoom_label.setMinimumWidth(Config.UI.ZOOM_LABEL_MIN_WIDTH)
-            self._zoom_label.setAlignment(Qt.AlignCenter)
-            self._zoom_label.setStyleSheet(StyleManager.get_zoom_display())
-            self._main_toolbar.addWidget(self._zoom_label)
     
-    def _setup_status_bar(self):
-        """Set up status bar."""
-        status_bar = EnhancedStatusBar(self)
-        self.setStatusBar(status_bar)
-        self._status_manager = StatusBarManager(status_bar)
     
-    def _setup_main_content(self):
-        """Set up main content area with tabbed interface."""
-        # Create central widget
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-        
-        # Main vertical layout
-        main_layout = QVBoxLayout(central_widget)
-        main_layout.setContentsMargins(5, 5, 5, 5)
-        main_layout.setSpacing(5)
-        
-        # Create tab widget for different views
-        self._tab_widget = QTabWidget()
-        self._tab_widget.currentChanged.connect(self._segment_controller.on_tab_changed)
-        main_layout.addWidget(self._tab_widget)
-        
-        # Canvas view tab
-        canvas_tab = self._create_canvas_tab()
-        self._tab_widget.addTab(canvas_tab, "Frame View")
-        
-        # Grid view tab for animation splitting
-        grid_tab = self._create_grid_tab()
-        self._tab_widget.addTab(grid_tab, "Animation Splitting")
-        
-        # Info label at bottom
-        self._info_label = QLabel("Ready - Drag and drop a sprite sheet or use File > Open")
-        self._info_label.setWordWrap(True)
-        self._info_label.setStyleSheet(StyleManager.get_info_label())
-        main_layout.addWidget(self._info_label)
     
-    def _create_canvas_tab(self) -> QWidget:
-        """Create the canvas tab with traditional frame view."""
-        tab_widget = QWidget()
-        
-        # Main horizontal layout for the tab
-        tab_layout = QHBoxLayout(tab_widget)
-        tab_layout.setContentsMargins(0, 0, 0, 0)
-        tab_layout.setSpacing(5)
-        
-        # Create splitter for responsive layout
-        splitter = QSplitter(Qt.Horizontal)
-        tab_layout.addWidget(splitter)
-        
-        # Left side - Canvas
-        self._canvas = self._create_canvas_section()
-        splitter.addWidget(self._canvas)
-        
-        # Right side - Controls
-        controls_widget = self._create_controls_section()
-        splitter.addWidget(controls_widget)
-        
-        # Set splitter proportions
-        splitter.setSizes([700, 300])  # Canvas gets more space
-        splitter.setCollapsible(0, False)  # Canvas not collapsible
-        splitter.setCollapsible(1, False)  # Controls not collapsible
-        
-        return tab_widget
     
-    def _create_grid_tab(self) -> QWidget:
-        """Create the grid tab for animation splitting."""
-        # Initialize grid view
-        self._grid_view = AnimationGridView()
-        
-        # Connect grid view signals
-        self._grid_view.frameSelected.connect(self._on_grid_frame_selected)
-        self._grid_view.framePreviewRequested.connect(self._on_grid_frame_preview)
-        self._grid_view.segmentCreated.connect(self._segment_controller.create_segment)
-        self._grid_view.segmentDeleted.connect(self._segment_controller.delete_segment)
-        self._grid_view.segmentSelected.connect(self._segment_controller.select_segment)
-        self._grid_view.segmentPreviewRequested.connect(self._segment_controller.preview_segment)
-        self._grid_view.exportRequested.connect(
-            lambda segment: self._segment_controller.export_segment(segment, self)
-        )
-        
-        # Synchronize grid view with existing segments
-        self._grid_view.sync_segments_with_manager(self._segment_manager)
-        
-        # Add refresh button for debugging
-        from PySide6.QtWidgets import QVBoxLayout, QWidget, QPushButton
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        
-        refresh_btn = QPushButton("🔄 Refresh Grid View")
-        refresh_btn.clicked.connect(self._segment_controller.update_grid_view_frames)
-        layout.addWidget(refresh_btn)
-        
-        layout.addWidget(self._grid_view)
-        
-        return container
     
-    def _create_canvas_section(self) -> QWidget:
-        """Create canvas section."""
-        self._canvas = SpriteCanvas()
-        # Set sprite model reference for canvas to get current frame
-        self._canvas.set_sprite_model(self._sprite_model)
-        return self._canvas
     
-    def _create_controls_section(self) -> QWidget:
-        """Create controls section."""
-        controls_widget = QWidget()
-        controls_layout = QVBoxLayout(controls_widget)
-        controls_layout.setContentsMargins(0, 0, 0, 0)
-        controls_layout.setSpacing(10)
-        
-        # Playback controls
-        self._playback_controls = PlaybackControls()
-        controls_layout.addWidget(self._playback_controls)
-        
-        # Frame extractor
-        self._frame_extractor = FrameExtractor()
-        controls_layout.addWidget(self._frame_extractor)
-        
-        # Stretch to push everything to top
-        controls_layout.addStretch()
-        
-        return controls_widget
     
     def _connect_signals(self):
         """Connect signals between components."""
@@ -369,6 +246,18 @@ class SpriteViewer(QMainWindow):
         # Navigation button signals (need to connect the actual buttons)
         self._playback_controls.prev_btn.clicked.connect(self._go_to_prev_frame)
         self._playback_controls.next_btn.clicked.connect(self._go_to_next_frame)
+        
+        # Grid view signals (Phase 2 refactoring - moved from _create_grid_tab)
+        if self._grid_view:
+            self._grid_view.frameSelected.connect(self._on_grid_frame_selected)
+            self._grid_view.framePreviewRequested.connect(self._on_grid_frame_preview)
+            self._grid_view.segmentCreated.connect(self._segment_controller.create_segment)
+            self._grid_view.segmentDeleted.connect(self._segment_controller.delete_segment)
+            self._grid_view.segmentSelected.connect(self._segment_controller.select_segment)
+            self._grid_view.segmentPreviewRequested.connect(self._segment_controller.preview_segment)
+            self._grid_view.exportRequested.connect(
+                lambda segment: self._segment_controller.export_segment(segment, self)
+            )
     
     def _apply_settings(self):
         """Apply saved settings."""

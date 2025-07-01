@@ -4,5 +4,6 @@ Provides base classes and implementations for extracting responsibilities from m
 """
 
 from .base import CoordinatorBase, CoordinatorRegistry
+from .ui_setup_helper import UISetupHelper
 
-__all__ = ['CoordinatorBase', 'CoordinatorRegistry']
+__all__ = ['CoordinatorBase', 'CoordinatorRegistry', 'UISetupHelper']
