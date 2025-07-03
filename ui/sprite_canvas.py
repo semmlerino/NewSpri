@@ -11,7 +11,6 @@ from PySide6.QtGui import QPixmap, QPainter, QColor, QPen, QFont
 
 from config import Config
 from utils.styles import StyleManager
-from utils.sprite_rendering import draw_pixmap_safe
 
 
 class SpriteCanvas(QLabel):
@@ -27,6 +26,7 @@ class SpriteCanvas(QLabel):
         self.setStyleSheet(StyleManager.get_canvas_normal())
         self.setAlignment(Qt.AlignCenter)
         self.setCursor(Qt.OpenHandCursor)
+        self.setContentsMargins(0, 0, 0, 0)
         
         # Canvas properties
         self._pixmap = None
@@ -174,7 +174,12 @@ class SpriteCanvas(QLabel):
         painter.setRenderHint(QPainter.Antialiasing, True)
         painter.setRenderHint(QPainter.SmoothPixmapTransform, False)  # Keep pixel-perfect for sprites
         
+        # Get the full widget rect
         rect = self.rect()
+        
+        # Ensure we're using the full widget area
+        painter.setViewport(rect)
+        painter.setWindow(rect)
         
         # Draw background
         if self._show_checkerboard:
@@ -184,7 +189,16 @@ class SpriteCanvas(QLabel):
         
         # Draw sprite if available
         if self._pixmap and not self._pixmap.isNull():
-            scaled_size = self._pixmap.size() * self._zoom_factor
+            # Create a temporary pixmap with 1px border to prevent edge cutoff
+            temp_pixmap = QPixmap(self._pixmap.width() + 2, self._pixmap.height() + 2)
+            temp_pixmap.fill(Qt.transparent)
+            
+            temp_painter = QPainter(temp_pixmap)
+            temp_painter.drawPixmap(1, 1, self._pixmap)
+            temp_painter.end()
+            
+            # Scale the temporary pixmap
+            scaled_size = temp_pixmap.size() * self._zoom_factor
             
             # Center the sprite - use floating point for accuracy
             x = (rect.width() - scaled_size.width()) / 2.0 + self._pan_offset[0]
@@ -194,12 +208,20 @@ class SpriteCanvas(QLabel):
             x = round(x)
             y = round(y)
             
+            # Draw the temporary pixmap (which includes padding)
             target_rect = QRect(x, y, scaled_size.width(), scaled_size.height())
-            draw_pixmap_safe(painter, target_rect, self._pixmap, preserve_pixel_perfect=True)
+            painter.drawPixmap(target_rect, temp_pixmap)
             
-            # Draw grid overlay if enabled
+            # Draw grid overlay if enabled (adjust for padding)
             if self._show_grid:
-                self._draw_grid(painter, target_rect)
+                # Adjust grid rect to account for the 1px padding
+                grid_rect = QRect(
+                    target_rect.x() + int(self._zoom_factor),
+                    target_rect.y() + int(self._zoom_factor),
+                    int(self._pixmap.width() * self._zoom_factor),
+                    int(self._pixmap.height() * self._zoom_factor)
+                )
+                self._draw_grid(painter, grid_rect)
             
             # Draw frame info overlay
             self._draw_frame_info(painter, rect)

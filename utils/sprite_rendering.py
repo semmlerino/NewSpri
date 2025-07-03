@@ -26,31 +26,26 @@ def draw_pixmap_safe(painter: QPainter, target_rect: QRect, pixmap: QPixmap,
     
     # Save painter state
     old_hints = painter.renderHints()
+    old_clip = painter.hasClipping()
+    
+    # Temporarily disable clipping to ensure edges aren't cut
+    painter.setClipping(False)
     
     if preserve_pixel_perfect:
-        # For pixel-perfect rendering, we need to be careful about coordinates
-        # Use QRectF for sub-pixel accuracy during calculation
-        # then round to ensure we're on pixel boundaries
-        
-        # Ensure antialiasing is on to prevent edge cutoff
-        painter.setRenderHint(QPainter.Antialiasing, True)
-        
         # Keep pixel-perfect scaling
         painter.setRenderHint(QPainter.SmoothPixmapTransform, False)
+        # But use antialiasing for edges
+        painter.setRenderHint(QPainter.Antialiasing, True)
         
-        # Draw with slight inset to ensure edges are visible
-        # This compensates for Qt's pixel boundary handling
-        source_rect = QRectF(0.5, 0.5, pixmap.width() - 1, pixmap.height() - 1)
-        target_rect_f = QRectF(target_rect.x() + 0.5, target_rect.y() + 0.5,
-                              target_rect.width() - 1, target_rect.height() - 1)
-        
-        painter.drawPixmap(target_rect_f, pixmap, source_rect)
+        # Draw the pixmap directly without any offset adjustments
+        painter.drawPixmap(target_rect, pixmap)
     else:
         # For smooth scaling, use standard approach
         painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
         painter.drawPixmap(target_rect, pixmap)
     
     # Restore painter state
+    painter.setClipping(old_clip)
     painter.setRenderHints(old_hints)
 
 
@@ -71,27 +66,23 @@ def scale_pixmap_safe(pixmap: QPixmap, width: int, height: int,
     if not pixmap or pixmap.isNull():
         return pixmap
     
-    # Create a slightly larger pixmap to ensure edges aren't cut
-    temp_pixmap = QPixmap(pixmap.size().width() + 2, pixmap.size().height() + 2)
-    temp_pixmap.fill(Qt.transparent)
+    # Create a pixmap with transparent padding
+    padded_pixmap = QPixmap(pixmap.width() + 2, pixmap.height() + 2)
+    padded_pixmap.fill(Qt.transparent)
     
-    # Draw original pixmap centered in temp pixmap
-    painter = QPainter(temp_pixmap)
+    # Draw original pixmap centered
+    painter = QPainter(padded_pixmap)
     painter.drawPixmap(1, 1, pixmap)
     painter.end()
     
-    # Scale the temp pixmap
+    # Scale with padding included
     if preserve_aspect:
-        scaled = temp_pixmap.scaled(width + 2, height + 2, 
-                                   Qt.KeepAspectRatio, 
-                                   Qt.FastTransformation)
+        scaled = padded_pixmap.scaled(width, height, 
+                                     Qt.KeepAspectRatio, 
+                                     Qt.SmoothTransformation)
     else:
-        scaled = temp_pixmap.scaled(width + 2, height + 2,
-                                   Qt.IgnoreAspectRatio,
-                                   Qt.FastTransformation)
+        scaled = padded_pixmap.scaled(width, height,
+                                     Qt.IgnoreAspectRatio,
+                                     Qt.SmoothTransformation)
     
-    # Extract the center portion
-    final_width = min(width, scaled.width() - 2)
-    final_height = min(height, scaled.height() - 2)
-    
-    return scaled.copy(1, 1, final_width, final_height)
+    return scaled
