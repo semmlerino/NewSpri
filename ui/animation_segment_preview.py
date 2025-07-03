@@ -40,7 +40,8 @@ class SegmentPreviewItem(QFrame):
     frameHoldsChanged = Signal(str, dict)  # segment_name, frame_holds
     
     def __init__(self, segment_name: str, color: QColor, frames: List[QPixmap], 
-                 bounce_mode: bool = False, frame_holds: Dict[int, int] = None):
+                 bounce_mode: bool = False, frame_holds: Dict[int, int] = None,
+                 zoom_factor: float = 1.0):
         super().__init__()
         self.segment_name = segment_name
         self.segment_color = color
@@ -48,6 +49,7 @@ class SegmentPreviewItem(QFrame):
         self._current_frame = 0
         self._is_playing = False
         self._fps = 10  # Default FPS
+        self._zoom_factor = zoom_factor
         
         # Animation mode properties
         self._bounce_mode = bounce_mode
@@ -226,7 +228,8 @@ class SegmentPreviewItem(QFrame):
         
         # Right side: Animation preview
         self.preview_label = QLabel()
-        self.preview_label.setFixedSize(120, 120)
+        base_size = int(120 * self._zoom_factor)
+        self.preview_label.setFixedSize(base_size, base_size)
         self.preview_label.setAlignment(Qt.AlignCenter)
         self.preview_label.setStyleSheet("""
             QLabel {
@@ -246,8 +249,9 @@ class SegmentPreviewItem(QFrame):
         """Display a specific frame in the preview."""
         if 0 <= index < len(self._frames):
             pixmap = self._frames[index]
+            scaled_size = int(110 * self._zoom_factor)
             scaled = pixmap.scaled(
-                110, 110,
+                scaled_size, scaled_size,
                 Qt.KeepAspectRatio,
                 Qt.SmoothTransformation
             )
@@ -508,6 +512,14 @@ class SegmentPreviewItem(QFrame):
             self.hold_button.setText(f"Holds ({len(self._frame_holds)})")
         else:
             self.hold_button.setText("Holds")
+    
+    def set_zoom_factor(self, zoom_factor: float):
+        """Update the zoom factor and resize the preview."""
+        self._zoom_factor = zoom_factor
+        base_size = int(120 * self._zoom_factor)
+        self.preview_label.setFixedSize(base_size, base_size)
+        # Redraw current frame with new size
+        self._display_frame(self._current_frame)
 
 
 class AnimationSegmentPreview(QWidget):
@@ -523,6 +535,7 @@ class AnimationSegmentPreview(QWidget):
         super().__init__()
         self._preview_items: Dict[str, SegmentPreviewItem] = {}
         self._all_frames: List[QPixmap] = []
+        self._zoom_factor = 1.0  # Default zoom level
         
         self._setup_ui()
         
@@ -580,7 +593,73 @@ class AnimationSegmentPreview(QWidget):
         title_layout.addWidget(self.stop_all_button)
         
         title_layout.addStretch()
+        
+        # Zoom controls
+        zoom_layout = QHBoxLayout()
+        zoom_layout.setSpacing(4)
+        
+        # Zoom out button
+        self.zoom_out_button = QPushButton("-")
+        self.zoom_out_button.setFixedSize(24, 24)
+        self.zoom_out_button.setStyleSheet("""
+            QPushButton {
+                background-color: #666;
+                color: white;
+                border: none;
+                border-radius: 12px;
+                font-size: 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #555;
+            }
+            QPushButton:disabled {
+                background-color: #ccc;
+            }
+        """)
+        self.zoom_out_button.clicked.connect(self._zoom_out)
+        zoom_layout.addWidget(self.zoom_out_button)
+        
+        # Zoom level label
+        self.zoom_label = QLabel("100%")
+        self.zoom_label.setStyleSheet("color: #666; font-size: 12px; min-width: 40px; text-align: center;")
+        self.zoom_label.setAlignment(Qt.AlignCenter)
+        zoom_layout.addWidget(self.zoom_label)
+        
+        # Zoom in button
+        self.zoom_in_button = QPushButton("+")
+        self.zoom_in_button.setFixedSize(24, 24)
+        self.zoom_in_button.setStyleSheet("""
+            QPushButton {
+                background-color: #666;
+                color: white;
+                border: none;
+                border-radius: 12px;
+                font-size: 16px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #555;
+            }
+            QPushButton:disabled {
+                background-color: #ccc;
+            }
+        """)
+        self.zoom_in_button.clicked.connect(self._zoom_in)
+        zoom_layout.addWidget(self.zoom_in_button)
+        
+        title_layout.addLayout(zoom_layout)
         layout.addWidget(title_bar)
+        
+        # Add keyboard shortcuts for zoom
+        from PySide6.QtGui import QKeySequence, QShortcut
+        zoom_in_shortcut = QShortcut(QKeySequence("Ctrl++"), self)
+        zoom_in_shortcut.activated.connect(self._zoom_in)
+        zoom_in_shortcut2 = QShortcut(QKeySequence("Ctrl+="), self)  # For keyboards without numpad
+        zoom_in_shortcut2.activated.connect(self._zoom_in)
+        
+        zoom_out_shortcut = QShortcut(QKeySequence("Ctrl+-"), self)
+        zoom_out_shortcut.activated.connect(self._zoom_out)
         
         # Scroll area for segment previews
         self.scroll_area = QScrollArea()
@@ -626,8 +705,8 @@ class AnimationSegmentPreview(QWidget):
         # Hide empty state
         self.empty_label.hide()
         
-        # Create preview item with animation settings
-        preview_item = SegmentPreviewItem(name, color, segment_frames, bounce_mode, frame_holds)
+        # Create preview item with animation settings and current zoom
+        preview_item = SegmentPreviewItem(name, color, segment_frames, bounce_mode, frame_holds, self._zoom_factor)
         preview_item.removeRequested.connect(self._on_remove_requested)
         preview_item.playToggled.connect(self._on_play_toggled)
         preview_item.bounceChanged.connect(self._on_bounce_changed)
@@ -712,3 +791,28 @@ class AnimationSegmentPreview(QWidget):
             item.stop_playback()
             
         self.play_all_button.setText("Play All")
+    
+    def _zoom_in(self):
+        """Increase zoom level."""
+        if self._zoom_factor < 2.0:  # Max zoom 200%
+            self._zoom_factor = min(2.0, self._zoom_factor + 0.25)
+            self._update_zoom()
+    
+    def _zoom_out(self):
+        """Decrease zoom level."""
+        if self._zoom_factor > 0.5:  # Min zoom 50%
+            self._zoom_factor = max(0.5, self._zoom_factor - 0.25)
+            self._update_zoom()
+    
+    def _update_zoom(self):
+        """Update zoom for all preview items."""
+        # Update zoom label
+        self.zoom_label.setText(f"{int(self._zoom_factor * 100)}%")
+        
+        # Update button states
+        self.zoom_in_button.setEnabled(self._zoom_factor < 2.0)
+        self.zoom_out_button.setEnabled(self._zoom_factor > 0.5)
+        
+        # Update all preview items
+        for item in self._preview_items.values():
+            item.set_zoom_factor(self._zoom_factor)

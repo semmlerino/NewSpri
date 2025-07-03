@@ -26,7 +26,7 @@ class FrameHoldDemo(QMainWindow):
     
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Frame Hold Feature Demo")
+        self.setWindowTitle("Animation Preview Features Demo")
         self.setGeometry(100, 100, 800, 600)
         
         # Create central widget
@@ -36,10 +36,11 @@ class FrameHoldDemo(QMainWindow):
         
         # Add instructions
         instructions = QLabel(
-            "<h2>Frame Hold Demo</h2>"
-            "<p>This demo shows the new frame hold features:</p>"
+            "<h2>Animation Preview Demo</h2>"
+            "<p>This demo shows the animation preview features:</p>"
             "<ul>"
-            "<li>Click 'Holds' button on any segment to access hold menu</li>"
+            "<li><b>Zoom:</b> Use + and - buttons or Ctrl+/- to zoom in/out (50% to 200%)</li>"
+            "<li><b>Frame Holds:</b> Click 'Holds' button to access hold menu</li>"
             "<li><b>Add Frame Hold:</b> Add hold to a specific frame</li>"
             "<li><b>Add Hold to All Frames:</b> Apply same duration to all frames</li>"
             "<li><b>Clear All Holds:</b> Remove all frame holds</li>"
