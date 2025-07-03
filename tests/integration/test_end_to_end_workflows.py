@@ -17,7 +17,7 @@ from PySide6.QtTest import QTest
 from sprite_viewer import SpriteViewer
 from sprite_model import SpriteModel
 from export import ExportDialog
-from export.frame_exporter import get_frame_exporter
+from export.core.frame_exporter import get_frame_exporter
 
 
 class TestCompleteApplicationLifecycle:

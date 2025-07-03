@@ -5,11 +5,11 @@ Tests wizard functionality without complex threading/export operations.
 
 import pytest
 from pathlib import Path
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication, QPushButton
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QColor
 
-from export.export_dialog_wizard import ExportDialogWizard
+from export import ExportDialog
 from config import Config
 
 
@@ -20,7 +20,7 @@ class TestExportWizardSimple:
     def test_wizard_navigation_flow(self, qtbot):
         """Test basic wizard navigation flow."""
         # Create dialog with test data
-        dialog = ExportDialogWizard(frame_count=8)
+        dialog = ExportDialog(frame_count=8, current_frame=0)
         qtbot.addWidget(dialog)
         dialog.show()
         
@@ -92,10 +92,11 @@ class TestExportWizardSimple:
     def test_export_settings_validation(self, qtbot, tmp_path):
         """Test export settings validation."""
         sprites = self._create_test_sprites(4)
-        dialog = ExportDialogWizard(
+        dialog = ExportDialog(
             frame_count=len(sprites),
-            sprites=sprites
+            current_frame=0
         )
+        dialog.set_sprites(sprites)
         qtbot.addWidget(dialog)
         dialog.show()
         
@@ -126,10 +127,11 @@ class TestExportWizardSimple:
     def test_export_request_signal(self, qtbot, tmp_path):
         """Test that export request signal is emitted with correct data."""
         sprites = self._create_test_sprites(2)
-        dialog = ExportDialogWizard(
+        dialog = ExportDialog(
             frame_count=len(sprites),
-            sprites=sprites
+            current_frame=0
         )
+        dialog.set_sprites(sprites)
         qtbot.addWidget(dialog)
         dialog.show()
         
@@ -179,7 +181,7 @@ class TestExportWizardSimple:
     @pytest.mark.integration
     def test_sprite_sheet_settings(self, qtbot):
         """Test sprite sheet specific settings."""
-        dialog = ExportDialogWizard(frame_count=16)
+        dialog = ExportDialog(frame_count=16, current_frame=0)
         qtbot.addWidget(dialog)
         dialog.show()
         
@@ -215,7 +217,7 @@ class TestExportWizardSimple:
     @pytest.mark.integration
     def test_selected_frames_mode(self, qtbot):
         """Test selected frames export mode."""
-        dialog = ExportDialogWizard(frame_count=10, current_frame=3)
+        dialog = ExportDialog(frame_count=10, current_frame=3)
         qtbot.addWidget(dialog)
         dialog.show()
         
@@ -251,7 +253,7 @@ class TestExportWizardSimple:
     @pytest.mark.integration
     def test_quick_export_buttons(self, qtbot):
         """Test quick export buttons in type selection."""
-        dialog = ExportDialogWizard(frame_count=8)
+        dialog = ExportDialog(frame_count=8, current_frame=0)
         qtbot.addWidget(dialog)
         dialog.show()
         

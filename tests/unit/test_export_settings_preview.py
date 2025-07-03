@@ -9,10 +9,10 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPixmap, QColor
 from PySide6.QtTest import QTest
 
-from export.export_settings_preview_step import (
+from export.steps.settings_preview import (
     ExportSettingsPreviewStep, LivePreviewWidget
 )
-from export.export_presets import ExportPreset
+from export.core.export_presets import ExportPreset
 
 
 class TestLivePreviewWidget:

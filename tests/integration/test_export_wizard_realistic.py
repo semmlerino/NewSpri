@@ -13,8 +13,8 @@ from PySide6.QtCore import Qt, QTimer, QPoint
 from PySide6.QtGui import QPixmap, QColor
 from PySide6.QtTest import QTest
 
-from export.export_dialog_wizard import ExportDialogWizard
-from export.frame_exporter import get_frame_exporter
+from export import ExportDialog
+from export.core.frame_exporter import get_frame_exporter
 from sprite_viewer import SpriteViewer
 from sprite_model.core import SpriteModel
 from config import Config
@@ -30,11 +30,11 @@ class TestRealisticExportWizardIntegration:
         sprites = self._create_test_sprites(4)
         
         # Create dialog with real data
-        dialog = ExportDialogWizard(
+        dialog = ExportDialog(
             frame_count=len(sprites),
-            current_frame=0,
-            sprites=sprites
+            current_frame=0
         )
+        dialog.set_sprites(sprites)
         qtbot.addWidget(dialog)
         dialog.show()
         
@@ -157,10 +157,11 @@ class TestRealisticExportWizardIntegration:
         """Test sprite sheet export with real image generation."""
         sprites = self._create_test_sprites(16)
         
-        dialog = ExportDialogWizard(
+        dialog = ExportDialog(
             frame_count=len(sprites),
-            sprites=sprites
+            current_frame=0
         )
+        dialog.set_sprites(sprites)
         qtbot.addWidget(dialog)
         dialog.show()
         
@@ -225,11 +226,11 @@ class TestRealisticExportWizardIntegration:
         """Test exporting only selected frames."""
         sprites = self._create_test_sprites(10)
         
-        dialog = ExportDialogWizard(
+        dialog = ExportDialog(
             frame_count=len(sprites),
-            current_frame=2,
-            sprites=sprites
+            current_frame=2
         )
+        dialog.set_sprites(sprites)
         qtbot.addWidget(dialog)
         dialog.show()
         
@@ -287,7 +288,7 @@ class TestRealisticExportWizardIntegration:
     @pytest.mark.integration
     def test_wizard_navigation_and_validation(self, qtbot):
         """Test wizard navigation and validation without mocking."""
-        dialog = ExportDialogWizard(frame_count=8)
+        dialog = ExportDialog(frame_count=8, current_frame=0)
         qtbot.addWidget(dialog)
         dialog.show()
         
@@ -340,7 +341,7 @@ class TestRealisticExportWizardIntegration:
         created_dialog = None
         
         # Override exec to prevent blocking
-        original_exec = ExportDialogWizard.exec
+        original_exec = ExportDialog.exec
         
         def non_blocking_exec(self):
             nonlocal dialog_created, created_dialog
@@ -349,7 +350,7 @@ class TestRealisticExportWizardIntegration:
             self.show()
             return True
         
-        ExportDialogWizard.exec = non_blocking_exec
+        ExportDialog.exec = non_blocking_exec
         
         try:
             # Trigger export action
@@ -394,12 +395,12 @@ class TestRealisticExportWizardIntegration:
             
         finally:
             # Restore original exec
-            ExportDialogWizard.exec = original_exec
+            ExportDialog.exec = original_exec
     
     @pytest.mark.integration
     def test_error_handling_with_real_filesystem(self, qtbot):
         """Test error handling with real filesystem operations."""
-        dialog = ExportDialogWizard(frame_count=4)
+        dialog = ExportDialog(frame_count=4, current_frame=0)
         qtbot.addWidget(dialog)
         dialog.show()
         
@@ -476,10 +477,11 @@ class TestRealisticPerformance:
             sprites.append(pixmap)
         
         def export_large_sprite_sheet():
-            dialog = ExportDialogWizard(
+            dialog = ExportDialog(
                 frame_count=len(sprites),
-                sprites=sprites
+                current_frame=0
             )
+            dialog.set_sprites(sprites)
             qtbot.addWidget(dialog)
             
             # Select sprite sheet

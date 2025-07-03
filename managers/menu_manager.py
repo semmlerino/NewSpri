@@ -139,11 +139,6 @@ class MenuManager(QObject):
             items=[
                 MenuItemDefinition(MenuItemType.ACTION, action_id='file_open'),
                 MenuItemDefinition(MenuItemType.SEPARATOR),
-                MenuItemDefinition(MenuItemType.ACTION, action_id='view_zoom_in'),
-                MenuItemDefinition(MenuItemType.ACTION, action_id='view_zoom_out'),
-                MenuItemDefinition(MenuItemType.ACTION, action_id='view_zoom_fit'),
-                MenuItemDefinition(MenuItemType.ACTION, action_id='view_zoom_reset'),
-                MenuItemDefinition(MenuItemType.SEPARATOR),
                 MenuItemDefinition(MenuItemType.ACTION, action_id='toolbar_export'),
             ]
         ),
@@ -164,6 +159,7 @@ class MenuManager(QObject):
         self._menu_definitions: Dict[str, MenuDefinition] = {}
         self._toolbar_definitions: Dict[str, ToolbarDefinition] = {}
         self._recent_files_handler: Optional[callable] = None
+        self._recent_files_menu: Optional[QMenu] = None
         
         # Load default definitions
         self._load_default_definitions()
@@ -284,8 +280,27 @@ class MenuManager(QObject):
         Args:
             menu: QMenu to add recent files to
         """
+        # Create a submenu for recent files
+        recent_submenu = menu.addMenu("Recent Files")
+        recent_submenu.setToolTip("Recently opened sprite sheets")
+        
+        # Store reference for dynamic updates
+        self._recent_files_menu = recent_submenu
+        
+        # Populate initial content if handler is available
         if self._recent_files_handler:
-            self._recent_files_handler(menu)
+            self._recent_files_handler(recent_submenu)
+        
+        # Connect menu aboutToShow signal for dynamic updates
+        recent_submenu.aboutToShow.connect(self._update_recent_files_menu)
+    
+    def _update_recent_files_menu(self):
+        """Update recent files menu when it's about to be shown."""
+        if self._recent_files_menu and self._recent_files_handler:
+            # Clear the menu
+            self._recent_files_menu.clear()
+            # Repopulate with current recent files
+            self._recent_files_handler(self._recent_files_menu)
     
     def create_toolbar(self, toolbar_id: str) -> Optional[QToolBar]:
         """

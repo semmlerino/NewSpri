@@ -14,6 +14,7 @@ from .playback_controls import PlaybackControls
 from .frame_extractor import FrameExtractor
 from .animation_grid_view import AnimationGridView
 from .animation_segment_widget import AnimationSegmentSelector
+from .animation_segment_preview import AnimationSegmentPreview
 from .enhanced_status_bar import EnhancedStatusBar, StatusBarManager
 
 __all__ = [
@@ -22,6 +23,7 @@ __all__ = [
     'FrameExtractor',
     'AnimationGridView',
     'AnimationSegmentSelector',
+    'AnimationSegmentPreview',
     'EnhancedStatusBar',
     'StatusBarManager'
 ]

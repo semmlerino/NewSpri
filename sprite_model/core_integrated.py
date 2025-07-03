@@ -220,6 +220,29 @@ class SpriteModel(QObject):
             # Use CCL extraction instead
             return self.extract_ccl_frames()
     
+    def set_frame_settings(self, width: int, height: int, offset_x: int = 0,
+                         offset_y: int = 0, spacing_x: int = 0, spacing_y: int = 0) -> None:
+        """Set frame extraction parameters without extracting.
+        
+        This method is for setting parameters only, without triggering extraction.
+        For extraction, use extract_frames() after setting parameters.
+        """
+        # Validate inputs
+        if width <= 0 or height <= 0:
+            raise ValueError(f"Frame dimensions must be positive: {width}x{height}")
+        if offset_x < 0 or offset_y < 0:
+            raise ValueError(f"Offsets cannot be negative: ({offset_x}, {offset_y})")
+        if spacing_x < 0 or spacing_y < 0:
+            raise ValueError(f"Spacing cannot be negative: ({spacing_x}, {spacing_y})")
+        
+        # Store settings
+        self._frame_width = width
+        self._frame_height = height
+        self._offset_x = offset_x
+        self._offset_y = offset_y
+        self._spacing_x = spacing_x
+        self._spacing_y = spacing_y
+    
     def validate_frame_settings(self, width: int, height: int, offset_x: int = 0,
                               offset_y: int = 0, spacing_x: int = 0, spacing_y: int = 0) -> Tuple[bool, str]:
         """Validate frame extraction settings."""

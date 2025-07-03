@@ -32,8 +32,8 @@ from PySide6.QtCore import QTimer
 from PySide6.QtGui import QPixmap, QColor
 
 # Project imports
-from export.sprite_preview_widget import SpriteSheetPreviewCanvas, SpriteSheetPreviewWidget
-from export.frame_exporter import SpriteSheetLayout
+from export.widgets.sprite_preview_widget import SpriteSheetPreviewCanvas, SpriteSheetPreviewWidget
+from export.core.frame_exporter import SpriteSheetLayout
 from config import Config
 
 

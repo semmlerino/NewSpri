@@ -10,8 +10,8 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPixmap, QColor
 from PySide6.QtTest import QTest
 
-from export.export_dialog_wizard_integrated import ExportDialogWizardIntegrated
-from export.export_presets import get_preset_manager
+from export import ExportDialog
+from export.core.export_presets import get_preset_manager
 
 
 class TestIntegratedExportWorkflow:
@@ -31,7 +31,7 @@ class TestIntegratedExportWorkflow:
     @pytest.fixture
     def export_dialog(self, test_sprites):
         """Create export dialog with test data."""
-        dialog = ExportDialogWizardIntegrated(
+        dialog = ExportDialog(
             frame_count=len(test_sprites),
             current_frame=3,
             sprites=test_sprites

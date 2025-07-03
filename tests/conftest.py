@@ -14,6 +14,12 @@ from unittest.mock import Mock, MagicMock
 
 import pytest
 
+# Import Qt mock fixtures
+from tests.fixtures.qt_mocks import (
+    mock_qmessagebox, auto_mock_qmessagebox, 
+    mock_qinputdialog, mock_qfiledialog, QtButtons
+)
+
 # Configure Qt environment BEFORE importing PySide6
 os.environ["QT_QPA_PLATFORM"] = "offscreen"
 os.environ["QT_LOGGING_RULES"] = "*.debug=false;*.warning=false;*.critical=false"

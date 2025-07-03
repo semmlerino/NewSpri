@@ -1,6 +1,6 @@
 # Python Sprite Viewer
 
-A professional PySide6-based application for previewing sprite sheet animations with modern MVC architecture.
+A professional PySide6-based application for previewing and editing sprite sheet animations with modern MVC architecture, advanced animation splitting, and comprehensive export capabilities.
 
 ## 🏗️ Architecture Overview
 
@@ -9,19 +9,29 @@ The application features a **complete component-based MVC architecture** after c
 ### **Component Structure**
 ```
 📁 Python Sprite Viewer - Professional Architecture
-├── 🏗️ UI Components
-│   ├── sprite_viewer.py         - Main application window
-│   ├── sprite_canvas.py         - Zoom/pan display widget  
-│   ├── playback_controls.py     - Animation control panel
-│   └── frame_extractor.py       - Configuration interface
-├── 🧠 MVC Architecture  
-│   ├── sprite_model.py          - Data layer & algorithms
-│   └── animation_controller.py  - Animation timing & control
+├── 🎨 UI Components
+│   ├── sprite_viewer.py               - Main application window
+│   ├── sprite_canvas.py               - Zoom/pan display widget  
+│   ├── playback_controls.py           - Animation control panel
+│   ├── frame_extractor.py             - Configuration interface
+│   ├── animation_grid_view.py         - Animation splitting interface
+│   └── animation_segment_preview.py   - Segment preview panel
+├── 🧠 Core Architecture  
+│   ├── sprite_model/                  - Data layer & algorithms
+│   ├── animation_controller.py        - Animation timing control
+│   ├── animation_segment_controller.py - Segment management
+│   └── auto_detection_controller.py   - Frame detection logic
+├── 📦 Managers
+│   ├── animation_segment_manager.py   - Segment persistence
+│   ├── menu_manager.py                - Menu system
+│   └── recent_files_manager.py       - Recent files tracking
 ├── ⚙️ Foundation
-│   ├── config.py                - Centralized configuration
-│   └── styles.py                - Centralized styling
-└── 📚 Documentation
-    └── PHASE_*_COMPLETE.md      - Comprehensive architecture docs
+│   ├── config.py                      - Centralized configuration
+│   └── styles.py                      - Centralized styling
+└── 📚 Export System
+    ├── export/core/                   - Export engine
+    ├── export/dialogs/                - Export dialogs
+    └── export/widgets/                - Export UI components
 ```
 
 ### **Key Architectural Benefits**
@@ -39,6 +49,11 @@ The application features a **complete component-based MVC architecture** after c
 - **Advanced Display Engine** - Zoom, pan, overlays with smooth interaction
 - **Intelligent Auto-Detection** - Frame size and margin detection algorithms
 - **Comprehensive UI Controls** - Intuitive interface with keyboard shortcuts
+- **Recent Files Menu** - Quick access to recently opened sprite sheets (Alt+1 through Alt+9)
+- **Export System** - Export frames as individual files, sprite sheets, or animated GIFs
+- **Animation Splitting** - Split sprite sheets into named animation segments with color coding
+- **Segment Preview** - Individual playback controls for each animation segment
+- **Connected Component Labeling** - Advanced frame extraction for complex sprite sheets
 
 ### **Technical Highlights**
 - **Performance Optimized** - Real-time FPS monitoring and smart UI updates
@@ -84,6 +99,7 @@ python sprite_viewer.py
 - **📁 Open Button** - Browse and select sprite sheets
 - **🖱️ Drag & Drop** - Drop image files directly onto canvas
 - **⌨️ Ctrl+O** - Quick file open shortcut
+- **⌨️ Alt+1 to Alt+9** - Quick access to recent files
 
 **Supported Formats:** PNG, JPG, JPEG, BMP, GIF
 
@@ -118,6 +134,20 @@ The application excels at intelligent sprite sheet processing:
 - **🎨 Background Options** - Checkerboard or solid color
 - **📏 Frame Info** - Real-time frame counter display
 
+### **Animation Splitting**
+
+**Segment Creation:**
+- **🎯 Frame Selection** - Click, drag, or shift-click to select frames
+- **✂️ Create Segments** - Right-click or button to create named segments
+- **🎨 Color Coding** - Automatic distinct colors for each segment
+- **💾 Auto-Save** - Segments persist with sprite sheet files
+
+**Segment Management:**
+- **▶️ Individual Playback** - Preview each segment separately
+- **📤 Export Segments** - Export specific animations independently
+- **🔄 Edit Segments** - Rename, delete, or modify segments
+- **👁️ Visual Markers** - Clear start/end frame indicators
+
 ### **Keyboard Shortcuts**
 | Key | Function |
 |-----|----------|
@@ -129,6 +159,9 @@ The application excels at intelligent sprite sheet processing:
 | `Ctrl++` / `Ctrl+-` | Zoom in/out |
 | `Ctrl+0` | Fit to window |
 | `Ctrl+1` | Reset zoom (100%) |
+| `Ctrl+E` | Export all frames |
+| `Ctrl+Shift+E` | Export current frame |
+| `Alt+1` to `Alt+9` | Open recent file 1-9 |
 | `Ctrl+Q` | Quit application |
 
 ## 🏆 Professional Features
@@ -153,20 +186,35 @@ The application excels at intelligent sprite sheet processing:
 
 ## 📚 Documentation
 
-Comprehensive documentation available:
-- **PHASE_*_COMPLETE.md** - Detailed architecture transformation docs
-- **CODE_REVIEW_FINAL.md** - Complete code quality analysis
-- **archive/documentation/** - Historical development documentation
+- **README.md** - This file - main project documentation
+- **CLAUDE.md** - Instructions for Claude AI assistant when working with this codebase
+- **requirements.txt** - Python package dependencies
+- **pytest.ini** - Test configuration and markers
 
 ## 🔧 Development
+
+### **Testing**
+Run the comprehensive test suite:
+```bash
+# All tests
+python -m pytest
+
+# Specific test categories
+python -m pytest -m unit          # Unit tests only
+python -m pytest -m integration   # Integration tests
+python -m pytest tests/ui/        # UI component tests
+
+# With coverage
+python -m pytest --cov=. --cov-report=html
+```
 
 ### **Architecture Highlights**
 The codebase demonstrates **professional software engineering** with:
 
-- **38% Main File Reduction** - Clean component extraction (1,188→736 lines)
-- **Zero Circular Dependencies** - Proper import hierarchy
-- **Event-Driven Design** - Qt signals for loose coupling
-- **Single Responsibility** - Each module has clear, focused purpose
+- **Modular Design** - 20+ independent components with clear responsibilities
+- **Zero Circular Dependencies** - Proper import hierarchy maintained
+- **Event-Driven Architecture** - Qt signals for loose coupling
+- **Comprehensive Testing** - Unit, integration, and UI tests
 - **Enterprise Quality** - Production-ready code organization
 
 ### **Future Enhancement Ready**
@@ -177,8 +225,10 @@ The architecture enables advanced features:
 - Machine learning-powered auto-detection
 - Professional timeline editing tools
 
+## 📄 License
+
+This project is open source. Feel free to use and modify for your needs.
+
 ---
 
-**Python Sprite Viewer** - From functional application to **professional software engineering showcase** through systematic architectural transformation.
-
-*Achieved through 5-phase refactoring: Configuration→Styling→Model→Controller→Components*
+**Python Sprite Viewer** - A professional sprite sheet animation tool built with modern software engineering principles.

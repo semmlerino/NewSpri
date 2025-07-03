@@ -29,9 +29,9 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QColor
 
 # Project imports
-from export.export_dialog import ExportDialog
-from export.frame_exporter import SpriteSheetLayout
-from export.export_presets import ExportPresetType, get_preset_manager
+from export import ExportDialog
+from export.core.frame_exporter import SpriteSheetLayout
+from export.core.export_presets import ExportPresetType, get_preset_manager
 
 
 @pytest.fixture(scope="session")

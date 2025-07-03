@@ -97,6 +97,7 @@ class UISetupHelper(CoordinatorBase):
             'playback_controls': self.playback_controls,
             'frame_extractor': self.frame_extractor,
             'grid_view': self.grid_view,
+            'segment_preview': getattr(self, 'segment_preview', None),
             'info_label': self.info_label,
             'zoom_label': self.zoom_label,
             'main_toolbar': self.main_toolbar,
@@ -197,6 +198,19 @@ class UISetupHelper(CoordinatorBase):
     
     def _create_grid_tab(self):
         """Create the grid tab for animation splitting."""
+        # Main container
+        container = QWidget()
+        main_layout = QHBoxLayout(container)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Create splitter for resizable layout
+        splitter = QSplitter(Qt.Horizontal)
+        main_layout.addWidget(splitter)
+        
+        # Left side: Grid view with frames
+        grid_container = QWidget()
+        grid_layout = QVBoxLayout(grid_container)
+        
         # Initialize grid view
         self.grid_view = self._grid_view_class()
         
@@ -204,9 +218,6 @@ class UISetupHelper(CoordinatorBase):
         self.grid_view.sync_segments_with_manager(self.segment_manager)
         
         # Add refresh button for debugging
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        
         refresh_btn = QPushButton("🔄 Refresh Grid View")
         
         # Connect refresh button to segment controller if available
@@ -215,8 +226,20 @@ class UISetupHelper(CoordinatorBase):
             # Connect tab widget signal
             self.tab_widget.currentChanged.connect(self.segment_controller.on_tab_changed)
         
-        layout.addWidget(refresh_btn)
-        layout.addWidget(self.grid_view)
+        grid_layout.addWidget(refresh_btn)
+        grid_layout.addWidget(self.grid_view)
+        
+        splitter.addWidget(grid_container)
+        
+        # Right side: Animation segment preview
+        # Import here to avoid circular imports
+        from ui.animation_segment_preview import AnimationSegmentPreview
+        
+        self.segment_preview = AnimationSegmentPreview()
+        splitter.addWidget(self.segment_preview)
+        
+        # Set splitter proportions (grid gets 2/3, preview gets 1/3)
+        splitter.setSizes([800, 400])
         
         return container
     

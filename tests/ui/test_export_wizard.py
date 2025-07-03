@@ -9,12 +9,11 @@ from PySide6.QtWidgets import QApplication, QPushButton
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPixmap, QColor
 
-from export.export_dialog_wizard import ExportDialogWizard
-from export.wizard_widget import WizardWidget, WizardStep
-from export.export_type_step import ExportTypeStep, VisualPresetCard
-from export.export_settings_step import ExportSettingsStep
-from export.export_preview_step import ExportPreviewStep
-from export.export_presets import ExportPreset, ExportPresetType, get_preset_manager
+from export import ExportDialog
+from export.dialogs.base.wizard_base import WizardWidget, WizardStep
+from export.steps.type_selection import ExportTypeStepSimple as ExportTypeStep
+from export.steps.settings_preview import ExportSettingsPreviewStep
+from export.core.export_presets import ExportPreset, ExportPresetType, get_preset_manager
 
 
 class TestWizardWidget:
@@ -329,14 +328,14 @@ class TestExportPreviewStep:
         assert "PNG @ 2.0x" in step.summary_labels['format'].text()
 
 
-class TestExportDialogWizard:
+class TestExportDialog:
     """Test the main export dialog wizard."""
     
     @pytest.mark.ui
     def test_wizard_dialog_creation(self, qtbot):
         """Test creating the wizard dialog."""
         sprites = [QPixmap(32, 32) for _ in range(16)]
-        dialog = ExportDialogWizard(
+        dialog = ExportDialog(
             frame_count=16,
             current_frame=0,
             sprites=sprites
@@ -352,7 +351,7 @@ class TestExportDialogWizard:
     @pytest.mark.ui
     def test_dialog_sizing(self, qtbot):
         """Test dialog has improved sizing."""
-        dialog = ExportDialogWizard()
+        dialog = ExportDialog()
         qtbot.addWidget(dialog)
         
         # Check minimum size is larger than old dialog
@@ -367,7 +366,7 @@ class TestExportDialogWizard:
     def test_complete_export_flow(self, qtbot):
         """Test complete export flow through wizard."""
         sprites = [QPixmap(32, 32) for _ in range(4)]
-        dialog = ExportDialogWizard(
+        dialog = ExportDialog(
             frame_count=4,
             current_frame=0,
             sprites=sprites
@@ -400,7 +399,7 @@ class TestExportDialogWizard:
     @pytest.mark.ui
     def test_export_signal(self, qtbot):
         """Test export signal is emitted with correct data."""
-        dialog = ExportDialogWizard(frame_count=4)
+        dialog = ExportDialog(frame_count=4)
         qtbot.addWidget(dialog)
         
         # Mock the gathering of settings
@@ -472,7 +471,7 @@ class TestWizardPerformance:
     def test_wizard_creation_time(self, qtbot, benchmark):
         """Benchmark wizard creation time."""
         def create_wizard():
-            dialog = ExportDialogWizard(frame_count=100)
+            dialog = ExportDialog(frame_count=100)
             qtbot.addWidget(dialog)
             dialog.close()
         
@@ -482,7 +481,7 @@ class TestWizardPerformance:
     
     def test_step_switching_time(self, qtbot, benchmark):
         """Benchmark step switching performance."""
-        dialog = ExportDialogWizard(frame_count=50)
+        dialog = ExportDialog(frame_count=50)
         qtbot.addWidget(dialog)
         
         def switch_steps():

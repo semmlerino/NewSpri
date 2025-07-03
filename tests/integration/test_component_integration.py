@@ -16,9 +16,9 @@ from core.auto_detection_controller import AutoDetectionController
 from ui.sprite_canvas import SpriteCanvas
 from ui.playback_controls import PlaybackControls
 from ui.frame_extractor import FrameExtractor
-from managers import StatusManager, RecentFilesManager, ShortcutManager
+from managers import RecentFilesManager, ShortcutManager
 from export import ExportDialog
-from export.frame_exporter import FrameExporter
+from export.core.frame_exporter import FrameExporter
 
 
 class TestModelViewControllerIntegration:
@@ -36,17 +36,49 @@ class TestModelViewControllerIntegration:
         qtbot.addWidget(playback)
         
         # Connect model to views
-        model.frameChanged.connect(canvas.set_current_frame)
-        model.frameChanged.connect(playback.update_frame_info)
+        # Canvas doesn't have set_current_frame, just update it
+        model.frameChanged.connect(lambda idx, count: canvas.update())
+        # Connect to playback controls
+        model.frameChanged.connect(lambda idx, count: playback.on_frame_changed(idx))
         model.dataLoaded.connect(canvas.update)
         
-        # Load sprites
-        sprites = [QPixmap(32, 32) for _ in range(10)]
-        for i, sprite in enumerate(sprites):
-            sprite.fill(QColor.fromHsv(i * 36, 200, 200))
+        # Create a sprite sheet with 10 frames (5x2 grid)
+        sprite_sheet = QPixmap(160, 64)  # 5 sprites x 32 pixels wide, 2 rows x 32 pixels high
+        sprite_sheet.fill(Qt.white)
         
-        model.sprite_frames = sprites
-        model.frameChanged.emit(0, 10)
+        # Draw colored rectangles as frames
+        from PySide6.QtGui import QPainter
+        painter = QPainter(sprite_sheet)
+        for i in range(10):
+            col = i % 5
+            row = i // 5
+            x = col * 32
+            y = row * 32
+            color = QColor.fromHsv(i * 36, 200, 200)
+            painter.fillRect(x, y, 32, 32, color)
+        painter.end()
+        
+        # Save to temp file and load it
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+            sprite_sheet.save(tmp.name)
+            tmp_path = tmp.name
+        
+        # Load the sprite sheet
+        success, msg = model.load_sprite_sheet(tmp_path)
+        assert success, f"Failed to load sprite sheet: {msg}"
+        
+        # Set extraction mode to grid (not CCL which might fail)
+        model.set_extraction_mode('grid')
+        
+        # Extract frames
+        success, msg, count = model.extract_frames(32, 32, 0, 0, 0, 0)
+        assert success, f"Failed to extract frames: {msg}"
+        assert count == 10, f"Expected 10 frames, got {count}"
+        
+        # Clean up temp file
+        import os
+        os.unlink(tmp_path)
         
         # Verify views updated
         assert canvas._sprite_pixmap is not None
@@ -63,17 +95,47 @@ class TestModelViewControllerIntegration:
     def test_controller_coordination(self, qtbot):
         """Test coordination between different controllers."""
         model = SpriteModel()
-        animation_controller = AnimationController(model)
-        detection_controller = AutoDetectionController(model)
+        animation_controller = AnimationController()
+        animation_controller.initialize(model, None)
+        detection_controller = AutoDetectionController()
+        detection_controller.initialize(model, None)
         
-        # Load test sprites
-        sprites = []
+        # Create a sprite sheet with 16 frames (4x4 grid)
+        sprite_sheet = QPixmap(128, 128)  # 4x4 grid of 32x32 sprites
+        sprite_sheet.fill(Qt.white)
+        
+        # Draw colored rectangles as frames
+        from PySide6.QtGui import QPainter
+        painter = QPainter(sprite_sheet)
         for i in range(16):
-            pixmap = QPixmap(32, 32)
-            pixmap.fill(QColor.fromHsv(i * 22, 200, 200))
-            sprites.append(pixmap)
+            col = i % 4
+            row = i // 4
+            x = col * 32
+            y = row * 32
+            color = QColor.fromHsv(i * 22, 200, 200)
+            painter.fillRect(x, y, 32, 32, color)
+        painter.end()
         
-        model.sprite_frames = sprites
+        # Save to temp file and load it
+        import tempfile
+        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+            sprite_sheet.save(tmp.name)
+            tmp_path = tmp.name
+        
+        # Load and extract frames
+        success, msg = model.load_sprite_sheet(tmp_path)
+        assert success
+        
+        # Set extraction mode to grid
+        model.set_extraction_mode('grid')
+        
+        success, msg, count = model.extract_frames(32, 32, 0, 0, 0, 0)
+        assert success
+        assert count == 16
+        
+        # Clean up temp file
+        import os
+        os.unlink(tmp_path)
         
         # Test animation controller
         animation_controller.start_animation()
@@ -106,19 +168,23 @@ class TestModelViewControllerIntegration:
         canvas = SpriteCanvas()
         playback = PlaybackControls()
         extractor = FrameExtractor()
-        status_manager = StatusManager()
         
         qtbot.addWidget(canvas)
         qtbot.addWidget(playback)
         qtbot.addWidget(extractor)
         
         # Set up signal connections
-        model.frameChanged.connect(canvas.set_current_frame)
-        model.frameChanged.connect(playback.update_frame_info)
-        model.frameChanged.connect(status_manager.update_frame_info)
+        model.frameChanged.connect(lambda idx, count: canvas.update())
+        model.frameChanged.connect(lambda idx, count: playback.on_frame_changed(idx))
         
-        canvas.zoomChanged.connect(status_manager.update_zoom_level)
-        extractor.settingsChanged.connect(model.update_extraction_settings)
+        # Canvas zoom signal
+        zoom_signals = []
+        canvas.zoomChanged.connect(lambda zoom: zoom_signals.append(zoom))
+        
+        # Extractor doesn't have settingsChanged, use extraction completed
+        extraction_signals = []
+        if hasattr(extractor, 'extractionCompleted'):
+            extractor.extractionCompleted.connect(lambda: extraction_signals.append(True))
         
         # Test signal chain
         signal_received = {'frame': False, 'zoom': False, 'extraction': False}

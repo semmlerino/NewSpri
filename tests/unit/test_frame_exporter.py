@@ -10,7 +10,7 @@ from unittest.mock import MagicMock, patch
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 
-from export.frame_exporter import (
+from export.core.frame_exporter import (
     FrameExporter, ExportTask, ExportMode, ExportFormat,
     get_frame_exporter
 )
@@ -133,9 +133,14 @@ class TestFrameExporter:
         )
         assert not success
     
-    @patch('frame_exporter.Path.mkdir')
-    def test_export_frames_creates_directory(self, mock_mkdir):
+    @patch('export.core.frame_exporter.ExportWorker')
+    @patch('export.core.frame_exporter.Path.mkdir')
+    def test_export_frames_creates_directory(self, mock_mkdir, mock_worker_class):
         """Test that export creates output directory if needed."""
+        # Mock the worker to avoid actual thread creation
+        mock_worker = MagicMock()
+        mock_worker_class.return_value = mock_worker
+        
         exporter = FrameExporter()
         
         frames = [MagicMock(spec=QPixmap)]
@@ -146,6 +151,7 @@ class TestFrameExporter:
         )
         
         mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
+        mock_worker.start.assert_called_once()
     
     def test_is_exporting_state(self):
         """Test is_exporting state tracking."""
@@ -174,7 +180,7 @@ class TestExportWorker:
     
     def test_individual_frames_export(self, mock_frames, tmp_path):
         """Test exporting individual frames."""
-        from frame_exporter import ExportWorker
+        from export.core.frame_exporter import ExportWorker
         
         task = ExportTask(
             frames=mock_frames,
@@ -207,7 +213,7 @@ class TestExportWorker:
     
     def test_sprite_sheet_export(self, mock_frames, tmp_path):
         """Test exporting as sprite sheet."""
-        from frame_exporter import ExportWorker
+        from export.core.frame_exporter import ExportWorker
         
         task = ExportTask(
             frames=mock_frames,
@@ -220,18 +226,18 @@ class TestExportWorker:
         worker = ExportWorker(task)
         
         # Mock QPixmap creation for sprite sheet
-        with patch('frame_exporter.QPixmap') as mock_pixmap_class:
+        with patch('export.core.frame_exporter.QPixmap') as mock_pixmap_class:
             mock_sheet = MagicMock()
             mock_sheet.save.return_value = True
             mock_pixmap_class.return_value = mock_sheet
             
             # Mock QPainter
-            with patch('frame_exporter.QPainter'):
+            with patch('export.core.frame_exporter.QPainter'):
                 worker._export_sprite_sheet()
                 
                 # Verify sprite sheet was created with correct size
-                # 3 frames in 2x2 grid = 128x128 pixels
-                mock_pixmap_class.assert_called_with(128, 128)
+                # 3 frames in 1x3 grid = 64x192 pixels (auto layout chooses 1x3 for 3 frames)
+                mock_pixmap_class.assert_called_with(64, 192)
                 
                 # Verify save was called
                 expected_filename = "sprites_sheet.png"
@@ -242,7 +248,7 @@ class TestExportWorker:
     
     def test_frame_filtering_workflow(self, mock_frames, tmp_path):
         """Test frame filtering workflow (replaces selected frames export)."""
-        from frame_exporter import ExportWorker
+        from export.core.frame_exporter import ExportWorker
         
         # Pre-filter frames like sprite_viewer.py does
         selected_indices = [0, 2]  # Select first and third frame
@@ -268,7 +274,7 @@ class TestExportWorker:
     
     def test_scale_factor_application(self, mock_frames, tmp_path):
         """Test that scale factor is applied correctly."""
-        from frame_exporter import ExportWorker
+        from export.core.frame_exporter import ExportWorker
         
         # Mock scaled return
         for frame in mock_frames:
@@ -298,7 +304,7 @@ class TestExportWorker:
     
     def test_export_cancellation(self, mock_frames, tmp_path):
         """Test export cancellation."""
-        from frame_exporter import ExportWorker
+        from export.core.frame_exporter import ExportWorker
         
         task = ExportTask(
             frames=mock_frames,
@@ -317,7 +323,7 @@ class TestExportWorker:
 class TestExportIntegration:
     """Integration tests for export functionality."""
     
-    @patch('frame_exporter.ExportWorker')
+    @patch('export.core.frame_exporter.ExportWorker')
     def test_full_export_workflow(self, mock_worker_class, qtbot):
         """Test complete export workflow."""
         exporter = FrameExporter()

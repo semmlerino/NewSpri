@@ -151,7 +151,7 @@ class TestMenuManager:
         main_toolbar = self.manager.get_toolbar_definition("main")
         assert main_toolbar is not None
         assert main_toolbar.name == "Main Toolbar"
-        assert len(main_toolbar.items) >= 5  # Should have several items
+        assert len(main_toolbar.items) == 3  # Open, separator, Export
         
         # Test non-existent toolbar
         non_existent = self.manager.get_toolbar_definition("non_existent")
@@ -313,10 +313,7 @@ class TestMenuIntegration:
                       if item.item_type == MenuItemType.ACTION)
         assert has_open
         
-        # Should have zoom actions
-        zoom_actions = [item.action_id for item in main_toolbar.items 
-                       if item.item_type == MenuItemType.ACTION and item.action_id and "zoom" in item.action_id]
-        assert len(zoom_actions) >= 3
+        # Zoom controls are added as widgets in sprite_viewer, not as actions in toolbar definition
         
         # Should have export action
         has_export = any(item.action_id == "toolbar_export" for item in main_toolbar.items 

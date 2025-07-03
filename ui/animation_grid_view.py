@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from PySide6.QtWidgets import (
     QWidget, QScrollArea, QGridLayout, QVBoxLayout, QHBoxLayout, 
     QLabel, QPushButton, QFrame, QSizePolicy, QToolTip, QMenu,
-    QInputDialog, QMessageBox, QSplitter, QListWidget, QListWidgetItem
+    QInputDialog, QMessageBox, QSplitter, QApplication
 )
 from PySide6.QtCore import Qt, Signal, QSize, QPoint, QRect
 from PySide6.QtGui import QPixmap, QPainter, QColor, QPen, QFont, QMouseEvent, QContextMenuEvent
@@ -27,14 +27,32 @@ class AnimationSegment:
     end_frame: int
     color: QColor = None
     
+    # Class variable to track color index for unique colors
+    _color_index = 0
+    _predefined_colors = [
+        QColor("#E91E63"),  # Pink
+        QColor("#9C27B0"),  # Purple
+        QColor("#673AB7"),  # Deep Purple
+        QColor("#3F51B5"),  # Indigo
+        QColor("#2196F3"),  # Blue
+        QColor("#03A9F4"),  # Light Blue
+        QColor("#00BCD4"),  # Cyan
+        QColor("#009688"),  # Teal
+        QColor("#4CAF50"),  # Green
+        QColor("#8BC34A"),  # Light Green
+        QColor("#CDDC39"),  # Lime
+        QColor("#FFC107"),  # Amber
+        QColor("#FF9800"),  # Orange
+        QColor("#FF5722"),  # Deep Orange
+        QColor("#795548"),  # Brown
+        QColor("#607D8B"),  # Blue Grey
+    ]
+    
     def __post_init__(self):
         if self.color is None:
-            # Generate consistent color based on name hash with better distribution
-            hash_val = abs(hash(self.name))  # Use abs to ensure positive
-            hue = (hash_val * 137) % 360  # Use golden angle for better distribution
-            saturation = 120 + (hash_val % 60)  # Vary saturation 120-180
-            value = 180 + (hash_val % 40)      # Vary value 180-220
-            self.color = QColor.fromHsv(hue, saturation, value)
+            # Use predefined colors in sequence for better visual distinction
+            self.color = AnimationSegment._predefined_colors[AnimationSegment._color_index % len(AnimationSegment._predefined_colors)]
+            AnimationSegment._color_index += 1
     
     @property
     def frame_count(self) -> int:
@@ -92,14 +110,17 @@ class FrameThumbnail(QLabel):
             border_color = "#2196F3"  # Blue for highlighted/drag-over
             border_width = "2px"
             background = "#E3F2FD"
-        elif self._segment_color:
+        elif self._segment_color is not None and self._segment_color.isValid():
+            # Enhanced segment visualization
             border_color = self._segment_color.name()
-            border_width = "2px"
-            background = "#FFFFFF"
+            border_width = "3px"
+            # Create lighter background from segment color
+            lighter_color = self._segment_color.lighter(180)
+            background = lighter_color.name()
         else:
             border_color = "#CCCCCC"
             border_width = "1px"
-            background = "#FFFFFF"
+            background = "white"  # Use named color instead of hex
         
         hover_style = ""
         if not self._selected and not self._highlighted:
@@ -110,15 +131,32 @@ class FrameThumbnail(QLabel):
             }
             """
         
-        self.setStyleSheet(f"""
+        # Add segment marker overlays for start/end frames
+        overlay_style = ""
+        if self._is_segment_start:
+            overlay_style += """
+                border-left-width: 5px;
+                border-left-style: solid;
+            """
+        if self._is_segment_end:
+            overlay_style += """
+                border-right-width: 5px;
+                border-right-style: solid;
+            """
+        
+        # Build the complete style
+        style = f"""
             QLabel {{
                 border: {border_width} solid {border_color};
                 background-color: {background};
                 border-radius: 4px;
                 margin: 2px;
+                {overlay_style}
             }}
             {hover_style}
-        """)
+        """
+        
+        self.setStyleSheet(style)
     
     def set_selected(self, selected: bool):
         """Set selection state."""
@@ -135,7 +173,42 @@ class FrameThumbnail(QLabel):
         self._is_segment_start = is_start
         self._is_segment_end = is_end
         self._segment_color = color
+        
+        # Update the visual style
         self._update_style()
+        
+        # Force visual update
+        self.update()
+        self.repaint()
+    
+    def force_clear_style(self):
+        """Forcefully clear all styles and reset to default."""
+        # Reset all state
+        self._is_segment_start = False
+        self._is_segment_end = False
+        self._segment_color = None
+        self._selected = False
+        self._highlighted = False
+        
+        # Set explicit default style
+        default_style = """
+            QLabel {
+                border: 1px solid #CCCCCC;
+                background-color: rgb(255, 255, 255);
+                background: rgb(255, 255, 255);
+                border-radius: 4px;
+                margin: 2px;
+            }
+            QLabel:hover {
+                border-color: #2196F3;
+                background-color: rgb(240, 248, 255);
+            }
+        """
+        self.setStyleSheet(default_style)
+        
+        # Force update
+        self.update()
+        self.repaint()
     
     def mousePressEvent(self, event: QMouseEvent):
         """Handle mouse press events with modifier support."""
@@ -178,83 +251,6 @@ class FrameThumbnail(QLabel):
         super().mouseReleaseEvent(event)
 
 
-class SegmentListWidget(QListWidget):
-    """Widget for displaying and managing animation segments."""
-    
-    segmentSelected = Signal(str)  # segment_name
-    segmentDeleted = Signal(str)   # segment_name
-    segmentRenamed = Signal(str, str)  # old_name, new_name
-    segmentDoubleClicked = Signal(str)  # segment_name (for preview)
-    
-    def __init__(self):
-        super().__init__()
-        self.setMaximumWidth(200)
-        self.setMinimumWidth(150)
-        
-        # Connect double-click for preview
-        self.itemDoubleClicked.connect(self._on_item_double_clicked)
-        
-    def add_segment(self, segment: AnimationSegment):
-        """Add a segment to the list."""
-        item = QListWidgetItem(f"{segment.name}\n({segment.frame_count} frames)")
-        item.setData(Qt.UserRole, segment.name)
-        
-        # Color the item
-        item.setBackground(segment.color.lighter(150))
-        
-        self.addItem(item)
-    
-    def remove_segment(self, segment_name: str):
-        """Remove a segment from the list."""
-        for i in range(self.count()):
-            item = self.item(i)
-            if item.data(Qt.UserRole) == segment_name:
-                self.takeItem(i)
-                break
-    
-    def update_segment(self, segment: AnimationSegment):
-        """Update an existing segment in the list."""
-        for i in range(self.count()):
-            item = self.item(i)
-            if item.data(Qt.UserRole) == segment.name:
-                item.setText(f"{segment.name}\n({segment.frame_count} frames)")
-                item.setBackground(segment.color.lighter(150))
-                break
-    
-    def contextMenuEvent(self, event: QContextMenuEvent):
-        """Show context menu for segment management."""
-        item = self.itemAt(event.pos())
-        if item:
-            menu = QMenu(self)
-            
-            rename_action = menu.addAction("Rename")
-            delete_action = menu.addAction("Delete")
-            
-            action = menu.exec(event.globalPos())
-            segment_name = item.data(Qt.UserRole)
-            
-            if action == rename_action:
-                new_name, ok = QInputDialog.getText(
-                    self, "Rename Segment", "Enter new name:", text=segment_name
-                )
-                if ok and new_name.strip():
-                    self.segmentRenamed.emit(segment_name, new_name.strip())
-            elif action == delete_action:
-                reply = QMessageBox.question(
-                    self, "Delete Segment", 
-                    f"Are you sure you want to delete '{segment_name}'?",
-                    QMessageBox.Yes | QMessageBox.No
-                )
-                if reply == QMessageBox.Yes:
-                    self.segmentDeleted.emit(segment_name)
-    
-    def _on_item_double_clicked(self, item):
-        """Handle double-click on segment item for preview."""
-        if item:
-            segment_name = item.data(Qt.UserRole)
-            if segment_name:
-                self.segmentDoubleClicked.emit(segment_name)
-
 
 class AnimationGridView(QWidget):
     """Main grid view widget for animation frame selection and splitting."""
@@ -265,6 +261,7 @@ class AnimationGridView(QWidget):
     selectionChanged = Signal(list)  # selected_frame_indices
     segmentCreated = Signal(AnimationSegment)  # new_segment
     segmentDeleted = Signal(str)  # segment_name
+    segmentRenamed = Signal(str, str)  # old_name, new_name
     segmentSelected = Signal(AnimationSegment)  # selected_segment
     segmentPreviewRequested = Signal(AnimationSegment)  # segment_to_preview (double-click)
     exportRequested = Signal(AnimationSegment)  # segment_to_export
@@ -295,26 +292,13 @@ class AnimationGridView(QWidget):
     
     def _setup_ui(self):
         """Set up the user interface."""
-        layout = QHBoxLayout(self)
+        layout = QVBoxLayout(self)
         
-        # Create splitter for resizable layout
-        splitter = QSplitter(Qt.Horizontal)
-        layout.addWidget(splitter)
-        
-        # Left side: Grid view
-        self._setup_grid_area(splitter)
-        
-        # Right side: Segment management
-        self._setup_segment_panel(splitter)
-        
-        # Set splitter proportions
-        splitter.setSizes([800, 200])
+        # Just set up the grid area, no segment panel needed
+        self._setup_grid_area(layout)
     
-    def _setup_grid_area(self, parent):
+    def _setup_grid_area(self, parent_layout):
         """Set up the main grid area."""
-        grid_widget = QWidget()
-        grid_layout = QVBoxLayout(grid_widget)
-        
         # Controls
         controls_layout = QHBoxLayout()
         
@@ -350,12 +334,12 @@ class AnimationGridView(QWidget):
         self._clear_selection_btn.clicked.connect(self._clear_selection)
         controls_layout.addWidget(self._clear_selection_btn)
         
-        grid_layout.addLayout(controls_layout)
+        parent_layout.addLayout(controls_layout)
         
         # Add selection instructions
         instructions = QLabel(
             "Selection modes: Click = select • Drag = range • Shift+Click = extend range • "
-            "Ctrl/Alt+Click = multi-select • Double-Click = preview"
+            "Ctrl/Alt+Click = multi-select • Double-Click = preview • Right-Click = add as segment"
         )
         instructions.setStyleSheet("""
             QLabel {
@@ -368,7 +352,7 @@ class AnimationGridView(QWidget):
             }
         """)
         instructions.setWordWrap(True)
-        grid_layout.addWidget(instructions)
+        parent_layout.addWidget(instructions)
         
         # Scroll area for grid
         self._scroll_area = QScrollArea()
@@ -382,53 +366,12 @@ class AnimationGridView(QWidget):
         self._grid_layout.setSpacing(2)
         
         self._scroll_area.setWidget(self._grid_container)
-        grid_layout.addWidget(self._scroll_area)
-        
-        parent.addWidget(grid_widget)
-    
-    def _setup_segment_panel(self, parent):
-        """Set up the segment management panel."""
-        panel_widget = QWidget()
-        panel_layout = QVBoxLayout(panel_widget)
-        
-        # Title
-        title = QLabel("Animation Segments")
-        title.setFont(QFont("Arial", 10, QFont.Bold))
-        panel_layout.addWidget(title)
-        
-        # Instructions
-        instructions = QLabel("Click to select • Double-click to preview")
-        instructions.setStyleSheet("""
-            QLabel {
-                font-size: 9px;
-                color: #666;
-                margin-bottom: 5px;
-            }
-        """)
-        instructions.setWordWrap(True)
-        panel_layout.addWidget(instructions)
-        
-        # Segment list
-        self._segment_list = SegmentListWidget()
-        panel_layout.addWidget(self._segment_list)
-        
-        # Panel buttons
-        self._export_btn = QPushButton("Export Selected")
-        self._export_btn.setEnabled(False)  # Disabled until segment selected
-        self._export_btn.clicked.connect(self._export_selected_segment)
-        panel_layout.addWidget(self._export_btn)
-        
-        parent.addWidget(panel_widget)
+        parent_layout.addWidget(self._scroll_area)
     
     def _connect_signals(self):
         """Connect internal signals."""
-        self._segment_list.segmentSelected.connect(self._on_segment_selected)
-        self._segment_list.segmentDeleted.connect(self._delete_segment)
-        self._segment_list.segmentRenamed.connect(self._rename_segment)
-        self._segment_list.segmentDoubleClicked.connect(self._on_segment_double_clicked)
-        
-        # Connect to selection changes to update export button
-        self._segment_list.itemSelectionChanged.connect(self._on_segment_list_selection_changed)
+        # Currently no internal signals to connect as segment list is removed
+        pass
     
     def set_frames(self, frames: List[QPixmap]):
         """Set the frames to display in the grid."""
@@ -559,9 +502,50 @@ class AnimationGridView(QWidget):
             if i < len(self._thumbnails):
                 self._selected_frames.add(i)
     
+    def _get_segment_at_frame(self, frame_index: int) -> Optional[AnimationSegment]:
+        """Get the segment that contains the given frame index."""
+        for segment in self._segments.values():
+            if segment.start_frame <= frame_index <= segment.end_frame:
+                return segment
+        return None
+
     def _on_frame_right_clicked(self, frame_index: int, position: QPoint):
         """Handle frame thumbnail right-click."""
         menu = QMenu(self)
+        
+        # Check if this frame is part of a segment
+        segment = self._get_segment_at_frame(frame_index)
+        
+        if segment:
+            # Frame is part of a segment - show segment-specific actions
+            segment_menu = menu.addMenu(f"Segment: {segment.name}")
+            
+            # Export segment options
+            export_frames_action = segment_menu.addAction("Export as Individual Frames...")
+            export_frames_action.triggered.connect(
+                lambda: self.exportRequested.emit(segment.name)
+            )
+            
+            export_sheet_action = segment_menu.addAction("Export as Sprite Sheet...")
+            export_sheet_action.triggered.connect(
+                lambda: self.exportRequested.emit(segment.name)
+            )
+            
+            segment_menu.addSeparator()
+            
+            # Rename segment action
+            rename_action = segment_menu.addAction("Rename Segment...")
+            rename_action.triggered.connect(
+                lambda: self._prompt_rename_segment(segment.name)
+            )
+            
+            # Delete segment action
+            delete_action = segment_menu.addAction("Delete Segment")
+            delete_action.triggered.connect(
+                lambda: self._delete_segment(segment.name)
+            )
+            
+            menu.addSeparator()
         
         # Add frame to selection if not already selected
         if frame_index not in self._selected_frames:
@@ -570,8 +554,25 @@ class AnimationGridView(QWidget):
             self._update_selection_display()
         
         if self._selected_frames:
-            create_action = menu.addAction(f"Create segment from selection ({len(self._selected_frames)} frames)")
+            count = len(self._selected_frames)
+            sorted_frames = sorted(self._selected_frames)
+            
+            # Create descriptive action text
+            if count == 1:
+                action_text = f"Add frame {sorted_frames[0]} as animation segment"
+            elif self._is_contiguous_selection(sorted_frames):
+                action_text = f"Add frames {sorted_frames[0]}-{sorted_frames[-1]} as animation segment"
+            else:
+                action_text = f"Add {count} frames as animation segment"
+            
+            create_action = menu.addAction(action_text)
             create_action.triggered.connect(self._create_segment_from_selection)
+            
+            menu.addSeparator()
+            
+            # Quick preview action
+            preview_action = menu.addAction("Preview selected frames")
+            preview_action.triggered.connect(lambda: self._preview_selection())
         
         if menu.actions():
             menu.exec(position)
@@ -698,7 +699,6 @@ class AnimationGridView(QWidget):
     def add_segment(self, segment: AnimationSegment):
         """Add a new animation segment."""
         self._segments[segment.name] = segment
-        self._segment_list.add_segment(segment)
         self._update_segment_visualization()
     
     def sync_segments_with_manager(self, segment_manager):
@@ -711,7 +711,6 @@ class AnimationGridView(QWidget):
         
         # Clear current segments and rebuild from manager
         self._segments.clear()
-        self._segment_list.clear()
         
         # Add all segments from manager to grid view
         for segment_data in manager_segments:
@@ -724,7 +723,6 @@ class AnimationGridView(QWidget):
             )
             
             self._segments[segment_data.name] = grid_segment
-            self._segment_list.add_segment(grid_segment)
         
         # Update visualization
         self._update_segment_visualization()
@@ -733,9 +731,34 @@ class AnimationGridView(QWidget):
         """Delete an animation segment."""
         if segment_name in self._segments:
             del self._segments[segment_name]
-            self._segment_list.remove_segment(segment_name)
             self._update_segment_visualization()
             self.segmentDeleted.emit(segment_name)
+    
+    def _prompt_rename_segment(self, old_name: str):
+        """Prompt user to rename a segment."""
+        # Get new name from user
+        new_name, ok = QInputDialog.getText(
+            self, "Rename Segment", 
+            f"Enter new name for '{old_name}':",
+            text=old_name
+        )
+        
+        if ok and new_name.strip():
+            new_name = new_name.strip()
+            
+            # Check if new name already exists
+            if new_name in self._segments and new_name != old_name:
+                QMessageBox.warning(
+                    self, "Name Already Exists",
+                    f"A segment named '{new_name}' already exists.\nPlease choose a different name."
+                )
+                return
+            
+            # Perform the rename
+            if new_name != old_name:
+                self._rename_segment(old_name, new_name)
+                # Emit signal to notify other components
+                self.segmentRenamed.emit(old_name, new_name)
     
     def _rename_segment(self, old_name: str, new_name: str):
         """Rename an animation segment."""
@@ -743,15 +766,16 @@ class AnimationGridView(QWidget):
             segment = self._segments.pop(old_name)
             segment.name = new_name
             self._segments[new_name] = segment
-            
-            self._segment_list.remove_segment(old_name)
-            self._segment_list.add_segment(segment)
+            self._update_segment_visualization()
     
     def _update_segment_visualization(self):
         """Update visual markers for all segments."""
-        # Clear all segment markers
+        # First, forcefully clear all thumbnails to default state
         for thumbnail in self._thumbnails:
-            thumbnail.set_segment_markers()
+            thumbnail.force_clear_style()
+        
+        # Process clearing before applying new markers
+        QApplication.processEvents()
         
         # Apply segment markers
         for segment in self._segments.values():
@@ -760,42 +784,32 @@ class AnimationGridView(QWidget):
                     is_start = (i == segment.start_frame)
                     is_end = (i == segment.end_frame)
                     self._thumbnails[i].set_segment_markers(is_start, is_end, segment.color)
+        
+        # Force a final refresh of the entire widget hierarchy
+        self.update()
+        self.repaint()
+        
+        # Also update the parent scroll area to ensure complete refresh
+        if self._scroll_area:
+            self._scroll_area.update()
+            self._scroll_area.viewport().update()
+        
+        QApplication.processEvents()
     
-    def _on_segment_selected(self, segment_name: str):
-        """Handle segment selection from list."""
-        if segment_name in self._segments:
-            segment = self._segments[segment_name]
-            self.segmentSelected.emit(segment)
     
-    def _on_segment_double_clicked(self, segment_name: str):
-        """Handle segment double-click for preview."""
-        if segment_name in self._segments:
-            segment = self._segments[segment_name]
-            self.segmentPreviewRequested.emit(segment)
-    
-    def _on_segment_list_selection_changed(self):
-        """Handle changes in segment list selection to update export button."""
-        current_item = self._segment_list.currentItem()
-        if current_item:
-            segment_name = current_item.data(Qt.UserRole)
-            if segment_name and segment_name in self._segments:
-                segment = self._segments[segment_name]
-                self._export_btn.setEnabled(True)
-                self._export_btn.setText(f"Export '{segment.name}'")
-            else:
-                self._export_btn.setEnabled(False)
-                self._export_btn.setText("Export Selected")
-        else:
-            self._export_btn.setEnabled(False)
-            self._export_btn.setText("Export Selected")
-    
-    def _export_selected_segment(self):
-        """Export the currently selected segment."""
-        current_item = self._segment_list.currentItem()
-        if current_item:
-            segment_name = current_item.data(Qt.UserRole)
-            if segment_name in self._segments:
-                self.exportRequested.emit(self._segments[segment_name])
+    def _preview_selection(self):
+        """Preview the currently selected frames as an animation."""
+        if not self._selected_frames or not self._frames:
+            return
+            
+        sorted_frames = sorted(self._selected_frames)
+        # Create temporary segment for preview
+        temp_segment = AnimationSegment(
+            "Preview",
+            sorted_frames[0],
+            sorted_frames[-1]
+        )
+        self.segmentPreviewRequested.emit(temp_segment)
     
     def get_segments(self) -> List[AnimationSegment]:
         """Get all current animation segments."""
@@ -804,7 +818,8 @@ class AnimationGridView(QWidget):
     def clear_segments(self):
         """Clear all animation segments."""
         self._segments.clear()
-        self._segment_list.clear()
+        # Reset color index for fresh color sequence
+        AnimationSegment._color_index = 0
         self._update_segment_visualization()
     
     def mouseMoveEvent(self, event: QMouseEvent):

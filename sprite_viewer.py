@@ -95,6 +95,7 @@ class SpriteViewer(QMainWindow):
         self._playback_controls = ui_components['playback_controls']
         self._frame_extractor = ui_components['frame_extractor']
         self._grid_view = ui_components['grid_view']
+        self._segment_preview = ui_components['segment_preview']
         self._info_label = ui_components['info_label']
         self._zoom_label = ui_components['zoom_label']
         self._main_toolbar = ui_components['main_toolbar']
@@ -225,6 +226,7 @@ class SpriteViewer(QMainWindow):
         self._segment_controller.set_grid_view(self._grid_view)
         self._segment_controller.set_sprite_model(self._sprite_model)
         self._segment_controller.set_tab_widget(self._tab_widget)
+        self._segment_controller.set_segment_preview(self._segment_preview)
         
         # Connect segment controller status messages
         self._segment_controller.statusMessage.connect(self._status_manager.show_message)
@@ -313,6 +315,7 @@ class SpriteViewer(QMainWindow):
             self._grid_view.framePreviewRequested.connect(self._on_grid_frame_preview)
             self._grid_view.segmentCreated.connect(self._segment_controller.create_segment)
             self._grid_view.segmentDeleted.connect(self._segment_controller.delete_segment)
+            self._grid_view.segmentRenamed.connect(self._segment_controller.rename_segment)
             self._grid_view.segmentSelected.connect(self._segment_controller.select_segment)
             self._grid_view.segmentPreviewRequested.connect(self._segment_controller.preview_segment)
             self._grid_view.exportRequested.connect(

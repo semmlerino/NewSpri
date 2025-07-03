@@ -4,16 +4,16 @@ Tests individual components without excessive mocking.
 """
 
 import pytest
-from PySide6.QtCore import Qt, Signal, QSize
-from PySide6.QtGui import QPixmap, QColor, QPainter, QWheelEvent, QPointF
+from PySide6.QtCore import Qt, Signal, QSize, QPointF
+from PySide6.QtGui import QPixmap, QColor, QPainter, QWheelEvent
 from PySide6.QtWidgets import QWidget, QApplication, QVBoxLayout, QLabel
 from PySide6.QtTest import QTest
 
-from export.wizard_widget import WizardStep, WizardWidget
-from export.export_type_step import VisualPresetCard, EnhancedExportPreset, ExportTypeStep
-from export.export_settings_step import ExportSettingsStep
-from export.export_preview_step import SpriteSheetPreviewView, ExportPreviewStep
-from export.frame_exporter import SpriteSheetLayout
+from export.dialogs.base.wizard_base import WizardStep, WizardWidget
+from export.steps.type_selection import ExportTypeStepSimple as ExportTypeStep
+from export.steps.settings_preview import ExportSettingsPreviewStep
+from export.core.frame_exporter import SpriteSheetLayout
+from export.core.export_presets import ExportPreset
 
 
 class TestWizardStepReal:

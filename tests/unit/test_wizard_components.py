@@ -9,11 +9,11 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QPixmap, QColor, QPainter
 from PySide6.QtWidgets import QWidget, QApplication
 
-from export.wizard_widget import WizardStep
-from export.export_type_step import VisualPresetCard, EnhancedExportPreset
-from export.export_settings_step import ExportSettingsStep
-from export.export_preview_step import SpriteSheetPreviewView, ExportPreviewStep
-from export.frame_exporter import SpriteSheetLayout
+from export.dialogs.base.wizard_base import WizardStep, WizardWidget
+from export.steps.type_selection import ExportTypeStepSimple as ExportTypeStep
+from export.steps.settings_preview import ExportSettingsPreviewStep
+from export.core.frame_exporter import SpriteSheetLayout
+from export.core.export_presets import ExportPreset
 
 
 class TestWizardStep:

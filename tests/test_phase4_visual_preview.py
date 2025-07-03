@@ -28,10 +28,10 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPixmap, QColor
 
 # Project imports
-from export.sprite_preview_widget import (
+from export.widgets.sprite_preview_widget import (
     SpriteSheetPreviewWidget, SpriteSheetPreviewCanvas, PreviewSettings
 )
-from export.frame_exporter import SpriteSheetLayout
+from export.core.frame_exporter import SpriteSheetLayout
 from config import Config
 
 
@@ -237,7 +237,7 @@ class TestLayoutAccuracy:
     
     def test_layout_algorithm_consistency(self, preview_canvas, sample_sprites):
         """Test that preview uses same algorithms as export."""
-        from export.frame_exporter import ExportWorker, ExportTask, ExportMode, ExportFormat
+        from export.core.frame_exporter import ExportWorker, ExportTask, ExportMode, ExportFormat
         
         # Create export task for comparison
         layout = SpriteSheetLayout(mode='auto', spacing=4, padding=8)
@@ -442,11 +442,11 @@ class TestEdgeCases:
 class TestIntegration:
     """Test integration with other components."""
     
-    @patch('export.export_dialog.ExportDialog')
+    @patch('export.ExportDialog')
     def test_export_dialog_integration(self, mock_dialog):
         """Test integration with export dialog."""
         # Test the integration points exist by checking the actual class
-        from export.export_dialog import ExportDialog
+        from export import ExportDialog
         
         # Create a real instance to check methods
         try:

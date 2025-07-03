@@ -41,7 +41,7 @@ class TestSpriteLoadingWorkflow:
             pytest.skip(f"Test sprite sheet not found: {test_path}")
         
         # Load sprite sheet
-        success, message, metadata = sprite_model.load_sprite_sheet(str(test_path))
+        success, message = sprite_model.load_sprite_sheet(str(test_path))
         
         # Verify loading succeeded
         assert success, f"Failed to load sprite sheet: {message}"

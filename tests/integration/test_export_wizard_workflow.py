@@ -14,7 +14,7 @@ from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QPixmap, QColor
 
 from export import ExportDialog  # Should use wizard version
-from export.frame_exporter import get_frame_exporter
+from export.core.frame_exporter import get_frame_exporter
 from sprite_viewer import SpriteViewer
 from sprite_model import SpriteModel
 
@@ -57,9 +57,9 @@ class TestExportWizardIntegration:
         sprites = self._create_test_sprites(4)
         dialog = ExportDialog(
             frame_count=len(sprites),
-            current_frame=0,
-            sprites=sprites
+            current_frame=0
         )
+        dialog.set_sprites(sprites)
         qtbot.addWidget(dialog)
         
         # Step 1: Select individual frames preset
@@ -103,8 +103,9 @@ class TestExportWizardIntegration:
         sprites = self._create_test_sprites(16)
         dialog = ExportDialog(
             frame_count=len(sprites),
-            sprites=sprites
+            current_frame=0
         )
+        dialog.set_sprites(sprites)
         qtbot.addWidget(dialog)
         
         # Select sprite sheet preset
@@ -150,7 +151,8 @@ class TestExportWizardIntegration:
     def test_animated_gif_export_workflow(self, qtbot, tmp_path):
         """Test animated GIF export workflow."""
         sprites = self._create_test_sprites(8)
-        dialog = ExportDialog(frame_count=len(sprites), sprites=sprites)
+        dialog = ExportDialog(frame_count=len(sprites), current_frame=0)
+        dialog.set_sprites(sprites)
         qtbot.addWidget(dialog)
         
         # Use quick export for GIF
@@ -192,9 +194,9 @@ class TestExportWizardIntegration:
         sprites = self._create_test_sprites(10)
         dialog = ExportDialog(
             frame_count=len(sprites),
-            current_frame=2,
-            sprites=sprites
+            current_frame=2
         )
+        dialog.set_sprites(sprites)
         qtbot.addWidget(dialog)
         
         # Select "selected frames" preset
@@ -227,7 +229,7 @@ class TestExportWizardIntegration:
     @pytest.mark.integration
     def test_validation_prevents_invalid_export(self, qtbot):
         """Test validation prevents proceeding with invalid settings."""
-        dialog = ExportDialog(frame_count=4)
+        dialog = ExportDialog(frame_count=4, current_frame=0)
         qtbot.addWidget(dialog)
         
         # Try to proceed without selecting preset
@@ -251,7 +253,7 @@ class TestExportWizardIntegration:
     @pytest.mark.integration
     def test_backward_navigation_preserves_settings(self, qtbot):
         """Test going back preserves user settings."""
-        dialog = ExportDialog(frame_count=8)
+        dialog = ExportDialog(frame_count=8, current_frame=0)
         qtbot.addWidget(dialog)
         
         # Configure first two steps
@@ -295,8 +297,9 @@ class TestExportWizardIntegration:
         def create_and_navigate_wizard():
             dialog = ExportDialog(
                 frame_count=sprite_count,
-                sprites=sprites
+                current_frame=0
             )
+            dialog.set_sprites(sprites)
             qtbot.addWidget(dialog)
             
             # Select preset
@@ -338,7 +341,7 @@ class TestExportWizardErrorHandling:
     @pytest.mark.integration
     def test_export_failure_handling(self, qtbot):
         """Test handling of export failures."""
-        dialog = ExportDialog(frame_count=4)
+        dialog = ExportDialog(frame_count=4, current_frame=0)
         qtbot.addWidget(dialog)
         
         # Navigate to export
@@ -358,7 +361,7 @@ class TestExportWizardErrorHandling:
     @pytest.mark.integration
     def test_directory_creation_handling(self, qtbot, tmp_path):
         """Test handling of directory creation."""
-        dialog = ExportDialog(frame_count=4)
+        dialog = ExportDialog(frame_count=4, current_frame=0)
         qtbot.addWidget(dialog)
         
         # Navigate to settings
@@ -392,7 +395,7 @@ class TestExportWizardErrorHandling:
         existing_file = tmp_path / "sprite_000.png"
         existing_file.write_text("existing")
         
-        dialog = ExportDialog(frame_count=4)
+        dialog = ExportDialog(frame_count=4, current_frame=0)
         qtbot.addWidget(dialog)
         
         # Configure to overwrite

@@ -37,9 +37,13 @@ htmlcov/
 .cache
 nosetests.xml
 coverage.xml
+coverage.json
 *.cover
 .hypothesis/
 .pytest_cache/
+test_report.json
+.benchmarks/
+pytest-*.xml
 
 # Environments
 .env
@@ -64,3 +68,17 @@ venv.bak/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Application specific
+.sprite_segments/
+*.json.bak
+debug_*.py
+test_*.py
+!tests/test_*.py
+*.log
+
+# Screenshots and temporary files
+*.png
+!assets/**/*.png
+!spritetests/**/*.png
+!Archer/**/*.png

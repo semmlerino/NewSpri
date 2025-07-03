@@ -9,9 +9,9 @@ from PySide6.QtWidgets import QApplication, QListWidget
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QColor
 
-from export.export_dialog_wizard import ExportDialogWizard
-from export.export_settings_step_simple import ExportSettingsStepSimple
-from export.export_presets import get_preset_manager
+from export import ExportDialog
+from export.steps.settings_preview import ExportSettingsPreviewStep
+from export.core.export_presets import get_preset_manager
 
 
 class TestExportSettingsIntegration:
@@ -31,11 +31,11 @@ class TestExportSettingsIntegration:
     @pytest.fixture
     def export_dialog(self, test_sprites):
         """Create export dialog with test data."""
-        dialog = ExportDialogWizard(
+        dialog = ExportDialog(
             frame_count=len(test_sprites),
-            current_frame=2,
-            sprites=test_sprites
+            current_frame=2
         )
+        dialog.set_sprites(test_sprites)
         return dialog
     
     @pytest.mark.integration
@@ -58,7 +58,7 @@ class TestExportSettingsIntegration:
         
         # Step 2: Configure settings
         settings_step = export_dialog.settings_step
-        assert isinstance(settings_step, ExportSettingsStepSimple)
+        assert isinstance(settings_step, ExportSettingsPreviewStep)
         
         # Check that appropriate UI was created
         assert 'directory' in settings_step._settings_widgets

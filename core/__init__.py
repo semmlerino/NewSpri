@@ -10,8 +10,12 @@ Contains the core Model-View-Controller components:
 # Import core MVC components
 from .animation_controller import AnimationController
 from .auto_detection_controller import AutoDetectionController
+from .file_controller import FileController
+from .animation_segment_controller import AnimationSegmentController
 
 __all__ = [
     'AnimationController',
-    'AutoDetectionController'
+    'AutoDetectionController',
+    'FileController',
+    'AnimationSegmentController'
 ]

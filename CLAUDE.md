@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Python Sprite Viewer is a professional PySide6-based application for previewing sprite sheet animations, built with a complete MVC component-based architecture. The project underwent a 5-phase architectural refactoring from a monolithic design to enterprise-quality modular components.
+Python Sprite Viewer is a professional PySide6-based application for previewing and editing sprite sheet animations. It features animation splitting, segment management, comprehensive export capabilities, and is built with a complete MVC component-based architecture.
 
 ## Development Environment Setup
 
@@ -62,7 +62,7 @@ python sprite_viewer.py
 ```
 
 ### Testing
-The project uses pytest as the primary testing framework with unittest-style tests:
+The project uses pytest as the primary testing framework:
 ```bash
 # Run all tests
 python -m pytest
@@ -73,48 +73,48 @@ python -m pytest -m integration       # Integration tests only
 python -m pytest tests/unit/          # All unit tests
 python -m pytest tests/ui/            # UI component tests
 
-# Run specific test files
-python -m pytest tests/unit/test_config.py
-python -m pytest tests/unit/test_settings_config.py
-
 # Run with coverage
 python -m pytest --cov=. --cov-report=html
 
-# Alternative: Run main test suite using direct execution
-python tests/test_sprite_viewer.py
-
-# Run specific component tests
-python test_comprehensive.py
-python test_rectangular_detection.py
-python test_phase1.py
+# Run specific test files
+python -m pytest tests/unit/test_animation_segment_controller.py
+python -m pytest tests/ui/test_animation_grid_view.py
 ```
 
-### Development Testing Scripts
-```bash
-# Debug specific algorithms
-python debug_spacing.py
-python debug_spacing_detailed.py
-python debug_final.py
-python debug_scoring.py
-```
+### Development Scripts
+These debug scripts are available in the root directory for testing specific functionality:
+- `debug_spacing.py` - Test spacing detection algorithms
+- `debug_scoring.py` - Evaluate frame detection scoring
+- `test_animation_splitting.py` - Test animation segment creation
 
 ## Architecture Overview
 
 ### Component-Based MVC Structure
 ```
-📁 Core Architecture (Post Phase-5 Refactoring)
-├── 🏗️ UI Components (Extracted in Phase 5)
-│   ├── sprite_viewer.py         - Main application window (736 lines)
-│   ├── sprite_canvas.py         - Zoom/pan display widget (216 lines)
-│   ├── playback_controls.py     - Animation control panel (136 lines)
-│   └── frame_extractor.py       - Configuration interface (157 lines)
-├── 🧠 MVC Logic Layer
-│   ├── sprite_model.py          - Data layer & sprite processing algorithms
-│   ├── animation_controller.py  - Animation timing & playback control
-│   └── auto_detection_controller.py - Frame detection algorithms
+📁 Core Architecture
+├── 🎨 UI Components
+│   ├── sprite_viewer.py               - Main application window
+│   ├── sprite_canvas.py               - Zoom/pan display widget
+│   ├── playback_controls.py           - Animation control panel
+│   ├── frame_extractor.py             - Configuration interface
+│   ├── animation_grid_view.py         - Animation splitting interface
+│   └── animation_segment_preview.py   - Segment preview panel
+├── 🧠 Core Architecture
+│   ├── sprite_model/                  - Data layer & algorithms
+│   ├── animation_controller.py        - Animation timing control
+│   ├── animation_segment_controller.py - Segment management
+│   └── auto_detection_controller.py   - Frame detection logic
+├── 📦 Managers
+│   ├── animation_segment_manager.py   - Segment persistence
+│   ├── menu_manager.py                - Menu system
+│   └── recent_files_manager.py       - Recent files tracking
 ├── ⚙️ Foundation Layer
-│   ├── config.py                - Centralized configuration (323 lines)
-│   └── styles.py                - Centralized styling system
+│   ├── config.py                      - Centralized configuration
+│   └── styles.py                      - Centralized styling
+└── 📚 Export System
+    ├── export/core/                   - Export engine
+    ├── export/dialogs/                - Export dialogs
+    └── export/widgets/                - Export UI components
 ```
 
 ### Key Architectural Principles
@@ -135,6 +135,8 @@ The application uses a comprehensive centralized configuration system in `config
 - `Config.UI` - Layout, sizing, and responsive design settings
 - `Config.Drawing` - Rendering and visual styling
 - `Config.File` - Supported formats and I/O settings
+- `Config.Export` - Export formats, scales, and naming patterns
+- `Config.AnimationSplitting` - Grid columns, selection modes
 
 ### Modifying Configuration
 Always use the Config classes instead of magic numbers:
@@ -157,6 +159,9 @@ The application uses Qt's signal/slot system for component communication:
 - `SpriteModel.dataLoaded(str)` - New sprite loaded
 - `AnimationController.statusChanged(str)` - Status updates
 - `AutoDetectionController.detectionCompleted(...)` - Detection results
+- `AnimationGridView.segmentCreated(segment)` - New segment created
+- `AnimationGridView.segmentDeleted(name)` - Segment deleted
+- `AnimationSegmentManager.segmentRemoved(name)` - Manager segment removal
 
 ### Adding New Signals
 1. Define in the appropriate controller/model class
@@ -223,30 +228,42 @@ Use `test_comprehensive.py` for full application testing with real sprite sheets
 
 ### Archive Structure
 - `archive/` contains historical documentation and deprecated files
-- `archive/documentation/` has detailed refactoring history
-- Phase completion files (`PHASE_*_COMPLETE.md`) document architectural evolution
+- `archive/phase-documentation/` has detailed refactoring history
+- `archive/feature-documentation/` contains feature implementation details
+- `archive/export-dialog-development/` contains export system evolution
 
 ### Assets and Testing
 - `assets/` and `spritetests/` contain test sprite sheets
 - `Archer/` contains sample animation sprites
 - Support for PNG, JPG, JPEG, BMP, GIF formats
 
-## Export Functionality (Phase 4)
+## Export Functionality
 
-The application includes comprehensive frame export capabilities:
+The application includes comprehensive export capabilities:
 - **Individual Frames**: Export each frame as a separate file
 - **Sprite Sheet**: Export all frames as a single sprite sheet
-- **Selected Frames**: Export only selected frames
-- **Animated GIF**: Export frames as an animated GIF (requires Pillow)
+- **Animation Segments**: Export specific animation segments
+- **Animated GIF**: Export frames as an animated GIF
+- **Segments Per Row**: Control sprite sheet layout
 
-### Export System Components
-- `frame_exporter.py` - Core export engine with threading support
-- `export_dialog.py` - User interface for export configuration
+### Export System Architecture
+```
+export/
+├── core/
+│   ├── frame_exporter.py      - Main export engine
+│   └── export_settings.py     - Export configuration
+├── dialogs/
+│   ├── export_dialog.py       - Main export dialog
+│   └── simple_dialog.py       - Quick export dialog
+└── widgets/
+    ├── preview_widget.py      - Export preview
+    └── settings_widget.py     - Settings controls
+```
 
-### Export Settings (Config.Export)
-- Supported formats: PNG, JPG, BMP, GIF
-- Default scale factors: 1.0, 2.0, 4.0
-- Naming pattern: `{name}_{index:03d}`
+### Export Settings
+- Formats: PNG, JPG, BMP, GIF
+- Scale factors: 0.5x to 4.0x
+- Naming patterns with variables
 - Keyboard shortcuts: Ctrl+E (export all), Ctrl+Shift+E (export current)
 
 ## Common Development Tasks
@@ -281,4 +298,71 @@ Follow the established pattern:
 - Proper resource cleanup and memory management
 - Status message propagation through signal system
 
-This codebase demonstrates professional software engineering with enterprise-quality architecture, comprehensive documentation, and systematic development practices.
+## Animation Splitting Feature
+
+The animation splitting feature allows users to divide sprite sheets into named segments:
+
+### Usage
+1. Switch to "Animation Splitting" tab
+2. Select frames by clicking, dragging, or using Shift/Ctrl
+3. Right-click to create named segments
+4. Segments are color-coded and persist with the sprite sheet
+
+### Key Components
+- `AnimationGridView` - Frame selection and segment visualization
+- `AnimationSegmentManager` - Segment persistence and management
+- `AnimationSegmentController` - Coordination between components
+- `AnimationSegmentPreview` - Individual segment playback
+
+### Segment Export Features
+Enhanced export functionality specifically designed for animation segments:
+
+#### Segments Per Row Export
+- Each animation segment becomes one row in the sprite sheet
+- Segments can have different numbers of frames
+- Perfect for game engines that expect animations in rows
+
+#### Multiple Export Access Points
+1. **Export Dialog**: Animation menu → Export → "Segments Per Row" (auto-highlighted when segments exist)
+2. **Segment Preview**: Right-click any segment in preview panel → Export as Individual Frames/Sprite Sheet
+3. **Grid View**: Right-click on frame → Segment menu → Export options
+
+#### Smart UI Enhancement
+- Export dialog automatically detects segments and recommends "Segments Per Row"
+- Visual emphasis with blue border and recommendation banner
+- Pre-selects optimal export mode when segments are present
+
+### Segment Data
+Segments are saved as JSON files alongside sprite sheets:
+```json
+{
+  "sprite_sheet": "character.png",
+  "segments": [
+    {
+      "name": "Walk",
+      "start_frame": 0,
+      "end_frame": 7,
+      "color": [233, 30, 99]
+    }
+  ]
+}
+```
+
+## Recent Changes and Fixes
+
+### Color Persistence Fix
+- Fixed issue where segment colors would persist after deletion
+- Added proper synchronization between segment manager and grid view
+- Implemented `force_clear_style()` method for complete style reset
+
+### Alt+1 Shortcut Fix
+- Fixed Alt+1 through Alt+9 shortcuts for recent files
+- Added proper callback connection in FileController
+
+### Segment Export Preview Fix
+- Fixed preview format issue for "Segments Per Row" export mode
+- Added segment_manager parameter to ModernExportSettings
+- Implemented proper preview generation for segments per row layout
+- Added error handling to prevent crashes when segment data is missing
+
+This codebase demonstrates professional software engineering with modular architecture, comprehensive testing, and systematic development practices.

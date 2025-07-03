@@ -1,0 +1,488 @@
+"""
+Animation Segment Preview Widget - Visual preview panel for animation segments
+Displays each animation segment with individual playback controls.
+Part of Animation Segment System Enhancement.
+"""
+
+from typing import Dict, List, Optional, Set
+from dataclasses import dataclass
+
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QScrollArea, 
+    QLabel, QPushButton, QFrame, QToolButton, QSpinBox
+)
+from PySide6.QtCore import Qt, Signal, QTimer, QSize
+from PySide6.QtGui import QPixmap, QPainter, QColor, QIcon
+
+from config import Config
+from core.animation_controller import AnimationController
+from sprite_model.core import SpriteModel
+
+
+class SegmentPreviewItem(QFrame):
+    """Individual animation segment preview with playback controls."""
+    
+    # Signals
+    playToggled = Signal(str, bool)  # segment_name, is_playing
+    removeRequested = Signal(str)    # segment_name
+    exportRequested = Signal(str)    # segment_name
+    
+    def __init__(self, segment_name: str, color: QColor, frames: List[QPixmap]):
+        super().__init__()
+        self.segment_name = segment_name
+        self.segment_color = color
+        self._frames = frames
+        self._current_frame = 0
+        self._is_playing = False
+        self._fps = 10  # Default FPS
+        
+        # Create mini animation controller
+        self._timer = QTimer()
+        self._timer.timeout.connect(self._update_frame)
+        self._update_timer_interval()
+        
+        self._setup_ui()
+        
+        # Enable context menu
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._show_context_menu)
+        
+    def _setup_ui(self):
+        """Set up the preview item UI."""
+        self.setFrameStyle(QFrame.Box)
+        self.setStyleSheet(f"""
+            QFrame {{
+                border: 2px solid {self.segment_color.name()};
+                border-radius: 8px;
+                background-color: #FAFAFA;
+                margin: 4px;
+                padding: 8px;
+            }}
+            QFrame:hover {{
+                background-color: #F0F0F0;
+            }}
+        """)
+        
+        layout = QHBoxLayout(self)
+        
+        # Left side: Info and controls
+        info_layout = QVBoxLayout()
+        
+        # Segment name with color indicator
+        name_layout = QHBoxLayout()
+        color_indicator = QLabel()
+        color_indicator.setFixedSize(16, 16)
+        color_indicator.setStyleSheet(f"""
+            QLabel {{
+                background-color: {self.segment_color.name()};
+                border: 1px solid #666;
+                border-radius: 3px;
+            }}
+        """)
+        name_layout.addWidget(color_indicator)
+        
+        name_label = QLabel(self.segment_name)
+        name_label.setStyleSheet("font-weight: bold;")
+        name_layout.addWidget(name_label)
+        name_layout.addStretch()
+        
+        info_layout.addLayout(name_layout)
+        
+        # Frame info
+        frame_info = QLabel(f"{len(self._frames)} frames")
+        frame_info.setStyleSheet("color: #666; font-size: 10px;")
+        info_layout.addWidget(frame_info)
+        
+        # Controls
+        controls_layout = QHBoxLayout()
+        
+        # Play/Pause button
+        self.play_button = QPushButton("▶")
+        self.play_button.setFixedSize(32, 32)
+        self.play_button.setStyleSheet("""
+            QPushButton {
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 16px;
+                font-size: 16px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QPushButton:pressed {
+                background-color: #3d8b40;
+            }
+        """)
+        self.play_button.clicked.connect(self._toggle_playback)
+        controls_layout.addWidget(self.play_button)
+        
+        # Frame counter
+        self.frame_counter = QLabel("1 / " + str(len(self._frames)))
+        self.frame_counter.setStyleSheet("color: #666; font-size: 10px;")
+        controls_layout.addWidget(self.frame_counter)
+        
+        # FPS control
+        fps_label = QLabel("FPS:")
+        fps_label.setStyleSheet("color: #666; font-size: 10px;")
+        controls_layout.addWidget(fps_label)
+        
+        self.fps_spinner = QSpinBox()
+        self.fps_spinner.setMinimum(1)
+        self.fps_spinner.setMaximum(60)
+        self.fps_spinner.setValue(self._fps)
+        self.fps_spinner.setFixedWidth(50)
+        self.fps_spinner.setStyleSheet("""
+            QSpinBox {
+                background-color: white;
+                border: 1px solid #DDD;
+                border-radius: 4px;
+                padding: 2px;
+                font-size: 10px;
+            }
+            QSpinBox::up-button, QSpinBox::down-button {
+                width: 12px;
+            }
+        """)
+        self.fps_spinner.valueChanged.connect(self._on_fps_changed)
+        controls_layout.addWidget(self.fps_spinner)
+        
+        controls_layout.addStretch()
+        
+        # Remove button
+        remove_button = QToolButton()
+        remove_button.setText("×")
+        remove_button.setFixedSize(20, 20)
+        remove_button.setStyleSheet("""
+            QToolButton {
+                background-color: #f44336;
+                color: white;
+                border: none;
+                border-radius: 10px;
+                font-size: 16px;
+                font-weight: bold;
+            }
+            QToolButton:hover {
+                background-color: #da190b;
+            }
+        """)
+        remove_button.clicked.connect(lambda: self.removeRequested.emit(self.segment_name))
+        controls_layout.addWidget(remove_button)
+        
+        info_layout.addLayout(controls_layout)
+        layout.addLayout(info_layout)
+        
+        # Right side: Animation preview
+        self.preview_label = QLabel()
+        self.preview_label.setFixedSize(120, 120)
+        self.preview_label.setAlignment(Qt.AlignCenter)
+        self.preview_label.setStyleSheet("""
+            QLabel {
+                border: 1px solid #DDD;
+                background-color: white;
+                border-radius: 4px;
+            }
+        """)
+        
+        # Display first frame
+        if self._frames:
+            self._display_frame(0)
+        
+        layout.addWidget(self.preview_label)
+        
+    def _display_frame(self, index: int):
+        """Display a specific frame in the preview."""
+        if 0 <= index < len(self._frames):
+            pixmap = self._frames[index]
+            scaled = pixmap.scaled(
+                110, 110,
+                Qt.KeepAspectRatio,
+                Qt.SmoothTransformation
+            )
+            self.preview_label.setPixmap(scaled)
+            self.frame_counter.setText(f"{index + 1} / {len(self._frames)}")
+            
+    def _update_frame(self):
+        """Update to next frame in animation."""
+        self._current_frame = (self._current_frame + 1) % len(self._frames)
+        self._display_frame(self._current_frame)
+        
+    def _toggle_playback(self):
+        """Toggle animation playback."""
+        self._is_playing = not self._is_playing
+        
+        if self._is_playing:
+            self.play_button.setText("⏸")
+            self.play_button.setStyleSheet("""
+                QPushButton {
+                    background-color: #FF9800;
+                    color: white;
+                    border: none;
+                    border-radius: 16px;
+                    font-size: 14px;
+                }
+                QPushButton:hover {
+                    background-color: #F57C00;
+                }
+            """)
+            self._timer.start()
+        else:
+            self.play_button.setText("▶")
+            self.play_button.setStyleSheet("""
+                QPushButton {
+                    background-color: #4CAF50;
+                    color: white;
+                    border: none;
+                    border-radius: 16px;
+                    font-size: 16px;
+                }
+                QPushButton:hover {
+                    background-color: #45a049;
+                }
+            """)
+            self._timer.stop()
+            
+        self.playToggled.emit(self.segment_name, self._is_playing)
+        
+    def _update_timer_interval(self):
+        """Update timer interval based on current FPS."""
+        if self._fps > 0:
+            interval = 1000 // self._fps
+            self._timer.setInterval(interval)
+            
+    def _on_fps_changed(self, value: int):
+        """Handle FPS change from spinner."""
+        self._fps = value
+        self._update_timer_interval()
+        
+    def set_playing(self, playing: bool):
+        """Set playback state externally."""
+        if playing != self._is_playing:
+            self._toggle_playback()
+            
+    def stop_playback(self):
+        """Stop playback and reset to first frame."""
+        if self._is_playing:
+            self._toggle_playback()
+        self._current_frame = 0
+        self._display_frame(0)
+    
+    def _show_context_menu(self, pos):
+        """Show context menu for segment actions."""
+        from PySide6.QtWidgets import QMenu
+        
+        menu = QMenu(self)
+        
+        # Export actions
+        export_menu = menu.addMenu("Export Segment")
+        
+        export_frames_action = export_menu.addAction("Export as Individual Frames...")
+        export_frames_action.triggered.connect(
+            lambda: self.exportRequested.emit(self.segment_name)
+        )
+        
+        export_sheet_action = export_menu.addAction("Export as Sprite Sheet...")
+        export_sheet_action.triggered.connect(
+            lambda: self.exportRequested.emit(self.segment_name)
+        )
+        
+        menu.addSeparator()
+        
+        # Remove action
+        remove_action = menu.addAction("Remove Segment")
+        remove_action.triggered.connect(
+            lambda: self.removeRequested.emit(self.segment_name)
+        )
+        
+        menu.exec_(self.mapToGlobal(pos))
+
+
+class AnimationSegmentPreview(QWidget):
+    """Main widget for previewing all animation segments."""
+    
+    # Signals
+    segmentRemoved = Signal(str)  # segment_name
+    playbackStateChanged = Signal(str, bool)  # segment_name, is_playing
+    
+    def __init__(self):
+        super().__init__()
+        self._preview_items: Dict[str, SegmentPreviewItem] = {}
+        self._all_frames: List[QPixmap] = []
+        
+        self._setup_ui()
+        
+    def _setup_ui(self):
+        """Set up the main UI."""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        
+        # Title bar
+        title_bar = QFrame()
+        title_bar.setStyleSheet("""
+            QFrame {
+                background-color: #E3F2FD;
+                border-bottom: 2px solid #2196F3;
+                padding: 8px;
+            }
+        """)
+        title_layout = QHBoxLayout(title_bar)
+        
+        title = QLabel("Animation Segments")
+        title.setStyleSheet("font-size: 14px; font-weight: bold; color: #1976D2;")
+        title_layout.addWidget(title)
+        
+        # Global controls
+        self.play_all_button = QPushButton("Play All")
+        self.play_all_button.setStyleSheet("""
+            QPushButton {
+                background-color: #2196F3;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 4px 12px;
+            }
+            QPushButton:hover {
+                background-color: #1976D2;
+            }
+        """)
+        self.play_all_button.clicked.connect(self._toggle_all_playback)
+        title_layout.addWidget(self.play_all_button)
+        
+        self.stop_all_button = QPushButton("Stop All")
+        self.stop_all_button.setStyleSheet("""
+            QPushButton {
+                background-color: #F44336;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 4px 12px;
+            }
+            QPushButton:hover {
+                background-color: #D32F2F;
+            }
+        """)
+        self.stop_all_button.clicked.connect(self._stop_all_playback)
+        title_layout.addWidget(self.stop_all_button)
+        
+        title_layout.addStretch()
+        layout.addWidget(title_bar)
+        
+        # Scroll area for segment previews
+        self.scroll_area = QScrollArea()
+        self.scroll_area.setWidgetResizable(True)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        
+        # Container for preview items
+        self.container = QWidget()
+        self.container_layout = QVBoxLayout(self.container)
+        self.container_layout.setAlignment(Qt.AlignTop)
+        self.container_layout.setSpacing(4)
+        
+        self.scroll_area.setWidget(self.container)
+        layout.addWidget(self.scroll_area)
+        
+        # Empty state
+        self.empty_label = QLabel("No animation segments yet.\nSelect frames and right-click to create.")
+        self.empty_label.setAlignment(Qt.AlignCenter)
+        self.empty_label.setStyleSheet("""
+            QLabel {
+                color: #999;
+                font-style: italic;
+                padding: 40px;
+            }
+        """)
+        self.container_layout.addWidget(self.empty_label)
+        
+    def set_frames(self, frames: List[QPixmap]):
+        """Set the available frames for segment extraction."""
+        self._all_frames = frames
+        
+    def add_segment(self, name: str, start_frame: int, end_frame: int, color: QColor):
+        """Add a new segment preview."""
+        if not self._all_frames:
+            return
+            
+        # Extract frames for this segment
+        segment_frames = self._all_frames[start_frame:end_frame + 1]
+        if not segment_frames:
+            return
+            
+        # Hide empty state
+        self.empty_label.hide()
+        
+        # Create preview item
+        preview_item = SegmentPreviewItem(name, color, segment_frames)
+        preview_item.removeRequested.connect(self._on_remove_requested)
+        preview_item.playToggled.connect(self._on_play_toggled)
+        
+        # Add to container
+        self.container_layout.insertWidget(self.container_layout.count() - 1, preview_item)
+        self._preview_items[name] = preview_item
+        
+    def remove_segment(self, name: str):
+        """Remove a segment preview."""
+        if name in self._preview_items:
+            preview_item = self._preview_items[name]
+            preview_item.stop_playback()
+            self.container_layout.removeWidget(preview_item)
+            preview_item.deleteLater()
+            del self._preview_items[name]
+            
+            # Show empty state if no segments left
+            if not self._preview_items:
+                self.empty_label.show()
+                
+    def update_segment(self, name: str, new_name: str = None, color: QColor = None):
+        """Update an existing segment."""
+        if name in self._preview_items and new_name and new_name != name:
+            # Handle rename by recreating (simpler than updating internals)
+            preview_item = self._preview_items[name]
+            # Store current state
+            was_playing = preview_item._is_playing
+            frames = preview_item._frames
+            
+            # Remove old
+            self.remove_segment(name)
+            
+            # Add new
+            if color is None:
+                color = preview_item.segment_color
+            self.add_segment(new_name, 0, len(frames) - 1, color)
+            
+            # Restore playback state
+            if was_playing and new_name in self._preview_items:
+                self._preview_items[new_name].set_playing(True)
+                
+    def clear_segments(self):
+        """Clear all segment previews."""
+        for name in list(self._preview_items.keys()):
+            self.remove_segment(name)
+            
+    def _on_remove_requested(self, name: str):
+        """Handle remove request from preview item."""
+        self.segmentRemoved.emit(name)
+        
+    def _on_play_toggled(self, name: str, is_playing: bool):
+        """Handle playback state change."""
+        self.playbackStateChanged.emit(name, is_playing)
+        
+    def _toggle_all_playback(self):
+        """Toggle playback for all segments."""
+        # Check if any are playing
+        any_playing = any(item._is_playing for item in self._preview_items.values())
+        
+        # If any playing, stop all. Otherwise, start all.
+        target_state = not any_playing
+        
+        for item in self._preview_items.values():
+            item.set_playing(target_state)
+            
+        # Update button text
+        self.play_all_button.setText("Pause All" if target_state else "Play All")
+        
+    def _stop_all_playback(self):
+        """Stop playback for all segments."""
+        for item in self._preview_items.values():
+            item.stop_playback()
+            
+        self.play_all_button.setText("Play All")

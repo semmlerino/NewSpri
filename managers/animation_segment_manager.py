@@ -132,6 +132,7 @@ class AnimationSegmentManager(QObject):
         Returns:
             Tuple of (success, error_message)
         """
+        
         # Validate name uniqueness
         if name in self._segments:
             return False, f"Segment '{name}' already exists"
@@ -243,6 +244,19 @@ class AnimationSegmentManager(QObject):
             self._auto_save()
         
         return True, ""
+    
+    def rename_segment(self, old_name: str, new_name: str) -> Tuple[bool, str]:
+        """
+        Rename an animation segment.
+        
+        Args:
+            old_name: Current name of the segment
+            new_name: New name for the segment
+            
+        Returns:
+            Tuple of (success, error_message)
+        """
+        return self.update_segment(old_name, new_name=new_name)
     
     def get_segment(self, name: str) -> Optional[AnimationSegmentData]:
         """Get a segment by name."""
@@ -368,11 +382,14 @@ class AnimationSegmentManager(QObject):
             with open(file_path, 'r') as f:
                 data = json.load(f)
             
+            segments_in_file = data.get("segments", [])
+            
             # Clear existing segments
             self.clear_segments()
             
             # Load segments
-            for segment_data in data.get("segments", []):
+            loaded_count = 0
+            for segment_data in segments_in_file:
                 segment = AnimationSegmentData.from_dict(segment_data)
                 
                 # Validate against current context
@@ -380,7 +397,7 @@ class AnimationSegmentManager(QObject):
                 if is_valid:
                     self._segments[segment.name] = segment
                     self.segmentAdded.emit(segment)
-            
+                    loaded_count += 1
             return True, ""
             
         except Exception as e:
