@@ -204,6 +204,23 @@ class AnimationController(QObject):
         Updates timer interval if currently playing.
         Returns success status.
         """
+        # Validate input type
+        if fps is None or not isinstance(fps, (int, float)):
+            self.errorOccurred.emit(f"FPS must be a number, received: {type(fps).__name__}")
+            return False
+        
+        # Check for special float values
+        if isinstance(fps, float) and (fps != fps or fps == float('inf') or fps == float('-inf')):
+            self.errorOccurred.emit(f"FPS must be a valid number, not {fps}")
+            return False
+        
+        # Convert to int if float
+        try:
+            fps = int(fps)
+        except (ValueError, OverflowError):
+            self.errorOccurred.emit(f"FPS value too large or invalid: {fps}")
+            return False
+        
         # Validate FPS range
         if not (Config.Animation.MIN_FPS <= fps <= Config.Animation.MAX_FPS):
             self.errorOccurred.emit(f"FPS must be between {Config.Animation.MIN_FPS} and {Config.Animation.MAX_FPS}")

@@ -186,8 +186,8 @@ class FileController(QObject):
     # Recent files integration
     def add_to_recent_files(self, file_path: str):
         """Add file to recent files list."""
-        if self._recent_files_manager and hasattr(self._recent_files_manager, 'add_file'):
-            self._recent_files_manager.add_file(file_path)
+        if self._recent_files_manager and hasattr(self._recent_files_manager, 'add_file_to_recent'):
+            self._recent_files_manager.add_file_to_recent(file_path)
     
     def setup_recent_files_handler(self, callback: Callable[[str], None]):
         """

@@ -26,6 +26,8 @@ class AnimationSegment:
     start_frame: int
     end_frame: int
     color: QColor = None
+    bounce_mode: bool = False
+    frame_holds: Dict[int, int] = None
     
     # Class variable to track color index for unique colors
     _color_index = 0
@@ -53,6 +55,8 @@ class AnimationSegment:
             # Use predefined colors in sequence for better visual distinction
             self.color = AnimationSegment._predefined_colors[AnimationSegment._color_index % len(AnimationSegment._predefined_colors)]
             AnimationSegment._color_index += 1
+        if self.frame_holds is None:
+            self.frame_holds = {}
     
     @property
     def frame_count(self) -> int:
@@ -719,7 +723,9 @@ class AnimationGridView(QWidget):
                 segment_data.name,
                 segment_data.start_frame,
                 segment_data.end_frame,
-                segment_data.color
+                segment_data.color,
+                segment_data.bounce_mode,
+                segment_data.frame_holds.copy() if segment_data.frame_holds else {}
             )
             
             self._segments[segment_data.name] = grid_segment

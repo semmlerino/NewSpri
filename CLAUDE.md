@@ -198,6 +198,12 @@ canvas = SpriteCanvas()
 ### Integration Testing
 Use `test_comprehensive.py` for full application testing with real sprite sheets.
 
+### Test-Driven Bug Discovery
+The test suite has been instrumental in discovering and fixing implementation bugs:
+- Always fix the implementation rather than adapting tests to work around bugs
+- Integration tests reveal API contract violations between components
+- Workflow tests catch real user interaction issues that unit tests miss
+
 ## Development Workflow
 
 ### Adding New Features
@@ -364,5 +370,22 @@ Segments are saved as JSON files alongside sprite sheets:
 - Added segment_manager parameter to ModernExportSettings
 - Implemented proper preview generation for segments per row layout
 - Added error handling to prevent crashes when segment data is missing
+
+### Test Infrastructure Improvements (Phase 2-3)
+- Fixed 50+ integration test failures by addressing actual implementation bugs
+- Fixed API mismatches between components:
+  - `PlaybackControls.on_frame_changed()` → `set_current_frame()`
+  - `sprite_frames` property is read-only, cannot be set directly
+  - `FrameExtractor` has `width_spin`, not `frame_width_spin`
+  - `ViewCoordinator` zoom methods now use `canvas.set_zoom()` instead of non-existent `zoom_in/zoom_out`
+  - `ViewCoordinator.toggle_grid()` now uses `set_grid_overlay()` instead of non-existent `toggle_grid`
+- Added missing workflow tests for critical user paths
+- Improved test coverage for edge cases and error scenarios
+
+### Animation Segment Persistence Fix
+- Fixed issue where animation segments were not loaded when reopening the application
+- Added missing `set_sprite_context()` call in `_on_extraction_completed()` to trigger segment loading
+- Added `sync_segments_with_manager()` call to synchronize loaded segments with the grid view
+- Segments are now properly restored from the `.sprite_segments` directory when a sprite sheet is loaded
 
 This codebase demonstrates professional software engineering with modular architecture, comprehensive testing, and systematic development practices.

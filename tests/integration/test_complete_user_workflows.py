@@ -84,13 +84,13 @@ class TestCompleteUserWorkflows:
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
         
-        # Test navigation methods that were failing
+        # Test navigation methods using new coordinator API
         try:
             # These trigger _on_frame_changed which calls canvas.update()
-            viewer._go_to_next_frame()  
-            viewer._go_to_prev_frame()
-            viewer._go_to_first_frame()
-            viewer._go_to_last_frame()
+            viewer._animation_coordinator.go_to_next_frame()  
+            viewer._animation_coordinator.go_to_prev_frame()
+            viewer._animation_coordinator.go_to_first_frame()
+            viewer._animation_coordinator.go_to_last_frame()
             
             print("✅ Frame navigation workflow completed")
             
@@ -116,16 +116,16 @@ class TestCompleteUserWorkflows:
         qtbot.addWidget(viewer)
         
         try:
-            # Test zoom operations
-            viewer._zoom_in()
-            viewer._zoom_out()
-            viewer._zoom_reset()  # ← Triggers canvas.reset_view() - Was reset_zoom (FIXED)
-            viewer._zoom_fit()
+            # Test zoom operations using new coordinator API
+            viewer._view_coordinator.zoom_in()
+            viewer._view_coordinator.zoom_out()
+            viewer._view_coordinator.zoom_reset()  # ← Triggers canvas.reset_view() - Was reset_zoom (FIXED)
+            viewer._view_coordinator.zoom_fit()
             
             print("✅ Zoom workflow completed")
             
-            # Test grid toggle
-            viewer._toggle_grid()
+            # Test grid toggle using new coordinator API
+            viewer._view_coordinator.toggle_grid()
             
             print("✅ Grid toggle workflow completed")
             

@@ -103,9 +103,23 @@ class EventCoordinator(CoordinatorBase):
                 parts.append("Alt")
             parts.append(self.KEY_MAPPING[key])
             key_sequence_str = "+".join(parts)
-        elif Qt.Key_A <= key <= Qt.Key_Z or Qt.Key_0 <= key <= Qt.Key_9:
-            # Letter and number keys are handled well by QKeySequence
-            pass
+        elif Qt.Key_A <= key <= Qt.Key_Z:
+            # Handle single letter keys specially - QKeySequence may not format them correctly
+            if modifiers == Qt.NoModifier:
+                # For single letters with no modifiers, use the letter directly
+                key_sequence_str = chr(key)
+            # else let QKeySequence handle modified letters (Ctrl+A, etc.)
+        elif Qt.Key_0 <= key <= Qt.Key_9:
+            # Handle single digit keys specially
+            if modifiers == Qt.NoModifier:
+                # For single digits with no modifiers, use the digit directly
+                key_sequence_str = chr(key)
+            # else let QKeySequence handle modified digits (Alt+1, etc.)
+        elif key == Qt.Key_BracketLeft:
+            # Handle bracket keys specially
+            key_sequence_str = "["
+        elif key == Qt.Key_BracketRight:
+            key_sequence_str = "]"
         else:
             # Let parent handle other keys
             return False

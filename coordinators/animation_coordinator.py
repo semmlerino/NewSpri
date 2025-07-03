@@ -88,6 +88,13 @@ class AnimationCoordinator(CoordinatorBase):
         if self.sprite_model:
             self.sprite_model.set_current_frame(frame_index)
     
+    def restart_animation(self):
+        """Restart animation from first frame."""
+        if self.sprite_model:
+            self.sprite_model.set_current_frame(0)
+            if self.status_manager:
+                self.status_manager.show_message("Animation restarted")
+    
     # ============================================================================
     # PLAYBACK CONTROL
     # ============================================================================
@@ -226,6 +233,36 @@ class AnimationCoordinator(CoordinatorBase):
         if self.sprite_model and self.sprite_model.sprite_frames:
             return len(self.sprite_model.sprite_frames)
         return 0
+    
+    def decrease_animation_speed(self):
+        """Decrease animation speed by one step."""
+        if self.animation_controller:
+            current_fps = self.animation_controller._current_fps
+            # Define speed steps
+            speed_steps = [1, 2, 4, 6, 8, 10, 12, 15, 20, 24, 30, 60]
+            # Find current step and go to previous
+            for i in range(len(speed_steps) - 1, -1, -1):
+                if current_fps > speed_steps[i]:
+                    self.animation_controller.set_fps(speed_steps[i])
+                    return
+            # If we're at or below the lowest, set to lowest
+            if current_fps > speed_steps[0]:
+                self.animation_controller.set_fps(speed_steps[0])
+    
+    def increase_animation_speed(self):
+        """Increase animation speed by one step."""
+        if self.animation_controller:
+            current_fps = self.animation_controller._current_fps
+            # Define speed steps
+            speed_steps = [1, 2, 4, 6, 8, 10, 12, 15, 20, 24, 30, 60]
+            # Find current step and go to next
+            for i in range(len(speed_steps)):
+                if current_fps < speed_steps[i]:
+                    self.animation_controller.set_fps(speed_steps[i])
+                    return
+            # If we're at or above the highest, set to highest
+            if current_fps < speed_steps[-1]:
+                self.animation_controller.set_fps(speed_steps[-1])
     
     # ============================================================================
     # HELPER METHODS

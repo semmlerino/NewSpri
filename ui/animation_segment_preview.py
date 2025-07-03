@@ -418,7 +418,7 @@ class SegmentPreviewItem(QFrame):
             self, "Add Frame Hold", 
             f"Frame number (1-{len(self._frames)}):",
             value=self._current_frame + 1,
-            min=1, max=len(self._frames)
+            minValue=1, maxValue=len(self._frames)
         )
         
         if ok:
@@ -429,7 +429,7 @@ class SegmentPreviewItem(QFrame):
                 self, "Add Frame Hold",
                 f"Hold duration for frame {frame_idx + 1} (in frames):",
                 value=self._frame_holds.get(frame_idx, 5),
-                min=1, max=60
+                minValue=1, maxValue=60
             )
             
             if ok:
@@ -446,7 +446,7 @@ class SegmentPreviewItem(QFrame):
             self, "Edit Frame Hold",
             f"Hold duration for frame {frame_idx + 1} (in frames):",
             value=current_duration,
-            min=0, max=60
+            minValue=0, maxValue=60
         )
         
         if ok:

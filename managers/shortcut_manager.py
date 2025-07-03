@@ -89,6 +89,15 @@ class ShortcutManager(QObject):
         'animation_last_frame': ShortcutDefinition(
             "End", "Last frame", "animation", ShortcutContext.HAS_FRAMES
         ),
+        'animation_restart': ShortcutDefinition(
+            "R", "Restart animation", "animation", ShortcutContext.HAS_FRAMES
+        ),
+        'animation_speed_decrease': ShortcutDefinition(
+            "[", "Decrease animation speed", "animation", ShortcutContext.HAS_FRAMES
+        ),
+        'animation_speed_increase': ShortcutDefinition(
+            "]", "Increase animation speed", "animation", ShortcutContext.HAS_FRAMES
+        ),
         
         # View controls
         'view_zoom_in': ShortcutDefinition(

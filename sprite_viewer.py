@@ -255,6 +255,9 @@ class SpriteViewer(QMainWindow):
         self._action_manager.set_action_callback('animation_next_frame', self._animation_coordinator.go_to_next_frame)
         self._action_manager.set_action_callback('animation_first_frame', self._animation_coordinator.go_to_first_frame)
         self._action_manager.set_action_callback('animation_last_frame', self._animation_coordinator.go_to_last_frame)
+        self._action_manager.set_action_callback('animation_restart', self._animation_coordinator.restart_animation)
+        self._action_manager.set_action_callback('animation_speed_decrease', self._animation_coordinator.decrease_animation_speed)
+        self._action_manager.set_action_callback('animation_speed_increase', self._animation_coordinator.increase_animation_speed)
         
         # Toolbar actions (reuse same callbacks)
         self._action_manager.set_action_callback('toolbar_export', self._export_coordinator.export_frames)
@@ -425,6 +428,14 @@ class SpriteViewer(QMainWindow):
             
             # Update grid view with new frames
             self._segment_controller.update_grid_view_frames()
+            
+            # Update segment manager with sprite context to load saved segments
+            if self._sprite_model.file_path:
+                self._segment_manager.set_sprite_context(self._sprite_model.file_path, frame_count)
+                
+                # Sync loaded segments to grid view
+                if self._grid_view:
+                    self._grid_view.sync_segments_with_manager(self._segment_manager)
         else:
             self._view_coordinator.set_frame_info(0, 0)
             

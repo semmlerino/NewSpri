@@ -27,8 +27,8 @@ class TestCCLUIAvailability:
         # Return fake path for UI testing
         return "/fake/test/sprite.png"
     
-    def test_ccl_button_initially_disabled(self, qtbot):
-        """Test that CCL button starts disabled (no sprite loaded)."""
+    def test_ccl_button_initially_enabled(self, qtbot):
+        """Test that CCL button is enabled by default."""
         from sprite_viewer import SpriteViewer
         
         print("\n🔍 TESTING INITIAL CCL STATE")
@@ -37,12 +37,13 @@ class TestCCLUIAvailability:
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
         
-        # Check that CCL button is initially disabled
+        # Check that CCL button is enabled (new behavior - always available)
         frame_extractor = viewer._frame_extractor
         ccl_button = frame_extractor.ccl_mode_btn
         
-        assert not ccl_button.isEnabled(), "CCL button should be disabled initially"
-        print("✅ CCL button correctly disabled initially (no sprite loaded)")
+        # CCL is now always available, so button should be enabled
+        assert ccl_button.isEnabled(), "CCL button should be enabled by default"
+        print("✅ CCL button correctly enabled (always available)")
     
     def test_ccl_availability_methods_exist(self, qtbot):
         """Test that all CCL availability methods exist."""
@@ -54,58 +55,52 @@ class TestCCLUIAvailability:
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
         
-        # Test SpriteViewer has _update_ccl_availability method
-        assert hasattr(viewer, '_update_ccl_availability'), "SpriteViewer missing _update_ccl_availability method"
-        assert callable(viewer._update_ccl_availability), "_update_ccl_availability should be callable"
-        print("✅ SpriteViewer._update_ccl_availability() exists")
-        
         # Test SpriteModel has CCL methods
         sprite_model = viewer._sprite_model
         assert hasattr(sprite_model, 'is_ccl_available'), "SpriteModel missing is_ccl_available method"
         assert hasattr(sprite_model, 'get_ccl_sprite_bounds'), "SpriteModel missing get_ccl_sprite_bounds method"
+        assert hasattr(sprite_model, 'extract_ccl_frames'), "SpriteModel missing extract_ccl_frames method"
+        assert hasattr(sprite_model, 'set_extraction_mode'), "SpriteModel missing set_extraction_mode method"
         print("✅ SpriteModel CCL methods exist")
         
         # Test FrameExtractor has set_ccl_available method
         frame_extractor = viewer._frame_extractor
         assert hasattr(frame_extractor, 'set_ccl_available'), "FrameExtractor missing set_ccl_available method"
-        print("✅ FrameExtractor.set_ccl_available() exists")
+        assert hasattr(frame_extractor, 'get_extraction_mode'), "FrameExtractor missing get_extraction_mode method"
+        print("✅ FrameExtractor CCL methods exist")
     
-    def test_ccl_enabled_after_sprite_load(self, test_sprite_path, qtbot):
-        """Test that CCL becomes available after sprite loading."""
+    def test_ccl_remains_enabled_after_sprite_load(self, test_sprite_path, qtbot):
+        """Test that CCL stays enabled after sprite loading."""
         from sprite_viewer import SpriteViewer
         
-        print("\n🔍 TESTING CCL ENABLING AFTER SPRITE LOAD")
+        print("\n🔍 TESTING CCL STATE AFTER SPRITE LOAD")
         print("=" * 45)
         
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
         
-        # Verify CCL starts disabled
+        # CCL should be enabled by default
         ccl_button = viewer._frame_extractor.ccl_mode_btn
-        assert not ccl_button.isEnabled(), "CCL should start disabled"
-        print("✅ Confirmed CCL starts disabled")
+        assert ccl_button.isEnabled(), "CCL should be enabled by default"
+        print("✅ Confirmed CCL is enabled by default")
         
         # Mock sprite loading success
         with patch.object(viewer._sprite_model, 'load_sprite_sheet') as mock_load:
             mock_load.return_value = (True, None)  # Success, no error
             
-            # Mock sprite model to return CCL available
-            with patch.object(viewer._sprite_model, 'is_ccl_available') as mock_available:
-                mock_available.return_value = True
+            # Simulate loading through file controller
+            with patch.object(viewer._file_controller, 'load_file') as mock_file_load:
+                viewer._file_controller.file_loaded.emit(test_sprite_path)
                 
-                with patch.object(viewer._sprite_model, 'get_ccl_sprite_bounds') as mock_bounds:
-                    mock_bounds.return_value = ['fake_bound_1', 'fake_bound_2']  # 2 sprites
-                    
-                    # Simulate sprite loading
-                    print(f"🎯 Simulating sprite loading: {test_sprite_path}")
-                    viewer._load_sprite_file(test_sprite_path)
-                    
-                    # CCL should now be enabled
-                    assert ccl_button.isEnabled(), "CCL button should be enabled after sprite load"
-                    print("✅ CCL button enabled after sprite loading")
+                # Wait for any async operations
+                qtbot.wait(100)
+                
+                # CCL should still be enabled
+                assert ccl_button.isEnabled(), "CCL button should remain enabled after sprite load"
+                print("✅ CCL button remains enabled after sprite loading")
     
     def test_ccl_independent_of_auto_detection(self, qtbot):
-        """Test that CCL availability is independent of auto-detection results."""
+        """Test that CCL availability is always enabled (new design)."""
         from sprite_viewer import SpriteViewer
         
         print("\n🔍 TESTING CCL INDEPENDENCE FROM AUTO-DETECTION")
@@ -114,43 +109,31 @@ class TestCCLUIAvailability:
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
         
+        # CCL should be enabled by default (new behavior)
+        ccl_button = viewer._frame_extractor.ccl_mode_btn
+        assert ccl_button.isEnabled(), "CCL should be enabled by default"
+        
         # Mock auto-detection failure
         with patch.object(viewer._auto_detection_controller, 'run_comprehensive_detection_with_dialog') as mock_detection:
             mock_detection.side_effect = Exception("Auto-detection failed")
             
-            # Mock sprite model methods for successful CCL availability
-            with patch.object(viewer._sprite_model, 'load_sprite_sheet') as mock_load, \
-                 patch.object(viewer._sprite_model, 'is_ccl_available') as mock_available, \
-                 patch.object(viewer._sprite_model, 'get_ccl_sprite_bounds') as mock_bounds:
-                
+            # Mock sprite model methods
+            with patch.object(viewer._sprite_model, 'load_sprite_sheet') as mock_load:
                 mock_load.return_value = (True, None)
-                mock_available.return_value = True
-                mock_bounds.return_value = ['sprite1', 'sprite2', 'sprite3']  # 3 sprites
                 
-                # Mock QMessageBox to avoid dialog
-                with patch('PySide6.QtWidgets.QMessageBox.critical'):
-                    
-                    try:
-                        # Attempt sprite loading (auto-detection will fail)
-                        viewer._load_sprite_file("/fake/test.png")
-                    except:
-                        pass  # Expected due to mocked failure
-                    
-                    # CCL should still be available despite auto-detection failure
-                    ccl_button = viewer._frame_extractor.ccl_mode_btn
-                    
-                    # Call the CCL availability update directly to simulate what should happen
-                    viewer._update_ccl_availability()
-                    
-                    # Now CCL should be enabled
-                    assert ccl_button.isEnabled(), "CCL should be available even when auto-detection fails"
-                    print("✅ CCL available independent of auto-detection failure")
+                # Simulate file loading through controller
+                viewer._file_controller.file_loaded.emit("/fake/test.png")
+                qtbot.wait(100)
+                
+                # CCL should still be enabled despite auto-detection issues
+                assert ccl_button.isEnabled(), "CCL should remain enabled regardless of auto-detection"
+                print("✅ CCL remains enabled independent of auto-detection")
     
-    def test_update_ccl_availability_workflow(self, qtbot):
-        """Test the complete _update_ccl_availability workflow."""
+    def test_ccl_mode_switching(self, qtbot):
+        """Test switching between Grid and CCL extraction modes."""
         from sprite_viewer import SpriteViewer
         
-        print("\n🔍 TESTING _update_ccl_availability WORKFLOW")
+        print("\n🔍 TESTING CCL MODE SWITCHING")
         print("=" * 45)
         
         viewer = SpriteViewer()
@@ -158,45 +141,47 @@ class TestCCLUIAvailability:
         
         frame_extractor = viewer._frame_extractor
         ccl_button = frame_extractor.ccl_mode_btn
+        grid_button = frame_extractor.grid_mode_btn
         
-        # Test with CCL not available
-        with patch.object(viewer._sprite_model, 'is_ccl_available') as mock_available:
-            mock_available.return_value = False
-            
-            viewer._update_ccl_availability()
-            assert not ccl_button.isEnabled(), "CCL should be disabled when not available"
-            print("✅ CCL correctly disabled when sprite model reports unavailable")
+        # Both buttons should be enabled
+        assert ccl_button.isEnabled(), "CCL button should be enabled"
+        assert grid_button.isEnabled(), "Grid button should be enabled"
         
-        # Test with CCL available and sprites
-        with patch.object(viewer._sprite_model, 'is_ccl_available') as mock_available, \
-             patch.object(viewer._sprite_model, 'get_ccl_sprite_bounds') as mock_bounds:
-            
-            mock_available.return_value = True
-            mock_bounds.return_value = ['sprite1', 'sprite2', 'sprite3']  # 3 sprites
-            
-            viewer._update_ccl_availability()
-            assert ccl_button.isEnabled(), "CCL should be enabled when available with sprites"
-            print("✅ CCL correctly enabled when sprite model reports available")
+        # Default is now CCL mode (new behavior)
+        assert ccl_button.isChecked(), "CCL mode should be default"
+        assert not grid_button.isChecked(), "Grid mode should not be checked by default"
+        
+        # Switch to Grid mode (from default CCL)
+        grid_button.click()
+        assert grid_button.isChecked(), "Grid mode should be checked after click"
+        assert not ccl_button.isChecked(), "CCL mode should be unchecked"
+        print("✅ Successfully switched to Grid mode")
+        
+        # Switch back to CCL mode
+        ccl_button.click()
+        assert ccl_button.isChecked(), "CCL mode should be checked after click"
+        assert not grid_button.isChecked(), "Grid mode should be unchecked"
+        print("✅ Successfully switched back to CCL mode")
     
-    def test_ccl_called_in_sprite_loaded_handler(self, qtbot):
-        """Test that _update_ccl_availability is called in _on_sprite_loaded."""
+    def test_ccl_enabled_in_sprite_loaded_handler(self, qtbot):
+        """Test that CCL is enabled when sprite is loaded."""
         from sprite_viewer import SpriteViewer
         
-        print("\n🔍 TESTING CCL UPDATE IN SPRITE LOADED HANDLER")
+        print("\n🔍 TESTING CCL ENABLEMENT IN SPRITE LOADED HANDLER")
         print("=" * 50)
         
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
         
-        # Mock the _update_ccl_availability method
-        with patch.object(viewer, '_update_ccl_availability') as mock_update_ccl:
+        # Mock set_ccl_available to verify it's called
+        with patch.object(viewer._frame_extractor, 'set_ccl_available') as mock_set_ccl:
             
             # Call _on_sprite_loaded (this is what happens after successful sprite loading)
             viewer._on_sprite_loaded("/fake/test.png")
             
-            # Verify that _update_ccl_availability was called
-            mock_update_ccl.assert_called_once()
-            print("✅ _update_ccl_availability called in _on_sprite_loaded handler")
+            # Verify that set_ccl_available was called with True
+            mock_set_ccl.assert_called_once_with(True, 0)
+            print("✅ CCL enabled via set_ccl_available(True, 0) in _on_sprite_loaded handler")
     
     def test_real_ccl_workflow_with_ark_png(self, qtbot):
         """Test real CCL workflow with Ark.png if available.""" 
@@ -252,19 +237,19 @@ class TestCCLRegressionPrevention:
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
         
-        # Checklist of requirements
+        # Checklist of requirements (updated for new behavior)
         requirements = [
-            ("SpriteViewer has _update_ccl_availability method", 
-             lambda: hasattr(viewer, '_update_ccl_availability')),
-            
-            ("_update_ccl_availability is callable",
-             lambda: callable(getattr(viewer, '_update_ccl_availability', None))),
-             
             ("SpriteModel has is_ccl_available method",
              lambda: hasattr(viewer._sprite_model, 'is_ccl_available')),
              
             ("SpriteModel has get_ccl_sprite_bounds method", 
              lambda: hasattr(viewer._sprite_model, 'get_ccl_sprite_bounds')),
+             
+            ("SpriteModel has extract_ccl_frames method",
+             lambda: hasattr(viewer._sprite_model, 'extract_ccl_frames')),
+             
+            ("SpriteModel has set_extraction_mode method",
+             lambda: hasattr(viewer._sprite_model, 'set_extraction_mode')),
              
             ("FrameExtractor has set_ccl_available method",
              lambda: hasattr(viewer._frame_extractor, 'set_ccl_available')),
@@ -272,8 +257,11 @@ class TestCCLRegressionPrevention:
             ("FrameExtractor has ccl_mode_btn attribute",
              lambda: hasattr(viewer._frame_extractor, 'ccl_mode_btn')),
              
-            ("CCL button starts disabled",
-             lambda: not viewer._frame_extractor.ccl_mode_btn.isEnabled()),
+            ("CCL button is enabled by default",
+             lambda: viewer._frame_extractor.ccl_mode_btn.isEnabled()),
+             
+            ("CCL mode is selected by default",
+             lambda: viewer._frame_extractor.ccl_mode_btn.isChecked()),
         ]
         
         # Check all requirements

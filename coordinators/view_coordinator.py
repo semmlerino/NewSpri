@@ -62,12 +62,18 @@ class ViewCoordinator(CoordinatorBase):
     def zoom_in(self):
         """Zoom in on canvas."""
         if self.canvas:
-            self.canvas.zoom_in()
+            current_zoom = self.canvas.get_zoom_factor()
+            from config import Config
+            new_zoom = current_zoom * Config.Canvas.ZOOM_FACTOR
+            self.canvas.set_zoom(new_zoom)
     
     def zoom_out(self):
         """Zoom out on canvas."""
         if self.canvas:
-            self.canvas.zoom_out()
+            current_zoom = self.canvas.get_zoom_factor()
+            from config import Config
+            new_zoom = current_zoom / Config.Canvas.ZOOM_FACTOR
+            self.canvas.set_zoom(new_zoom)
     
     def zoom_fit(self):
         """Fit canvas to window."""
@@ -82,8 +88,8 @@ class ViewCoordinator(CoordinatorBase):
     def toggle_grid(self):
         """Toggle grid overlay."""
         if self.canvas:
-            self.canvas.toggle_grid()
             self._grid_enabled = not self._grid_enabled
+            self.canvas.set_grid_overlay(self._grid_enabled)
     
     def reset_view(self):
         """Reset view to default state."""

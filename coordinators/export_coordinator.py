@@ -5,12 +5,12 @@ Handles export dialog creation, configuration, and coordination between componen
 
 from typing import Optional
 from PySide6.QtWidgets import QMessageBox
+from PySide6.QtCore import Signal, QObject
 
-from .base import CoordinatorBase
 from export import ExportDialog
 
 
-class ExportCoordinator(CoordinatorBase):
+class ExportCoordinator(QObject):
     """
     Coordinator responsible for export operations.
     
@@ -19,9 +19,14 @@ class ExportCoordinator(CoordinatorBase):
     Extracts export logic from SpriteViewer.
     """
     
+    # Signals
+    exportRequested = Signal(dict)  # Emitted when export is requested with config
+    
     def __init__(self, main_window):
         """Initialize export coordinator."""
-        super().__init__(main_window)
+        super().__init__()
+        self.main_window = main_window
+        self._initialized = False
         
         # Component references
         self.sprite_model = None
@@ -58,6 +63,9 @@ class ExportCoordinator(CoordinatorBase):
         if not self._validate_export():
             return
         
+        # Emit signal to notify export has been requested
+        self.exportRequested.emit({'mode': 'all_frames'})
+        
         dialog = self._create_export_dialog()
         
         # Set sprites for visual preview (Phase 4 enhancement)
@@ -70,6 +78,9 @@ class ExportCoordinator(CoordinatorBase):
         """Export only the current frame."""
         if not self._validate_export():
             return
+        
+        # Emit signal to notify export has been requested
+        self.exportRequested.emit({'mode': 'current_frame'})
         
         dialog = self._create_export_dialog()
         

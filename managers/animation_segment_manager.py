@@ -121,7 +121,11 @@ class AnimationSegmentManager(QObject):
         """
         if sprite_sheet_path != self._sprite_sheet_path:
             # Clear existing segments when switching sprite sheets
+            # Temporarily disable auto-save to prevent saving empty segments to old file
+            was_auto_save_enabled = self._auto_save_enabled
+            self._auto_save_enabled = False
             self.clear_segments()
+            self._auto_save_enabled = was_auto_save_enabled
             
         self._sprite_sheet_path = sprite_sheet_path
         self._max_frames = frame_count
@@ -367,6 +371,17 @@ class AnimationSegmentManager(QObject):
             if segment.start_frame <= frame_index <= segment.end_frame
         ]
     
+    def get_segment_at_frame(self, frame_index: int) -> Optional[AnimationSegmentData]:
+        """Get the first segment that contains a specific frame."""
+        for name, segment in self._segments.items():
+            if segment.start_frame <= frame_index <= segment.end_frame:
+                return segment
+        return None
+    
+    def get_segments(self) -> List[AnimationSegmentData]:
+        """Alias for get_all_segments() for backward compatibility."""
+        return self.get_all_segments()
+    
     def extract_frames_for_segment(self, segment_name: str, 
                                  all_frames: List[QPixmap]) -> List[QPixmap]:
         """
@@ -448,7 +463,11 @@ class AnimationSegmentManager(QObject):
             segments_in_file = data.get("segments", [])
             
             # Clear existing segments
+            # Temporarily disable auto-save to prevent overwriting the file we're loading
+            was_auto_save_enabled = self._auto_save_enabled
+            self._auto_save_enabled = False
             self.clear_segments()
+            self._auto_save_enabled = was_auto_save_enabled
             
             # Load segments
             loaded_count = 0

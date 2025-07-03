@@ -155,6 +155,27 @@ class ActionManager(QObject):
             enabled_by_default=False,
             enabled_context="has_frames"
         ),
+        'animation_restart': ActionDefinition(
+            "animation_restart", "Restart Animation", ActionCategory.ANIMATION,
+            shortcut_id="animation_restart",
+            tooltip="Restart animation from first frame",
+            enabled_by_default=False,
+            enabled_context="has_frames"
+        ),
+        'animation_speed_decrease': ActionDefinition(
+            "animation_speed_decrease", "Decrease Speed", ActionCategory.ANIMATION,
+            shortcut_id="animation_speed_decrease",
+            tooltip="Decrease animation speed",
+            enabled_by_default=False,
+            enabled_context="has_frames"
+        ),
+        'animation_speed_increase': ActionDefinition(
+            "animation_speed_increase", "Increase Speed", ActionCategory.ANIMATION,
+            shortcut_id="animation_speed_increase",
+            tooltip="Increase animation speed",
+            enabled_by_default=False,
+            enabled_context="has_frames"
+        ),
         
         # Toolbar actions (special variants)
         'toolbar_export': ActionDefinition(
