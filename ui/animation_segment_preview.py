@@ -21,7 +21,16 @@ from sprite_model.core import SpriteModel
 
 
 class SegmentPreviewItem(QFrame):
-    """Individual animation segment preview with playback controls."""
+    """Individual animation segment preview with playback controls.
+    
+    Features:
+    - Play/pause animation control
+    - Bounce mode (ping-pong) animation
+    - Frame holds: Pause on specific frames for a set duration
+    - Hold management: Add, edit, clear individual holds or apply to all frames
+    - Visual preview of current frame
+    - Export options via context menu
+    """
     
     # Signals
     playToggled = Signal(str, bool)  # segment_name, is_playing
@@ -401,6 +410,10 @@ class SegmentPreviewItem(QFrame):
         add_action = menu.addAction("Add Frame Hold...")
         add_action.triggered.connect(self._add_frame_hold)
         
+        # Add hold to all frames
+        add_all_action = menu.addAction("Add Hold to All Frames...")
+        add_all_action.triggered.connect(self._add_hold_to_all_frames)
+        
         # Clear all holds
         if self._frame_holds:
             clear_action = menu.addAction("Clear All Holds")
@@ -466,6 +479,28 @@ class SegmentPreviewItem(QFrame):
         self._update_hold_button_text()
         # Emit signal for persistence
         self.frameHoldsChanged.emit(self.segment_name, self._frame_holds)
+    
+    def _add_hold_to_all_frames(self):
+        """Add the same hold duration to all frames."""
+        if not self._frames:
+            return
+            
+        # Get hold duration
+        duration, ok = QInputDialog.getInt(
+            self, "Add Hold to All Frames",
+            "Hold duration for all frames (in frames):",
+            value=5,
+            minValue=1, maxValue=60
+        )
+        
+        if ok:
+            # Apply to all frames
+            for i in range(len(self._frames)):
+                self._frame_holds[i] = duration
+            
+            self._update_hold_button_text()
+            # Emit signal for persistence
+            self.frameHoldsChanged.emit(self.segment_name, self._frame_holds)
     
     def _update_hold_button_text(self):
         """Update hold button text to show count."""
