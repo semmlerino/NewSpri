@@ -230,12 +230,13 @@ class SegmentPreviewItem(QFrame):
         self.preview_label = QLabel()
         self.preview_label.setFixedSize(120, 120)  # Keep fixed size
         self.preview_label.setAlignment(Qt.AlignCenter)
+        self.preview_label.setContentsMargins(0, 0, 0, 0)
         self.preview_label.setStyleSheet("""
             QLabel {
                 border: 1px solid #DDD;
                 background-color: white;
                 border-radius: 4px;
-                padding: 1px;
+                padding: 2px;
             }
         """)
         
@@ -249,8 +250,8 @@ class SegmentPreviewItem(QFrame):
         """Display a specific frame in the preview."""
         if 0 <= index < len(self._frames):
             pixmap = self._frames[index]
-            # Account for 1px border + 1px padding on each side (4px total)
-            scaled_size = int(116 * self._zoom_factor)
+            # Account for 1px border + 2px padding on each side (6px total)
+            scaled_size = int(114 * self._zoom_factor)
             scaled = pixmap.scaled(
                 scaled_size, scaled_size,
                 Qt.KeepAspectRatio,
