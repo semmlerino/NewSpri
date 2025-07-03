@@ -17,6 +17,7 @@ from PySide6.QtGui import QPixmap, QPainter, QColor, QPen, QFont, QMouseEvent, Q
 
 from config import Config
 from utils.styles import StyleManager
+from utils.sprite_rendering import scale_pixmap_safe
 
 
 @dataclass
@@ -96,10 +97,9 @@ class FrameThumbnail(QLabel):
             # Account for margin (2px each side) + max border (5px each side) = 14px total
             # Scale pixmap to fit within available space
             available_size = self._thumbnail_size - 6  # Leave some padding
-            scaled_pixmap = pixmap.scaled(
-                available_size, available_size,
-                Qt.KeepAspectRatio, Qt.SmoothTransformation
-            )
+            # Use safe scaling to prevent edge cutoff
+            scaled_pixmap = scale_pixmap_safe(pixmap, available_size, available_size, 
+                                            preserve_aspect=True)
             self.setPixmap(scaled_pixmap)
         
         self.setFixedSize(self._thumbnail_size + 8, self._thumbnail_size + 8)  # +8 for border

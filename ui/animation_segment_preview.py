@@ -18,6 +18,7 @@ from PySide6.QtGui import QPixmap, QPainter, QColor, QIcon
 from config import Config
 from core.animation_controller import AnimationController
 from sprite_model.core import SpriteModel
+from utils.sprite_rendering import scale_pixmap_safe
 
 
 class SegmentPreviewItem(QFrame):
@@ -252,11 +253,9 @@ class SegmentPreviewItem(QFrame):
             pixmap = self._frames[index]
             # Account for 1px border + 2px padding on each side (6px total)
             scaled_size = int(114 * self._zoom_factor)
-            scaled = pixmap.scaled(
-                scaled_size, scaled_size,
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation
-            )
+            # Use safe scaling to prevent edge cutoff
+            scaled = scale_pixmap_safe(pixmap, scaled_size, scaled_size, 
+                                     preserve_aspect=True)
             self.preview_label.setPixmap(scaled)
             self.frame_counter.setText(f"{index + 1} / {len(self._frames)}")
             

@@ -11,6 +11,7 @@ from PySide6.QtGui import QPixmap, QPainter, QColor, QPen, QFont
 
 from config import Config
 from utils.styles import StyleManager
+from utils.sprite_rendering import draw_pixmap_safe
 
 
 class SpriteCanvas(QLabel):
@@ -169,7 +170,9 @@ class SpriteCanvas(QLabel):
     def paintEvent(self, event):
         """Custom paint event for rendering sprite with background and overlays."""
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.SmoothPixmapTransform, False)  # Pixel-perfect scaling
+        # Use antialiasing to prevent edge cutoff
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setRenderHint(QPainter.SmoothPixmapTransform, False)  # Keep pixel-perfect for sprites
         
         rect = self.rect()
         
@@ -183,12 +186,16 @@ class SpriteCanvas(QLabel):
         if self._pixmap and not self._pixmap.isNull():
             scaled_size = self._pixmap.size() * self._zoom_factor
             
-            # Center the sprite
-            x = (rect.width() - scaled_size.width()) // 2 + self._pan_offset[0]
-            y = (rect.height() - scaled_size.height()) // 2 + self._pan_offset[1]
+            # Center the sprite - use floating point for accuracy
+            x = (rect.width() - scaled_size.width()) / 2.0 + self._pan_offset[0]
+            y = (rect.height() - scaled_size.height()) / 2.0 + self._pan_offset[1]
+            
+            # Round to nearest pixel to avoid subpixel rendering issues
+            x = round(x)
+            y = round(y)
             
             target_rect = QRect(x, y, scaled_size.width(), scaled_size.height())
-            painter.drawPixmap(target_rect, self._pixmap)
+            draw_pixmap_safe(painter, target_rect, self._pixmap, preserve_pixel_perfect=True)
             
             # Draw grid overlay if enabled
             if self._show_grid:
