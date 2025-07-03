@@ -101,6 +101,8 @@ class AnimationSegmentController(QObject):
             # Connect preview widget signals
             self._segment_preview.segmentRemoved.connect(self.delete_segment)
             self._segment_preview.playbackStateChanged.connect(self._on_preview_playback_changed)
+            self._segment_preview.segmentBounceChanged.connect(self._on_segment_bounce_changed)
+            self._segment_preview.segmentFrameHoldsChanged.connect(self._on_segment_frame_holds_changed)
     
     # ============================================================================
     # SEGMENT CREATION
@@ -165,7 +167,9 @@ class AnimationSegmentController(QObject):
                     segment.name,
                     segment.start_frame,
                     segment.end_frame,
-                    segment.color
+                    segment.color,
+                    segment.bounce_mode,
+                    segment.frame_holds
                 )
         
         return True, message
@@ -215,7 +219,9 @@ class AnimationSegmentController(QObject):
                             new_name,
                             segment.start_frame,
                             segment.end_frame,
-                            segment.color
+                            segment.color,
+                            segment.bounce_mode,
+                            segment.frame_holds
                         )
                 
                 return True, new_name
@@ -288,7 +294,9 @@ class AnimationSegmentController(QObject):
                             new_name,
                             segment.start_frame,
                             segment.end_frame,
-                            segment.color
+                            segment.color,
+                            segment.bounce_mode,
+                            segment.frame_holds
                         )
             
             return True, message
@@ -362,6 +370,45 @@ class AnimationSegmentController(QObject):
             self.statusMessage.emit(f"Playing animation segment '{segment_name}'")
         else:
             self.statusMessage.emit(f"Paused animation segment '{segment_name}'")
+    
+    def _on_segment_bounce_changed(self, segment_name: str, bounce_mode: bool) -> None:
+        """
+        Handle bounce mode change from preview panel.
+        
+        Args:
+            segment_name: Name of segment
+            bounce_mode: Whether bounce mode is enabled
+        """
+        if not self._segment_manager:
+            return
+        
+        success, error = self._segment_manager.set_bounce_mode(segment_name, bounce_mode)
+        if success:
+            mode_text = "enabled" if bounce_mode else "disabled"
+            self.statusMessage.emit(f"Bounce mode {mode_text} for segment '{segment_name}'")
+        else:
+            self.statusMessage.emit(f"Failed to update bounce mode: {error}")
+    
+    def _on_segment_frame_holds_changed(self, segment_name: str, frame_holds: Dict[int, int]) -> None:
+        """
+        Handle frame holds change from preview panel.
+        
+        Args:
+            segment_name: Name of segment
+            frame_holds: Dictionary of frame indices to hold durations
+        """
+        if not self._segment_manager:
+            return
+        
+        success, error = self._segment_manager.set_frame_holds(segment_name, frame_holds)
+        if success:
+            if frame_holds:
+                hold_count = len(frame_holds)
+                self.statusMessage.emit(f"Updated {hold_count} frame hold{'s' if hold_count != 1 else ''} for segment '{segment_name}'")
+            else:
+                self.statusMessage.emit(f"Cleared frame holds for segment '{segment_name}'")
+        else:
+            self.statusMessage.emit(f"Failed to update frame holds: {error}")
     
     # ============================================================================
     # SEGMENT EXPORT
@@ -490,7 +537,9 @@ class AnimationSegmentController(QObject):
                             segment_data.name,
                             segment_data.start_frame,
                             segment_data.end_frame,
-                            segment_data.color
+                            segment_data.color,
+                            segment_data.bounce_mode,
+                            segment_data.frame_holds
                         )
             
             # Update segment manager context

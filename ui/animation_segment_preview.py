@@ -9,7 +9,8 @@ from dataclasses import dataclass
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QScrollArea, 
-    QLabel, QPushButton, QFrame, QToolButton, QSpinBox
+    QLabel, QPushButton, QFrame, QToolButton, QSpinBox,
+    QCheckBox, QMenu, QInputDialog
 )
 from PySide6.QtCore import Qt, Signal, QTimer, QSize
 from PySide6.QtGui import QPixmap, QPainter, QColor, QIcon
@@ -26,8 +27,11 @@ class SegmentPreviewItem(QFrame):
     playToggled = Signal(str, bool)  # segment_name, is_playing
     removeRequested = Signal(str)    # segment_name
     exportRequested = Signal(str)    # segment_name
+    bounceChanged = Signal(str, bool)  # segment_name, bounce_mode
+    frameHoldsChanged = Signal(str, dict)  # segment_name, frame_holds
     
-    def __init__(self, segment_name: str, color: QColor, frames: List[QPixmap]):
+    def __init__(self, segment_name: str, color: QColor, frames: List[QPixmap], 
+                 bounce_mode: bool = False, frame_holds: Dict[int, int] = None):
         super().__init__()
         self.segment_name = segment_name
         self.segment_color = color
@@ -35,6 +39,12 @@ class SegmentPreviewItem(QFrame):
         self._current_frame = 0
         self._is_playing = False
         self._fps = 10  # Default FPS
+        
+        # Animation mode properties
+        self._bounce_mode = bounce_mode
+        self._frame_holds = frame_holds or {}
+        self._playback_direction = 1  # 1 for forward, -1 for backward
+        self._hold_counter = 0  # Counter for frame holds
         
         # Create mini animation controller
         self._timer = QTimer()
@@ -149,6 +159,39 @@ class SegmentPreviewItem(QFrame):
         
         controls_layout.addStretch()
         
+        # Animation mode controls (2nd row)
+        mode_layout = QHBoxLayout()
+        
+        # Bounce mode checkbox
+        self.bounce_checkbox = QCheckBox("Bounce")
+        self.bounce_checkbox.setChecked(self._bounce_mode)
+        self.bounce_checkbox.setToolTip("Play animation forward then backward")
+        self.bounce_checkbox.setStyleSheet("font-size: 10px; color: #666;")
+        self.bounce_checkbox.toggled.connect(self._on_bounce_toggled)
+        mode_layout.addWidget(self.bounce_checkbox)
+        
+        # Frame hold button
+        self.hold_button = QPushButton("Holds")
+        self.hold_button.setFixedSize(40, 20)
+        self.hold_button.setToolTip("Set frame hold durations")
+        self.hold_button.setStyleSheet("""
+            QPushButton {
+                font-size: 10px;
+                padding: 2px;
+                background-color: #E0E0E0;
+                border: 1px solid #999;
+                border-radius: 3px;
+            }
+            QPushButton:hover {
+                background-color: #D0D0D0;
+            }
+        """)
+        self.hold_button.clicked.connect(self._show_hold_menu)
+        mode_layout.addWidget(self.hold_button)
+        
+        mode_layout.addStretch()
+        info_layout.addLayout(mode_layout)
+        
         # Remove button
         remove_button = QToolButton()
         remove_button.setText("×")
@@ -204,7 +247,33 @@ class SegmentPreviewItem(QFrame):
             
     def _update_frame(self):
         """Update to next frame in animation."""
-        self._current_frame = (self._current_frame + 1) % len(self._frames)
+        # Check if we're holding the current frame
+        if self._current_frame in self._frame_holds:
+            if self._hold_counter < self._frame_holds[self._current_frame]:
+                self._hold_counter += 1
+                return  # Keep displaying the same frame
+            else:
+                self._hold_counter = 0  # Reset counter for next time
+        
+        # Update frame based on playback mode
+        if self._bounce_mode:
+            # Bounce mode: reverse direction at ends
+            next_frame = self._current_frame + self._playback_direction
+            
+            if next_frame >= len(self._frames):
+                # Hit the end, reverse direction
+                self._playback_direction = -1
+                next_frame = len(self._frames) - 2  # Go back one frame
+            elif next_frame < 0:
+                # Hit the start, reverse direction
+                self._playback_direction = 1
+                next_frame = 1  # Go forward one frame
+                
+            self._current_frame = max(0, min(next_frame, len(self._frames) - 1))
+        else:
+            # Normal loop mode
+            self._current_frame = (self._current_frame + 1) % len(self._frames)
+            
         self._display_frame(self._current_frame)
         
     def _toggle_playback(self):
@@ -295,6 +364,115 @@ class SegmentPreviewItem(QFrame):
         )
         
         menu.exec_(self.mapToGlobal(pos))
+    
+    def _on_bounce_toggled(self, checked: bool):
+        """Handle bounce mode toggle."""
+        self._bounce_mode = checked
+        # Reset playback direction when toggling mode
+        self._playback_direction = 1
+        # Emit signal for persistence
+        self.bounceChanged.emit(self.segment_name, checked)
+        
+    def _show_hold_menu(self):
+        """Show menu for setting frame holds."""
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: white;
+                border: 1px solid #ccc;
+            }
+            QMenu::item {
+                padding: 4px 20px;
+            }
+            QMenu::item:selected {
+                background-color: #e0e0e0;
+            }
+        """)
+        
+        # Show current frame holds
+        if self._frame_holds:
+            menu.addSection("Current Frame Holds")
+            for frame_idx, duration in sorted(self._frame_holds.items()):
+                action = menu.addAction(f"Frame {frame_idx + 1}: Hold for {duration} frames")
+                action.triggered.connect(lambda checked, idx=frame_idx: self._edit_frame_hold(idx))
+            menu.addSeparator()
+        
+        # Add new frame hold
+        add_action = menu.addAction("Add Frame Hold...")
+        add_action.triggered.connect(self._add_frame_hold)
+        
+        # Clear all holds
+        if self._frame_holds:
+            clear_action = menu.addAction("Clear All Holds")
+            clear_action.triggered.connect(self._clear_frame_holds)
+        
+        menu.exec_(self.hold_button.mapToGlobal(self.hold_button.rect().bottomLeft()))
+    
+    def _add_frame_hold(self):
+        """Add a new frame hold."""
+        if not self._frames:
+            return
+            
+        # Get frame index
+        frame_idx, ok = QInputDialog.getInt(
+            self, "Add Frame Hold", 
+            f"Frame number (1-{len(self._frames)}):",
+            value=self._current_frame + 1,
+            min=1, max=len(self._frames)
+        )
+        
+        if ok:
+            frame_idx -= 1  # Convert to 0-based index
+            
+            # Get hold duration
+            duration, ok = QInputDialog.getInt(
+                self, "Add Frame Hold",
+                f"Hold duration for frame {frame_idx + 1} (in frames):",
+                value=self._frame_holds.get(frame_idx, 5),
+                min=1, max=60
+            )
+            
+            if ok:
+                self._frame_holds[frame_idx] = duration
+                self._update_hold_button_text()
+                # Emit signal for persistence
+                self.frameHoldsChanged.emit(self.segment_name, self._frame_holds)
+    
+    def _edit_frame_hold(self, frame_idx: int):
+        """Edit an existing frame hold."""
+        current_duration = self._frame_holds.get(frame_idx, 5)
+        
+        duration, ok = QInputDialog.getInt(
+            self, "Edit Frame Hold",
+            f"Hold duration for frame {frame_idx + 1} (in frames):",
+            value=current_duration,
+            min=0, max=60
+        )
+        
+        if ok:
+            if duration > 0:
+                self._frame_holds[frame_idx] = duration
+            else:
+                # Remove hold if duration is 0
+                self._frame_holds.pop(frame_idx, None)
+            self._update_hold_button_text()
+            # Emit signal for persistence
+            self.frameHoldsChanged.emit(self.segment_name, self._frame_holds)
+    
+    def _clear_frame_holds(self):
+        """Clear all frame holds."""
+        self._frame_holds.clear()
+        self._hold_counter = 0
+        self._update_hold_button_text()
+        # Emit signal for persistence
+        self.frameHoldsChanged.emit(self.segment_name, self._frame_holds)
+    
+    def _update_hold_button_text(self):
+        """Update hold button text to show count."""
+        if self._frame_holds:
+            self.hold_button.setText(f"Holds ({len(self._frame_holds)})")
+        else:
+            self.hold_button.setText("Holds")
 
 
 class AnimationSegmentPreview(QWidget):
@@ -303,6 +481,8 @@ class AnimationSegmentPreview(QWidget):
     # Signals
     segmentRemoved = Signal(str)  # segment_name
     playbackStateChanged = Signal(str, bool)  # segment_name, is_playing
+    segmentBounceChanged = Signal(str, bool)  # segment_name, bounce_mode
+    segmentFrameHoldsChanged = Signal(str, dict)  # segment_name, frame_holds
     
     def __init__(self):
         super().__init__()
@@ -397,7 +577,8 @@ class AnimationSegmentPreview(QWidget):
         """Set the available frames for segment extraction."""
         self._all_frames = frames
         
-    def add_segment(self, name: str, start_frame: int, end_frame: int, color: QColor):
+    def add_segment(self, name: str, start_frame: int, end_frame: int, color: QColor,
+                   bounce_mode: bool = False, frame_holds: Dict[int, int] = None):
         """Add a new segment preview."""
         if not self._all_frames:
             return
@@ -410,10 +591,12 @@ class AnimationSegmentPreview(QWidget):
         # Hide empty state
         self.empty_label.hide()
         
-        # Create preview item
-        preview_item = SegmentPreviewItem(name, color, segment_frames)
+        # Create preview item with animation settings
+        preview_item = SegmentPreviewItem(name, color, segment_frames, bounce_mode, frame_holds)
         preview_item.removeRequested.connect(self._on_remove_requested)
         preview_item.playToggled.connect(self._on_play_toggled)
+        preview_item.bounceChanged.connect(self._on_bounce_changed)
+        preview_item.frameHoldsChanged.connect(self._on_frame_holds_changed)
         
         # Add to container
         self.container_layout.insertWidget(self.container_layout.count() - 1, preview_item)
@@ -465,6 +648,14 @@ class AnimationSegmentPreview(QWidget):
     def _on_play_toggled(self, name: str, is_playing: bool):
         """Handle playback state change."""
         self.playbackStateChanged.emit(name, is_playing)
+        
+    def _on_bounce_changed(self, name: str, bounce_mode: bool):
+        """Handle bounce mode change."""
+        self.segmentBounceChanged.emit(name, bounce_mode)
+        
+    def _on_frame_holds_changed(self, name: str, frame_holds: dict):
+        """Handle frame holds change."""
+        self.segmentFrameHoldsChanged.emit(name, frame_holds)
         
     def _toggle_all_playback(self):
         """Toggle playback for all segments."""

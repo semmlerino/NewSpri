@@ -25,10 +25,14 @@ class AnimationSegmentData:
     color_rgb: Tuple[int, int, int] = (100, 150, 200)
     description: str = ""
     tags: List[str] = None
+    bounce_mode: bool = False  # Play forward then backward
+    frame_holds: Dict[int, int] = None  # Frame index -> hold duration in frames
     
     def __post_init__(self):
         if self.tags is None:
             self.tags = []
+        if self.frame_holds is None:
+            self.frame_holds = {}
     
     @property
     def frame_count(self) -> int:
@@ -51,6 +55,15 @@ class AnimationSegmentData:
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'AnimationSegmentData':
         """Create from dictionary."""
+        # Handle backward compatibility for segments without new fields
+        data = data.copy()
+        if 'bounce_mode' not in data:
+            data['bounce_mode'] = False
+        if 'frame_holds' not in data:
+            data['frame_holds'] = {}
+        # Convert frame_holds keys from strings to ints (JSON serializes dict keys as strings)
+        if isinstance(data.get('frame_holds'), dict):
+            data['frame_holds'] = {int(k): v for k, v in data['frame_holds'].items()}
         return cls(**data)
     
     def validate(self, max_frames: int = None) -> Tuple[bool, str]:
@@ -257,6 +270,56 @@ class AnimationSegmentManager(QObject):
             Tuple of (success, error_message)
         """
         return self.update_segment(old_name, new_name=new_name)
+    
+    def set_bounce_mode(self, segment_name: str, bounce_mode: bool) -> Tuple[bool, str]:
+        """
+        Set bounce mode for a segment.
+        
+        Args:
+            segment_name: Name of the segment
+            bounce_mode: Whether to use bounce/ping-pong animation
+            
+        Returns:
+            Tuple of (success, error_message)
+        """
+        if segment_name not in self._segments:
+            return False, f"Segment '{segment_name}' not found"
+        
+        self._segments[segment_name].bounce_mode = bounce_mode
+        
+        # Auto-save if enabled
+        if self._auto_save_enabled:
+            self._auto_save()
+        
+        return True, ""
+    
+    def set_frame_holds(self, segment_name: str, frame_holds: Dict[int, int]) -> Tuple[bool, str]:
+        """
+        Set frame holds for a segment.
+        
+        Args:
+            segment_name: Name of the segment
+            frame_holds: Dictionary mapping frame indices to hold durations
+            
+        Returns:
+            Tuple of (success, error_message)
+        """
+        if segment_name not in self._segments:
+            return False, f"Segment '{segment_name}' not found"
+        
+        # Validate frame holds are within segment range
+        segment = self._segments[segment_name]
+        for frame_idx in frame_holds.keys():
+            if frame_idx < 0 or frame_idx >= segment.frame_count:
+                return False, f"Frame index {frame_idx} is out of range for segment"
+        
+        segment.frame_holds = frame_holds
+        
+        # Auto-save if enabled
+        if self._auto_save_enabled:
+            self._auto_save()
+        
+        return True, ""
     
     def get_segment(self, name: str) -> Optional[AnimationSegmentData]:
         """Get a segment by name."""
