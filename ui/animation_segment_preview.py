@@ -228,14 +228,14 @@ class SegmentPreviewItem(QFrame):
         
         # Right side: Animation preview
         self.preview_label = QLabel()
-        base_size = int(120 * self._zoom_factor)
-        self.preview_label.setFixedSize(base_size, base_size)
+        self.preview_label.setFixedSize(120, 120)  # Keep fixed size
         self.preview_label.setAlignment(Qt.AlignCenter)
         self.preview_label.setStyleSheet("""
             QLabel {
                 border: 1px solid #DDD;
                 background-color: white;
                 border-radius: 4px;
+                padding: 1px;
             }
         """)
         
@@ -249,7 +249,8 @@ class SegmentPreviewItem(QFrame):
         """Display a specific frame in the preview."""
         if 0 <= index < len(self._frames):
             pixmap = self._frames[index]
-            scaled_size = int(110 * self._zoom_factor)
+            # Account for 1px border + 1px padding on each side (4px total)
+            scaled_size = int(116 * self._zoom_factor)
             scaled = pixmap.scaled(
                 scaled_size, scaled_size,
                 Qt.KeepAspectRatio,
@@ -514,16 +515,21 @@ class SegmentPreviewItem(QFrame):
             self.hold_button.setText("Holds")
     
     def set_zoom_factor(self, zoom_factor: float):
-        """Update the zoom factor and resize the preview."""
+        """Update the zoom factor and redraw the preview content."""
         self._zoom_factor = zoom_factor
-        base_size = int(120 * self._zoom_factor)
-        self.preview_label.setFixedSize(base_size, base_size)
-        # Redraw current frame with new size
+        # Redraw current frame with new zoom
         self._display_frame(self._current_frame)
 
 
 class AnimationSegmentPreview(QWidget):
-    """Main widget for previewing all animation segments."""
+    """Main widget for previewing all animation segments.
+    
+    Features:
+    - Multiple segment previews with individual playback
+    - Global play/stop controls for all segments
+    - Content zoom (50% to 200%) - scales sprites while keeping widget size constant
+    - Keyboard shortcuts: Ctrl+/- for zoom control
+    """
     
     # Signals
     segmentRemoved = Signal(str)  # segment_name
