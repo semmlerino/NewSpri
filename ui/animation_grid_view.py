@@ -93,9 +93,11 @@ class FrameThumbnail(QLabel):
     def _setup_thumbnail(self, pixmap: QPixmap):
         """Set up the thumbnail display."""
         if pixmap and not pixmap.isNull():
-            # Scale pixmap to thumbnail size while maintaining aspect ratio
+            # Account for margin (2px each side) + max border (5px each side) = 14px total
+            # Scale pixmap to fit within available space
+            available_size = self._thumbnail_size - 6  # Leave some padding
             scaled_pixmap = pixmap.scaled(
-                self._thumbnail_size, self._thumbnail_size,
+                available_size, available_size,
                 Qt.KeepAspectRatio, Qt.SmoothTransformation
             )
             self.setPixmap(scaled_pixmap)
@@ -155,6 +157,7 @@ class FrameThumbnail(QLabel):
                 background-color: {background};
                 border-radius: 4px;
                 margin: 2px;
+                padding: 2px;
                 {overlay_style}
             }}
             {hover_style}
