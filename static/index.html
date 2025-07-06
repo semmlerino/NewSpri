@@ -1,0 +1,1061 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sprite Viewer</title>
+    <style>
+        :root {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252525;
+            --bg-tertiary: #2d2d2d;
+            --text-primary: #e0e0e0;
+            --text-secondary: #a0a0a0;
+            --accent: #4a9eff;
+            --accent-hover: #357abd;
+            --success: #4caf50;
+            --error: #f44336;
+            --border: #404040;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background-color: var(--bg-secondary);
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .header h1 {
+            font-size: 20px;
+            font-weight: 500;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            margin-left: auto;
+        }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 300px;
+            background-color: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .canvas-container {
+            flex: 1;
+            background-color: var(--bg-tertiary);
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #spriteCanvas {
+            max-width: 90%;
+            max-height: 90%;
+            image-rendering: pixelated;
+            cursor: grab;
+        }
+
+        #spriteCanvas.dragging {
+            cursor: grabbing;
+        }
+
+        /* Controls */
+        .controls {
+            background-color: var(--bg-secondary);
+            padding: 15px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .playback-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .frame-info {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+
+        .fps-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-left: auto;
+        }
+
+        /* Sidebar Sections */
+        .sidebar-section {
+            border-bottom: 1px solid var(--border);
+            padding: 15px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+
+        /* Form Controls */
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-bottom: 5px;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .form-row .form-group {
+            flex: 1;
+        }
+
+        input[type="number"],
+        input[type="text"],
+        input[type="range"],
+        select {
+            width: 100%;
+            padding: 6px 10px;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 4px;
+            font-size: 13px;
+        }
+
+        input[type="number"]:focus,
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        /* Buttons */
+        .btn {
+            padding: 8px 16px;
+            background-color: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            border-radius: 4px;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .btn:hover {
+            background-color: var(--bg-primary);
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .btn-primary:hover {
+            background-color: var(--accent-hover);
+        }
+
+        .btn-icon {
+            padding: 8px;
+            width: 36px;
+            height: 36px;
+            justify-content: center;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 5px;
+        }
+
+        /* Frames Grid */
+        .frames-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 5px;
+            padding: 10px;
+        }
+
+        .frame-item {
+            aspect-ratio: 1;
+            background-color: var(--bg-tertiary);
+            border: 2px solid transparent;
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .frame-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            image-rendering: pixelated;
+        }
+
+        .frame-item.active {
+            border-color: var(--accent);
+        }
+
+        .frame-item .frame-number {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            font-size: 10px;
+            padding: 2px 4px;
+            border-radius: 2px;
+        }
+
+        /* Segments */
+        .segment-item {
+            background-color: var(--bg-tertiary);
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 8px;
+            border-left: 4px solid var(--accent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .segment-info {
+            flex: 1;
+        }
+
+        .segment-name {
+            font-weight: 500;
+            margin-bottom: 2px;
+        }
+
+        .segment-frames {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+
+        /* Status Bar */
+        .status-bar {
+            background-color: var(--bg-secondary);
+            border-top: 1px solid var(--border);
+            padding: 5px 15px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .status-indicator.connected {
+            background-color: var(--success);
+        }
+
+        .status-indicator.disconnected {
+            background-color: var(--error);
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background-color: transparent;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab:hover {
+            color: var(--text-primary);
+        }
+
+        .tab.active {
+            color: var(--text-primary);
+            border-bottom-color: var(--accent);
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Zoom Controls */
+        .zoom-controls {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            display: flex;
+            gap: 5px;
+            background-color: rgba(0, 0, 0, 0.7);
+            padding: 5px;
+            border-radius: 4px;
+        }
+
+        .zoom-info {
+            color: white;
+            font-size: 12px;
+            padding: 0 10px;
+            display: flex;
+            align-items: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Sprite Viewer</h1>
+        <div class="header-actions">
+            <label for="fileInput" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                    <polyline points="7 10 12 15 17 10"></polyline>
+                    <line x1="12" y1="15" x2="12" y2="3"></line>
+                </svg>
+                Load Sprite
+            </label>
+            <input type="file" id="fileInput" accept="image/*">
+        </div>
+    </div>
+
+    <div class="main-container">
+        <div class="sidebar">
+            <div class="tabs">
+                <button class="tab active" data-tab="extraction">Extraction</button>
+                <button class="tab" data-tab="frames">Frames</button>
+                <button class="tab" data-tab="segments">Segments</button>
+            </div>
+
+            <div class="tab-content active" id="extraction-tab">
+                <div class="sidebar-section">
+                    <div class="section-title">Frame Settings</div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Width</label>
+                            <input type="number" id="frameWidth" value="32" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Height</label>
+                            <input type="number" id="frameHeight" value="32" min="1">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Offset X</label>
+                            <input type="number" id="offsetX" value="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Offset Y</label>
+                            <input type="number" id="offsetY" value="0" min="0">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Spacing X</label>
+                            <input type="number" id="spacingX" value="0" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Spacing Y</label>
+                            <input type="number" id="spacingY" value="0" min="0">
+                        </div>
+                    </div>
+                    <div class="btn-group" style="margin-top: 10px;">
+                        <button class="btn btn-primary" id="extractBtn">Extract Frames</button>
+                        <button class="btn" id="autoDetectBtn">Auto Detect</button>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <div class="section-title">Presets</div>
+                    <select id="presetSelect">
+                        <option value="">Custom</option>
+                        <option value="16,16">16×16</option>
+                        <option value="32,32">32×32</option>
+                        <option value="48,48">48×48</option>
+                        <option value="64,64">64×64</option>
+                        <option value="32,48">32×48</option>
+                        <option value="48,32">48×32</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="tab-content" id="frames-tab">
+                <div class="frames-grid" id="framesGrid"></div>
+            </div>
+
+            <div class="tab-content" id="segments-tab">
+                <div class="sidebar-section">
+                    <div class="section-title">Animation Segments</div>
+                    <div id="segmentsList"></div>
+                    <button class="btn btn-primary" id="createSegmentBtn" style="margin-top: 10px;">Create Segment</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="content">
+            <div class="canvas-container">
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                </div>
+                <img id="spriteCanvas" style="display: none;">
+                <canvas id="frameCanvas" style="display: none;"></canvas>
+                <div class="zoom-controls">
+                    <button class="btn btn-icon" id="zoomOutBtn">-</button>
+                    <div class="zoom-info" id="zoomInfo">100%</div>
+                    <button class="btn btn-icon" id="zoomInBtn">+</button>
+                    <button class="btn btn-icon" id="zoomFitBtn">⤧</button>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="playback-controls">
+                    <button class="btn btn-icon" id="prevBtn" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M11 18V6l-8.5 6 8.5 6zm.5-6l8.5 6V6l-8.5 6z"/>
+                        </svg>
+                    </button>
+                    <button class="btn btn-icon" id="playPauseBtn" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" id="playIcon">
+                            <path d="M8 5v14l11-7z"/>
+                        </svg>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" id="pauseIcon" style="display: none;">
+                            <rect x="6" y="4" width="4" height="16"/>
+                            <rect x="14" y="4" width="4" height="16"/>
+                        </svg>
+                    </button>
+                    <button class="btn btn-icon" id="nextBtn" disabled>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M13 6v12l8.5-6L13 6zM4 18l8.5-6L4 6v12z"/>
+                        </svg>
+                    </button>
+                    <div class="frame-info" id="frameInfo">Frame: 0 / 0</div>
+                </div>
+
+                <div class="fps-control">
+                    <label>FPS:</label>
+                    <input type="range" id="fpsSlider" min="1" max="60" value="30" style="width: 100px;">
+                    <span id="fpsValue">30</span>
+                    <button class="btn" id="loopBtn">Loop</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div>
+            <span class="status-indicator" id="connectionStatus"></span>
+            <span id="statusText">Disconnected</span>
+        </div>
+        <div id="spriteInfo"></div>
+    </div>
+
+    <script>
+        // Application state
+        const app = {
+            ws: null,
+            currentSprite: null,
+            frames: [],
+            currentFrame: 0,
+            isPlaying: false,
+            zoom: 1,
+            isDragging: false,
+            dragStart: { x: 0, y: 0 },
+            canvasOffset: { x: 0, y: 0 }
+        };
+
+        // Initialize WebSocket connection
+        function initWebSocket() {
+            app.ws = new WebSocket(`ws://${window.location.host}/ws`);
+            
+            app.ws.onopen = () => {
+                updateConnectionStatus(true);
+            };
+            
+            app.ws.onclose = () => {
+                updateConnectionStatus(false);
+                // Reconnect after 3 seconds
+                setTimeout(initWebSocket, 3000);
+            };
+            
+            app.ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+        }
+
+        // Handle WebSocket messages
+        function handleWebSocketMessage(data) {
+            switch (data.type) {
+                case 'frame_changed':
+                    updateFrameDisplay(data.current_frame, data.total_frames);
+                    break;
+                case 'sprite_loaded':
+                    loadSpriteInfo();
+                    break;
+                case 'extraction_completed':
+                    loadFrames();
+                    showNotification(`Extracted ${data.frame_count} frames`, 'success');
+                    break;
+            }
+        }
+
+        // Update connection status
+        function updateConnectionStatus(connected) {
+            const indicator = document.getElementById('connectionStatus');
+            const text = document.getElementById('statusText');
+            
+            if (connected) {
+                indicator.classList.add('connected');
+                indicator.classList.remove('disconnected');
+                text.textContent = 'Connected';
+            } else {
+                indicator.classList.remove('connected');
+                indicator.classList.add('disconnected');
+                text.textContent = 'Disconnected';
+            }
+        }
+
+        // File upload handler
+        document.getElementById('fileInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            showLoading(true);
+            
+            try {
+                const response = await fetch('/api/sprite/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    app.currentSprite = data;
+                    displaySprite();
+                    updateSpriteInfo();
+                } else {
+                    showNotification(data.detail || 'Failed to load sprite', 'error');
+                }
+            } catch (error) {
+                showNotification('Error uploading file', 'error');
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // Display sprite in canvas
+        async function displaySprite() {
+            const canvas = document.getElementById('spriteCanvas');
+            canvas.src = '/api/sprite/original';
+            canvas.style.display = 'block';
+            document.getElementById('frameCanvas').style.display = 'none';
+        }
+
+        // Extract frames
+        document.getElementById('extractBtn').addEventListener('click', async () => {
+            const settings = {
+                width: parseInt(document.getElementById('frameWidth').value),
+                height: parseInt(document.getElementById('frameHeight').value),
+                offset_x: parseInt(document.getElementById('offsetX').value),
+                offset_y: parseInt(document.getElementById('offsetY').value),
+                spacing_x: parseInt(document.getElementById('spacingX').value),
+                spacing_y: parseInt(document.getElementById('spacingY').value)
+            };
+            
+            showLoading(true);
+            
+            try {
+                const response = await fetch('/api/frames/extract', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    loadFrames();
+                } else {
+                    showNotification(data.detail || 'Failed to extract frames', 'error');
+                }
+            } catch (error) {
+                showNotification('Error extracting frames', 'error');
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // Auto detect frames
+        document.getElementById('autoDetectBtn').addEventListener('click', async () => {
+            showLoading(true);
+            
+            try {
+                const response = await fetch('/api/frames/extract/auto', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    // Update UI with detected settings
+                    const settings = data.settings;
+                    document.getElementById('frameWidth').value = settings.width;
+                    document.getElementById('frameHeight').value = settings.height;
+                    document.getElementById('offsetX').value = settings.offset_x || 0;
+                    document.getElementById('offsetY').value = settings.offset_y || 0;
+                    document.getElementById('spacingX').value = settings.spacing_x || 0;
+                    document.getElementById('spacingY').value = settings.spacing_y || 0;
+                    
+                    loadFrames();
+                } else {
+                    showNotification(data.detail || 'Auto-detection failed', 'error');
+                }
+            } catch (error) {
+                showNotification('Error during auto-detection', 'error');
+            } finally {
+                showLoading(false);
+            }
+        });
+
+        // Load frames
+        async function loadFrames() {
+            try {
+                const response = await fetch('/api/frames/all');
+                const data = await response.json();
+                
+                app.frames = data.frames;
+                displayFramesGrid();
+                enablePlaybackControls();
+                
+                // Switch to frames tab
+                switchTab('frames');
+            } catch (error) {
+                console.error('Error loading frames:', error);
+            }
+        }
+
+        // Display frames in grid
+        function displayFramesGrid() {
+            const grid = document.getElementById('framesGrid');
+            grid.innerHTML = '';
+            
+            app.frames.forEach((frame, index) => {
+                const item = document.createElement('div');
+                item.className = 'frame-item';
+                if (index === app.currentFrame) {
+                    item.classList.add('active');
+                }
+                
+                const img = document.createElement('img');
+                img.src = `data:image/png;base64,${frame.data}`;
+                
+                const number = document.createElement('div');
+                number.className = 'frame-number';
+                number.textContent = index;
+                
+                item.appendChild(img);
+                item.appendChild(number);
+                
+                item.addEventListener('click', () => {
+                    selectFrame(index);
+                });
+                
+                grid.appendChild(item);
+            });
+        }
+
+        // Select frame
+        async function selectFrame(index) {
+            try {
+                const response = await fetch(`/api/animation/frame/${index}`, {
+                    method: 'POST'
+                });
+                
+                if (response.ok) {
+                    updateFrameDisplay(index, app.frames.length);
+                }
+            } catch (error) {
+                console.error('Error selecting frame:', error);
+            }
+        }
+
+        // Update frame display
+        function updateFrameDisplay(current, total) {
+            app.currentFrame = current;
+            
+            // Update frame info
+            document.getElementById('frameInfo').textContent = `Frame: ${current + 1} / ${total}`;
+            
+            // Update active frame in grid
+            document.querySelectorAll('.frame-item').forEach((item, index) => {
+                item.classList.toggle('active', index === current);
+            });
+            
+            // Update canvas display
+            if (app.frames.length > 0 && app.frames[current]) {
+                displayFrame(current);
+            }
+            
+            // Update button states
+            document.getElementById('prevBtn').disabled = current === 0;
+            document.getElementById('nextBtn').disabled = current >= total - 1;
+        }
+
+        // Display single frame
+        function displayFrame(index) {
+            const canvas = document.getElementById('frameCanvas');
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+            
+            img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.drawImage(img, 0, 0);
+                
+                canvas.style.display = 'block';
+                document.getElementById('spriteCanvas').style.display = 'none';
+                
+                // Apply zoom
+                updateZoom();
+            };
+            
+            img.src = `data:image/png;base64,${app.frames[index].data}`;
+        }
+
+        // Playback controls
+        document.getElementById('playPauseBtn').addEventListener('click', async () => {
+            if (app.isPlaying) {
+                await fetch('/api/animation/pause', { method: 'POST' });
+                app.isPlaying = false;
+            } else {
+                await fetch('/api/animation/play', { method: 'POST' });
+                app.isPlaying = true;
+            }
+            
+            updatePlayPauseButton();
+        });
+
+        document.getElementById('prevBtn').addEventListener('click', () => {
+            if (app.currentFrame > 0) {
+                selectFrame(app.currentFrame - 1);
+            }
+        });
+
+        document.getElementById('nextBtn').addEventListener('click', () => {
+            if (app.currentFrame < app.frames.length - 1) {
+                selectFrame(app.currentFrame + 1);
+            }
+        });
+
+        // FPS control
+        document.getElementById('fpsSlider').addEventListener('input', async (e) => {
+            const fps = e.target.value;
+            document.getElementById('fpsValue').textContent = fps;
+            
+            await fetch(`/api/animation/fps/${fps}`, { method: 'POST' });
+        });
+
+        // Loop control
+        document.getElementById('loopBtn').addEventListener('click', async (e) => {
+            const btn = e.target;
+            const enabled = !btn.classList.contains('active');
+            
+            await fetch(`/api/animation/loop/${enabled}`, { method: 'POST' });
+            
+            btn.classList.toggle('active', enabled);
+        });
+
+        // Preset selection
+        document.getElementById('presetSelect').addEventListener('change', (e) => {
+            const value = e.target.value;
+            if (value) {
+                const [width, height] = value.split(',');
+                document.getElementById('frameWidth').value = width;
+                document.getElementById('frameHeight').value = height;
+            }
+        });
+
+        // Tab switching
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const tabName = tab.dataset.tab;
+                switchTab(tabName);
+            });
+        });
+
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(t => {
+                t.classList.toggle('active', t.dataset.tab === tabName);
+            });
+            
+            // Update tab content
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.toggle('active', content.id === `${tabName}-tab`);
+            });
+        }
+
+        // Zoom controls
+        document.getElementById('zoomInBtn').addEventListener('click', () => {
+            app.zoom = Math.min(app.zoom * 1.2, 10);
+            updateZoom();
+        });
+
+        document.getElementById('zoomOutBtn').addEventListener('click', () => {
+            app.zoom = Math.max(app.zoom / 1.2, 0.1);
+            updateZoom();
+        });
+
+        document.getElementById('zoomFitBtn').addEventListener('click', () => {
+            fitToScreen();
+        });
+
+        function updateZoom() {
+            const canvas = document.getElementById('frameCanvas');
+            const sprite = document.getElementById('spriteCanvas');
+            const active = canvas.style.display !== 'none' ? canvas : sprite;
+            
+            active.style.transform = `scale(${app.zoom}) translate(${app.canvasOffset.x}px, ${app.canvasOffset.y}px)`;
+            document.getElementById('zoomInfo').textContent = `${Math.round(app.zoom * 100)}%`;
+        }
+
+        function fitToScreen() {
+            const container = document.querySelector('.canvas-container');
+            const canvas = document.getElementById('frameCanvas');
+            const sprite = document.getElementById('spriteCanvas');
+            const active = canvas.style.display !== 'none' ? canvas : sprite;
+            
+            const containerWidth = container.clientWidth * 0.9;
+            const containerHeight = container.clientHeight * 0.9;
+            
+            const scaleX = containerWidth / active.naturalWidth;
+            const scaleY = containerHeight / active.naturalHeight;
+            
+            app.zoom = Math.min(scaleX, scaleY);
+            app.canvasOffset = { x: 0, y: 0 };
+            updateZoom();
+        }
+
+        // Canvas dragging
+        const canvasContainer = document.querySelector('.canvas-container');
+        
+        canvasContainer.addEventListener('mousedown', (e) => {
+            if (e.target.id === 'spriteCanvas' || e.target.id === 'frameCanvas') {
+                app.isDragging = true;
+                app.dragStart = { x: e.clientX - app.canvasOffset.x, y: e.clientY - app.canvasOffset.y };
+                e.target.classList.add('dragging');
+            }
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (app.isDragging) {
+                app.canvasOffset.x = e.clientX - app.dragStart.x;
+                app.canvasOffset.y = e.clientY - app.dragStart.y;
+                updateZoom();
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            if (app.isDragging) {
+                app.isDragging = false;
+                document.getElementById('spriteCanvas').classList.remove('dragging');
+                document.getElementById('frameCanvas').classList.remove('dragging');
+            }
+        });
+
+        // Utility functions
+        function showLoading(show) {
+            document.getElementById('loading').classList.toggle('active', show);
+        }
+
+        function showNotification(message, type = 'info') {
+            // For now, just log to console
+            console.log(`[${type}] ${message}`);
+            // TODO: Implement toast notifications
+        }
+
+        function updateSpriteInfo() {
+            if (app.currentSprite) {
+                document.getElementById('spriteInfo').textContent = 
+                    `${app.currentSprite.filename} - ${app.currentSprite.width}×${app.currentSprite.height}`;
+            }
+        }
+
+        function enablePlaybackControls() {
+            document.getElementById('playPauseBtn').disabled = false;
+            document.getElementById('prevBtn').disabled = app.currentFrame === 0;
+            document.getElementById('nextBtn').disabled = app.currentFrame >= app.frames.length - 1;
+        }
+
+        function updatePlayPauseButton() {
+            document.getElementById('playIcon').style.display = app.isPlaying ? 'none' : 'block';
+            document.getElementById('pauseIcon').style.display = app.isPlaying ? 'block' : 'none';
+        }
+
+        async function loadSpriteInfo() {
+            try {
+                const response = await fetch('/api/sprite/info');
+                const data = await response.json();
+                
+                if (response.ok) {
+                    app.currentSprite = data;
+                    updateSpriteInfo();
+                    
+                    if (data.has_frames) {
+                        loadFrames();
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading sprite info:', error);
+            }
+        }
+
+        // Initialize app
+        initWebSocket();
+        
+        // Load initial state if server already has a sprite loaded
+        loadSpriteInfo();
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            
+            switch (e.key) {
+                case ' ':
+                    e.preventDefault();
+                    document.getElementById('playPauseBtn').click();
+                    break;
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    document.getElementById('prevBtn').click();
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    document.getElementById('nextBtn').click();
+                    break;
+                case '+':
+                case '=':
+                    e.preventDefault();
+                    document.getElementById('zoomInBtn').click();
+                    break;
+                case '-':
+                    e.preventDefault();
+                    document.getElementById('zoomOutBtn').click();
+                    break;
+                case '0':
+                    e.preventDefault();
+                    document.getElementById('zoomFitBtn').click();
+                    break;
+            }
+        });
+    </script>
+</body>
+</html>

@@ -209,6 +209,18 @@ class TestCompleteApplicationLifecycle:
         viewer._sprite_model.next_frame()  # Should not crash with no frames
         viewer._sprite_model.previous_frame()
         
+        # Ensure button states are updated for no frames
+        viewer._sprite_model.frameChanged.emit(0, 0)
+        qtbot.wait(50)
+        
+        # Test button navigation with no frames
+        assert not viewer._playback_controls.prev_btn.isEnabled()
+        assert not viewer._playback_controls.next_btn.isEnabled()
+        
+        # Clicking disabled buttons should not crash
+        viewer._playback_controls.prev_btn.click()
+        viewer._playback_controls.next_btn.click()
+        
         # 4. Test animation with no frames
         viewer._animation_controller.toggle_playback()  # Should handle gracefully
         assert viewer._animation_controller.is_playing is False

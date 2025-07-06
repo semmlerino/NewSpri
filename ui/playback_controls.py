@@ -22,6 +22,8 @@ class PlaybackControls(QFrame):
     frameChanged = Signal(int)
     fpsChanged = Signal(int)
     loopToggled = Signal(bool)
+    prevFrameClicked = Signal()
+    nextFrameClicked = Signal()
     
     def __init__(self):
         super().__init__()
@@ -48,6 +50,7 @@ class PlaybackControls(QFrame):
         self.prev_btn = QPushButton("Prev")
         self.prev_btn.setStyleSheet(button_style)
         self.prev_btn.setToolTip("Previous frame (←)")
+        self.prev_btn.clicked.connect(self.prevFrameClicked)
         nav_layout.addWidget(self.prev_btn)
         
         # Frame slider in the middle
@@ -60,6 +63,7 @@ class PlaybackControls(QFrame):
         self.next_btn = QPushButton("Next")
         self.next_btn.setStyleSheet(button_style)
         self.next_btn.setToolTip("Next frame (→)")
+        self.next_btn.clicked.connect(self.nextFrameClicked)
         nav_layout.addWidget(self.next_btn)
         
         layout.addLayout(nav_layout)

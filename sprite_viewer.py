@@ -309,8 +309,8 @@ class SpriteViewer(QMainWindow):
         self._playback_controls.loopToggled.connect(self._animation_coordinator.set_loop_mode)
         
         # Navigation button signals (Phase 5 refactoring - use AnimationCoordinator)
-        self._playback_controls.prev_btn.clicked.connect(self._animation_coordinator.go_to_prev_frame)
-        self._playback_controls.next_btn.clicked.connect(self._animation_coordinator.go_to_next_frame)
+        self._playback_controls.prevFrameClicked.connect(self._animation_coordinator.go_to_prev_frame)
+        self._playback_controls.nextFrameClicked.connect(self._animation_coordinator.go_to_next_frame)
         
         # Grid view signals (Phase 6 refactoring - use EventCoordinator)
         if self._grid_view:
@@ -396,6 +396,12 @@ class SpriteViewer(QMainWindow):
         
         # Update playback controls
         self._playback_controls.set_current_frame(frame_index)
+        
+        # Update button states based on current position
+        has_frames = total_frames > 0
+        at_start = frame_index == 0
+        at_end = frame_index >= total_frames - 1 if total_frames > 0 else True
+        self._playback_controls.update_button_states(has_frames, at_start, at_end)
     
     def _on_sprite_loaded(self, file_path: str):
         """Handle sprite loaded."""
