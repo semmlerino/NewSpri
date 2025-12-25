@@ -4,6 +4,7 @@ Handles exporting individual frames, sprite sheets, and animations.
 Part of Phase 4: Frame Export System implementation.
 """
 
+import logging
 import os
 from pathlib import Path
 from typing import List, Optional, Tuple, Dict, Callable, Any
@@ -15,6 +16,8 @@ from PySide6.QtGui import QPixmap, QPainter, QImage, QColor, QBrush
 from PySide6.QtWidgets import QMessageBox
 
 from config import Config
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -593,8 +596,8 @@ class ExportWorker(QThread):
                     painter.drawPixmap(x, y, frame)
                 
                 frames_drawn += 1
-            
-            print(f"DEBUG:   Drew {frames_drawn} frames for segment '{segment['name']}')")
+
+            logger.debug("Drew %d frames for segment '%s'", frames_drawn, segment['name'])
         
         painter.end()
     
@@ -656,21 +659,18 @@ class FrameExporter(QObject):
         Returns:
             True if export started successfully
         """
-        print("DEBUG: FrameExporter.export_frames called")
-        print(f"DEBUG: Mode: {mode}")
-        print(f"DEBUG: Format: {format}")
-        print(f"DEBUG: Frame count: {len(frames)}")
-        print(f"DEBUG: Base name: {base_name}")
-        print(f"DEBUG: Scale factor: {scale_factor}")
-        print(f"DEBUG: Segment info provided: {segment_info is not None}")
+        logger.debug("FrameExporter.export_frames called")
+        logger.debug("Mode: %s, Format: %s, Frame count: %d", mode, format, len(frames))
+        logger.debug("Base name: %s, Scale factor: %s", base_name, scale_factor)
+        logger.debug("Segment info provided: %s", segment_info is not None)
         if segment_info:
-            print(f"DEBUG: Segment count: {len(segment_info)}")
+            logger.debug("Segment count: %d", len(segment_info))
             for i, seg in enumerate(segment_info):
-                print(f"DEBUG:   Segment {i}: {seg}")
-        
+                logger.debug("  Segment %d: %s", i, seg)
+
         # Validate inputs
         if not frames:
-            print("DEBUG: No frames to export, emitting error")
+            logger.debug("No frames to export, emitting error")
             self.exportError.emit("No frames to export")
             return False
         
@@ -685,15 +685,15 @@ class FrameExporter(QObject):
         # Parse format and mode
         try:
             export_format = ExportFormat.from_string(format)
-            print(f"DEBUG: Parsed export format: {export_format}")
-            
+            logger.debug("Parsed export format: %s", export_format)
+
             # Handle special mode for segments_sheet
             if mode == 'segments_sheet':
-                print("DEBUG: Converting segments_sheet mode to SPRITE_SHEET")
+                logger.debug("Converting segments_sheet mode to SPRITE_SHEET")
                 export_mode = ExportMode.SPRITE_SHEET
             else:
                 export_mode = ExportMode(mode)
-            print(f"DEBUG: Parsed export mode: {export_mode}")
+            logger.debug("Parsed export mode: %s", export_mode)
         except ValueError as e:
             self.exportError.emit(f"Invalid export settings: {str(e)}")
             return False

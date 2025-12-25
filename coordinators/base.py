@@ -3,8 +3,11 @@ Base coordinator classes for SpriteViewer refactoring.
 Provides abstract base class and registry for managing coordinators.
 """
 
+import logging
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
+
+logger = logging.getLogger(__name__)
 
 
 class CoordinatorBase(ABC):
@@ -118,15 +121,15 @@ class CoordinatorRegistry:
                     coordinator.initialize(dependencies)
                     coordinator._initialized = True
                 except Exception as e:
-                    print(f"Failed to initialize coordinator '{name}': {e}")
-    
+                    logger.error("Failed to initialize coordinator '%s': %s", name, e)
+
     def cleanup_all(self):
         """Clean up all registered coordinators."""
         for coordinator in self._coordinators.values():
             try:
                 coordinator.cleanup()
             except Exception as e:
-                print(f"Error during coordinator cleanup: {e}")
+                logger.error("Error during coordinator cleanup: %s", e)
         
         self._coordinators.clear()
     

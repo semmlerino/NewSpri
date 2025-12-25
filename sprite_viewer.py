@@ -135,7 +135,8 @@ class SpriteViewer(QMainWindow):
             'animation_controller': self._animation_controller,
             'playback_controls': self._playback_controls,
             'action_manager': self._action_manager,
-            'status_manager': self._status_manager
+            'status_manager': self._status_manager,
+            'shortcut_manager': self._shortcut_manager,
         }
         self._animation_coordinator.initialize(animation_dependencies)
         

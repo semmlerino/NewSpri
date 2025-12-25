@@ -3,6 +3,7 @@ Export Dialog Wizard with Integrated Settings and Preview
 Simplified two-step wizard with live preview functionality.
 """
 
+import logging
 from typing import List, Optional, Dict, Any
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
@@ -10,6 +11,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal, QTimer, QSize
 from PySide6.QtGui import QPixmap
+
+logger = logging.getLogger(__name__)
 
 from .base.wizard_base import WizardWidget
 from ..steps.type_selection import ExportTypeStepSimple as ExportTypeStep
@@ -86,40 +89,40 @@ class ExportDialog(QDialog):
     
     def _on_export_clicked(self):
         """Handle export button click."""
-        print("DEBUG: Export button clicked")
-        print(f"DEBUG: Segment manager available: {self.segment_manager is not None}")
+        logger.debug("Export button clicked")
+        logger.debug("Segment manager available: %s", self.segment_manager is not None)
         if self.segment_manager:
             segments = self.segment_manager.get_all_segments()
-            print(f"DEBUG: Number of segments available: {len(segments)}")
+            logger.debug("Number of segments available: %d", len(segments))
             for i, seg in enumerate(segments):
-                print(f"DEBUG:   Segment {i}: '{seg.name}' frames {seg.start_frame}-{seg.end_frame}")
-        
+                logger.debug("  Segment %d: '%s' frames %d-%d", i, seg.name, seg.start_frame, seg.end_frame)
+
         # Trigger wizard finish to collect all data
-        print("DEBUG: Triggering wizard finish to collect data")
+        logger.debug("Triggering wizard finish to collect data")
         self.wizard._on_finish()
     
     def _on_wizard_finished(self, data: Dict[str, Any]):
         """Handle wizard completion - perform export."""
-        print("DEBUG: _on_wizard_finished called")
-        print(f"DEBUG: Wizard data keys: {list(data.keys())}")
-        
+        logger.debug("_on_wizard_finished called")
+        logger.debug("Wizard data keys: %s", list(data.keys()))
+
         # Extract data from wizard steps
         preset = data.get('step_0', {}).get('preset')
         settings = data.get('step_1', {})
-        
-        print(f"DEBUG: Preset: {preset}")
-        print(f"DEBUG: Preset mode: {preset.mode if preset else 'None'}")
-        print(f"DEBUG: Settings keys: {list(settings.keys())}")
-        
+
+        logger.debug("Preset: %s", preset)
+        logger.debug("Preset mode: %s", preset.mode if preset else 'None')
+        logger.debug("Settings keys: %s", list(settings.keys()))
+
         if not preset:
             QMessageBox.warning(self, "Export Error", "No export type selected.")
             return
-        
+
         # Prepare export configuration
-        print("DEBUG: Preparing export configuration")
+        logger.debug("Preparing export configuration")
         export_config = self._prepare_export_config(preset, settings)
-        print(f"DEBUG: Export config keys: {list(export_config.keys())}")
-        print(f"DEBUG: Export config mode: {export_config.get('mode', 'None')}")
+        logger.debug("Export config keys: %s", list(export_config.keys()))
+        logger.debug("Export config mode: %s", export_config.get('mode', 'None'))
         
         # Emit exportRequested for compatibility with sprite_viewer
         self.exportRequested.emit(export_config)
@@ -141,19 +144,19 @@ class ExportDialog(QDialog):
         exporter.exportError.connect(lambda error: self._on_export_failed(error, progress_dialog))
         
         # Start export based on type
-        print(f"DEBUG: Starting export for mode: {preset.mode}")
+        logger.debug("Starting export for mode: %s", preset.mode)
         if preset.mode == "sheet":
-            print("DEBUG: Calling _export_sprite_sheet")
+            logger.debug("Calling _export_sprite_sheet")
             self._export_sprite_sheet(exporter, export_config)
         elif preset.mode == "selected":
             selected_indices = settings.get('selected_indices', [])
-            print(f"DEBUG: Calling _export_selected_frames with {len(selected_indices)} selected indices")
+            logger.debug("Calling _export_selected_frames with %d selected indices", len(selected_indices))
             self._export_selected_frames(exporter, export_config, selected_indices)
         elif preset.mode == "segments_sheet":
-            print("DEBUG: Calling _export_segments_per_row")
+            logger.debug("Calling _export_segments_per_row")
             self._export_segments_per_row(exporter, export_config)
         else:  # individual
-            print("DEBUG: Calling _export_individual_frames")
+            logger.debug("Calling _export_individual_frames")
             self._export_individual_frames(exporter, export_config)
         
         # Show progress dialog
@@ -256,27 +259,27 @@ class ExportDialog(QDialog):
     
     def _export_segments_per_row(self, exporter, config):
         """Export sprite sheet with segments per row."""
-        print("DEBUG: _export_segments_per_row called")
-        print(f"DEBUG: segment_manager available: {self.segment_manager is not None}")
-        
+        logger.debug("_export_segments_per_row called")
+        logger.debug("segment_manager available: %s", self.segment_manager is not None)
+
         if not self.segment_manager:
-            print("DEBUG: No segment manager available, showing error")
+            logger.debug("No segment manager available, showing error")
             QMessageBox.warning(self, "Export Error", "No segment manager available.")
             return
-        
+
         # Get all segments
         segments = self.segment_manager.get_all_segments()
-        print(f"DEBUG: Retrieved {len(segments)} segments from manager")
-        
+        logger.debug("Retrieved %d segments from manager", len(segments))
+
         if not segments:
-            print("DEBUG: No segments found, showing error dialog")
+            logger.debug("No segments found, showing error dialog")
             QMessageBox.warning(
-                self, 
-                "Export Error", 
+                self,
+                "Export Error",
                 "No animation segments defined.\n\nPlease create segments using Animation > Manage Segments before using this export option."
             )
             return
-        
+
         # Prepare segment info
         segment_info = []
         for i, segment in enumerate(segments):
@@ -286,11 +289,11 @@ class ExportDialog(QDialog):
                 'end_frame': segment.end_frame
             }
             segment_info.append(seg_info)
-            print(f"DEBUG: Segment {i}: {seg_info}")
-        
+            logger.debug("Segment %d: %s", i, seg_info)
+
         # Sort segments by start frame
         segment_info.sort(key=lambda s: s['start_frame'])
-        print(f"DEBUG: Sorted segment info: {segment_info}")
+        logger.debug("Sorted segment info: %s", segment_info)
         
         # Create layout with segments_per_row mode
         from ..core.frame_exporter import SpriteSheetLayout
@@ -304,12 +307,12 @@ class ExportDialog(QDialog):
         
         # Make sure the layout is included in the config
         config['sprite_sheet_layout'] = layout
-        
+
         # Start export
-        print(f"DEBUG: Starting segment export with {len(self.sprites)} sprites total")
-        print(f"DEBUG: Export config: output_dir={config['output_dir']}, base_name={config['base_name']}")
-        print(f"DEBUG: Format={config['format']}, scale={config['scale']}")
-        print(f"DEBUG: Layout mode: {layout.mode}")
+        logger.debug("Starting segment export with %d sprites total", len(self.sprites))
+        logger.debug("Export config: output_dir=%s, base_name=%s", config['output_dir'], config['base_name'])
+        logger.debug("Format=%s, scale=%s", config['format'], config['scale'])
+        logger.debug("Layout mode: %s", layout.mode)
         
         exporter.export_frames(
             frames=self.sprites,

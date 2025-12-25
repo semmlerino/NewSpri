@@ -21,18 +21,19 @@ class AnimationCoordinator(CoordinatorBase):
     def __init__(self, main_window):
         """Initialize animation coordinator."""
         super().__init__(main_window)
-        
+
         # Component references
         self.sprite_model = None
         self.animation_controller = None
         self.playback_controls = None
         self.action_manager = None
         self.status_manager = None
-    
+        self.shortcut_manager = None
+
     def initialize(self, dependencies):
         """
         Initialize coordinator with required dependencies.
-        
+
         Args:
             dependencies: Dict containing:
                 - sprite_model: SpriteModel instance
@@ -40,13 +41,15 @@ class AnimationCoordinator(CoordinatorBase):
                 - playback_controls: PlaybackControls instance
                 - action_manager: ActionManager instance
                 - status_manager: StatusBarManager instance
+                - shortcut_manager: ShortcutManager instance
         """
         self.sprite_model = dependencies['sprite_model']
         self.animation_controller = dependencies['animation_controller']
         self.playback_controls = dependencies['playback_controls']
         self.action_manager = dependencies.get('action_manager')
         self.status_manager = dependencies.get('status_manager')
-        
+        self.shortcut_manager = dependencies.get('shortcut_manager')
+
         self._initialized = True
     
     def cleanup(self):
@@ -275,15 +278,16 @@ class AnimationCoordinator(CoordinatorBase):
             
         has_frames = bool(self.sprite_model and self.sprite_model.sprite_frames)
         is_playing = self.is_playing()
-        
+
         # Update both managers if available
-        if hasattr(self.main_window, '_shortcut_manager'):
-            self.main_window._shortcut_manager.update_context(
+        if self.shortcut_manager:
+            self.shortcut_manager.update_context(
                 has_frames=has_frames,
                 is_playing=is_playing
             )
-        
-        self.action_manager.update_context(
-            has_frames=has_frames,
-            is_playing=is_playing
-        )
+
+        if self.action_manager:
+            self.action_manager.update_context(
+                has_frames=has_frames,
+                is_playing=is_playing
+            )

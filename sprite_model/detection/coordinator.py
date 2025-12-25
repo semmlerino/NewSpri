@@ -17,7 +17,7 @@ from .spacing_detector import SpacingDetector
 
 class DetectionResult:
     """Container for detection results."""
-    
+
     def __init__(self):
         self.frame_width: int = 0
         self.frame_height: int = 0
@@ -26,8 +26,18 @@ class DetectionResult:
         self.spacing_x: int = 0
         self.spacing_y: int = 0
         self.success: bool = False
-        self.confidence: float = 0.0
+        self._confidence: float = 0.0
         self.messages: list = []
+
+    @property
+    def confidence(self) -> float:
+        """Get confidence score."""
+        return self._confidence
+
+    @confidence.setter
+    def confidence(self, value: float) -> None:
+        """Set confidence score, clamping to valid range [0.0, 1.0]."""
+        self._confidence = max(0.0, min(1.0, float(value)))
 
 
 class DetectionCoordinator:

@@ -3,6 +3,7 @@ Export Type Selection Step (Simplified)
 Clean, simple export type selection without clutter.
 """
 
+import logging
 from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from PySide6.QtWidgets import (
@@ -11,6 +12,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
+
+logger = logging.getLogger(__name__)
 
 from ..dialogs.base.wizard_base import WizardStep
 from ..core.export_presets import ExportPreset, get_preset_manager
@@ -127,23 +130,23 @@ class ExportTypeStepSimple(WizardStep):
     
     def _setup_ui(self):
         """Set up the simplified UI."""
-        print("DEBUG: ExportTypeStepSimple._setup_ui called")
-        print(f"DEBUG: Frame count: {self.frame_count}")
-        print(f"DEBUG: Segment manager available: {self.segment_manager is not None}")
-        
+        logger.debug("ExportTypeStepSimple._setup_ui called")
+        logger.debug("Frame count: %d", self.frame_count)
+        logger.debug("Segment manager available: %s", self.segment_manager is not None)
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(32, 24, 32, 24)
         layout.setSpacing(16)
-        
+
         # Check if we have segments
         if self.segment_manager:
             segments = self.segment_manager.get_all_segments()
             self._has_segments = len(segments) > 0
-            print(f"DEBUG: Found {len(segments)} segments, has_segments = {self._has_segments}")
+            logger.debug("Found %d segments, has_segments = %s", len(segments), self._has_segments)
             for i, seg in enumerate(segments):
-                print(f"DEBUG:   Segment {i}: '{seg.name}' frames {seg.start_frame}-{seg.end_frame}")
+                logger.debug("  Segment %d: '%s' frames %d-%d", i, seg.name, seg.start_frame, seg.end_frame)
         else:
-            print("DEBUG: No segment manager available")
+            logger.debug("No segment manager available")
             self._has_segments = False
         
         # Show recommendation if segments exist
@@ -240,20 +243,20 @@ class ExportTypeStepSimple(WizardStep):
     
     def _on_option_clicked(self, preset: ExportPreset):
         """Handle option selection."""
-        print(f"DEBUG: Option clicked: {preset.name} ({preset.mode})")
+        logger.debug("Option clicked: %s (%s)", preset.name, preset.mode)
         self._select_preset(preset)
-    
+
     def _select_preset(self, preset: ExportPreset):
         """Select a preset and update UI."""
-        print(f"DEBUG: _select_preset called with: {preset.name} ({preset.mode})")
+        logger.debug("_select_preset called with: %s (%s)", preset.name, preset.mode)
         self._selected_preset = preset
-        
+
         # Update option selection states
         for option in self._options:
             option.set_selected(option.preset == preset)
-        
+
         # Emit signals
-        print(f"DEBUG: Emitting stepValidated(True) and preset data")
+        logger.debug("Emitting stepValidated(True) and preset data")
         self.stepValidated.emit(True)
         self.dataChanged.emit(self.get_data())
         self.presetSelected.emit(preset)
@@ -264,20 +267,20 @@ class ExportTypeStepSimple(WizardStep):
     
     def get_data(self) -> Dict[str, Any]:
         """Get the selected preset data."""
-        print("[DEBUG] ExportTypeStep.get_data() called")
-        print(f"[DEBUG] Selected preset: {self._selected_preset.name if self._selected_preset else 'None'}")
-        print(f"[DEBUG] Selected preset mode: {self._selected_preset.mode if self._selected_preset else 'None'}")
-        
+        logger.debug("ExportTypeStep.get_data() called")
+        logger.debug("Selected preset: %s", self._selected_preset.name if self._selected_preset else 'None')
+        logger.debug("Selected preset mode: %s", self._selected_preset.mode if self._selected_preset else 'None')
+
         if self._selected_preset:
             data = {
                 'preset': self._selected_preset,
                 'preset_name': self._selected_preset.name,
                 'export_mode': self._selected_preset.mode
             }
-            print(f"[DEBUG] Returning preset data: {data}")
+            logger.debug("Returning preset data: %s", data)
             return data
-        
-        print("[DEBUG] No preset selected, returning empty dict")
+
+        logger.debug("No preset selected, returning empty dict")
         return {}
     
     def set_data(self, data: Dict[str, Any]):

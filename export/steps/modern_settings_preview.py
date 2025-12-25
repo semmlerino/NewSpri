@@ -3,6 +3,7 @@ Modern Export Settings with Live Preview
 Redesigned for better usability and modern aesthetics.
 """
 
+import logging
 import math
 import os
 from typing import Optional, Dict, Any, List, Tuple
@@ -16,6 +17,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, Signal, QTimer, QRectF, QSize, QPropertyAnimation, QEasingCurve
 from PySide6.QtGui import QPixmap, QPainter, QBrush, QColor, QPen, QFont, QIcon
+
+logger = logging.getLogger(__name__)
 
 from ..dialogs.base.wizard_base import WizardStep
 from ..core.export_presets import ExportPreset
@@ -486,31 +489,31 @@ class ModernExportSettings(WizardStep):
     
     def _setup_for_preset(self, preset: ExportPreset):
         """Configure UI for selected preset."""
-        print(f"DEBUG: _setup_for_preset called with: {preset.name} (mode: {preset.mode})")
+        logger.debug("_setup_for_preset called with: %s (mode: %s)", preset.name, preset.mode)
         self._current_preset = preset
-        
+
         # Clear mode stack
         while self.mode_stack.count():
             self.mode_stack.removeWidget(self.mode_stack.widget(0))
-        
+
         # Add appropriate settings widget
         if preset.mode == "sheet":
-            print("DEBUG: Creating sheet settings widget")
+            logger.debug("Creating sheet settings widget")
             settings = self._create_sheet_settings()
         elif preset.mode == "segments_sheet":
-            print("DEBUG: Creating sheet settings widget for segments_sheet mode")
+            logger.debug("Creating sheet settings widget for segments_sheet mode")
             settings = self._create_sheet_settings()
         elif preset.mode == "selected":
-            print("DEBUG: Creating selected settings widget")
+            logger.debug("Creating selected settings widget")
             settings = self._create_selected_settings()
         else:  # individual
-            print("DEBUG: Creating individual settings widget")
+            logger.debug("Creating individual settings widget")
             settings = self._create_individual_settings()
-        
+
         self.mode_stack.addWidget(settings)
-        
+
         # Update UI
-        print("DEBUG: Updating preview and summary after preset setup")
+        logger.debug("Updating preview and summary after preset setup")
         self._update_preview()
         self._update_summary()
     
@@ -918,45 +921,45 @@ class ModernExportSettings(WizardStep):
     
     def _update_preview(self):
         """Update preview based on settings."""
-        print("DEBUG: _update_preview called")
-        print(f"DEBUG: Current preset: {self._current_preset}")
-        print(f"DEBUG: Current preset mode: {self._current_preset.mode if self._current_preset else 'None'}")
-        print(f"DEBUG: Number of sprites: {len(self._sprites)}")
-        print(f"DEBUG: Segment manager available: {self._segment_manager is not None}")
-        
+        logger.debug("_update_preview called")
+        logger.debug("Current preset: %s", self._current_preset)
+        logger.debug("Current preset mode: %s", self._current_preset.mode if self._current_preset else 'None')
+        logger.debug("Number of sprites: %d", len(self._sprites))
+        logger.debug("Segment manager available: %s", self._segment_manager is not None)
+
         if not self._current_preset or not self._sprites:
-            print("DEBUG: No preset or sprites, showing empty preview")
+            logger.debug("No preset or sprites, showing empty preview")
             self.preview_view.update_preview(QPixmap(), {})
             return
-        
+
         # Generate preview
         if self._current_preset.mode == "sheet" or self._current_preset.mode == "segments_sheet":
-            print(f"DEBUG: Generating sheet preview for mode: {self._current_preset.mode}")
+            logger.debug("Generating sheet preview for mode: %s", self._current_preset.mode)
             pixmap = self._generate_sheet_preview()
         else:
-            print(f"DEBUG: Generating frames preview for mode: {self._current_preset.mode}")
+            logger.debug("Generating frames preview for mode: %s", self._current_preset.mode)
             pixmap = self._generate_frames_preview()
-        
-        print(f"DEBUG: Generated preview pixmap size: {pixmap.width()}x{pixmap.height()}")
+
+        logger.debug("Generated preview pixmap size: %dx%d", pixmap.width(), pixmap.height())
         self.preview_view.update_preview(pixmap, {})
     
     def _generate_sheet_preview(self) -> QPixmap:
         """Generate sprite sheet preview."""
-        print("DEBUG: _generate_sheet_preview called")
-        
+        logger.debug("_generate_sheet_preview called")
+
         if not self._sprites:
-            print("DEBUG: No sprites available for sheet preview")
+            logger.debug("No sprites available for sheet preview")
             return QPixmap()
-        
+
         # Special handling for segments per row mode
         if self._current_preset and self._current_preset.mode == "segments_sheet":
-            print("DEBUG: Detected segments_sheet mode, calling _generate_segments_preview")
+            logger.debug("Detected segments_sheet mode, calling _generate_segments_preview")
             try:
                 return self._generate_segments_preview()
             except Exception as e:
                 # If segments preview fails, fall back to regular sheet preview
-                print(f"DEBUG: Failed to generate segments preview: {e}")
-                print("DEBUG: Falling back to regular sheet preview")
+                logger.debug("Failed to generate segments preview: %s", e)
+                logger.debug("Falling back to regular sheet preview")
                 # Continue with regular sheet preview below
         
         # Get layout settings
@@ -1031,12 +1034,12 @@ class ModernExportSettings(WizardStep):
     
     def _generate_segments_preview(self) -> QPixmap:
         """Generate preview for segments per row mode."""
-        print("DEBUG: _generate_segments_preview called")
-        print(f"DEBUG: Sprites available: {len(self._sprites)}")
-        print(f"DEBUG: Segment manager available: {self._segment_manager is not None}")
-        
+        logger.debug("_generate_segments_preview called")
+        logger.debug("Sprites available: %d", len(self._sprites))
+        logger.debug("Segment manager available: %s", self._segment_manager is not None)
+
         if not self._sprites or not self._segment_manager:
-            print("DEBUG: No sprites or segment manager, showing placeholder")
+            logger.debug("No sprites or segment manager, showing placeholder")
             # Show placeholder if no segments available
             pixmap = QPixmap(400, 200)
             pixmap.fill(Qt.white)
@@ -1058,13 +1061,13 @@ class ModernExportSettings(WizardStep):
         
         # Get all segments
         segments = self._segment_manager.get_all_segments() if self._segment_manager else []
-        print(f"DEBUG: Retrieved {len(segments)} segments from manager")
-        
+        logger.debug("Retrieved %d segments from manager", len(segments))
+
         for i, seg in enumerate(segments):
-            print(f"DEBUG:   Segment {i}: '{seg.name}' frames {seg.start_frame}-{seg.end_frame}")
-        
+            logger.debug("  Segment %d: '%s' frames %d-%d", i, seg.name, seg.start_frame, seg.end_frame)
+
         if not segments:
-            print("DEBUG: No segments found, showing placeholder")
+            logger.debug("No segments found, showing placeholder")
             # No segments, show placeholder
             pixmap = QPixmap(400, 200)
             pixmap.fill(Qt.white)
@@ -1084,15 +1087,15 @@ class ModernExportSettings(WizardStep):
         # Calculate layout for segments
         try:
             max_frames_in_segment = max(seg.end_frame - seg.start_frame + 1 for seg in segments)
-            print(f"DEBUG: Max frames in any segment: {max_frames_in_segment}")
+            logger.debug("Max frames in any segment: %d", max_frames_in_segment)
         except (ValueError, AttributeError) as e:
             # Handle case where segments might be malformed
-            print(f"DEBUG: Invalid segment data: {e}")
+            logger.debug("Invalid segment data: %s", e)
             max_frames_in_segment = 1
-        
+
         rows = len(segments)
         cols = max_frames_in_segment
-        print(f"DEBUG: Preview layout will be {rows} rows x {cols} cols")
+        logger.debug("Preview layout will be %d rows x %d cols", rows, cols)
         
         # Get spacing
         spacing = self._settings_widgets.get('spacing', QSlider()).value() if 'spacing' in self._settings_widgets else 0
@@ -1275,29 +1278,29 @@ class ModernExportSettings(WizardStep):
     
     def on_entering(self):
         """Called when entering this step."""
-        print("DEBUG: ModernExportSettings.on_entering called")
-        
+        logger.debug("ModernExportSettings.on_entering called")
+
         # Get preset from wizard
         wizard = self.parent()
         while wizard and not hasattr(wizard, 'get_wizard_data'):
             wizard = wizard.parent()
-        
+
         if wizard:
             wizard_data = wizard.get_wizard_data()
-            print(f"DEBUG: Wizard data keys: {list(wizard_data.keys())}")
-            
+            logger.debug("Wizard data keys: %s", list(wizard_data.keys()))
+
             step_0_data = wizard_data.get('step_0', {})
-            print(f"DEBUG: Step 0 data keys: {list(step_0_data.keys())}")
-            
+            logger.debug("Step 0 data keys: %s", list(step_0_data.keys()))
+
             preset = step_0_data.get('preset')
-            print(f"DEBUG: Retrieved preset: {preset.name if preset else 'None'}")
-            
+            logger.debug("Retrieved preset: %s", preset.name if preset else 'None')
+
             if preset:
                 self._setup_for_preset(preset)
             else:
-                print("DEBUG: No preset found in wizard data")
+                logger.debug("No preset found in wizard data")
         else:
-            print("DEBUG: No wizard found in parent hierarchy")
+            logger.debug("No wizard found in parent hierarchy")
     
     def validate(self) -> bool:
         """Validate the step."""
@@ -1305,17 +1308,17 @@ class ModernExportSettings(WizardStep):
     
     def get_data(self) -> Dict[str, Any]:
         """Get all settings data."""
-        print("[DEBUG] ModernExportSettings.get_data() called")
-        print(f"[DEBUG] Current preset: {self._current_preset.name if self._current_preset else 'None'}")
-        print(f"[DEBUG] Current preset mode: {self._current_preset.mode if self._current_preset else 'None'}")
-        
+        logger.debug("ModernExportSettings.get_data() called")
+        logger.debug("Current preset: %s", self._current_preset.name if self._current_preset else 'None')
+        logger.debug("Current preset mode: %s", self._current_preset.mode if self._current_preset else 'None')
+
         data = {
             'output_dir': self.path_edit.text(),
             'format': self.format_combo.currentText(),
             'scale': self.scale_group.checkedId() if self.scale_group.checkedButton() else 1
         }
-        
-        print(f"[DEBUG] Base data: output_dir='{data['output_dir']}', format='{data['format']}', scale={data['scale']}")
+
+        logger.debug("Base data: output_dir='%s', format='%s', scale=%s", data['output_dir'], data['format'], data['scale'])
         
         if self._current_preset:
             if self._current_preset.mode == "sheet":
@@ -1382,9 +1385,9 @@ class ModernExportSettings(WizardStep):
                 else:
                     data['base_name'] = 'frame'
                 data['pattern'] = "{name}_{index:03d}"
-        
-        print(f"[DEBUG] Final get_data() result: {data}")
-        print(f"[DEBUG] Data keys: {list(data.keys())}")
+
+        logger.debug("Final get_data() result: %s", data)
+        logger.debug("Data keys: %s", list(data.keys()))
         return data
     
     def set_sprites(self, sprites: List[QPixmap]):

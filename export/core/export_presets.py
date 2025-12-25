@@ -4,6 +4,7 @@ Provides predefined export configurations for common use cases.
 Part of Phase 1: Export Dialog Redesign implementation.
 """
 
+import logging
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, List
 from enum import Enum
@@ -11,6 +12,8 @@ from pathlib import Path
 import os
 
 from config import Config
+
+logger = logging.getLogger(__name__)
 from .frame_exporter import SpriteSheetLayout
 
 
@@ -259,30 +262,30 @@ class ExportPresetManager:
     
     def get_preset(self, preset_type_or_name) -> Optional[ExportPreset]:
         """Get a preset by type or name."""
-        print(f"DEBUG: get_preset called with: {preset_type_or_name}")
-        
+        logger.debug("get_preset called with: %s", preset_type_or_name)
+
         # Handle ExportPresetType
         if isinstance(preset_type_or_name, ExportPresetType):
             preset = self.BUILTIN_PRESETS.get(preset_type_or_name)
-            print(f"DEBUG: Found preset by type: {preset.name if preset else 'None'}")
+            logger.debug("Found preset by type: %s", preset.name if preset else 'None')
             return preset
-        
+
         # Handle string name
         if isinstance(preset_type_or_name, str):
             # Check built-in presets
             for preset in self.BUILTIN_PRESETS.values():
                 if preset.name == preset_type_or_name:
-                    print(f"DEBUG: Found preset by name: {preset.name} (mode: {preset.mode})")
+                    logger.debug("Found preset by name: %s (mode: %s)", preset.name, preset.mode)
                     return preset
             # Check custom presets
             custom_preset = self._custom_presets.get(preset_type_or_name)
             if custom_preset:
-                print(f"DEBUG: Found custom preset: {custom_preset.name}")
+                logger.debug("Found custom preset: %s", custom_preset.name)
             else:
-                print(f"DEBUG: No preset found for name: {preset_type_or_name}")
+                logger.debug("No preset found for name: %s", preset_type_or_name)
             return custom_preset
-        
-        print(f"DEBUG: Invalid preset type: {type(preset_type_or_name)}")
+
+        logger.debug("Invalid preset type: %s", type(preset_type_or_name))
         return None
     
     def get_all_presets(self) -> List[ExportPreset]:
