@@ -3,13 +3,13 @@ Export Layout Configuration - Sprite sheet layout configuration UI components
 Part of Phase 1 refactoring to split export_dialog.py into smaller modules.
 """
 
-from typing import Optional, Tuple
+from typing import Optional
 from PySide6.QtWidgets import (
     QWidget, QGroupBox, QVBoxLayout, QHBoxLayout, QLabel, 
     QComboBox, QSpinBox, QPushButton, QColorDialog
 )
-from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QColor, QPixmap
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QColor
 
 from config import Config
 from ..core.frame_exporter import SpriteSheetLayout

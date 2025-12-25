@@ -3,7 +3,7 @@ Sprite Rendering Utilities
 Common utilities for properly rendering sprites without edge cutoff.
 """
 
-from PySide6.QtCore import QRect, QRectF, Qt
+from PySide6.QtCore import QRect, Qt
 from PySide6.QtGui import QPixmap, QPainter
 
 
@@ -33,15 +33,15 @@ def draw_pixmap_safe(painter: QPainter, target_rect: QRect, pixmap: QPixmap,
     
     if preserve_pixel_perfect:
         # Keep pixel-perfect scaling
-        painter.setRenderHint(QPainter.SmoothPixmapTransform, False)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)
         # But use antialiasing for edges
-        painter.setRenderHint(QPainter.Antialiasing, True)
-        
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+
         # Draw the pixmap directly without any offset adjustments
         painter.drawPixmap(target_rect, pixmap)
     else:
         # For smooth scaling, use standard approach
-        painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
         painter.drawPixmap(target_rect, pixmap)
     
     # Restore painter state
@@ -68,7 +68,7 @@ def scale_pixmap_safe(pixmap: QPixmap, width: int, height: int,
     
     # Create a pixmap with transparent padding
     padded_pixmap = QPixmap(pixmap.width() + 2, pixmap.height() + 2)
-    padded_pixmap.fill(Qt.transparent)
+    padded_pixmap.fill(Qt.GlobalColor.transparent)
     
     # Draw original pixmap centered
     painter = QPainter(padded_pixmap)
@@ -77,12 +77,12 @@ def scale_pixmap_safe(pixmap: QPixmap, width: int, height: int,
     
     # Scale with padding included
     if preserve_aspect:
-        scaled = padded_pixmap.scaled(width, height, 
-                                     Qt.KeepAspectRatio, 
-                                     Qt.SmoothTransformation)
+        scaled = padded_pixmap.scaled(width, height,
+                                     Qt.AspectRatioMode.KeepAspectRatio,
+                                     Qt.TransformationMode.SmoothTransformation)
     else:
         scaled = padded_pixmap.scaled(width, height,
-                                     Qt.IgnoreAspectRatio,
-                                     Qt.SmoothTransformation)
+                                     Qt.AspectRatioMode.IgnoreAspectRatio,
+                                     Qt.TransformationMode.SmoothTransformation)
     
     return scaled

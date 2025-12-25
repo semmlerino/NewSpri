@@ -10,12 +10,12 @@ from dataclasses import dataclass
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, 
-    QScrollArea, QFrame, QSlider, QCheckBox, QSizePolicy
+    QScrollArea, QCheckBox, QSizePolicy
 )
-from PySide6.QtCore import Qt, Signal, QRect, QSize, QTimer
+from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import (
-    QPixmap, QPainter, QPen, QBrush, QColor, QFont, 
-    QWheelEvent, QMouseEvent, QPaintEvent, QResizeEvent
+    QPixmap, QPainter, QPen, QColor, QFont, 
+    QWheelEvent, QMouseEvent, QPaintEvent
 )
 
 from config import Config
@@ -62,11 +62,11 @@ class SpriteSheetPreviewCanvas(QWidget):
         self._update_timer.timeout.connect(self._generate_preview)
         
         self.setMinimumSize(200, 150)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setMouseTracking(True)
-        
+
         # Enable focus for keyboard events
-        self.setFocusPolicy(Qt.WheelFocus)
+        self.setFocusPolicy(Qt.FocusPolicy.WheelFocus)
     
     def set_sprites(self, sprites: List[QPixmap]):
         """Set the sprites to preview."""
@@ -123,10 +123,10 @@ class SpriteSheetPreviewCanvas(QWidget):
             
             # Create preview pixmap
             self._preview_pixmap = QPixmap(preview_width, preview_height)
-            self._preview_pixmap.fill(Qt.transparent)
-            
+            self._preview_pixmap.fill(Qt.GlobalColor.transparent)
+
             painter = QPainter(self._preview_pixmap)
-            painter.setRenderHint(QPainter.Antialiasing, 
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing,
                                 self.preview_settings.preview_quality != "fast")
             
             # Draw background
@@ -246,19 +246,19 @@ class SpriteSheetPreviewCanvas(QWidget):
             if scale != 1.0:
                 scaled_sprite = sprite.scaled(
                     scaled_frame_width, scaled_frame_height,
-                    Qt.KeepAspectRatio, Qt.SmoothTransformation
+                    Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
                 )
             else:
                 scaled_sprite = sprite
-            
+
             painter.drawPixmap(x, y, scaled_sprite)
-            
+
             # Draw sprite border if enabled
             if self.preview_settings.show_sprite_borders:
                 pen = QPen(QColor(100, 100, 100, 100))
                 pen.setWidth(1)
                 painter.setPen(pen)
-                painter.setBrush(Qt.NoBrush)
+                painter.setBrush(Qt.BrushStyle.NoBrush)
                 painter.drawRect(x, y, scaled_frame_width, scaled_frame_height)
     
     def _draw_grid(self, painter: QPainter, cols: int, rows: int, scale: float):
@@ -280,7 +280,7 @@ class SpriteSheetPreviewCanvas(QWidget):
         # Draw padding area
         if scaled_padding > 0:
             painter.setBrush(padding_color)
-            painter.setPen(Qt.NoPen)
+            painter.setPen(Qt.PenStyle.NoPen)
             
             # Top padding
             painter.drawRect(0, 0, self._preview_pixmap.width(), scaled_padding)
@@ -296,7 +296,7 @@ class SpriteSheetPreviewCanvas(QWidget):
         # Draw spacing areas
         if scaled_spacing > 0:
             painter.setBrush(spacing_color)
-            painter.setPen(Qt.NoPen)
+            painter.setPen(Qt.PenStyle.NoPen)
             
             # Horizontal spacing
             for col in range(cols - 1):
@@ -312,8 +312,8 @@ class SpriteSheetPreviewCanvas(QWidget):
                                scaled_spacing)
         
         # Draw grid lines
-        painter.setPen(QPen(grid_color, 1, Qt.DashLine))
-        painter.setBrush(Qt.NoBrush)
+        painter.setPen(QPen(grid_color, 1, Qt.PenStyle.DashLine))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
         
         # Vertical grid lines
         for col in range(cols + 1):
@@ -336,8 +336,8 @@ class SpriteSheetPreviewCanvas(QWidget):
         font.setPointSize(max(8, int(10 * scale)))
         painter.setFont(font)
         painter.setPen(QPen(QColor(50, 50, 50, 200)))
-        
-        frame_width, frame_height = self._frame_size
+
+        _frame_width, _frame_height = self._frame_size
         scaled_spacing = int(self.layout.spacing * scale)
         scaled_padding = int(self.layout.padding * scale)
         
@@ -360,13 +360,13 @@ class SpriteSheetPreviewCanvas(QWidget):
         if not self._preview_valid:
             # Show loading state
             painter.setPen(QColor(150, 150, 150))
-            painter.drawText(self.rect(), Qt.AlignCenter, "Generating preview...")
+            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "Generating preview...")
             return
-        
+
         if not self._preview_pixmap:
             # Show empty state
             painter.setPen(QColor(150, 150, 150))
-            painter.drawText(self.rect(), Qt.AlignCenter, "No sprites to preview")
+            painter.drawText(self.rect(), Qt.AlignmentFlag.AlignCenter, "No sprites to preview")
             return
         
         # Calculate centered position with zoom and pan
@@ -385,7 +385,7 @@ class SpriteSheetPreviewCanvas(QWidget):
         else:
             scaled_preview = self._preview_pixmap.scaled(
                 preview_width, preview_height,
-                Qt.KeepAspectRatio, Qt.SmoothTransformation
+                Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
             )
             painter.drawPixmap(draw_x, draw_y, scaled_preview)
         
@@ -397,7 +397,7 @@ class SpriteSheetPreviewCanvas(QWidget):
     
     def wheelEvent(self, event: QWheelEvent):
         """Handle zoom with mouse wheel."""
-        if event.modifiers() & Qt.ControlModifier:
+        if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
             # Zoom
             zoom_in = event.angleDelta().y() > 0
             zoom_factor = 1.1 if zoom_in else 0.9
@@ -413,7 +413,7 @@ class SpriteSheetPreviewCanvas(QWidget):
     
     def mousePressEvent(self, event: QMouseEvent):
         """Handle mouse press for panning."""
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self._dragging = True
             self._last_mouse_pos = event.position().toPoint()
     
@@ -431,7 +431,7 @@ class SpriteSheetPreviewCanvas(QWidget):
     
     def mouseReleaseEvent(self, event: QMouseEvent):
         """Handle mouse release."""
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self._dragging = False
             self._last_mouse_pos = None
     
@@ -486,14 +486,14 @@ class SpriteSheetPreviewWidget(QWidget):
         scroll_area = QScrollArea()
         scroll_area.setWidget(self.canvas)
         scroll_area.setWidgetResizable(True)
-        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         layout.addWidget(scroll_area)
         
         # Info label
         self.info_label = QLabel("Select sprite sheet preset to see preview")
         self.info_label.setStyleSheet("color: #666; font-size: 11px; padding: 4px;")
-        self.info_label.setAlignment(Qt.AlignCenter)
+        self.info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.info_label)
     
     def _connect_signals(self):

@@ -1,0 +1,198 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "sprite-viewer"
+version = "1.0.0"
+description = "Professional PySide6-based sprite sheet animation viewer and editor"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "PySide6>=6.9.0",
+    "numpy>=1.21.0",
+    "Pillow>=8.0.0",
+    "scipy>=1.7.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov",
+    "pytest-qt>=4.2.0",
+    "pytest-mock",
+    "pytest-timeout",
+    "ruff",
+    "basedpyright",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = [".", "coordinators", "core", "export", "managers", "sprite_model", "ui", "utils"]
+exclude = [
+    "venv",
+    ".venv",
+    "archive",
+    "tests",
+    "tools",
+    "web_backend",
+    "web_frontend",
+    "build",
+    "dist",
+    ".tox",
+    "__pycache__",
+    ".ruff_cache",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "SIM",    # flake8-simplify
+    "TCH",    # flake8-type-checking
+    "RUF",    # Ruff-specific rules
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # function call in default argument (common in Qt)
+    "SIM108", # ternary operator (readability preference)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["config", "coordinators", "core", "export", "managers", "sprite_model", "ui", "utils", "tools"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+
+[tool.basedpyright]
+pythonVersion = "3.11"
+typeCheckingMode = "standard"
+include = [
+    "config.py",
+    "sprite_viewer.py",
+    "styles.py",
+    "coordinators",
+    "core",
+    "export",
+    "managers",
+    "sprite_model",
+    "ui",
+    "utils",
+]
+exclude = [
+    "**/venv",
+    "**/.venv",
+    "**/archive",
+    "**/tests",
+    "**/web_backend",
+    "**/web_frontend",
+    "**/build",
+    "**/dist",
+    "**/.tox",
+    "**/__pycache__",
+    "**/.ruff_cache",
+    "**/node_modules",
+]
+# Standard mode settings - good balance
+reportMissingImports = true
+reportMissingTypeStubs = false
+reportUnusedImport = true
+reportUnusedVariable = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["archive", "build", "dist", ".tox", "venv", "__pycache__"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+minversion = "7.0"
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "-v",
+    "--tb=short",
+    "--durations=10",
+    "--maxfail=3",
+    "--disable-warnings",
+    "-p", "no:cacheprovider",
+    "--ignore=archive/",
+]
+markers = [
+    "unit: Unit tests (fast, isolated components)",
+    "integration: Integration tests (multi-component workflows)",
+    "ui: UI component tests (requires Qt/display)",
+    "performance: Performance and load tests",
+    "slow: Tests that take more than 2 seconds",
+    "smoke: Critical functionality smoke tests",
+    "regression: Regression tests for bug fixes",
+    "requires_files: Tests requiring test sprite files or file I/O",
+    "memory_intensive: Tests that use significant memory",
+    "requires_qt: Tests requiring Qt event loop",
+    "requires_threading: Tests with threading/async operations",
+    "platform_specific: Platform-specific tests",
+    "signal_test: Tests for Qt signal/slot connections",
+    "benchmark: Performance benchmark tests",
+    "sprite_model: Tests for sprite model components",
+    "animation: Animation system tests",
+    "detection: Auto-detection algorithm tests",
+    "file_ops: File operation tests",
+    "config: Configuration system tests",
+    "phase4: Phase 4 Enhanced Live Preview System tests",
+    "visual_preview: Visual preview widget tests",
+    "layout_calculation: Layout algorithm tests",
+    "export_integration: Export dialog integration tests",
+    "preview_performance: Preview system performance tests",
+    "requires_display: Tests requiring GUI display",
+]
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning:pkg_resources.*",
+    "ignore::PendingDeprecationWarning",
+    "ignore:.*QApplication.*:DeprecationWarning",
+    "ignore:.*Qt.*:DeprecationWarning",
+    "ignore:.*PySide6.*:DeprecationWarning",
+    "ignore:.*shiboken6.*:DeprecationWarning",
+    "ignore::pytest.PytestUnraisableExceptionWarning",
+    "ignore:.*unclosed.*:ResourceWarning",
+    "ignore:.*QObject.*:RuntimeWarning",
+    "ignore:.*QThread.*:RuntimeWarning",
+    "ignore:.*QPixmap.*:RuntimeWarning",
+    "ignore:.*QWidget.*:RuntimeWarning",
+]
+
+[tool.coverage.run]
+source = ["."]
+omit = [
+    "venv/*",
+    "__pycache__/*",
+    "*.pyc",
+    "tests/*",
+    "archive/*",
+    "build/*",
+    "dist/*",
+    ".tox/*",
+    "setup.py",
+    "*/tests/*",
+    "*/test_*",
+    "*/conftest.py",
+    "*/__init__.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]

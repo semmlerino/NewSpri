@@ -5,7 +5,7 @@ Handles all UI component creation and initialization.
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QTabWidget,
-    QLabel, QPushButton, QMessageBox
+    QLabel, QPushButton
 )
 from PySide6.QtCore import Qt
 
@@ -129,7 +129,7 @@ class UISetupHelper(CoordinatorBase):
             self.main_toolbar.addSeparator()
             self.zoom_label = QLabel("100%")
             self.zoom_label.setMinimumWidth(Config.UI.ZOOM_LABEL_MIN_WIDTH)
-            self.zoom_label.setAlignment(Qt.AlignCenter)
+            self.zoom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
             self.zoom_label.setStyleSheet(StyleManager.get_zoom_display())
             self.main_toolbar.addWidget(self.zoom_label)
     
@@ -178,7 +178,7 @@ class UISetupHelper(CoordinatorBase):
         tab_layout.setSpacing(5)
         
         # Create splitter for responsive layout
-        splitter = QSplitter(Qt.Horizontal)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
         tab_layout.addWidget(splitter)
         
         # Left side - Canvas
@@ -204,7 +204,7 @@ class UISetupHelper(CoordinatorBase):
         main_layout.setContentsMargins(0, 0, 0, 0)
         
         # Create splitter for resizable layout
-        splitter = QSplitter(Qt.Horizontal)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
         main_layout.addWidget(splitter)
         
         # Left side: Grid view with frames

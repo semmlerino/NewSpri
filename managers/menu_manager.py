@@ -4,15 +4,14 @@ Provides structured menu definitions and dynamic updates.
 Part of Phase 5: Architecture refactoring for better maintainability.
 """
 
-from typing import Dict, List, Optional, Union, Any
+from typing import Dict, List, Optional
 from dataclasses import dataclass
 from enum import Enum
 
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QWidget, QMenuBar, QMenu, QToolBar, QMainWindow
-from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QMenuBar, QMenu, QToolBar, QMainWindow
 
-from managers.action_manager import get_actionmanager, ActionManager
+from managers.action_manager import get_actionmanager
 
 
 class MenuItemType(Enum):

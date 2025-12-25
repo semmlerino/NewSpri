@@ -20,7 +20,6 @@ try:
     
 except ImportError as e:
     # Critical error - the modular implementation should always be available
-    import sys
     
     error_msg = f"""
 ❌ CRITICAL ERROR: Could not import modular SpriteModel implementation.

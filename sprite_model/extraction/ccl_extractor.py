@@ -209,8 +209,8 @@ def detect_sprites_ccl_enhanced(image_path: str) -> Optional[dict]:
         # Pre-analyze for irregular collections before merging
         widths = [w for x, y, w, h in sprite_bounds]
         heights = [h for x, y, w, h in sprite_bounds]
-        avg_width = np.mean(widths)
-        avg_height = np.mean(heights)
+        np.mean(widths)
+        np.mean(heights)
         width_std = np.std(widths)
         height_std = np.std(heights)
         
@@ -405,7 +405,7 @@ def _analyze_ccl_results(sprite_bounds: List[Tuple[int, int, int, int]],
     
     if uniform_size and len(sprite_bounds) >= 2:  # Lowered threshold from 4 to 2
         # Infer grid structure from sprite positions (not content bounds)
-        sorted_sprites = sorted(sprite_bounds, key=lambda s: (s[1], s[0]))
+        sorted(sprite_bounds, key=lambda s: (s[1], s[0]))
         debug_log.append(f"   🗂️ Sorted sprites by position for grid analysis")
         
         # Extract sprite center positions

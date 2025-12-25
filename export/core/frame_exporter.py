@@ -490,15 +490,15 @@ class ExportWorker(QThread):
         return sprite_sheet
     
     def _draw_sprites_with_layout(self, sprite_sheet: QPixmap, cols: int, rows: int,
-                                frame_width: int, frame_height: int, 
+                                frame_width: int, frame_height: int,
                                 layout: SpriteSheetLayout):
         """Draw all frames onto the sprite sheet with proper spacing and layout."""
         painter = QPainter(sprite_sheet)
-        
+
         # Enable high-quality rendering if configured
         if Config.Export.ENABLE_ANTIALIASING:
-            painter.setRenderHint(QPainter.Antialiasing)
-            painter.setRenderHint(QPainter.SmoothPixmapTransform)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
         for i, frame in enumerate(self.task.frames):
             if self._cancelled:
@@ -557,9 +557,9 @@ class ExportWorker(QThread):
         
         # Enable high-quality rendering if configured
         if Config.Export.ENABLE_ANTIALIASING:
-            painter.setRenderHint(QPainter.Antialiasing)
-            painter.setRenderHint(QPainter.SmoothPixmapTransform)
-        
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
         # Draw each segment on its own row
         for row_idx, segment in enumerate(self.task.segment_info):
             start = segment['start_frame']
@@ -604,8 +604,8 @@ class ExportWorker(QThread):
         return pixmap.scaled(
             new_width, 
             new_height, 
-            aspectMode=1,  # KeepAspectRatio
-            mode=1  # SmoothTransformation
+            aspectMode=Qt.AspectRatioMode.KeepAspectRatio,
+            mode=Qt.TransformationMode.SmoothTransformation
         )
 
 

@@ -6,11 +6,10 @@ Part of Phase 1: Export Dialog Redesign implementation.
 
 from typing import Optional, List
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QFrame, QSizePolicy, QGraphicsDropShadowEffect, QButtonGroup
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QGraphicsDropShadowEffect
 )
-from PySide6.QtCore import Qt, Signal, QPropertyAnimation, QEasingCurve, QRect, QTimer
-from PySide6.QtGui import QFont, QPalette, QColor, QPainter, QPen, QBrush
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QFont, QColor
 
 from ..core.export_presets import ExportPreset, ExportPresetType, get_preset_manager
 
@@ -33,8 +32,8 @@ class ExportPresetCard(QFrame):
     def _setup_ui(self):
         """Set up the card UI elements."""
         self.setFixedSize(180, 120)
-        self.setFrameStyle(QFrame.Box)
-        self.setCursor(Qt.PointingHandCursor)
+        self.setFrameStyle(QFrame.Shape.Box)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         
         # Main layout
         layout = QVBoxLayout(self)
@@ -50,7 +49,7 @@ class ExportPresetCard(QFrame):
         icon_font = QFont()
         icon_font.setPointSize(24)
         self.icon_label.setFont(icon_font)
-        self.icon_label.setAlignment(Qt.AlignCenter)
+        self.icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.icon_label.setFixedSize(32, 32)
         top_layout.addWidget(self.icon_label)
         
@@ -81,7 +80,7 @@ class ExportPresetCard(QFrame):
         tech_font.setPointSize(8)
         self.tech_label.setFont(tech_font)
         self.tech_label.setStyleSheet("color: #888; font-weight: 500;")
-        self.tech_label.setAlignment(Qt.AlignCenter)
+        self.tech_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(self.tech_label)
         
         # Set tooltip
@@ -168,7 +167,7 @@ class ExportPresetCard(QFrame):
     
     def mousePressEvent(self, event):
         """Handle mouse click to select preset."""
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.selected.emit(self.preset)
         super().mousePressEvent(event)
     
@@ -293,7 +292,7 @@ class ExportPresetSelector(QWidget):
         # This could be implemented to show the advanced dialog
         custom_card = QFrame()
         custom_card.setFixedSize(180, 120)
-        custom_card.setFrameStyle(QFrame.Box)
+        custom_card.setFrameStyle(QFrame.Shape.Box)
         custom_card.setStyleSheet("""
             QFrame {
                 background-color: #f9f9f9;
@@ -310,22 +309,22 @@ class ExportPresetSelector(QWidget):
         plus_font = QFont()
         plus_font.setPointSize(24)
         plus_label.setFont(plus_font)
-        plus_label.setAlignment(Qt.AlignCenter)
+        plus_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         custom_layout.addWidget(plus_label)
-        
+
         # Custom label
         custom_label = QLabel("Custom Settings")
         custom_font = QFont()
         custom_font.setPointSize(10)
         custom_font.setBold(True)
         custom_label.setFont(custom_font)
-        custom_label.setAlignment(Qt.AlignCenter)
+        custom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         custom_layout.addWidget(custom_label)
-        
+
         # Description
         desc_label = QLabel("Advanced options")
         desc_label.setStyleSheet("color: #666; font-size: 9px;")
-        desc_label.setAlignment(Qt.AlignCenter)
+        desc_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         custom_layout.addWidget(desc_label)
         
         self.cards_layout.insertWidget(len(self._cards), custom_card)

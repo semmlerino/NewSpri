@@ -24,8 +24,8 @@ class SpriteCanvas(QLabel):
         super().__init__()
         self.setMinimumSize(Config.Canvas.MIN_WIDTH, Config.Canvas.MIN_HEIGHT)
         self.setStyleSheet(StyleManager.get_canvas_normal())
-        self.setAlignment(Qt.AlignCenter)
-        self.setCursor(Qt.OpenHandCursor)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.setCursor(Qt.CursorShape.OpenHandCursor)
         self.setContentsMargins(0, 0, 0, 0)
         
         # Canvas properties
@@ -171,8 +171,8 @@ class SpriteCanvas(QLabel):
         """Custom paint event for rendering sprite with background and overlays."""
         painter = QPainter(self)
         # Use antialiasing to prevent edge cutoff
-        painter.setRenderHint(QPainter.Antialiasing, True)
-        painter.setRenderHint(QPainter.SmoothPixmapTransform, False)  # Keep pixel-perfect for sprites
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)  # Keep pixel-perfect for sprites
         
         # Get the full widget rect
         rect = self.rect()
@@ -191,7 +191,7 @@ class SpriteCanvas(QLabel):
         if self._pixmap and not self._pixmap.isNull():
             # Create a temporary pixmap with 1px border to prevent edge cutoff
             temp_pixmap = QPixmap(self._pixmap.width() + 2, self._pixmap.height() + 2)
-            temp_pixmap.fill(Qt.transparent)
+            temp_pixmap.fill(Qt.GlobalColor.transparent)
             
             temp_painter = QPainter(temp_pixmap)
             temp_painter.drawPixmap(1, 1, self._pixmap)
@@ -246,7 +246,7 @@ class SpriteCanvas(QLabel):
         font.setPointSize(Config.Font.FRAME_INFO_FONT_SIZE)
         font.setBold(True)
         painter.setFont(font)
-        painter.drawText(info_rect, Qt.AlignCenter, f"Frame {self._current_frame + 1}/{self._total_frames}")
+        painter.drawText(info_rect, Qt.AlignmentFlag.AlignCenter, f"Frame {self._current_frame + 1}/{self._total_frames}")
     
     def _draw_checkerboard(self, painter: QPainter, rect: QRect):
         """Draw checkerboard background pattern."""
@@ -281,16 +281,16 @@ class SpriteCanvas(QLabel):
     
     def mousePressEvent(self, event):
         """Handle mouse press for panning."""
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self._last_pan_point = event.position().toPoint()
-            self.setCursor(Qt.ClosedHandCursor)
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
     
     def mouseMoveEvent(self, event):
         """Handle mouse move for panning and coordinate tracking."""
         mouse_pos = event.position().toPoint()
         
         # Handle panning if left button is pressed
-        if self._last_pan_point and (event.buttons() & Qt.LeftButton):
+        if self._last_pan_point and (event.buttons() & Qt.MouseButton.LeftButton):
             delta = mouse_pos - self._last_pan_point
             self._pan_offset[0] += delta.x()
             self._pan_offset[1] += delta.y()
@@ -304,9 +304,9 @@ class SpriteCanvas(QLabel):
     
     def mouseReleaseEvent(self, event):
         """Handle mouse release."""
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self._last_pan_point = None
-            self.setCursor(Qt.OpenHandCursor)
+            self.setCursor(Qt.CursorShape.OpenHandCursor)
     
     def wheelEvent(self, event):
         """Handle mouse wheel for zooming."""

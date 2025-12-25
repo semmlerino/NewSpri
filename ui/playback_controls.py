@@ -27,7 +27,7 @@ class PlaybackControls(QFrame):
     
     def __init__(self):
         super().__init__()
-        self.setFrameStyle(QFrame.StyledPanel)
+        self.setFrameStyle(QFrame.Shape.StyledPanel)
         self.setStyleSheet(StyleManager.get_playback_controls_frame())
         
         layout = QVBoxLayout(self)
@@ -54,7 +54,7 @@ class PlaybackControls(QFrame):
         nav_layout.addWidget(self.prev_btn)
         
         # Frame slider in the middle
-        self.frame_slider = QSlider(Qt.Horizontal)
+        self.frame_slider = QSlider(Qt.Orientation.Horizontal)
         self.frame_slider.setMinimum(Config.Slider.FRAME_SLIDER_MIN)
         self.frame_slider.setMaximum(0)
         self.frame_slider.valueChanged.connect(self.frameChanged)
@@ -74,17 +74,17 @@ class PlaybackControls(QFrame):
         fps_label.setStyleSheet(StyleManager.get_speed_label())
         fps_layout.addWidget(fps_label)
         
-        self.fps_slider = QSlider(Qt.Horizontal)
+        self.fps_slider = QSlider(Qt.Orientation.Horizontal)
         self.fps_slider.setRange(Config.Animation.MIN_FPS, Config.Animation.MAX_FPS)
         self.fps_slider.setValue(Config.Animation.DEFAULT_FPS)
-        self.fps_slider.setTickPosition(QSlider.TicksBelow)
+        self.fps_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.fps_slider.setTickInterval(Config.Slider.FPS_SLIDER_TICK_INTERVAL)
         self.fps_slider.valueChanged.connect(self._on_fps_changed)
         fps_layout.addWidget(self.fps_slider, 1)
         
         self.fps_value = QLabel(f"{Config.Animation.DEFAULT_FPS}")
         self.fps_value.setMinimumWidth(Config.Slider.FPS_VALUE_MIN_WIDTH)
-        self.fps_value.setAlignment(Qt.AlignRight)
+        self.fps_value.setAlignment(Qt.AlignmentFlag.AlignRight)
         fps_layout.addWidget(self.fps_value)
         
         layout.addLayout(fps_layout)

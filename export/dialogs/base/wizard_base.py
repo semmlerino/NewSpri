@@ -4,15 +4,14 @@ Provides a clean wizard interface for multi-step processes.
 Part of Export Dialog Usability Improvements.
 """
 
-from typing import List, Optional, Dict, Any
+from typing import List, Dict, Any
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QStackedWidget, QFrame, QSizePolicy, QProgressBar
+    QStackedWidget, QProgressBar
 )
-from PySide6.QtCore import Qt, Signal, QPropertyAnimation, QEasingCurve, QSize
-from PySide6.QtGui import QFont, QPalette
+from PySide6.QtCore import Signal, QPropertyAnimation, QEasingCurve
+from PySide6.QtGui import QFont
 
-from config import Config
 
 
 class WizardStep(QWidget):
@@ -268,7 +267,7 @@ class WizardWidget(QWidget):
         # Animation for step transitions
         self.transition_animation = QPropertyAnimation(self.content_stack, b"minimumHeight")
         self.transition_animation.setDuration(200)
-        self.transition_animation.setEasingCurve(QEasingCurve.InOutQuad)
+        self.transition_animation.setEasingCurve(QEasingCurve.Type.InOutQuad)
     
     def add_step(self, step: WizardStep):
         """Add a step to the wizard."""
@@ -376,7 +375,7 @@ class WizardWidget(QWidget):
         """Handle wizard completion."""
         # Collect all data
         all_data = {}
-        for i, step in enumerate(self.steps):
+        for _, step in enumerate(self.steps):
             step_data = step.get_data()
             all_data.update(step_data)
         

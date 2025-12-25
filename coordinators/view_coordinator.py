@@ -3,11 +3,8 @@ View Coordinator for SpriteViewer refactoring.
 Handles canvas display operations, zoom control, and view state management.
 """
 
-from typing import Optional
-from PySide6.QtCore import QObject
 
 from .base import CoordinatorBase
-from config import Config
 
 
 class ViewCoordinator(CoordinatorBase):

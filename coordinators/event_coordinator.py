@@ -3,7 +3,6 @@ Event Coordinator for SpriteViewer refactoring.
 Handles keyboard shortcuts, drag/drop events, and user input coordination.
 """
 
-from typing import Optional
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeySequence, QDragEnterEvent, QDropEvent
 
@@ -22,13 +21,13 @@ class EventCoordinator(CoordinatorBase):
     
     # Key mapping for special keys
     KEY_MAPPING = {
-        Qt.Key_Space: "Space",
-        Qt.Key_Left: "Left",
-        Qt.Key_Right: "Right",
-        Qt.Key_Home: "Home",
-        Qt.Key_End: "End",
-        Qt.Key_Plus: "+",
-        Qt.Key_Minus: "-",
+        Qt.Key.Key_Space: "Space",
+        Qt.Key.Key_Left: "Left",
+        Qt.Key.Key_Right: "Right",
+        Qt.Key.Key_Home: "Home",
+        Qt.Key.Key_End: "End",
+        Qt.Key.Key_Plus: "+",
+        Qt.Key.Key_Minus: "-",
     }
     
     def __init__(self, main_window):
@@ -95,30 +94,30 @@ class EventCoordinator(CoordinatorBase):
         if key in self.KEY_MAPPING:
             # Build custom sequence for special keys
             parts = []
-            if modifiers & Qt.ControlModifier:
+            if modifiers & Qt.KeyboardModifier.ControlModifier:
                 parts.append("Ctrl")
-            if modifiers & Qt.ShiftModifier:
+            if modifiers & Qt.KeyboardModifier.ShiftModifier:
                 parts.append("Shift")
-            if modifiers & Qt.AltModifier:
+            if modifiers & Qt.KeyboardModifier.AltModifier:
                 parts.append("Alt")
             parts.append(self.KEY_MAPPING[key])
             key_sequence_str = "+".join(parts)
-        elif Qt.Key_A <= key <= Qt.Key_Z:
+        elif Qt.Key.Key_A <= key <= Qt.Key.Key_Z:
             # Handle single letter keys specially - QKeySequence may not format them correctly
-            if modifiers == Qt.NoModifier:
+            if modifiers == Qt.KeyboardModifier.NoModifier:
                 # For single letters with no modifiers, use the letter directly
                 key_sequence_str = chr(key)
             # else let QKeySequence handle modified letters (Ctrl+A, etc.)
-        elif Qt.Key_0 <= key <= Qt.Key_9:
+        elif Qt.Key.Key_0 <= key <= Qt.Key.Key_9:
             # Handle single digit keys specially
-            if modifiers == Qt.NoModifier:
+            if modifiers == Qt.KeyboardModifier.NoModifier:
                 # For single digits with no modifiers, use the digit directly
                 key_sequence_str = chr(key)
             # else let QKeySequence handle modified digits (Alt+1, etc.)
-        elif key == Qt.Key_BracketLeft:
+        elif key == Qt.Key.Key_BracketLeft:
             # Handle bracket keys specially
             key_sequence_str = "["
-        elif key == Qt.Key_BracketRight:
+        elif key == Qt.Key.Key_BracketRight:
             key_sequence_str = "]"
         else:
             # Let parent handle other keys

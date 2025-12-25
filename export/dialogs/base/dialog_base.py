@@ -5,17 +5,15 @@ Part of Phase 1 refactoring to split export_dialog.py into smaller modules.
 
 import os
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 
 from PySide6.QtWidgets import (
     QDialog, QVBoxLayout, QWidget, QApplication, QMessageBox,
     QProgressBar, QLabel, QPushButton, QDialogButtonBox
 )
 from PySide6.QtCore import Qt, Signal, QTimer
-from PySide6.QtGui import QPixmap
 
 from config import Config
-from utils.styles import StyleManager
 
 
 class ExportDialogBase(QDialog):
@@ -102,7 +100,7 @@ class ExportDialogBase(QDialog):
         # Progress label
         self.progress_label = QLabel("")
         self.progress_label.setVisible(False)
-        self.progress_label.setAlignment(Qt.AlignCenter)
+        self.progress_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.progress_label.setStyleSheet("""
             QLabel {
                 color: #666;
@@ -121,18 +119,18 @@ class ExportDialogBase(QDialog):
         layout.setContentsMargins(0, 0, 0, 0)
         
         # Button box
-        button_box = QDialogButtonBox(Qt.Horizontal)
+        button_box = QDialogButtonBox(Qt.Orientation.Horizontal)
         
         # Export button
         self.export_button = QPushButton("Export Frames")
         self.export_button.setDefault(True)
         self.export_button.setMinimumHeight(Config.UI.PLAYBACK_BUTTON_MIN_HEIGHT)
-        button_box.addButton(self.export_button, QDialogButtonBox.AcceptRole)
-        
+        button_box.addButton(self.export_button, QDialogButtonBox.ButtonRole.AcceptRole)
+
         # Cancel button
         self.cancel_button = QPushButton("Cancel")
         self.cancel_button.setMinimumHeight(Config.UI.PLAYBACK_BUTTON_MIN_HEIGHT)
-        button_box.addButton(self.cancel_button, QDialogButtonBox.RejectRole)
+        button_box.addButton(self.cancel_button, QDialogButtonBox.ButtonRole.RejectRole)
         
         layout.addWidget(button_box)
         return container

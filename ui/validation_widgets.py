@@ -7,16 +7,15 @@ Part of Phase 1: Export Dialog Redesign implementation.
 import os
 import re
 from pathlib import Path
-from typing import Callable, Optional, Tuple, Dict, Any
+from typing import Callable, Optional, Tuple
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, 
-    QPushButton, QFileDialog, QFrame, QToolTip, QComboBox
+    QPushButton, QFileDialog, QFrame, QComboBox
 )
-from PySide6.QtCore import Qt, Signal, QTimer
-from PySide6.QtGui import QFont, QIcon, QPalette, QColor
+from PySide6.QtCore import Signal, QTimer
+from PySide6.QtGui import QFont
 
-from config import Config
 
 
 class ValidationState:
@@ -147,7 +146,7 @@ class ValidationMessageWidget(QFrame):
     
     def _setup_ui(self):
         """Set up the validation message widget."""
-        self.setFrameStyle(QFrame.NoFrame)
+        self.setFrameStyle(QFrame.Shape.NoFrame)
         
         layout = QHBoxLayout(self)
         layout.setContentsMargins(8, 4, 8, 4)

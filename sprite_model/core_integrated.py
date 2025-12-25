@@ -4,18 +4,18 @@ Maintains complete API compatibility with original implementation.
 Part of Legacy Integration Phase 1: Create integrated SpriteModel structure.
 """
 
-from typing import List, Tuple, Optional, Callable
+from typing import List, Tuple, Optional
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QPixmap
 
 # Import all refactored modules
 from sprite_model.file_operations import FileLoader, FileValidator, MetadataExtractor
-from sprite_model.extraction import GridExtractor, GridConfig, GridLayout
+from sprite_model.extraction import GridExtractor, GridConfig
 from sprite_model.extraction.ccl_extractor import CCLExtractor
 from sprite_model.animation import AnimationStateManager
 from sprite_model.detection import (
     FrameDetector, MarginDetector, SpacingDetector, 
-    DetectionCoordinator, DetectionResult
+    DetectionCoordinator
 )
 from sprite_model.ccl import CCLOperations
 from sprite_model.extraction.background_detector import BackgroundDetector
@@ -102,8 +102,8 @@ class SpriteModel(QObject):
         """
         try:
             # Use FileLoader module
-            success, pixmap, metadata, message = self._file_loader.load_sprite_sheet(file_path)
-            
+            success, pixmap, _metadata, message = self._file_loader.load_sprite_sheet(file_path)
+
             if success:
                 # Store state
                 self._original_sprite_sheet = pixmap
@@ -132,8 +132,8 @@ class SpriteModel(QObject):
             return False, "No sprite sheet loaded"
         
         # Use FileLoader's reload method
-        success, pixmap, metadata, message = self._file_loader.reload_sprite_sheet(self._file_path)
-        
+        success, pixmap, _metadata, message = self._file_loader.reload_sprite_sheet(self._file_path)
+
         if success:
             self._original_sprite_sheet = pixmap
             # Re-extract frames if we had them before
@@ -681,92 +681,3 @@ class SpriteModel(QObject):
                 info_parts.append(f"Frame size: {self._frame_width}x{self._frame_height}")
         
         return " | ".join(info_parts)
-    
-    # Frame extraction setting getters (for web API compatibility)
-    def get_frame_width(self) -> int:
-        """Get current frame width."""
-        return self._frame_width
-    
-    def get_frame_height(self) -> int:
-        """Get current frame height."""
-        return self._frame_height
-    
-    def get_offset_x(self) -> int:
-        """Get current X offset."""
-        return self._offset_x
-    
-    def get_offset_y(self) -> int:
-        """Get current Y offset."""
-        return self._offset_y
-    
-    def get_spacing_x(self) -> int:
-        """Get current X spacing."""
-        return self._spacing_x
-    
-    def get_spacing_y(self) -> int:
-        """Get current Y spacing."""
-        return self._spacing_y
-    
-    def get_frame(self, frame_id: int):
-        """Get a specific frame by ID."""
-        if 0 <= frame_id < len(self._sprite_frames):
-            return self._sprite_frames[frame_id]
-        return None
-    
-    def has_sprite_sheet(self) -> bool:
-        """Check if sprite sheet is loaded (web API compatibility)."""
-        return self.is_loaded
-    
-    def detect_frames(self) -> List[dict]:
-        """Auto-detect frames and return results (web API compatibility)."""
-        if not self.is_loaded:
-            return []
-        
-        # Use the existing auto_detect_frame_size method which returns multiple results
-        try:
-            # Try using the auto frame size detection
-            results = self.auto_detect_frame_size()
-            
-            if results and len(results) > 0:
-                # Convert to web API format
-                formatted_results = []
-                for result in results[:5]:  # Return top 5 results
-                    formatted_results.append({
-                        'width': result.get('width', 0),
-                        'height': result.get('height', 0),
-                        'offset_x': result.get('offset_x', 0),
-                        'offset_y': result.get('offset_y', 0),
-                        'spacing_x': result.get('spacing_x', 0),
-                        'spacing_y': result.get('spacing_y', 0),
-                        'frame_count': result.get('frame_count', 0),
-                        'confidence': result.get('confidence', 'medium')
-                    })
-                return formatted_results
-        except:
-            pass
-        
-        # Fallback: try basic detection and create a single result
-        try:
-            # Use basic frame size detection as fallback
-            from config import Config
-            for size_preset in Config.FrameExtraction.SQUARE_PRESETS:
-                width, height = size_preset[1], size_preset[2]
-                try:
-                    success, message, frame_count = self.extract_frames(width, height, 0, 0, 0, 0)
-                    if success and frame_count > 1:
-                        return [{
-                            'width': width,
-                            'height': height,
-                            'offset_x': 0,
-                            'offset_y': 0,
-                            'spacing_x': 0,
-                            'spacing_y': 0,
-                            'frame_count': frame_count,
-                            'confidence': 'low'
-                        }]
-                except:
-                    continue
-        except:
-            pass
-        
-        return []

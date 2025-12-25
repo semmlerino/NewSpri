@@ -4,7 +4,7 @@ Simple progress dialog for export operations.
 """
 
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLabel, QProgressBar, QPushButton
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Signal
 
 
 class ExportProgressDialog(QDialog):

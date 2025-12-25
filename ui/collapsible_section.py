@@ -4,16 +4,14 @@ Reusable collapsible section for progressive disclosure in the UI.
 Part of Phase 1: Export Dialog Redesign implementation.
 """
 
-from typing import Optional
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QFrame, QToolButton, QGraphicsOpacityEffect, QSizePolicy
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QToolButton, QGraphicsOpacityEffect, QSizePolicy
 )
 from PySide6.QtCore import (
     Qt, Signal, QPropertyAnimation, QEasingCurve, 
-    QParallelAnimationGroup, QRect, QSize
+    QParallelAnimationGroup
 )
-from PySide6.QtGui import QFont, QIcon, QPalette, QColor
+from PySide6.QtGui import QFont
 
 
 class CollapsibleSection(QWidget):
@@ -47,8 +45,8 @@ class CollapsibleSection(QWidget):
         
         # Content container
         self.content_frame = QFrame()
-        self.content_frame.setFrameStyle(QFrame.NoFrame)
-        self.content_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.content_frame.setFrameStyle(QFrame.Shape.NoFrame)
+        self.content_frame.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Fixed)
         
         # Content layout
         content_layout = QVBoxLayout(self.content_frame)
@@ -60,8 +58,8 @@ class CollapsibleSection(QWidget):
     def _create_header(self, title: str) -> QFrame:
         """Create the clickable header section."""
         header_frame = QFrame()
-        header_frame.setFrameStyle(QFrame.NoFrame)
-        header_frame.setCursor(Qt.PointingHandCursor)
+        header_frame.setFrameStyle(QFrame.Shape.NoFrame)
+        header_frame.setCursor(Qt.CursorShape.PointingHandCursor)
         header_frame.setStyleSheet("""
             QFrame:hover {
                 background-color: #f5f5f5;
@@ -74,7 +72,7 @@ class CollapsibleSection(QWidget):
         
         # Expand/collapse arrow
         self.arrow_button = QToolButton()
-        self.arrow_button.setArrowType(Qt.DownArrow)
+        self.arrow_button.setArrowType(Qt.ArrowType.DownArrow)
         self.arrow_button.setAutoRaise(True)
         self.arrow_button.setFixedSize(16, 16)
         self.arrow_button.setStyleSheet("""
@@ -147,7 +145,7 @@ class CollapsibleSection(QWidget):
     
     def _on_header_clicked(self, event):
         """Handle header click to toggle section."""
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.toggle()
     
     def _on_animation_finished(self):
@@ -178,7 +176,7 @@ class CollapsibleSection(QWidget):
             self.content_frame.show()
             
             # Update arrow direction
-            self.arrow_button.setArrowType(Qt.DownArrow)
+            self.arrow_button.setArrowType(Qt.ArrowType.DownArrow)
             
             if animate:
                 # Get the content height
@@ -199,7 +197,7 @@ class CollapsibleSection(QWidget):
                 self.expanded.emit(True)
         else:
             # Update arrow direction
-            self.arrow_button.setArrowType(Qt.RightArrow)
+            self.arrow_button.setArrowType(Qt.ArrowType.RightArrow)
             
             if animate:
                 # Get current height

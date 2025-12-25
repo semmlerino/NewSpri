@@ -4,8 +4,6 @@ Configuration and Constants for Sprite Viewer
 Centralizes all magic numbers and settings for better maintainability.
 """
 
-from typing import Tuple, List
-from PySide6.QtCore import QSize
 from PySide6.QtGui import QColor
 
 

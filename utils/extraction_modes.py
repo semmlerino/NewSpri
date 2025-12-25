@@ -7,7 +7,7 @@ Part of Phase 3 refactoring: Complex Logic Simplification.
 from abc import ABC, abstractmethod
 from typing import Dict, Optional, Callable
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QWidget, QLabel
+from PySide6.QtWidgets import QLabel
 
 
 class ExtractionMode(ABC):

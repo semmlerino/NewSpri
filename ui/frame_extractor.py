@@ -9,7 +9,7 @@ from typing import Tuple
 
 from PySide6.QtWidgets import (
     QGroupBox, QVBoxLayout, QHBoxLayout, QLabel, QGridLayout,
-    QButtonGroup, QRadioButton, QFrame, QSpinBox, QPushButton, QCheckBox,
+    QButtonGroup, QRadioButton, QSpinBox, QPushButton, QCheckBox,
     QToolButton, QWidget
 )
 from PySide6.QtCore import Signal, Qt
@@ -17,7 +17,6 @@ from PySide6.QtCore import Signal, Qt
 from config import Config
 from utils.styles import StyleManager
 from utils.ui_common import AutoButtonManager
-from utils.extraction_modes import ExtractionModeStateMachine
 
 
 class FrameExtractor(QGroupBox):
@@ -331,7 +330,7 @@ class FrameExtractor(QGroupBox):
         
         # Toggle button (arrow)
         toggle_button = QToolButton()
-        toggle_button.setArrowType(Qt.DownArrow)
+        toggle_button.setArrowType(Qt.ArrowType.DownArrow)
         toggle_button.setAutoRaise(True)
         toggle_button.setFixedSize(16, 16)
         toggle_button.clicked.connect(lambda: self._toggle_section(toggle_button, content_widget))
@@ -358,9 +357,9 @@ class FrameExtractor(QGroupBox):
         
         # Update arrow direction
         if is_visible:
-            button.setArrowType(Qt.RightArrow)
+            button.setArrowType(Qt.ArrowType.RightArrow)
         else:
-            button.setArrowType(Qt.DownArrow)
+            button.setArrowType(Qt.ArrowType.DownArrow)
     
     def _on_custom_size_changed(self):
         """Handle custom size change."""

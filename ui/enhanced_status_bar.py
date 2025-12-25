@@ -7,10 +7,9 @@ Enhanced status bar with detailed application state information.
 Shows frame info, extraction mode, zoom level, FPS, and mouse coordinates.
 """
 
-from typing import Optional, Tuple
+from typing import Optional
 from PySide6.QtWidgets import QStatusBar, QLabel, QWidget, QHBoxLayout
-from PySide6.QtCore import QObject, Signal, QTimer, Qt
-from PySide6.QtGui import QFont
+from PySide6.QtCore import QObject, QTimer
 
 from config import Config
 

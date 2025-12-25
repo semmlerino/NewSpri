@@ -4,7 +4,7 @@ Handles file loading, drag/drop, recent files, and file validation.
 """
 
 import os
-from typing import Optional, Callable, List, Tuple
+from typing import Optional, Callable, Tuple
 from PySide6.QtWidgets import QFileDialog
 from PySide6.QtCore import QObject, Signal, QMimeData
 from PySide6.QtGui import QDropEvent

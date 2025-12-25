@@ -195,11 +195,11 @@ class AnimationSegmentController(QObject):
             timestamp = int(time.time() * 1000) % 10000
             new_name = f"{base_name}_{timestamp}"
             
-            success, error = self._segment_manager.add_segment(
-                new_name, 
-                segment.start_frame, 
-                segment.end_frame, 
-                segment.color, 
+            success, _error = self._segment_manager.add_segment(
+                new_name,
+                segment.start_frame,
+                segment.end_frame,
+                segment.color,
                 getattr(segment, 'description', '')
             )
             
@@ -488,7 +488,7 @@ class AnimationSegmentController(QObject):
             )
         )
         
-        if dialog.exec() == QDialog.Accepted:
+        if dialog.exec() == QDialog.DialogCode.Accepted:
             self.statusMessage.emit(f"Exported segment '{segment.name}'")
     
     def _handle_segment_export(

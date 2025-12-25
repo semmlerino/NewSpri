@@ -6,7 +6,7 @@ Part of Phase 3 refactoring: Complex Logic Simplification.
 
 import math
 from dataclasses import dataclass
-from typing import List, Tuple, Optional
+from typing import List, Tuple
 from abc import ABC, abstractmethod
 
 from config import Config

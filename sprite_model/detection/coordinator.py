@@ -7,7 +7,7 @@ Comprehensive auto-detection workflow that coordinates margin, frame size, and s
 Extracted from monolithic SpriteModel for better separation of concerns and testability.
 """
 
-from typing import Tuple, Dict, Any, Optional
+from typing import Tuple, Optional
 from PySide6.QtGui import QPixmap
 
 from .frame_detector import FrameDetector
@@ -97,14 +97,12 @@ class DetectionCoordinator:
             
             # Step 2: Detect optimal frame size with multiple fallback strategies
             results.append("\n🔍 Step 2: Detecting frame size...")
-            frame_success = False
             
             # Try content-based detection first
             try:
                 content_success, frame_width, frame_height, content_msg = self.frame_detector.detect_content_based(sprite_sheet)
                 
                 if content_success:
-                    frame_success = True
                     result.frame_width = frame_width
                     result.frame_height = frame_height
                     results.append(f"   ✓ {content_msg}")
@@ -118,7 +116,6 @@ class DetectionCoordinator:
                         rect_success, frame_width, frame_height, frame_msg = self.frame_detector.detect_rectangular_frames(sprite_sheet)
                         
                         if rect_success:
-                            frame_success = True
                             result.frame_width = frame_width
                             result.frame_height = frame_height
                             results.append(f"   ✓ {frame_msg}")
@@ -135,7 +132,6 @@ class DetectionCoordinator:
                             try:
                                 basic_success, basic_width, basic_height, basic_msg = self.frame_detector.detect_frame_size(sprite_sheet)
                                 if basic_success:
-                                    frame_success = True
                                     result.frame_width = basic_width
                                     result.frame_height = basic_height
                                     results.append(f"   ✓ Basic detection: {basic_msg}")

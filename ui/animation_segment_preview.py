@@ -4,20 +4,16 @@ Displays each animation segment with individual playback controls.
 Part of Animation Segment System Enhancement.
 """
 
-from typing import Dict, List, Optional, Set
-from dataclasses import dataclass
+from typing import Dict, List
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QScrollArea, 
     QLabel, QPushButton, QFrame, QToolButton, QSpinBox,
     QCheckBox, QMenu, QInputDialog
 )
-from PySide6.QtCore import Qt, Signal, QTimer, QSize
-from PySide6.QtGui import QPixmap, QPainter, QColor, QIcon
+from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtGui import QPixmap, QPainter, QColor
 
-from config import Config
-from core.animation_controller import AnimationController
-from sprite_model.core import SpriteModel
 
 
 class SegmentPreviewItem(QFrame):
@@ -65,12 +61,12 @@ class SegmentPreviewItem(QFrame):
         self._setup_ui()
         
         # Enable context menu
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.customContextMenuRequested.connect(self._show_context_menu)
         
     def _setup_ui(self):
         """Set up the preview item UI."""
-        self.setFrameStyle(QFrame.Box)
+        self.setFrameStyle(QFrame.Shape.Box)
         self.setStyleSheet(f"""
             QFrame {{
                 border: 2px solid {self.segment_color.name()};
@@ -229,7 +225,7 @@ class SegmentPreviewItem(QFrame):
         # Right side: Animation preview
         self.preview_label = QLabel()
         self.preview_label.setFixedSize(120, 120)  # Keep fixed size
-        self.preview_label.setAlignment(Qt.AlignCenter)
+        self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview_label.setContentsMargins(0, 0, 0, 0)
         self.preview_label.setStyleSheet("""
             QLabel {
@@ -253,7 +249,7 @@ class SegmentPreviewItem(QFrame):
             
             # Create padded pixmap to prevent edge cutoff
             padded = QPixmap(pixmap.width() + 2, pixmap.height() + 2)
-            padded.fill(Qt.transparent)
+            padded.fill(Qt.GlobalColor.transparent)
             
             painter = QPainter(padded)
             painter.drawPixmap(1, 1, pixmap)
@@ -263,8 +259,8 @@ class SegmentPreviewItem(QFrame):
             scaled_size = int(112 * self._zoom_factor)  # Adjust for padding
             scaled = padded.scaled(
                 scaled_size, scaled_size,
-                Qt.KeepAspectRatio,
-                Qt.SmoothTransformation
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
             )
             self.preview_label.setPixmap(scaled)
             self.frame_counter.setText(f"{index + 1} / {len(self._frames)}")
@@ -639,7 +635,7 @@ class AnimationSegmentPreview(QWidget):
         # Zoom level label
         self.zoom_label = QLabel("100%")
         self.zoom_label.setStyleSheet("color: #666; font-size: 12px; min-width: 40px; text-align: center;")
-        self.zoom_label.setAlignment(Qt.AlignCenter)
+        self.zoom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         zoom_layout.addWidget(self.zoom_label)
         
         # Zoom in button
@@ -680,12 +676,12 @@ class AnimationSegmentPreview(QWidget):
         # Scroll area for segment previews
         self.scroll_area = QScrollArea()
         self.scroll_area.setWidgetResizable(True)
-        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         
         # Container for preview items
         self.container = QWidget()
         self.container_layout = QVBoxLayout(self.container)
-        self.container_layout.setAlignment(Qt.AlignTop)
+        self.container_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.container_layout.setSpacing(4)
         
         self.scroll_area.setWidget(self.container)
@@ -693,7 +689,7 @@ class AnimationSegmentPreview(QWidget):
         
         # Empty state
         self.empty_label = QLabel("No animation segments yet.\nSelect frames and right-click to create.")
-        self.empty_label.setAlignment(Qt.AlignCenter)
+        self.empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.empty_label.setStyleSheet("""
             QLabel {
                 color: #999;

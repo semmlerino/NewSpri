@@ -4,19 +4,17 @@ Provides a grid view of all sprite frames with selection capabilities for animat
 Part of Animation Splitting Feature implementation.
 """
 
-from typing import List, Optional, Tuple, Dict, Any, Set
+from typing import List, Optional, Dict, Set
 from dataclasses import dataclass
 
 from PySide6.QtWidgets import (
     QWidget, QScrollArea, QGridLayout, QVBoxLayout, QHBoxLayout, 
-    QLabel, QPushButton, QFrame, QSizePolicy, QToolTip, QMenu,
-    QInputDialog, QMessageBox, QSplitter, QApplication
+    QLabel, QPushButton, QMenu,
+    QInputDialog, QMessageBox, QApplication
 )
-from PySide6.QtCore import Qt, Signal, QSize, QPoint, QRect
-from PySide6.QtGui import QPixmap, QPainter, QColor, QPen, QFont, QMouseEvent, QContextMenuEvent
+from PySide6.QtCore import Qt, Signal, QPoint
+from PySide6.QtGui import QPixmap, QPainter, QColor, QMouseEvent
 
-from config import Config
-from utils.styles import StyleManager
 
 
 @dataclass
@@ -95,7 +93,7 @@ class FrameThumbnail(QLabel):
         if pixmap and not pixmap.isNull():
             # Create padded pixmap to prevent edge cutoff
             padded = QPixmap(pixmap.width() + 2, pixmap.height() + 2)
-            padded.fill(Qt.transparent)
+            padded.fill(Qt.GlobalColor.transparent)
             
             painter = QPainter(padded)
             painter.drawPixmap(1, 1, pixmap)
@@ -105,12 +103,12 @@ class FrameThumbnail(QLabel):
             available_size = self._thumbnail_size - 4  # Account for padding
             scaled_pixmap = padded.scaled(
                 available_size, available_size,
-                Qt.KeepAspectRatio, Qt.SmoothTransformation
+                Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
             )
             self.setPixmap(scaled_pixmap)
         
         self.setFixedSize(self._thumbnail_size + 8, self._thumbnail_size + 8)  # +8 for border
-        self.setAlignment(Qt.AlignCenter)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setToolTip(f"Frame {self.frame_index}")
     
     def _update_style(self):
@@ -226,7 +224,7 @@ class FrameThumbnail(QLabel):
     
     def mousePressEvent(self, event: QMouseEvent):
         """Handle mouse press events with modifier support."""
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self._mouse_press_pos = event.position()
             # Convert modifiers to integer safely
             try:
@@ -240,19 +238,19 @@ class FrameThumbnail(QLabel):
                 modifiers_value = 0
             
             self.clicked.emit(self.frame_index, modifiers_value)
-        elif event.button() == Qt.RightButton:
+        elif event.button() == Qt.MouseButton.RightButton:
             self.rightClicked.emit(self.frame_index, event.globalPosition().toPoint())
         super().mousePressEvent(event)
     
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         """Handle double-click for frame preview."""
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.doubleClicked.emit(self.frame_index)
         super().mouseDoubleClickEvent(event)
     
     def mouseMoveEvent(self, event: QMouseEvent):
         """Handle mouse move for drag detection."""
-        if (event.buttons() & Qt.LeftButton and 
+        if (event.buttons() & Qt.MouseButton.LeftButton and 
             self._mouse_press_pos and
             (event.position() - self._mouse_press_pos).manhattanLength() > self._drag_threshold):
             self.dragStarted.emit(self.frame_index)
@@ -327,7 +325,7 @@ class AnimationGridView(QWidget):
         
         self._columns_display = QLabel(str(self._grid_columns))
         self._columns_display.setMinimumWidth(30)
-        self._columns_display.setAlignment(Qt.AlignCenter)
+        self._columns_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
         controls_layout.addWidget(self._columns_display)
         
         increase_btn = QPushButton("+")
@@ -371,8 +369,8 @@ class AnimationGridView(QWidget):
         # Scroll area for grid
         self._scroll_area = QScrollArea()
         self._scroll_area.setWidgetResizable(True)
-        self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         
         # Grid container
         self._grid_container = QWidget()
@@ -445,11 +443,11 @@ class AnimationGridView(QWidget):
             # If conversion fails, assume no modifiers
             mod_flags = Qt.KeyboardModifiers()
         
-        if mod_flags & Qt.ControlModifier or mod_flags & Qt.AltModifier:
+        if mod_flags & Qt.KeyboardModifier.ControlModifier or mod_flags & Qt.KeyboardModifier.AltModifier:
             # Ctrl/Alt+Click: Toggle individual frame selection
             print(f"DEBUG: Toggle selecting frame {frame_index}")
             self._toggle_frame_selection(frame_index)
-        elif mod_flags & Qt.ShiftModifier and self._last_clicked_frame is not None:
+        elif mod_flags & Qt.KeyboardModifier.ShiftModifier and self._last_clicked_frame is not None:
             # Shift+Click: Range selection from last clicked frame
             print(f"DEBUG: Range selecting from {self._last_clicked_frame} to {frame_index}")
             self._select_frame_range(self._last_clicked_frame, frame_index)
@@ -852,7 +850,7 @@ class AnimationGridView(QWidget):
     
     def mouseReleaseEvent(self, event: QMouseEvent):
         """Handle mouse release to end drag selection."""
-        if event.button() == Qt.LeftButton and self._is_dragging:
+        if event.button() == Qt.MouseButton.LeftButton and self._is_dragging:
             self._is_dragging = False
             self._drag_start_frame = None
             

@@ -8,7 +8,7 @@ Extracted from monolithic SpriteModel for better separation of concerns and test
 """
 
 import math
-from typing import Tuple, Optional, List
+from typing import Tuple, List
 from PySide6.QtGui import QPixmap
 from config import Config
 
@@ -138,8 +138,8 @@ class FrameDetector:
         try:
             # Convert to QImage for pixel analysis
             image = sprite_sheet.toImage()
-            width = image.width()
-            height = image.height()
+            image.width()
+            image.height()
             
             # Find content boundaries by analyzing transparency
             content_bounds = self._analyze_content_boundaries(image)

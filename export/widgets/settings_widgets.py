@@ -2,11 +2,11 @@
 Custom widget components for export settings.
 """
 
-from typing import Optional, List, Tuple
+from typing import List, Tuple
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QFrame, QLineEdit, QButtonGroup, QRadioButton, QSpinBox,
-    QFileDialog, QSizePolicy, QLayout
+    QFileDialog
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
@@ -18,7 +18,7 @@ class SettingsCard(QFrame):
     
     def __init__(self, title: str, icon: str = "", parent=None):
         super().__init__(parent)
-        self.setFrameStyle(QFrame.StyledPanel)
+        self.setFrameStyle(QFrame.Shape.StyledPanel)
         self.setStyleSheet("""
             QFrame {
                 background-color: #ffffff;
@@ -57,7 +57,7 @@ class SettingsCard(QFrame):
         # Label
         label_widget = QLabel(label)
         label_widget.setMinimumWidth(120)
-        label_widget.setAlignment(Qt.AlignRight | Qt.AlignVCenter)
+        label_widget.setAlignment(Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignVCenter)
         row_layout.addWidget(label_widget)
         
         # Widget

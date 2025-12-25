@@ -30,13 +30,13 @@ class CompactLivePreview(QGraphicsView):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setRenderHint(QPainter.Antialiasing)
+        self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
-        
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+
         # Modern frame style
-        self.setFrameStyle(QFrame.NoFrame)
+        self.setFrameStyle(QFrame.Shape.NoFrame)
         self.setStyleSheet("""
             QGraphicsView {
                 background-color: #f8f9fa;
@@ -108,7 +108,7 @@ class CompactLivePreview(QGraphicsView):
     def fit_to_view(self):
         """Fit preview to view with padding."""
         if self._pixmap_item:
-            self.fitInView(self._pixmap_item, Qt.KeepAspectRatio)
+            self.fitInView(self._pixmap_item, Qt.AspectRatioMode.KeepAspectRatio)
             self._zoom_level = 1.0
             # Add some padding
             self.scale(0.9, 0.9)
@@ -160,7 +160,7 @@ class ModernExportSettings(WizardStep):
         main_layout.setSpacing(0)
         
         # Content splitter
-        self.splitter = QSplitter(Qt.Horizontal)
+        self.splitter = QSplitter(Qt.Orientation.Horizontal)
         self.splitter.setChildrenCollapsible(False)
         self.splitter.setHandleWidth(1)
         self.splitter.setStyleSheet("""
@@ -189,7 +189,7 @@ class ModernExportSettings(WizardStep):
     def _create_settings_panel(self) -> QWidget:
         """Create compact settings panel."""
         panel = QFrame()
-        panel.setFrameStyle(QFrame.NoFrame)
+        panel.setFrameStyle(QFrame.Shape.NoFrame)
         panel.setStyleSheet("""
             QFrame {
                 background-color: #ffffff;
@@ -207,7 +207,7 @@ class ModernExportSettings(WizardStep):
         
         # Separator
         separator = QFrame()
-        separator.setFrameStyle(QFrame.HLine)
+        separator.setFrameStyle(QFrame.Shape.HLine)
         separator.setStyleSheet("background-color: #e9ecef;")
         separator.setFixedHeight(1)
         layout.addWidget(separator)
@@ -318,7 +318,7 @@ class ModernExportSettings(WizardStep):
         format_layout.addWidget(scale_label)
         
         self.scale_group = QButtonGroup()
-        for i, scale in enumerate([1, 2, 4]):
+        for _, scale in enumerate([1, 2, 4]):
             btn = QPushButton(f"{scale}x")
             btn.setCheckable(True)
             btn.setFixedSize(40, 28)
@@ -356,7 +356,7 @@ class ModernExportSettings(WizardStep):
     def _create_preview_panel(self) -> QWidget:
         """Create modern preview panel."""
         panel = QFrame()
-        panel.setFrameStyle(QFrame.NoFrame)
+        panel.setFrameStyle(QFrame.Shape.NoFrame)
         panel.setStyleSheet("background-color: #f8f9fa;")
         
         layout = QVBoxLayout(panel)
@@ -384,7 +384,7 @@ class ModernExportSettings(WizardStep):
         
         # Preview view
         self.preview_view = CompactLivePreview()
-        self.preview_view.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.preview_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         layout.addWidget(self.preview_view, 1)
         
         # Info overlay (floating)
@@ -437,7 +437,7 @@ class ModernExportSettings(WizardStep):
     def _create_bottom_bar(self) -> QWidget:
         """Create bottom action bar."""
         bar = QFrame()
-        bar.setFrameStyle(QFrame.NoFrame)
+        bar.setFrameStyle(QFrame.Shape.NoFrame)
         bar.setFixedHeight(70)
         bar.setStyleSheet("""
             QFrame {
@@ -648,10 +648,10 @@ class ModernExportSettings(WizardStep):
         spacing_label = QLabel("Spacing:")
         spacing_layout.addWidget(spacing_label)
         
-        self.spacing_slider = QSlider(Qt.Horizontal)
+        self.spacing_slider = QSlider(Qt.Orientation.Horizontal)
         self.spacing_slider.setRange(0, 32)
         self.spacing_slider.setValue(0)
-        self.spacing_slider.setTickPosition(QSlider.TicksBelow)
+        self.spacing_slider.setTickPosition(QSlider.TickPosition.TicksBelow)
         self.spacing_slider.setTickInterval(8)
         spacing_layout.addWidget(self.spacing_slider, 1)
         
@@ -778,7 +778,7 @@ class ModernExportSettings(WizardStep):
         
         # Frame list
         self.frame_list = QListWidget()
-        self.frame_list.setSelectionMode(QListWidget.MultiSelection)
+        self.frame_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
         self.frame_list.setStyleSheet("""
             QListWidget {
                 border: 1px solid #ced4da;
@@ -789,7 +789,7 @@ class ModernExportSettings(WizardStep):
         # Populate frames
         for i in range(self.frame_count):
             item = QListWidgetItem(f"Frame {i + 1}")
-            item.setData(Qt.UserRole, i)
+            item.setData(Qt.ItemDataRole.UserRole, i)
             self.frame_list.addItem(item)
             if i == self.current_frame:
                 item.setSelected(True)
@@ -851,8 +851,8 @@ class ModernExportSettings(WizardStep):
         try:
             if hasattr(self, '_pattern_radios') and self._pattern_radios and hasattr(self, 'base_name'):
                 base_name = self.base_name.text() if self.base_name.text() else "frame"
-                
-                for i, radio in enumerate(self._pattern_radios):
+
+                for _, radio in enumerate(self._pattern_radios):
                     pattern = radio.property("pattern")
                     if pattern:
                         new_display = self._generate_pattern_display(pattern, base_name)
@@ -999,19 +999,19 @@ class ModernExportSettings(WizardStep):
         
         # Create pixmap
         pixmap = QPixmap(sheet_w, sheet_h)
-        
+
         # Background
         bg_index = self._settings_widgets.get('background', QComboBox()).currentIndex() if 'background' in self._settings_widgets else 0
         if bg_index == 0:  # Transparent
-            pixmap.fill(Qt.transparent)
+            pixmap.fill(Qt.GlobalColor.transparent)
         elif bg_index == 1:  # White
-            pixmap.fill(Qt.white)
+            pixmap.fill(Qt.GlobalColor.white)
         elif bg_index == 2:  # Black
-            pixmap.fill(Qt.black)
-        
+            pixmap.fill(Qt.GlobalColor.black)
+
         # Draw sprites
         painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
         for i, sprite in enumerate(self._sprites):
             if i >= cols * rows:
@@ -1039,19 +1039,19 @@ class ModernExportSettings(WizardStep):
             logger.debug("No sprites or segment manager, showing placeholder")
             # Show placeholder if no segments available
             pixmap = QPixmap(400, 200)
-            pixmap.fill(Qt.white)
-            
+            pixmap.fill(Qt.GlobalColor.white)
+
             painter = QPainter(pixmap)
-            painter.setRenderHint(QPainter.Antialiasing)
-            
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
             # Draw placeholder text
             font = QFont("Segoe UI", 12)
             painter.setFont(font)
             painter.setPen(QColor(108, 117, 125))
-            
+
             text = "No animation segments available" if not self._segment_manager else "Loading segments preview..."
-            painter.drawText(pixmap.rect(), Qt.AlignCenter, text)
-            
+            painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, text)
+
             painter.end()
             self._update_preview_info("Segments Per Row: No segments defined")
             return pixmap
@@ -1067,15 +1067,15 @@ class ModernExportSettings(WizardStep):
             logger.debug("No segments found, showing placeholder")
             # No segments, show placeholder
             pixmap = QPixmap(400, 200)
-            pixmap.fill(Qt.white)
-            
+            pixmap.fill(Qt.GlobalColor.white)
+
             painter = QPainter(pixmap)
-            painter.setRenderHint(QPainter.Antialiasing)
-            
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
             font = QFont("Segoe UI", 12)
             painter.setFont(font)
             painter.setPen(QColor(108, 117, 125))
-            painter.drawText(pixmap.rect(), Qt.AlignCenter, "No animation segments defined")
+            painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "No animation segments defined")
             
             painter.end()
             self._update_preview_info("Segments Per Row: No segments")
@@ -1136,15 +1136,15 @@ class ModernExportSettings(WizardStep):
         # Background
         bg_index = self._settings_widgets.get('background', QComboBox()).currentIndex() if 'background' in self._settings_widgets else 0
         if bg_index == 0:  # Transparent
-            pixmap.fill(Qt.transparent)
+            pixmap.fill(Qt.GlobalColor.transparent)
         elif bg_index == 1:  # White
-            pixmap.fill(Qt.white)
+            pixmap.fill(Qt.GlobalColor.white)
         elif bg_index == 2:  # Black
-            pixmap.fill(Qt.black)
-        
+            pixmap.fill(Qt.GlobalColor.black)
+
         # Draw segments
         painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
         for row_idx, segment in enumerate(segments):
             frames_drawn = 0
@@ -1157,7 +1157,7 @@ class ModernExportSettings(WizardStep):
                     
                     if scale < 1.0:
                         scaled_sprite = self._sprites[frame_idx].scaled(
-                            fw, fh, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                            fw, fh, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
                         )
                         painter.drawPixmap(x, y, scaled_sprite)
                     else:
@@ -1193,16 +1193,16 @@ class ModernExportSettings(WizardStep):
         height = rows * fh + (rows - 1) * spacing
         
         pixmap = QPixmap(width, height)
-        pixmap.fill(Qt.transparent)
-        
+        pixmap.fill(Qt.GlobalColor.transparent)
+
         painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
         # Get selected frames if in selected mode
         selected_indices = []
         if self._current_preset.mode == "selected" and 'frame_list' in self._settings_widgets:
             for item in self._settings_widgets['frame_list'].selectedItems():
-                selected_indices.append(item.data(Qt.UserRole))
+                selected_indices.append(item.data(Qt.ItemDataRole.UserRole))
         else:
             selected_indices = list(range(len(self._sprites)))
         
@@ -1216,7 +1216,7 @@ class ModernExportSettings(WizardStep):
                 y = row * (fh + spacing)
                 
                 scaled = self._sprites[frame_idx].scaled(
-                    fw, fh, Qt.KeepAspectRatio, Qt.SmoothTransformation
+                    fw, fh, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
                 )
                 painter.drawPixmap(x, y, scaled)
         
@@ -1371,7 +1371,7 @@ class ModernExportSettings(WizardStep):
                 selected_indices = []
                 if hasattr(self, 'frame_list'):
                     for item in self.frame_list.selectedItems():
-                        selected_indices.append(item.data(Qt.UserRole))
+                        selected_indices.append(item.data(Qt.ItemDataRole.UserRole))
                 data['selected_indices'] = selected_indices
                 
                 # Get base name with proper fallback
@@ -1421,7 +1421,7 @@ class ModernExportSettings(WizardStep):
         # Update pattern radio button displays
         base_name = text if text else "frame"
         try:
-            for i, radio in enumerate(self._pattern_radios):
+            for _, radio in enumerate(self._pattern_radios):
                 pattern = radio.property("pattern")
                 if pattern:
                     new_display = self._generate_pattern_display(pattern, base_name)

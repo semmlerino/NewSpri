@@ -3,7 +3,6 @@ Export Coordinator for SpriteViewer refactoring.
 Handles export dialog creation, configuration, and coordination between components.
 """
 
-from typing import Optional
 from PySide6.QtWidgets import QMessageBox
 from PySide6.QtCore import Signal, QObject
 

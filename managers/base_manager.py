@@ -34,7 +34,7 @@ This approach:
 - Provides clear, readable implementation
 """
 
-from typing import Optional, TypeVar, Generic, Dict, Any, Callable
+from typing import TypeVar, Dict, Any
 from abc import ABC
 import threading
 

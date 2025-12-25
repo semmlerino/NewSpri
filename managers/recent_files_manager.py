@@ -7,12 +7,11 @@ Manages the recent files menu and related UI functionality.
 Provides integration between settings persistence and menu display.
 """
 
-import os
 from typing import List, Callable, Optional
 from pathlib import Path
 
-from PySide6.QtWidgets import QMenu, QWidget
-from PySide6.QtCore import QObject, Signal, Qt
+from PySide6.QtWidgets import QMenu
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QKeySequence, QAction
 
 from config import Config

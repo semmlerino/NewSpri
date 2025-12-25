@@ -8,7 +8,7 @@ Provides centralized access to user preferences and application state.
 """
 
 import json
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 from pathlib import Path
 
 from PySide6.QtCore import QSettings, QByteArray, QTimer, QObject, Signal

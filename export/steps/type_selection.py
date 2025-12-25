@@ -34,8 +34,8 @@ class SimpleExportOption(QFrame):
     
     def _setup_ui(self):
         """Set up the simple option UI."""
-        self.setFrameStyle(QFrame.StyledPanel)
-        self.setCursor(Qt.PointingHandCursor)
+        self.setFrameStyle(QFrame.Shape.StyledPanel)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
         
         layout = QVBoxLayout(self)
         layout.setContentsMargins(16, 12, 16, 12)
@@ -97,7 +97,7 @@ class SimpleExportOption(QFrame):
     
     def mousePressEvent(self, event):
         """Handle mouse press to select option."""
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
         super().mousePressEvent(event)
 

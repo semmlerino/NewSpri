@@ -5,7 +5,6 @@ Runs tests with coverage analysis and generates reports.
 """
 
 import sys
-import os
 import subprocess
 import argparse
 from pathlib import Path

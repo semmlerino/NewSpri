@@ -5,12 +5,11 @@ Manages auto-detection workflows and UI feedback for sprite sheet analysis.
 Extracted from sprite_viewer.py to reduce complexity and improve maintainability.
 """
 
-from typing import Tuple, Dict, Optional
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox
 
 from config import Config
-from utils.ui_common import DetectionResult, parse_detection_tuple, extract_confidence_from_message
+from utils.ui_common import parse_detection_tuple, extract_confidence_from_message
 
 
 class AutoDetectionController(QObject):
@@ -127,7 +126,7 @@ class AutoDetectionController(QObject):
             
             return success
             
-        except Exception as e:
+        except Exception:
             self._set_workflow_state("failed")
             return False
     
@@ -312,13 +311,13 @@ class AutoDetectionController(QObject):
         dialog.setWindowTitle("Comprehensive Auto-Detection Results")
         
         if success:
-            dialog.setIcon(QMessageBox.Information)
+            dialog.setIcon(QMessageBox.Icon.Information)
             
             # Create user-friendly summary
             summary = self._create_detection_summary()
             dialog.setText(summary)
         else:
-            dialog.setIcon(QMessageBox.Warning)
+            dialog.setIcon(QMessageBox.Icon.Warning)
             dialog.setText("Auto-detection completed with some issues.")
         
         dialog.setDetailedText(detailed_report)

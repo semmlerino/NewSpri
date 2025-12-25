@@ -6,12 +6,12 @@ Part of Phase 1: Export Dialog Redesign - Animation Segments Support.
 
 from typing import List, Dict, Any, Optional
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
+    QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QListWidget, QListWidgetItem, QGroupBox, QComboBox,
     QCheckBox, QSpinBox, QTextEdit, QFrame, QFormLayout
 )
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont, QColor
+from PySide6.QtGui import QFont
 
 try:
     from managers.animation_segment_manager import AnimationSegmentManager
@@ -73,14 +73,14 @@ class AnimationSegmentSelector(QGroupBox):
         """)
         
         no_segments_layout = QVBoxLayout(no_segments_frame)
-        no_segments_layout.setAlignment(Qt.AlignCenter)
+        no_segments_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
         
         # Icon
         icon_label = QLabel("🎭")
         icon_font = QFont()
         icon_font.setPointSize(32)
         icon_label.setFont(icon_font)
-        icon_label.setAlignment(Qt.AlignCenter)
+        icon_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         no_segments_layout.addWidget(icon_label)
         
         # Message
@@ -89,13 +89,13 @@ class AnimationSegmentSelector(QGroupBox):
         message_font.setPointSize(12)
         message_font.setBold(True)
         message_label.setFont(message_font)
-        message_label.setAlignment(Qt.AlignCenter)
+        message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         message_label.setStyleSheet("color: #6c757d; margin: 10px;")
         no_segments_layout.addWidget(message_label)
         
         # Help text
         help_label = QLabel("Create animation segments in the Animation Splitting tab to use this feature.")
-        help_label.setAlignment(Qt.AlignCenter)
+        help_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         help_label.setWordWrap(True)
         help_label.setStyleSheet("color: #6c757d; font-size: 11px;")
         no_segments_layout.addWidget(help_label)
@@ -115,7 +115,7 @@ class AnimationSegmentSelector(QGroupBox):
         layout.addWidget(list_label)
         
         self.segment_list = QListWidget()
-        self.segment_list.setSelectionMode(QListWidget.MultiSelection)
+        self.segment_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
         self.segment_list.setMaximumHeight(150)
         self.segment_list.setStyleSheet("""
             QListWidget {
@@ -271,7 +271,7 @@ class AnimationSegmentSelector(QGroupBox):
             # Create display text
             item_text = f"{segment.name} (Frames {segment.start_frame}-{segment.end_frame})"
             item = QListWidgetItem(item_text)
-            item.setData(Qt.UserRole, segment.name)
+            item.setData(Qt.ItemDataRole.UserRole, segment.name)
             
             # Set color based on segment color if available
             if hasattr(segment, 'color') and segment.color:
@@ -287,7 +287,7 @@ class AnimationSegmentSelector(QGroupBox):
             return
             
         selected_items = self.segment_list.selectedItems()
-        self._selected_segments = [item.data(Qt.UserRole) for item in selected_items]
+        self._selected_segments = [item.data(Qt.ItemDataRole.UserRole) for item in selected_items]
         
         # Update info display
         if selected_items and self.segment_manager:
@@ -295,7 +295,7 @@ class AnimationSegmentSelector(QGroupBox):
             total_frames = 0
             
             for item in selected_items:
-                segment_name = item.data(Qt.UserRole)
+                segment_name = item.data(Qt.ItemDataRole.UserRole)
                 segment = self.segment_manager.get_segment(segment_name)
                 if segment:
                     frame_count = getattr(segment, 'frame_count', 

@@ -4,7 +4,7 @@ Part of Phase 2 refactoring: Code Deduplication.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Tuple
 from PySide6.QtWidgets import QPushButton
 from PySide6.QtCore import QObject, Signal
 

@@ -3,17 +3,14 @@ Export Frame Selection - Frame selection UI components for export dialog
 Part of Phase 1 refactoring to split export_dialog.py into smaller modules.
 """
 
-from typing import List, Optional, Set
+from typing import List, Optional
 from PySide6.QtWidgets import (
     QWidget, QGroupBox, QVBoxLayout, QHBoxLayout, QLabel,
     QListWidget, QListWidgetItem, QRadioButton, QButtonGroup,
     QPushButton, QCheckBox
 )
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QPixmap, QIcon
 
-from config import Config
-from utils.styles import StyleManager
 
 
 class FrameSelectionWidget(QWidget):
@@ -60,15 +57,15 @@ class FrameSelectionWidget(QWidget):
         
         # Frame list (shown when selecting frames)
         self.frame_list = QListWidget()
-        self.frame_list.setSelectionMode(QListWidget.ExtendedSelection)
+        self.frame_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         self.frame_list.setMaximumHeight(150)
-        self.frame_list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.frame_list.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.frame_list.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.frame_list.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         
         # Populate frame list
         for i in range(self.frame_count):
             item = QListWidgetItem(f"Frame {i + 1}")
-            item.setData(Qt.UserRole, i)
+            item.setData(Qt.ItemDataRole.UserRole, i)
             self.frame_list.addItem(item)
         
         # Initially hidden (shown only when "Selected frames" is chosen)
@@ -159,7 +156,7 @@ class FrameSelectionWidget(QWidget):
         elif scope_id == 1:  # Selected frames
             indices = []
             for item in self.frame_list.selectedItems():
-                indices.append(item.data(Qt.UserRole))
+                indices.append(item.data(Qt.ItemDataRole.UserRole))
             return sorted(indices)
         elif scope_id == 2:  # Current frame
             return [self.current_frame]
@@ -202,7 +199,7 @@ class FrameSelectionWidget(QWidget):
         self.frame_list.clear()
         for i in range(self.frame_count):
             item = QListWidgetItem(f"Frame {i + 1}")
-            item.setData(Qt.UserRole, i)
+            item.setData(Qt.ItemDataRole.UserRole, i)
             self.frame_list.addItem(item)
         
         self._update_selection_info()

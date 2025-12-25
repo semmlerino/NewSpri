@@ -13,7 +13,6 @@ from dataclasses import dataclass, asdict
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QColor, QPixmap
 
-from config import Config
 
 
 @dataclass
@@ -373,7 +372,7 @@ class AnimationSegmentManager(QObject):
     
     def get_segment_at_frame(self, frame_index: int) -> Optional[AnimationSegmentData]:
         """Get the first segment that contains a specific frame."""
-        for name, segment in self._segments.items():
+        for _name, segment in self._segments.items():
             if segment.start_frame <= frame_index <= segment.end_frame:
                 return segment
         return None
@@ -473,9 +472,9 @@ class AnimationSegmentManager(QObject):
             loaded_count = 0
             for segment_data in segments_in_file:
                 segment = AnimationSegmentData.from_dict(segment_data)
-                
+
                 # Validate against current context
-                is_valid, error = segment.validate(self._max_frames)
+                is_valid, _error = segment.validate(self._max_frames)
                 if is_valid:
                     self._segments[segment.name] = segment
                     self.segmentAdded.emit(segment)

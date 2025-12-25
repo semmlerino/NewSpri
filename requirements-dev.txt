@@ -1,0 +1,8 @@
+-r requirements.txt
+pytest>=7.4.0
+pytest-cov
+pytest-qt>=4.2.0
+pytest-mock
+pytest-timeout
+ruff
+basedpyright

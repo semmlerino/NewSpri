@@ -7,10 +7,9 @@ import math
 from typing import Optional, Dict, Any, List, Tuple
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QLabel,
-    QPushButton, QFrame, QGraphicsScene, QGraphicsView,
-    QGraphicsPixmapItem, QSizePolicy, QApplication
+    QPushButton, QFrame, QGraphicsScene, QGraphicsView
 )
-from PySide6.QtCore import Qt, Signal, QTimer, QRectF, QSize
+from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtGui import QPixmap, QPainter, QBrush, QColor, QPen, QFont
 
 from ..dialogs.base.wizard_base import WizardStep
@@ -18,7 +17,7 @@ from ..widgets.settings_widgets import (
     SettingsCard, SimpleDirectorySelector, QuickScaleButtons,
     GridLayoutSelector
 )
-from PySide6.QtWidgets import QComboBox, QLineEdit, QSpinBox, QListWidget, QListWidgetItem, QCheckBox
+from PySide6.QtWidgets import QComboBox, QLineEdit, QSpinBox, QListWidget, QListWidgetItem
 from ..core.export_presets import ExportPreset
 from config import Config
 
@@ -28,10 +27,10 @@ class LivePreviewWidget(QGraphicsView):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setRenderHint(QPainter.Antialiasing)
+        self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         
         # Checkerboard background for transparency
         self.setBackgroundBrush(self._create_checkerboard())
@@ -47,7 +46,7 @@ class LivePreviewWidget(QGraphicsView):
     def _create_checkerboard(self) -> QBrush:
         """Create checkerboard pattern."""
         pixmap = QPixmap(20, 20)
-        pixmap.fill(Qt.white)
+        pixmap.fill(Qt.GlobalColor.white)
         painter = QPainter(pixmap)
         painter.fillRect(0, 0, 10, 10, QColor(220, 220, 220))
         painter.fillRect(10, 10, 10, 10, QColor(220, 220, 220))
@@ -81,12 +80,12 @@ class LivePreviewWidget(QGraphicsView):
                 text.setPos(5, pixmap.height() + 10)
             
             # Fit in view
-            self.fitInView(self.scene.itemsBoundingRect(), Qt.KeepAspectRatio)
-    
+            self.fitInView(self.scene.itemsBoundingRect(), Qt.AspectRatioMode.KeepAspectRatio)
+
     def fit_to_view(self):
         """Fit the preview to the view."""
         if self.scene.items():
-            self.fitInView(self.scene.itemsBoundingRect(), Qt.KeepAspectRatio)
+            self.fitInView(self.scene.itemsBoundingRect(), Qt.AspectRatioMode.KeepAspectRatio)
 
 
 class ExportSettingsPreviewStep(WizardStep):
@@ -125,7 +124,7 @@ class ExportSettingsPreviewStep(WizardStep):
         layout.setSpacing(16)
         
         # Create splitter for settings and preview
-        splitter = QSplitter(Qt.Horizontal)
+        splitter = QSplitter(Qt.Orientation.Horizontal)
         splitter.setChildrenCollapsible(False)
         
         # Left side: Settings
@@ -148,7 +147,7 @@ class ExportSettingsPreviewStep(WizardStep):
     def _create_settings_panel(self) -> QWidget:
         """Create the settings panel."""
         panel = QFrame()
-        panel.setFrameStyle(QFrame.StyledPanel)
+        panel.setFrameStyle(QFrame.Shape.StyledPanel)
         panel.setStyleSheet("""
             QFrame {
                 background-color: #f8f9fa;
@@ -185,7 +184,7 @@ class ExportSettingsPreviewStep(WizardStep):
     def _create_preview_panel(self) -> QWidget:
         """Create the preview panel."""
         panel = QFrame()
-        panel.setFrameStyle(QFrame.StyledPanel)
+        panel.setFrameStyle(QFrame.Shape.StyledPanel)
         panel.setStyleSheet("""
             QFrame {
                 background-color: #ffffff;
@@ -535,13 +534,13 @@ class ExportSettingsPreviewStep(WizardStep):
         
         # Frame list
         self.frame_list = QListWidget()
-        self.frame_list.setSelectionMode(QListWidget.MultiSelection)
+        self.frame_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
         self.frame_list.setMaximumHeight(200)
-        
+
         # Populate
         for i in range(self.frame_count):
             item = QListWidgetItem(f"Frame {i + 1}")
-            item.setData(Qt.UserRole, i)
+            item.setData(Qt.ItemDataRole.UserRole, i)
             self.frame_list.addItem(item)
             if i == self.current_frame:
                 item.setSelected(True)
@@ -655,19 +654,19 @@ class ExportSettingsPreviewStep(WizardStep):
         
         # Create pixmap
         pixmap = QPixmap(sheet_w, sheet_h)
-        
+
         # Background
         bg_index = self._settings_widgets.get('background', QComboBox()).currentIndex()
         if bg_index == 0:  # Transparent
-            pixmap.fill(Qt.transparent)
+            pixmap.fill(Qt.GlobalColor.transparent)
         elif bg_index == 1:  # White
-            pixmap.fill(Qt.white)
+            pixmap.fill(Qt.GlobalColor.white)
         else:  # Black
-            pixmap.fill(Qt.black)
-        
+            pixmap.fill(Qt.GlobalColor.black)
+
         # Draw sprites
         painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
         for i, sprite in enumerate(self._sprites[:frame_count]):
             row = i // cols
@@ -698,13 +697,13 @@ class ExportSettingsPreviewStep(WizardStep):
         spacing = 10
         width = cols * fw + (cols - 1) * spacing
         height = rows * fh + (rows - 1) * spacing
-        
+
         pixmap = QPixmap(width, height)
-        pixmap.fill(Qt.transparent)
-        
+        pixmap.fill(Qt.GlobalColor.transparent)
+
         painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing)
-        
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
         # Draw frames
         for i in range(display_count):
             row = i // cols
@@ -713,7 +712,7 @@ class ExportSettingsPreviewStep(WizardStep):
             y = row * (fh + spacing)
             
             if i < len(self._sprites):
-                scaled = self._sprites[i].scaled(fw, fh, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                scaled = self._sprites[i].scaled(fw, fh, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                 painter.drawPixmap(x, y, scaled)
                 
                 # Frame number
@@ -733,7 +732,7 @@ class ExportSettingsPreviewStep(WizardStep):
         selected_indices = []
         if 'frame_list' in self._settings_widgets:
             for item in self._settings_widgets['frame_list'].selectedItems():
-                selected_indices.append(item.data(Qt.UserRole))
+                selected_indices.append(item.data(Qt.ItemDataRole.UserRole))
         
         if not selected_indices:
             return QPixmap(), "No frames selected"
@@ -742,22 +741,22 @@ class ExportSettingsPreviewStep(WizardStep):
         display_count = min(len(selected_indices), 6)
         cols = min(3, display_count)
         rows = (display_count + cols - 1) // cols
-        
+
         if self._sprites:
             fw = min(self._sprites[0].width(), 80)
             fh = min(self._sprites[0].height(), 80)
         else:
             fw = fh = 64
-        
+
         spacing = 10
         width = cols * fw + (cols - 1) * spacing
         height = rows * fh + (rows - 1) * spacing
-        
+
         pixmap = QPixmap(width, height)
-        pixmap.fill(Qt.transparent)
-        
+        pixmap.fill(Qt.GlobalColor.transparent)
+
         painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
         for i, frame_idx in enumerate(selected_indices[:display_count]):
             row = i // cols
@@ -766,9 +765,9 @@ class ExportSettingsPreviewStep(WizardStep):
             y = row * (fh + spacing)
             
             if frame_idx < len(self._sprites):
-                scaled = self._sprites[frame_idx].scaled(fw, fh, Qt.KeepAspectRatio, Qt.SmoothTransformation)
+                scaled = self._sprites[frame_idx].scaled(fw, fh, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                 painter.drawPixmap(x, y, scaled)
-                
+
                 # Selection highlight
                 painter.setPen(QPen(QColor(0, 123, 255), 2))
                 painter.drawRect(x - 1, y - 1, scaled.width() + 2, scaled.height() + 2)
@@ -891,7 +890,7 @@ class ExportSettingsPreviewStep(WizardStep):
         if 'frame_list' in self._settings_widgets:
             selected_indices = []
             for item in self._settings_widgets['frame_list'].selectedItems():
-                selected_indices.append(item.data(Qt.UserRole))
+                selected_indices.append(item.data(Qt.ItemDataRole.UserRole))
             data['selected_indices'] = selected_indices
         
         # Grid layout

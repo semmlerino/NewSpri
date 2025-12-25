@@ -3,7 +3,7 @@ Export Handler - Centralized export request handling
 Part of Phase 1 refactoring to extract export handlers from sprite_viewer.py.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 from pathlib import Path
 from PySide6.QtWidgets import QMessageBox
 

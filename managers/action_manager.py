@@ -12,8 +12,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QWidget
 
-from managers.base_manager import ParameterizedSingletonManager, singleton_manager
-from managers.shortcut_manager import get_shortcut_manager, ShortcutContext
+from managers.shortcut_manager import get_shortcut_manager
 
 
 class ActionCategory(Enum):

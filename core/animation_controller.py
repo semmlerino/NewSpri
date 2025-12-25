@@ -7,7 +7,6 @@ Complete MVC Controller implementation for sprite animation.
 
 from typing import Optional
 from PySide6.QtCore import QObject, Signal, QTimer
-from PySide6.QtWidgets import QApplication
 
 from config import Config
 

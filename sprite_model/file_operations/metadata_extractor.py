@@ -7,7 +7,6 @@ File metadata extraction for sprite sheets.
 Extracted from monolithic SpriteModel for better separation of concerns and testability.
 """
 
-import os
 from pathlib import Path
 from typing import Dict, Any
 

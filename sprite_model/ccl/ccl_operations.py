@@ -219,7 +219,7 @@ class CCLOperations:
         
         # Re-extract frames with new mode
         if mode == "ccl":
-            success, error, count, frames, info = self.extract_ccl_frames(
+            success, _error, _count, frames, info = self.extract_ccl_frames(
                 ccl_available, detect_sprites_ccl_enhanced, detect_background_color
             )
             # Store the extracted frames and info for the main model to retrieve
@@ -228,7 +228,7 @@ class CCLOperations:
             # Return consistent format for main model
             return success
         else:
-            success, error, count = extract_grid_frames_callback()
+            success, _error, _count = extract_grid_frames_callback()
             self._last_extracted_frames = []
             self._last_extracted_info = ""
         

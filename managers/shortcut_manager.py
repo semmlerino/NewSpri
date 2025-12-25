@@ -8,11 +8,10 @@ from typing import Dict, List, Tuple, Optional, Callable, Any
 from dataclasses import dataclass
 from enum import Enum
 
-from PySide6.QtCore import QObject, Qt
+from PySide6.QtCore import QObject
 from PySide6.QtGui import QKeySequence, QAction
 from PySide6.QtWidgets import QWidget
 
-from config import Config
 
 
 class ShortcutContext(Enum):

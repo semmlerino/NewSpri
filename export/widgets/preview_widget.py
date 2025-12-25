@@ -6,17 +6,15 @@ Part of Phase 1: Export Dialog Redesign implementation.
 
 from typing import Dict, Any, List, Optional
 from pathlib import Path
-import os
 
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, 
-    QScrollArea, QGroupBox, QProgressBar, QTextEdit
+    QScrollArea, QGroupBox
 )
-from PySide6.QtCore import Qt, Signal, QTimer
-from PySide6.QtGui import QFont, QIcon, QPixmap, QPalette
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QFont
 
 from ..core.export_presets import ExportPreset, get_preset_manager
-from config import Config
 
 
 class FilePreviewItem(QFrame):
@@ -32,7 +30,7 @@ class FilePreviewItem(QFrame):
     
     def _setup_ui(self):
         """Set up the file preview item UI."""
-        self.setFrameStyle(QFrame.NoFrame)
+        self.setFrameStyle(QFrame.Shape.NoFrame)
         self.setStyleSheet("""
             FilePreviewItem {
                 background-color: #f8f9fa;
@@ -65,7 +63,7 @@ class FilePreviewItem(QFrame):
             size_text = self._format_file_size(self.size_kb)
             size_label = QLabel(size_text)
             size_label.setStyleSheet("color: #888; font-size: 8px;")
-            size_label.setAlignment(Qt.AlignRight)
+            size_label.setAlignment(Qt.AlignmentFlag.AlignRight)
             layout.addWidget(size_label)
     
     def _get_file_icon(self) -> str:
@@ -102,7 +100,7 @@ class ExportSummaryWidget(QFrame):
     
     def _setup_ui(self):
         """Set up the summary widget UI."""
-        self.setFrameStyle(QFrame.Box)
+        self.setFrameStyle(QFrame.Shape.Box)
         self.setStyleSheet("""
             ExportSummaryWidget {
                 background-color: #e8f5e8;
@@ -204,8 +202,8 @@ class ExportPreviewWidget(QGroupBox):
         self.file_scroll = QScrollArea()
         self.file_scroll.setMaximumHeight(120)
         self.file_scroll.setWidgetResizable(True)
-        self.file_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
-        self.file_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.file_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self.file_scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.file_scroll.setStyleSheet("""
             QScrollArea {
                 border: 1px solid #ddd;
@@ -367,7 +365,7 @@ class SizeWarningWidget(QFrame):
     
     def _setup_ui(self):
         """Set up the warning widget UI."""
-        self.setFrameStyle(QFrame.Box)
+        self.setFrameStyle(QFrame.Shape.Box)
         self.setStyleSheet("""
             SizeWarningWidget {
                 background-color: #fff3cd;

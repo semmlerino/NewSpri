@@ -3,14 +3,13 @@ Export Segment Handling - Animation segment export logic for export dialog
 Part of Phase 1 refactoring to split export_dialog.py into smaller modules.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from PySide6.QtWidgets import (
     QWidget, QGroupBox, QVBoxLayout, QHBoxLayout, QLabel,
     QListWidget, QListWidgetItem, QCheckBox, QPushButton
 )
 from PySide6.QtCore import Qt, Signal
 
-from config import Config
 
 
 class SegmentExportWidget(QWidget):
@@ -41,7 +40,7 @@ class SegmentExportWidget(QWidget):
         
         # Segment list
         self.segment_list = QListWidget()
-        self.segment_list.setSelectionMode(QListWidget.ExtendedSelection)
+        self.segment_list.setSelectionMode(QListWidget.SelectionMode.ExtendedSelection)
         self.segment_list.setMaximumHeight(200)
         layout.addWidget(self.segment_list)
         
@@ -98,8 +97,8 @@ class SegmentExportWidget(QWidget):
             item_text = f"{segment_name} ({frame_count} frames)"
             
             item = QListWidgetItem(item_text)
-            item.setData(Qt.UserRole, segment_name)
-            item.setData(Qt.UserRole + 1, segment_data)
+            item.setData(Qt.ItemDataRole.UserRole, segment_name)
+            item.setData(Qt.ItemDataRole.UserRole + 1, segment_data)
             
             # Add tooltip with more info
             tooltip = f"Frames {segment_data.start_frame + 1} - {segment_data.end_frame + 1}"
@@ -135,7 +134,7 @@ class SegmentExportWidget(QWidget):
         """Get list of selected segment names."""
         segments = []
         for item in self.segment_list.selectedItems():
-            segment_name = item.data(Qt.UserRole)
+            segment_name = item.data(Qt.ItemDataRole.UserRole)
             if segment_name:
                 segments.append(segment_name)
         return segments
