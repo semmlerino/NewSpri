@@ -66,23 +66,8 @@ class AnimationController(QObject):
         self._sprite_model: Optional[object] = None    # SpriteModel reference
         self._sprite_viewer: Optional[object] = None   # SpriteViewer reference
         
-        # ============================================================================
-        # PERFORMANCE TRACKING & OPTIMIZATION
-        # ============================================================================
-        
-        self._frame_count: int = 0
+        # Timer precision tracking (for get_actual_fps)
         self._timer_precision: float = 0.0
-        self._last_frame_time: float = 0.0
-        self._frame_timing_history: list = []
-        self._max_timing_history: int = 60  # Track last 60 frames for FPS analysis
-        
-        # UI Update Optimization
-        self._last_ui_update_frame: int = -1
-        self._ui_update_batch_pending: bool = False
-        self._pending_status_messages: list = []
-        
-        # Memory Management
-        self._signal_batch_timer: Optional[object] = None  # For batching UI updates
     
     # ============================================================================
     # CONTROLLER LIFECYCLE
@@ -144,10 +129,7 @@ class AnimationController(QObject):
         
         # Calculate timer interval based on FPS
         interval_ms = self._calculate_timer_interval()
-        
-        # Reset performance tracking for new animation session
-        self._reset_performance_tracking()
-        
+
         # Start animation timer
         self._animation_timer.start(interval_ms)
         self._is_playing = True
@@ -297,135 +279,28 @@ class AnimationController(QObject):
         return abs(self._timer_precision)
     
     # ============================================================================
-    # PERFORMANCE OPTIMIZATION METHODS (Step 4.7)
+    # TIMER EVENT HANDLING
     # ============================================================================
-    
-    def _track_frame_timing(self) -> None:
-        """
-        Track frame timing for performance analysis.
-        Maintains rolling window of frame timing data.
-        """
-        import time
-        current_time = time.time()
-        
-        if self._last_frame_time > 0:
-            frame_duration = current_time - self._last_frame_time
-            self._frame_timing_history.append(frame_duration)
-            
-            # Maintain rolling window
-            if len(self._frame_timing_history) > self._max_timing_history:
-                self._frame_timing_history.pop(0)
-        
-        self._last_frame_time = current_time
-    
-    def get_actual_performance_fps(self) -> float:
-        """
-        Get actual FPS based on measured frame timing.
-        More accurate than calculated FPS for performance monitoring.
-        """
-        if len(self._frame_timing_history) < 2:
-            return 0.0
-        
-        avg_duration = sum(self._frame_timing_history) / len(self._frame_timing_history)
-        return 1.0 / avg_duration if avg_duration > 0 else 0.0
-    
-    def get_performance_metrics(self) -> dict:
-        """
-        Get comprehensive performance metrics for monitoring.
-        """
-        return {
-            "target_fps": self._current_fps,
-            "calculated_fps": self.get_actual_fps(),
-            "measured_fps": self.get_actual_performance_fps(),
-            "timing_precision": self.get_timing_precision(),
-            "frame_timing_samples": len(self._frame_timing_history),
-            "total_frames_processed": self._frame_count,
-            "average_frame_duration_ms": (sum(self._frame_timing_history) / len(self._frame_timing_history) * 1000) if self._frame_timing_history else 0
-        }
-    
-    def _optimize_ui_updates(self, frame_index: int) -> bool:
-        """
-        Optimize UI updates to prevent unnecessary redraws.
-        Returns True if UI update should proceed.
-        """
-        # Skip redundant updates for same frame
-        if frame_index == self._last_ui_update_frame:
-            return False
-        
-        self._last_ui_update_frame = frame_index
-        return True
-    
-    def _batch_status_message(self, message: str) -> None:
-        """
-        Batch status messages to prevent UI flooding.
-        Groups multiple rapid status updates.
-        """
-        self._pending_status_messages.append(message)
-        
-        # If not already pending, schedule batch update
-        if not self._ui_update_batch_pending and self._signal_batch_timer:
-            self._ui_update_batch_pending = True
-            self._signal_batch_timer.start(50)  # 50ms batch window
-    
-    def _flush_batched_status_messages(self) -> None:
-        """
-        Flush batched status messages to UI.
-        Sends only the most recent relevant messages.
-        """
-        if self._pending_status_messages:
-            # Send only the last message to avoid spam
-            latest_message = self._pending_status_messages[-1]
-            self.statusChanged.emit(latest_message)
-            self._pending_status_messages.clear()
-        
-        self._ui_update_batch_pending = False
-    
-    def _reset_performance_tracking(self) -> None:
-        """Reset performance tracking for new animation session."""
-        self._frame_timing_history.clear()
-        self._last_frame_time = 0.0
-        self._frame_count = 0
-        self._last_ui_update_frame = -1
-    
-    # ============================================================================
-    # TIMER EVENT HANDLING (Implemented in Step 4.2, Enhanced in Step 4.7)
-    # ============================================================================
-    
+
     def _on_timer_timeout(self) -> None:
         """
         Handle animation timer timeout - advance to next frame.
-        Core animation advancement logic with performance optimization.
         """
         if not self._sprite_model or not self._is_playing:
             return
-        
+
         try:
-            # Track frame timing for performance analysis
-            self._track_frame_timing()
-            
             # Advance frame using model logic
             frame_index, should_continue = self._sprite_model.next_frame()
-            
-            # Optimize UI updates - only emit if frame actually changed
-            if self._optimize_ui_updates(frame_index):
-                self.frameAdvanced.emit(frame_index)
-            
+
+            # Emit frame advanced signal
+            self.frameAdvanced.emit(frame_index)
+
             # Handle animation completion (non-looping)
             if not should_continue:
                 self.pause_animation()
                 self.animationCompleted.emit()
-                # Use batched status for completion message
-                self._batch_status_message("Animation completed")
-            
-            # Track performance
-            self._frame_count += 1
-            
-            # Periodic performance reporting (every 60 frames)
-            if self._frame_count % 60 == 0:
-                metrics = self.get_performance_metrics()
-                if metrics["measured_fps"] > 0:
-                    performance_msg = f"Performance: {metrics['measured_fps']:.1f} FPS (target: {metrics['target_fps']})"
-                    self._batch_status_message(performance_msg)
+                self.statusChanged.emit("Animation completed")
             
         except Exception as e:
             self.errorOccurred.emit(f"Animation error: {str(e)}")
@@ -516,10 +391,7 @@ class AnimationController(QObject):
         # Stop current animation if playing
         if self._is_playing:
             self.stop_animation()
-        
-        # Reset frame counting for new data
-        self._frame_count = 0
-        
+
         # Sync state with newly loaded model
         self._sync_state_from_model()
         
@@ -665,40 +537,14 @@ class AnimationController(QObject):
         """Get current loop mode setting."""
         return self._loop_enabled
     
-    @property
-    def frame_count(self) -> int:
-        """Get total frames processed since initialization."""
-        return self._frame_count
-    
-    def get_view_status_info(self) -> dict:
-        """
-        Get status information specifically formatted for view display.
-        Returns user-friendly status data for UI components.
-        """
-        measured_fps = self.get_actual_performance_fps()
-        return {
-            "animation_state": "Playing" if self._is_playing else "Paused",
-            "fps_display": f"{self._current_fps} FPS",
-            "actual_fps_display": f"{self.get_actual_fps():.1f} actual FPS",
-            "measured_fps_display": f"{measured_fps:.1f} measured FPS" if measured_fps > 0 else "No data",
-            "loop_mode": "Loop enabled" if self._loop_enabled else "Play once",
-            "timing_quality": "Precise" if self.get_timing_precision() < 0.1 else "Standard",
-            "performance_quality": "Excellent" if abs(measured_fps - self._current_fps) < 2 else "Good" if abs(measured_fps - self._current_fps) < 5 else "Fair" if measured_fps > 0 else "Unknown",
-            "frame_count_processed": self._frame_count,
-            "controller_status": "Active" if self._is_active else "Inactive",
-            "can_animate": self._sprite_model is not None and len(self._sprite_model.sprite_frames) > 1 if self._sprite_model else False
-        }
-    
     def get_status_info(self) -> dict:
-        """Get comprehensive controller status information."""
+        """Get controller status information."""
         return {
             "is_active": self._is_active,
             "is_playing": self._is_playing,
             "current_fps": self._current_fps,
             "actual_fps": self.get_actual_fps(),
-            "timing_precision": self.get_timing_precision(),
             "loop_enabled": self._loop_enabled,
-            "frame_count": self._frame_count,
             "timer_interval_ms": self._calculate_timer_interval(),
             "has_model": self._sprite_model is not None,
             "has_view": self._sprite_viewer is not None

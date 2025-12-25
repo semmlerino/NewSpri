@@ -5,7 +5,7 @@ Provides abstract base class and registry for managing coordinators.
 
 import logging
 from abc import ABC, abstractmethod
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ class CoordinatorRegistry:
     def register(self, name: str, coordinator: CoordinatorBase):
         """
         Register a coordinator with the registry.
-        
+
         Args:
             name: Unique name for the coordinator
             coordinator: CoordinatorBase instance to register
@@ -77,51 +77,8 @@ class CoordinatorRegistry:
         if name in self._coordinators:
             # Clean up existing coordinator before replacing
             self._coordinators[name].cleanup()
-        
+
         self._coordinators[name] = coordinator
-    
-    def get(self, name: str) -> Optional[CoordinatorBase]:
-        """
-        Get a coordinator by name.
-        
-        Args:
-            name: Name of the coordinator to retrieve
-            
-        Returns:
-            Coordinator instance or None if not found
-        """
-        return self._coordinators.get(name)
-    
-    def remove(self, name: str) -> bool:
-        """
-        Remove a coordinator from the registry.
-        
-        Args:
-            name: Name of the coordinator to remove
-            
-        Returns:
-            True if removed, False if not found
-        """
-        if name in self._coordinators:
-            self._coordinators[name].cleanup()
-            del self._coordinators[name]
-            return True
-        return False
-    
-    def initialize_all(self, dependencies: Dict[str, Any]):
-        """
-        Initialize all registered coordinators.
-        
-        Args:
-            dependencies: Dictionary of dependencies to pass to coordinators
-        """
-        for name, coordinator in self._coordinators.items():
-            if not coordinator.is_initialized:
-                try:
-                    coordinator.initialize(dependencies)
-                    coordinator._initialized = True
-                except Exception as e:
-                    logger.error("Failed to initialize coordinator '%s': %s", name, e)
 
     def cleanup_all(self):
         """Clean up all registered coordinators."""
@@ -130,14 +87,5 @@ class CoordinatorRegistry:
                 coordinator.cleanup()
             except Exception as e:
                 logger.error("Error during coordinator cleanup: %s", e)
-        
+
         self._coordinators.clear()
-    
-    def list_coordinators(self) -> list:
-        """
-        Get list of registered coordinator names.
-        
-        Returns:
-            List of coordinator names
-        """
-        return list(self._coordinators.keys())

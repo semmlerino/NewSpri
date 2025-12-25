@@ -122,10 +122,9 @@ When loading sprites: `set_sprite_context()` must be called to trigger segment l
 export/
   core/frame_exporter.py    - Main export engine
   core/export_settings.py   - Export configuration
-  dialogs/export_dialog.py  - Main export dialog
-  dialogs/simple_dialog.py  - Quick export dialog
-  widgets/preview_widget.py - Export preview
-  widgets/settings_widget.py - Settings controls
+  dialogs/export_wizard.py  - Main export wizard dialog
+  widgets/sprite_preview_widget.py - Sprite sheet preview
+  widgets/settings_widgets.py - Settings controls
 ```
 
 Formats: PNG, JPG, BMP, GIF. Scale factors: 0.5x-4.0x. Shortcuts: Ctrl+E (all), Ctrl+Shift+E (current).
