@@ -172,38 +172,3 @@ class MetadataExtractor:
             frame_info = "<br><b>Frames:</b> 0"
         
         return base_info + frame_info
-
-
-# Convenience functions for direct usage
-def extract_file_metadata(file_path: str, pixmap: QPixmap) -> Dict[str, Any]:
-    """
-    Convenience function for metadata extraction.
-    
-    Args:
-        file_path: Path to the sprite sheet file
-        pixmap: Loaded QPixmap for dimension extraction
-        
-    Returns:
-        Dictionary containing file metadata
-    """
-    extractor = MetadataExtractor()
-    return extractor.extract_file_metadata(file_path, pixmap)
-
-
-def format_sprite_info(file_name: str, width: int, height: int, 
-                      file_format: str, file_size: int = 0) -> str:
-    """
-    Convenience function for formatting sprite info.
-    
-    Args:
-        file_name: Name of the file
-        width: Image width in pixels
-        height: Image height in pixels
-        file_format: File format (PNG, JPG, etc.)
-        file_size: File size in bytes (optional)
-        
-    Returns:
-        HTML-formatted string for display
-    """
-    extractor = MetadataExtractor()
-    return extractor.format_sprite_info(file_name, width, height, file_format, file_size)

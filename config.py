@@ -148,11 +148,9 @@ class UIConfig:
     
     # Layout spacing (standardized to 6px for consistency)
     MAIN_LAYOUT_SPACING = 6
-    CONTROLS_LAYOUT_SPACING = 6  # Consistent spacing throughout
     PRESET_GRID_SPACING = 6      # Consistent grid spacing
     SIZE_LAYOUT_SPACING = 5      # Keep size layout compact
     NAV_BUTTON_SPACING = 6       # Consistent button spacing
-    COLLAPSIBLE_SECTION_SPACING = 8  # Spacing within collapsible sections
     
     # Button dimensions (compacted by 20-25%)
     PLAYBACK_BUTTON_MIN_HEIGHT = 32   # Reduced from 40
@@ -160,7 +158,6 @@ class UIConfig:
     NAV_BUTTON_MIN_HEIGHT = 28        # Reduced from 35
     COLOR_BUTTON_MAX_WIDTH = 50       # Reduced from 60
     AUTO_BUTTON_MAX_WIDTH = 50        # Keep for usability
-    ZOOM_PRESET_BUTTON_MAX_WIDTH = 42 # Reduced from 50
     
     # Navigation button style values (updated to match new dimensions)
     NAV_BUTTON_WIDTH_PX = "28px"
@@ -251,27 +248,9 @@ class SliderConfig:
 
 class ColorConfig:
     """Color constants used throughout the application."""
-    
-    # Status and feedback colors
-    SUCCESS_COLOR = "#4CAF50"
-    WARNING_COLOR = "#ff9800"
-    ERROR_COLOR = "#f44336"
-    INFO_COLOR = "#2196F3"
-    
+
     # Transparency
     TRANSPARENT = QColor(0, 0, 0, 0)  # Fully transparent
-    
-    # UI element colors
-    BORDER_COLOR = "#ccc"
-    BACKGROUND_COLOR = "#f5f5f5"
-    TEXT_COLOR = "#666"
-    DISABLED_COLOR = "#999"
-    
-    # Button colors
-    BUTTON_NORMAL = "#e0e0e0"
-    BUTTON_HOVER = "#d0d0d0"
-    BUTTON_PRESSED = "#c0c0c0"
-    BUTTON_DISABLED = "#f0f0f0"
 
 
 class FontConfig:
@@ -417,8 +396,7 @@ class ExportConfig:
     
     # Layout calculation preferences
     PREFER_HORIZONTAL = False       # For auto mode: prefer horizontal vs vertical layouts
-    ASPECT_RATIO_TOLERANCE = 0.25   # Tolerance for "square-ish" layouts in auto mode
-    
+
     # Export quality settings for sprite sheets
     SPRITE_SHEET_QUALITY_MODE = 'balanced'  # 'speed', 'balanced', 'quality'
     ENABLE_ANTIALIASING = True      # Enable antialiasing for scaled sprites

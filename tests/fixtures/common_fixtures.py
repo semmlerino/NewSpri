@@ -13,7 +13,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
 from sprite_model import SpriteModel
-from export.export_presets import ExportPreset
+from export import ExportPreset
 
 
 # Sprite Creation Fixtures
@@ -148,7 +148,7 @@ def mock_individual_preset():
 @pytest.fixture
 def mock_sprite_sheet_preset():
     """Create a mock sprite sheet export preset."""
-    from export.frame_exporter import SpriteSheetLayout
+    from export.core.frame_exporter import SpriteSheetLayout
     
     return ExportPreset(
         name="sprite_sheet",
@@ -288,7 +288,7 @@ def sample_export_settings():
 @pytest.fixture
 def sample_sprite_sheet_settings():
     """Sample sprite sheet export settings."""
-    from export.frame_exporter import SpriteSheetLayout
+    from export.core.frame_exporter import SpriteSheetLayout
     
     return {
         'output_dir': '/tmp/sprites',

@@ -348,20 +348,3 @@ class CCLOperations:
     def get_last_extracted_info(self) -> str:
         """Get the info from the last CCL extraction."""
         return getattr(self, '_last_extracted_info', "")
-
-
-# Convenience functions for direct usage
-def apply_background_transparency(pixmap: QPixmap, background_color: Tuple[int, int, int], tolerance: int = 10) -> QPixmap:
-    """
-    Convenience function for applying background transparency.
-    
-    Args:
-        pixmap: Source QPixmap to process
-        background_color: RGB background color to make transparent
-        tolerance: Color matching tolerance (0-255)
-        
-    Returns:
-        QPixmap with background transparency applied
-    """
-    ccl_ops = CCLOperations()
-    return ccl_ops._apply_background_transparency(pixmap, background_color, tolerance)

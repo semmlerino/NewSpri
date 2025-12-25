@@ -127,7 +127,7 @@ class ExportDialog(QDialog):
         self.exportRequested.emit(export_config)
         
         # Create progress dialog
-        from ..widgets.progress_dialog import ExportProgressDialog
+        from ..widgets.settings_widgets import ExportProgressDialog
         progress_dialog = ExportProgressDialog(
             export_type=preset.display_name,
             total_frames=len(self.sprites),

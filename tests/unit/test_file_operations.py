@@ -19,9 +19,9 @@ from unittest.mock import Mock, patch, MagicMock
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 
-from sprite_model.file_operations.file_loader import FileLoader, load_sprite_sheet, reload_sprite_sheet
+from sprite_model.file_operations.file_loader import FileLoader
 from sprite_model.file_operations.file_validator import FileValidator, validate_file_path
-from sprite_model.file_operations.metadata_extractor import MetadataExtractor, extract_file_metadata, format_sprite_info
+from sprite_model.file_operations.metadata_extractor import MetadataExtractor
 
 
 class TestFileValidator:
@@ -366,30 +366,6 @@ class TestMetadataExtractor:
         assert "<b>Frames:</b> 10 (5×2)" in updated
         assert "5 (old)" not in updated
     
-    def test_convenience_functions(self, qapp):
-        """Test convenience functions for metadata extraction."""
-        mock_pixmap = Mock()
-        mock_pixmap.width.return_value = 100
-        mock_pixmap.height.return_value = 50
-        
-        # Test extract_file_metadata convenience function
-        with patch('pathlib.Path') as mock_path:
-            mock_path.return_value.exists.return_value = True
-            mock_path.return_value.name = "test.png"
-            mock_path.return_value.suffix = ".png"
-            mock_path.return_value.stat.return_value.st_size = 1024
-            mock_path.return_value.stat.return_value.st_mtime = 1234567890
-            
-            metadata = extract_file_metadata("test.png", mock_pixmap)
-            assert metadata['sheet_width'] == 100
-            assert metadata['sheet_height'] == 50
-        
-        # Test format_sprite_info convenience function
-        info = format_sprite_info("test.jpg", 200, 100, "JPG", 5000)
-        assert "test.jpg" in info
-        assert "200 × 100" in info
-
-
 class TestFileLoader:
     """Test file loading functionality."""
     
@@ -503,30 +479,6 @@ class TestFileLoader:
         assert pixmap == "mock_pixmap"
         assert metadata == {"test": "data"}
     
-    def test_convenience_functions(self, temp_dir):
-        """Test convenience functions for file loading."""
-        # Create test file
-        test_file = temp_dir / "test.png"
-        test_file.write_bytes(b"fake PNG content")
-        
-        # Mock the FileLoader class
-        with patch('sprite_model.file_operations.file_loader.FileLoader') as mock_loader_class:
-            mock_loader = Mock()
-            mock_loader.load_sprite_sheet.return_value = (True, "pixmap", {"data": "test"}, "")
-            mock_loader.reload_sprite_sheet.return_value = (True, "pixmap", {"data": "test"}, "")
-            mock_loader_class.return_value = mock_loader
-            
-            # Test load_sprite_sheet convenience function
-            success, pixmap, metadata, error = load_sprite_sheet(str(test_file))
-            assert success
-            mock_loader.load_sprite_sheet.assert_called_once_with(str(test_file))
-            
-            # Test reload_sprite_sheet convenience function
-            success, pixmap, metadata, error = reload_sprite_sheet(str(test_file))
-            assert success
-            mock_loader.reload_sprite_sheet.assert_called_once_with(str(test_file))
-
-
 class TestFileOperationsIntegration:
     """Test integration between file operations components."""
     

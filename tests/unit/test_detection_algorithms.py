@@ -18,9 +18,9 @@ from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QSignalSpy
 
-from sprite_model.detection.frame_detector import FrameDetector, detect_frame_size, detect_rectangular_frames, detect_content_based
-from sprite_model.detection.margin_detector import MarginDetector, detect_margins
-from sprite_model.detection.spacing_detector import SpacingDetector, detect_spacing
+from sprite_model.detection.frame_detector import FrameDetector
+from sprite_model.detection.margin_detector import MarginDetector
+from sprite_model.detection.spacing_detector import SpacingDetector
 from core.auto_detection_controller import AutoDetectionController
 from config import Config
 
@@ -197,21 +197,22 @@ class TestFrameDetector:
         assert most_common[1] == 32  # height
         assert most_common[2] == 4   # count
     
-    def test_convenience_functions(self, qapp):
-        """Test convenience functions work correctly."""
+    def test_all_detection_methods(self, qapp):
+        """Test all detection methods work correctly."""
+        detector = FrameDetector()
         pixmap = QPixmap(64, 64)
         pixmap.fill(Qt.red)
-        
-        # Test basic detection convenience function
-        success, width, height, message = detect_frame_size(pixmap)
+
+        # Test basic detection
+        success, width, height, message = detector.detect_frame_size(pixmap)
         assert success or not success  # Should not crash
-        
-        # Test rectangular detection convenience function
-        success, width, height, message = detect_rectangular_frames(pixmap)
+
+        # Test rectangular detection
+        success, width, height, message = detector.detect_rectangular_frames(pixmap)
         assert success or not success  # Should not crash
-        
-        # Test content-based detection convenience function
-        success, width, height, message = detect_content_based(pixmap)
+
+        # Test content-based detection
+        success, width, height, message = detector.detect_content_based(pixmap)
         assert success or not success  # Should not crash
 
 
@@ -361,12 +362,13 @@ class TestMarginDetector:
         assert top == 8
         assert bottom == 12
     
-    def test_convenience_function(self, qapp):
-        """Test margin detection convenience function."""
+    def test_detect_margins_with_frame_hints(self, qapp):
+        """Test margin detection with frame size hints."""
+        detector = MarginDetector()
         pixmap = QPixmap(64, 64)
         pixmap.fill(Qt.red)
-        
-        success, offset_x, offset_y, message = detect_margins(pixmap, 32, 32)
+
+        success, offset_x, offset_y, message = detector.detect_margins(pixmap, 32, 32)
         assert success or not success  # Should not crash
 
 
@@ -526,15 +528,6 @@ class TestSpacingDetector:
         assert "confidence:" in message
         assert any(conf in message for conf in ["high", "medium", "low"])
     
-    def test_convenience_function(self, qapp):
-        """Test spacing detection convenience function."""
-        pixmap = QPixmap(100, 100)
-        pixmap.fill(Qt.green)
-        
-        success, spacing_x, spacing_y, message = detect_spacing(pixmap, 25, 25, 5, 5)
-        assert success or not success  # Should not crash
-
-
 class TestAutoDetectionController:
     """Test auto-detection controller workflow management."""
     

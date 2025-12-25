@@ -225,23 +225,3 @@ class SpacingDetector:
                 best_spacing_y = test_spacing
         
         return best_spacing_y, best_score_y
-
-
-# Convenience function for direct usage
-def detect_spacing(sprite_sheet: QPixmap, frame_width: int, frame_height: int,
-                  offset_x: int = 0, offset_y: int = 0) -> Tuple[bool, int, int, str]:
-    """
-    Convenience function for spacing detection.
-    
-    Args:
-        sprite_sheet: Source sprite sheet pixmap
-        frame_width: Width of individual frames
-        frame_height: Height of individual frames
-        offset_x: X offset (margin) from left edge
-        offset_y: Y offset (margin) from top edge
-        
-    Returns:
-        Tuple of (success, spacing_x, spacing_y, status_message)
-    """
-    detector = SpacingDetector()
-    return detector.detect_spacing(sprite_sheet, frame_width, frame_height, offset_x, offset_y)

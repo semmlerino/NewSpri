@@ -27,26 +27,7 @@ except ImportError:
 
 from .file_validator import FileValidator
 
-# Conditional import of metadata extractor to handle PySide6 dependency
-try:
-    from .metadata_extractor import MetadataExtractor
-    METADATA_AVAILABLE = True
-except ImportError:
-    METADATA_AVAILABLE = False
-    # Fallback metadata extractor
-    class MetadataExtractor:
-        def extract_file_metadata(self, file_path, pixmap):
-            from pathlib import Path
-            return {
-                'file_path': file_path,
-                'file_name': Path(file_path).name if file_path else "Unknown",
-                'sheet_width': 0,
-                'sheet_height': 0,
-                'file_format': "UNKNOWN",
-                'file_size': 0,
-                'last_modified': 0.0,
-                'sprite_sheet_info': "Metadata extraction not available"
-            }
+from .metadata_extractor import MetadataExtractor
 
 
 class FileLoader:
@@ -114,38 +95,3 @@ class FileLoader:
             return False, None, {}, "No sprite sheet path provided"
         
         return self.load_sprite_sheet(file_path)
-
-
-# Convenience functions for direct usage
-def load_sprite_sheet(file_path: str) -> Tuple[bool, Optional[QPixmap], dict, str]:
-    """
-    Convenience function for loading sprite sheets.
-    
-    Args:
-        file_path: Path to the sprite sheet file
-        
-    Returns:
-        Tuple of (success, pixmap, metadata, error_message)
-    """
-    if not PYSIDE6_AVAILABLE:
-        return False, None, {}, "PySide6 not available - required for image loading"
-    
-    loader = FileLoader()
-    return loader.load_sprite_sheet(file_path)
-
-
-def reload_sprite_sheet(file_path: str) -> Tuple[bool, Optional[QPixmap], dict, str]:
-    """
-    Convenience function for reloading sprite sheets.
-    
-    Args:
-        file_path: Path to the sprite sheet file
-        
-    Returns:
-        Tuple of (success, pixmap, metadata, error_message)
-    """
-    if not PYSIDE6_AVAILABLE:
-        return False, None, {}, "PySide6 not available - required for image loading"
-    
-    loader = FileLoader()
-    return loader.reload_sprite_sheet(file_path)
