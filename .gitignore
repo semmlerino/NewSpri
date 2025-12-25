@@ -81,7 +81,7 @@ Thumbs.db
 *.json.bak
 debug_*.py
 test_*.py
-!tests/test_*.py
+!tests/**/test_*.py
 *.log
 
 # Screenshots and temporary files
