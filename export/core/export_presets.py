@@ -21,10 +21,8 @@ class ExportPresetType(Enum):
     SPRITE_SHEET = "sprite_sheet"
     WEB_OPTIMIZED = "web_optimized"
     PRINT_QUALITY = "print_quality"
-    ANIMATION_SEGMENTS = "animation_segments"
     WEB_GAME_ATLAS = "web_game_atlas"
     SPACED_SPRITE_SHEET = "spaced_sprite_sheet"
-    PRINT_ATLAS = "print_atlas"
     SELECTED_FRAMES = "selected_frames"
     SEGMENTS_PER_ROW = "segments_per_row"
     STANDARD = "standard"  # For categorizing presets
@@ -137,20 +135,6 @@ class ExportPresetManager:
             estimated_size_multiplier=4.0  # 2x scale = 4x pixels
         ),
         
-        ExportPresetType.ANIMATION_SEGMENTS: ExportPreset(
-            name="animation_segments",
-            display_name="Animation Segments",
-            icon="🎭",
-            description="Export animation segments separately",
-            mode="segments",
-            format="PNG",
-            scale=1.0,
-            default_pattern="{segment}_{frame:03d}",
-            tooltip="Export animation segments as separate collections with metadata",
-            use_cases=["Character animations", "State machines", "Animation libraries", "Game assets"],
-            estimated_size_multiplier=1.0
-        ),
-        
         # Enhanced sprite sheet presets with layout configurations
         ExportPresetType.WEB_GAME_ATLAS: ExportPreset(
             name="web_game_atlas",
@@ -190,27 +174,6 @@ class ExportPresetManager:
                 spacing=8,
                 padding=16,
                 background_mode='checkerboard'
-            )
-        ),
-        
-        ExportPresetType.PRINT_ATLAS: ExportPreset(
-            name="print_atlas",
-            display_name="Print Atlas",
-            icon="📰",
-            description="High quality sprite sheet for printing",
-            mode="sheet",
-            format="PNG",
-            scale=2.0,
-            default_pattern="{name}_print_atlas",
-            tooltip="High resolution sprite sheet with white background and padding for printing",
-            use_cases=["Physical prints", "Documentation", "Portfolios", "Archival purposes"],
-            estimated_size_multiplier=3.5,
-            sprite_sheet_layout=SpriteSheetLayout(
-                mode='square',
-                spacing=12,
-                padding=24,
-                background_mode='solid',
-                background_color=(255, 255, 255, 255)
             )
         ),
         

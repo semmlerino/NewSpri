@@ -20,13 +20,17 @@ from .steps.type_selection import ExportTypeStepSimple
 # Deprecated dialogs removed - no backward compatibility
 # Widget compatibility (some code may import these directly)
 # Import all public names from widget modules
-from .widgets.frame_selection import FrameSelectionCompact, FrameSelectionWidget
+from .widgets.selection_widgets import (
+    FrameSelectionWidget,
+    FrameSelectionCompact,
+    SegmentExportWidget,
+    SegmentExportHandler
+)
+from .widgets.settings_widgets import ExportProgressDialog
 
 # Layout configuration (might be imported directly)
 from .widgets.layout_config import LayoutConfigurationWidget
 from .widgets.preset_widget import ExportPresetSelector
-from .widgets.progress_dialog import ExportProgressDialog
-from .widgets.segment_handling import SegmentExportHandler, SegmentExportWidget
 from .widgets.sprite_preview_widget import SpriteSheetPreviewWidget
 
 # Maintain the same __all__ export list for API stability
