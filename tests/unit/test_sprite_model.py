@@ -157,11 +157,11 @@ class TestSpriteModelSignals:
         configured_sprite_model.set_current_frame(1)
         
         # Should emit signal with current frame and total frames
-        if len(spy) > 0:
-            args = spy[0]
-            assert len(args) == 2  # current_frame, total_frames
-            assert isinstance(args[0], int)  # current_frame
-            assert isinstance(args[1], int)  # total_frames
+        assert len(spy) > 0, "frameChanged signal should have been emitted"
+        args = spy[0]
+        assert len(args) == 2, "frameChanged should emit (current_frame, total_frames)"
+        assert isinstance(args[0], int), "current_frame should be an int"
+        assert isinstance(args[1], int), "total_frames should be an int"
 
 
 class TestSpriteModelIntegration:

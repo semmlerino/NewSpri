@@ -37,13 +37,7 @@ from export.core.frame_exporter import SpriteSheetLayout
 from config import Config
 
 
-@pytest.fixture(scope="session")
-def qapp():
-    """Create QApplication instance for tests."""
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    yield app
+# NOTE: qapp fixture is inherited from tests/conftest.py
 
 
 def create_test_sprites(count: int, width: int = 32, height: int = 32) -> List[QPixmap]:

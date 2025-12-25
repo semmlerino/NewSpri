@@ -9,10 +9,8 @@ from unittest.mock import MagicMock
 from managers import ActionManager, get_actionmanager
 from managers.action_manager import ActionDefinition, ActionCategory
 
-# Mock reset function since it doesn't exist
-def reset_action_manager():
-    """Mock reset function for testing."""
-    pass
+# Import the real reset function for proper test isolation
+from managers.action_manager import reset_actionmanager
 
 
 class TestActionDefinition:
@@ -67,7 +65,7 @@ class TestActionManager:
     
     def setup_method(self):
         """Set up test fixtures."""
-        reset_action_manager()
+        reset_actionmanager()
         self.manager = ActionManager()
     
     def test_manager_initialization(self):
@@ -204,7 +202,7 @@ class TestActionIntegration:
     
     def setup_method(self):
         """Set up test fixtures."""
-        reset_action_manager()
+        reset_actionmanager()
         self.manager = ActionManager()
     
     def test_action_definition_completeness(self):

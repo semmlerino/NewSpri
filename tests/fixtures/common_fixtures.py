@@ -140,8 +140,7 @@ def mock_individual_preset():
         default_pattern="{name}_{index:03d}",
         tooltip="Export each frame as a separate file",
         use_cases=["Frame editing", "Video production"],
-        short_description="Perfect for editing",
-        recommended_for=["Individual frame editing", "Asset libraries"]
+        short_description="Perfect for editing"
     )
 
 
@@ -149,7 +148,7 @@ def mock_individual_preset():
 def mock_sprite_sheet_preset():
     """Create a mock sprite sheet export preset."""
     from export.core.frame_exporter import SpriteSheetLayout
-    
+
     return ExportPreset(
         name="sprite_sheet",
         display_name="Sprite Sheet",
@@ -161,14 +160,13 @@ def mock_sprite_sheet_preset():
         default_pattern="{name}_sheet",
         tooltip="Create a sprite sheet for game engines",
         use_cases=["Game development", "Web animations"],
-        short_description="Optimized for games",
-        recommended_for=["Game engines", "Texture atlases"],
         sprite_sheet_layout=SpriteSheetLayout(
             mode='auto',
             spacing=0,
             padding=0,
             background_mode='transparent'
-        )
+        ),
+        short_description="Optimized for games"
     )
 
 
@@ -186,8 +184,7 @@ def mock_gif_preset():
         default_pattern="{name}_animation",
         tooltip="Export as animated GIF for sharing",
         use_cases=["Social media", "Documentation"],
-        short_description="Share-ready animation",
-        recommended_for=["Social media", "Quick previews"]
+        short_description="Share-ready animation"
     )
 
 
@@ -216,15 +213,7 @@ def mock_segment_manager():
     return manager
 
 
-# Qt Application Fixture
-@pytest.fixture(scope="session")
-def qapp():
-    """Create QApplication for the test session."""
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    yield app
-    # Don't quit the app - pytest-qt handles this
+# NOTE: qapp fixture is defined in tests/conftest.py - do not duplicate here
 
 
 # Window Geometry Fixtures

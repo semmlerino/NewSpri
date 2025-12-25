@@ -320,12 +320,18 @@ class TestAnimationControllerRealSignals:
         controller.start_animation()
         
         # Wait longer to allow multiple frames
-        if real_signal_tester.wait_for_signal('frame_advanced', timeout=200):
-            frame_count = real_signal_tester.get_spy_count('frame_advanced')
-            # Should have at least some frame advancements in 200ms at 20 FPS
-            assert frame_count >= 0  # Accept any result due to timing variability
-        
+        # At 20 FPS with 200ms wait, we expect ~4 frame advances
+        signal_received = real_signal_tester.wait_for_signal('frame_advanced', timeout=200)
         controller.stop_animation()
+
+        if signal_received:
+            frame_count = real_signal_tester.get_spy_count('frame_advanced')
+            # Should have at least 1 frame advancement if signal was received
+            assert frame_count >= 1, "Animation timer should have advanced at least one frame"
+        else:
+            # If no signal received in 200ms at 20 FPS, something is wrong
+            import pytest
+            pytest.skip("Timing-dependent test: frame_advanced signal not received in time")
     
     def test_real_error_signal_handling(self, animation_controller, real_signal_tester):
         """Test error signal emission with real Qt mechanisms."""
@@ -337,11 +343,12 @@ class TestAnimationControllerRealSignals:
         
         # Check if error signal was emitted
         error_emitted = real_signal_tester.verify_emission('error', count=1, timeout=100)
-        
-        if error_emitted:
-            args = real_signal_tester.get_signal_args('error', 0)
-            assert len(args) >= 1
-            assert isinstance(args[0], str)  # Error message should be string
+
+        # Error signal should be emitted for invalid FPS
+        assert error_emitted, "errorOccurred signal should be emitted for negative FPS"
+        args = real_signal_tester.get_signal_args('error', 0)
+        assert len(args) >= 1, "Error signal should have at least one argument"
+        assert isinstance(args[0], str), "Error message should be a string"
     
     def test_multiple_real_signals_coordination(self, real_sprite_system, real_signal_tester):
         """Test coordination of multiple real signals in complex scenarios."""

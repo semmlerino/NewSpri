@@ -35,14 +35,7 @@ from export.core.frame_exporter import SpriteSheetLayout
 from config import Config
 
 
-@pytest.fixture(scope="session")
-def qapp():
-    """Create QApplication instance for tests."""
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication([])
-    yield app
-    # Don't quit - let pytest handle cleanup
+# NOTE: qapp fixture is inherited from tests/conftest.py
 
 
 @pytest.fixture

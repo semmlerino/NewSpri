@@ -510,8 +510,14 @@ def real_signal_tester(qapp):
                         return list(emission)
                     else:
                         return [emission]
-                except (AttributeError, IndexError, TypeError):
-                    # Method 3: Fallback - return empty list
+                except (AttributeError, IndexError, TypeError) as e:
+                    # All methods failed - this indicates a real problem
+                    import warnings
+                    warnings.warn(
+                        f"QSignalSpy argument access failed for '{name}' at index {emission_index}: {e}. "
+                        f"This may indicate a PySide6 version incompatibility.",
+                        stacklevel=2
+                    )
                     return []
         
         def get_all_emissions(self, name):
