@@ -3,7 +3,6 @@ Animation Coordinator for SpriteViewer refactoring.
 Handles animation navigation, playback state management, and UI updates.
 """
 
-from typing import Optional
 from PySide6.QtWidgets import QMessageBox
 
 from .base import CoordinatorBase

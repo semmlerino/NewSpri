@@ -5,18 +5,12 @@ Refactored to use centralized managers for better maintainability.
 """
 
 import sys
-import os
-from typing import Optional
 
 from PySide6.QtWidgets import (
-    QApplication, QMainWindow, QHBoxLayout, QVBoxLayout, QWidget,
-    QSplitter, QLabel, QSizePolicy, QTabWidget, QPushButton, QDialog
+    QApplication, QMainWindow, QMessageBox
 )
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QPixmap, QDragEnterEvent, QDropEvent, QKeySequence
+from PySide6.QtGui import QDragEnterEvent, QDropEvent
 
-from config import Config
-from utils import StyleManager
 
 # Coordinator system (Phase 1 refactoring)
 from coordinators import CoordinatorRegistry, UISetupHelper, ViewCoordinator, ExportCoordinator, AnimationCoordinator, EventCoordinator, DialogCoordinator
@@ -32,13 +26,9 @@ from managers import (
 )
 
 # UI Components
-from ui import (
-    SpriteCanvas, PlaybackControls, FrameExtractor,
-    AnimationGridView, EnhancedStatusBar, StatusBarManager
-)
 
 # Export System
-from export import get_frame_exporter, ExportHandler
+from export import ExportHandler
 
 
 class SpriteViewer(QMainWindow):

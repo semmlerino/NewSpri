@@ -6,23 +6,23 @@ Redesigned for better usability and modern aesthetics.
 import logging
 import math
 import os
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional, Dict, Any, List
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QSplitter, QLabel,
     QPushButton, QFrame, QGraphicsScene, QGraphicsView,
-    QGraphicsPixmapItem, QSizePolicy, QApplication, QTabWidget,
+    QSizePolicy, QTabWidget,
     QComboBox, QLineEdit, QSpinBox, QSlider, QButtonGroup,
-    QRadioButton, QGridLayout, QScrollArea, QListWidget,
+    QRadioButton, QGridLayout, QListWidget,
     QListWidgetItem, QStackedWidget, QToolButton
 )
-from PySide6.QtCore import Qt, Signal, QTimer, QRectF, QSize, QPropertyAnimation, QEasingCurve
-from PySide6.QtGui import QPixmap, QPainter, QBrush, QColor, QPen, QFont, QIcon
-
-logger = logging.getLogger(__name__)
+from PySide6.QtCore import Qt, Signal, QTimer
+from PySide6.QtGui import QPixmap, QPainter, QBrush, QColor, QFont
 
 from ..dialogs.base.wizard_base import WizardStep
 from ..core.export_presets import ExportPreset
 from config import Config
+
+logger = logging.getLogger(__name__)
 
 
 class CompactLivePreview(QGraphicsView):
@@ -70,10 +70,7 @@ class CompactLivePreview(QGraphicsView):
         """Smooth zoom with mouse wheel."""
         zoom_in = 1.1
         zoom_out = 1 / zoom_in
-        
-        # Get the current zoom
-        old_zoom = self._zoom_level
-        
+
         if event.angleDelta().y() > 0:
             self._zoom_level *= zoom_in
             self.scale(zoom_in, zoom_in)

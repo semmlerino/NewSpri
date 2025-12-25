@@ -8,16 +8,15 @@ from typing import Optional, List, Dict, Any
 from dataclasses import dataclass
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QRadioButton, QButtonGroup,
-    QLabel, QFrame, QGridLayout
+    QLabel, QFrame
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
 
-logger = logging.getLogger(__name__)
-
 from ..dialogs.base.wizard_base import WizardStep
 from ..core.export_presets import ExportPreset, get_preset_manager
-from config import Config
+
+logger = logging.getLogger(__name__)
 
 
 class SimpleExportOption(QFrame):

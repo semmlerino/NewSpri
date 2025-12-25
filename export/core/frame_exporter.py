@@ -5,15 +5,13 @@ Part of Phase 4: Frame Export System implementation.
 """
 
 import logging
-import os
 from pathlib import Path
-from typing import List, Optional, Tuple, Dict, Callable, Any
+from typing import List, Optional, Tuple, Dict, Any
 from enum import Enum
 from dataclasses import dataclass
 
 from PySide6.QtCore import QObject, Signal, QThread
-from PySide6.QtGui import QPixmap, QPainter, QImage, QColor, QBrush
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtGui import QPixmap, QPainter, QColor
 
 from config import Config
 
@@ -329,7 +327,7 @@ class ExportWorker(QThread):
                 f"Successfully exported sprite sheet ({cols}x{rows}, {layout.spacing}px spacing)"
             )
         else:
-            self.finished.emit(False, f"Failed to save sprite sheet")
+            self.finished.emit(False, "Failed to save sprite sheet")
     
     def _calculate_grid_layout(self, layout: SpriteSheetLayout, frame_count: int) -> Tuple[int, int]:
         """Calculate optimal grid dimensions based on layout configuration."""
@@ -501,9 +499,7 @@ class ExportWorker(QThread):
         if Config.Export.ENABLE_ANTIALIASING:
             painter.setRenderHint(QPainter.Antialiasing)
             painter.setRenderHint(QPainter.SmoothPixmapTransform)
-        
-        frame_count = len(self.task.frames)
-        
+
         for i, frame in enumerate(self.task.frames):
             if self._cancelled:
                 painter.end()

@@ -4,21 +4,20 @@ Simplified two-step wizard with live preview functionality.
 """
 
 import logging
-from typing import List, Optional, Dict, Any
+from typing import List, Dict, Any
 from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
-    QLabel, QWidget, QSizePolicy, QMessageBox
+    QDialog, QVBoxLayout, QMessageBox
 )
-from PySide6.QtCore import Qt, Signal, QTimer, QSize
+from PySide6.QtCore import Signal
 from PySide6.QtGui import QPixmap
-
-logger = logging.getLogger(__name__)
 
 from .base.wizard_base import WizardWidget
 from ..steps.type_selection import ExportTypeStepSimple as ExportTypeStep
 from ..steps.modern_settings_preview import ModernExportSettings
 from ..core.frame_exporter import get_frame_exporter, SpriteSheetLayout
 from config import Config
+
+logger = logging.getLogger(__name__)
 
 
 class ExportDialog(QDialog):

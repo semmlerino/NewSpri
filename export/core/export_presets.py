@@ -8,13 +8,11 @@ import logging
 from dataclasses import dataclass
 from typing import Dict, Any, Optional, List
 from enum import Enum
-from pathlib import Path
-import os
 
 from config import Config
+from .frame_exporter import SpriteSheetLayout
 
 logger = logging.getLogger(__name__)
-from .frame_exporter import SpriteSheetLayout
 
 
 class ExportPresetType(Enum):
