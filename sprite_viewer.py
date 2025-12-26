@@ -248,7 +248,8 @@ class SpriteViewer(QMainWindow):
         self._segment_controller.set_segment_preview(self._segment_preview)
 
         # Connect segment controller status messages
-        self._segment_controller.statusMessage.connect(self._status_manager.show_message)
+        if self._status_manager is not None:
+            self._segment_controller.statusMessage.connect(self._status_manager.show_message)
 
         # Configure shortcut manager context
         self._update_manager_context()
@@ -307,14 +308,17 @@ class SpriteViewer(QMainWindow):
         self._animation_controller.animationCompleted.connect(self._animation_coordinator.on_playback_completed)
         self._animation_controller.frameAdvanced.connect(self._animation_coordinator.on_frame_advanced)
         self._animation_controller.errorOccurred.connect(self._animation_coordinator.on_animation_error)
-        self._animation_controller.statusChanged.connect(self._status_manager.show_message)
+        if self._status_manager is not None:
+            self._animation_controller.statusChanged.connect(self._status_manager.show_message)
 
         # Auto-detection controller signals
         self._auto_detection_controller.frameSettingsDetected.connect(self._on_frame_settings_detected)
-        self._auto_detection_controller.statusUpdate.connect(self._status_manager.show_message)
+        if self._status_manager is not None:
+            self._auto_detection_controller.statusUpdate.connect(self._status_manager.show_message)
 
         # Canvas signals (zoom connected in __init__)
-        self._canvas.mouseMoved.connect(self._status_manager.update_mouse_position)
+        if self._status_manager is not None:
+            self._canvas.mouseMoved.connect(self._status_manager.update_mouse_position)
 
         # Frame extractor signals
         self._frame_extractor.settingsChanged.connect(self._update_frame_slicing)
@@ -390,7 +394,8 @@ class SpriteViewer(QMainWindow):
             current_mode = self._frame_extractor.get_extraction_mode()
             if current_mode == "ccl":
                 # For CCL mode, try direct CCL extraction without grid auto-detection
-                self._status_manager.show_message("Running CCL extraction...")
+                if self._status_manager is not None:
+                    self._status_manager.show_message("Running CCL extraction...")
                 self._update_frame_slicing()  # This will trigger CCL extraction
             else:
                 # For grid mode, run comprehensive grid auto-detection
@@ -471,7 +476,8 @@ class SpriteViewer(QMainWindow):
             if frame_count > 0:
                 self._segment_controller.update_grid_view_frames()
 
-        self._status_manager.show_message(f"Loaded sprite sheet: {file_path}")
+        if self._status_manager is not None:
+            self._status_manager.show_message(f"Loaded sprite sheet: {file_path}")
 
     def _on_extraction_completed(self, frame_count: int):
         """Handle extraction completion."""
@@ -529,7 +535,8 @@ class SpriteViewer(QMainWindow):
 
         # Update status
         mode_name = "CCL" if mode == "ccl" else "Grid"
-        self._status_manager.show_message(f"Switched to {mode_name} extraction mode")
+        if self._status_manager is not None:
+            self._status_manager.show_message(f"Switched to {mode_name} extraction mode")
 
     def _update_frame_slicing(self):
         """Update frame slicing based on current settings."""
@@ -608,7 +615,8 @@ class SpriteViewer(QMainWindow):
         # Switch to canvas view and show selected frame
         self._tab_widget.setCurrentIndex(0)  # Switch to Frame View tab
         self._sprite_model.set_current_frame(frame_index)
-        self._status_manager.show_message(f"Previewing frame {frame_index}")
+        if self._status_manager is not None:
+            self._status_manager.show_message(f"Previewing frame {frame_index}")
 
     # ============================================================================
     # HELP DIALOGS

@@ -7,22 +7,29 @@ Core file loading logic for sprite sheets.
 Extracted from monolithic SpriteModel for better separation of concerns and testability.
 """
 
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from PySide6.QtGui import QPixmap
 
 try:
-    from PySide6.QtGui import QPixmap
+    from PySide6.QtGui import QPixmap as _QPixmapRuntime
     PYSIDE6_AVAILABLE = True
+    if not TYPE_CHECKING:
+        QPixmap = _QPixmapRuntime  # type: ignore[misc]
 except ImportError:
     PYSIDE6_AVAILABLE = False
-    # Minimal QPixmap stub for when PySide6 unavailable
-    class QPixmap:
-        def __init__(self, *args):
-            self._null = True
-        def isNull(self):
-            return self._null
-        def width(self):
-            return 0
-        def height(self):
-            return 0
+    if not TYPE_CHECKING:
+        # Minimal QPixmap stub for when PySide6 unavailable
+        class QPixmap:  # type: ignore[no-redef]
+            def __init__(self, *args):
+                self._null = True
+            def isNull(self):
+                return self._null
+            def width(self):
+                return 0
+            def height(self):
+                return 0
 
 from .file_validator import FileValidator
 from .metadata_extractor import MetadataExtractor

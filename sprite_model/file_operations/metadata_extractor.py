@@ -8,21 +8,27 @@ Extracted from monolithic SpriteModel for better separation of concerns and test
 """
 
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from PySide6.QtGui import QPixmap
 
 try:
-    from PySide6.QtGui import QPixmap
+    from PySide6.QtGui import QPixmap as _QPixmapRuntime
     PYSIDE6_AVAILABLE = True
+    if not TYPE_CHECKING:
+        QPixmap = _QPixmapRuntime  # type: ignore[misc]
 except ImportError:
     PYSIDE6_AVAILABLE = False
-    # Minimal QPixmap stub for when PySide6 unavailable
-    class QPixmap:
-        def __init__(self, *args):
-            pass
-        def width(self):
-            return 0
-        def height(self):
-            return 0
+    if not TYPE_CHECKING:
+        # Minimal QPixmap stub for when PySide6 unavailable
+        class QPixmap:  # type: ignore[no-redef]
+            def __init__(self, *args):
+                pass
+            def width(self):
+                return 0
+            def height(self):
+                return 0
 
 
 class MetadataExtractor:

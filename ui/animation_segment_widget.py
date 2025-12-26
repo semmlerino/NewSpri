@@ -248,11 +248,9 @@ class AnimationSegmentSelector(QGroupBox):
             self.segment_list.itemSelectionChanged.connect(self._on_selection_changed)
 
         if self.segment_manager:
-            # Connect to segment manager signals if available
-            # pyright: ignore[reportAttributeAccessIssue] - Dynamic signal checking
+            # Connect to segment manager signals if available (dynamic signal checking)
             if hasattr(self.segment_manager, 'segmentAdded'):
                 self.segment_manager.segmentAdded.connect(self._update_segment_list)  # type: ignore[attr-defined]
-            # pyright: ignore[reportAttributeAccessIssue] - Dynamic signal checking
             if hasattr(self.segment_manager, 'segmentRemoved'):
                 self.segment_manager.segmentRemoved.connect(self._update_segment_list)  # type: ignore[attr-defined]
 

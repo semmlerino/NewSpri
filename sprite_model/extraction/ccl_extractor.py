@@ -13,6 +13,8 @@ Features:
 """
 
 
+from typing import cast
+
 import numpy as np
 from PIL import Image
 from scipy import ndimage
@@ -155,7 +157,8 @@ def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
                 debug_log.append("No suitable color key found, using alpha channel")
 
         # Label connected components
-        labeled_array, num_features = ndimage.label(binary_mask)
+        label_result = ndimage.label(binary_mask)
+        labeled_array, num_features = cast('tuple[np.ndarray, int]', label_result)
         debug_log.append(f"Found {num_features} connected components")
 
         if num_features == 0:
@@ -182,8 +185,8 @@ def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
         debug_log.append(f"Valid components: {len(sprite_bounds)}")
 
         # Pre-analyze for irregular collections before merging
-        widths = [w for x, y, w, h in sprite_bounds]
-        heights = [h for x, y, w, h in sprite_bounds]
+        widths = [w for _x, _y, w, _h in sprite_bounds]
+        heights = [h for _x, _y, _w, h in sprite_bounds]
         width_std = np.std(widths)
         height_std = np.std(heights)
 
@@ -273,10 +276,10 @@ def _merge_nearby_components(sprite_bounds: list[tuple[int, int, int, int]],
 
         # Create merged bounding box for this group
         if merge_group:
-            min_x = min(x for x, y, w, h in merge_group)
-            min_y = min(y for x, y, w, h in merge_group)
-            max_x = max(x + w for x, y, w, h in merge_group)
-            max_y = max(y + h for x, y, w, h in merge_group)
+            min_x = min(x for x, _y, _w, _h in merge_group)
+            min_y = min(y for _x, y, _w, _h in merge_group)
+            max_x = max(x + w for x, _y, w, _h in merge_group)
+            max_y = max(y + h for _x, y, _w, h in merge_group)
             merged_bounds = (min_x, min_y, max_x - min_x, max_y - min_y)
             merged.append(merged_bounds)
 
@@ -298,8 +301,8 @@ def _analyze_ccl_results(sprite_bounds: list[tuple[int, int, int, int]],
         return {'success': False, 'method': 'ccl_enhanced'}
 
     # Calculate statistics
-    widths = [w for x, y, w, h in sprite_bounds]
-    heights = [h for x, y, w, h in sprite_bounds]
+    widths = [w for _x, _y, w, _h in sprite_bounds]
+    heights = [h for _x, _y, _w, h in sprite_bounds]
     avg_width = int(np.mean(widths))
     avg_height = int(np.mean(heights))
     width_std = np.std(widths)
@@ -312,8 +315,8 @@ def _analyze_ccl_results(sprite_bounds: list[tuple[int, int, int, int]],
 
     if uniform_size and len(sprite_bounds) >= 2:
         # Infer grid structure from sprite positions
-        centers_x = [x + w//2 for x, y, w, h in sprite_bounds]
-        centers_y = [y + h//2 for x, y, w, h in sprite_bounds]
+        centers_x = [x + w//2 for x, _y, w, _h in sprite_bounds]
+        centers_y = [y + h//2 for _x, y, _w, h in sprite_bounds]
 
         def group_positions(positions, tolerance=15):
             if not positions:
@@ -330,7 +333,7 @@ def _analyze_ccl_results(sprite_bounds: list[tuple[int, int, int, int]],
         grouped_x = group_positions(centers_x, tolerance=15)
 
         y_range = max(centers_y) - min(centers_y)
-        avg_sprite_height = np.mean([h for x, y, w, h in sprite_bounds])
+        avg_sprite_height = np.mean([h for _x, _y, _w, h in sprite_bounds])
 
         if y_range <= avg_sprite_height * 0.4:
             grouped_y = [int(np.mean(centers_y))]
@@ -396,8 +399,8 @@ def _analyze_ccl_results(sprite_bounds: list[tuple[int, int, int, int]],
             if is_irregular_collection:
                 char_sprites = [(w, h) for w, h in zip(widths, heights, strict=False) if 20 <= w <= 80 and 20 <= h <= 80]
                 if len(char_sprites) >= 10:
-                    chosen_width = int(np.median([w for w, h in char_sprites]))
-                    chosen_height = int(np.median([h for w, h in char_sprites]))
+                    chosen_width = int(np.median([w for w, _h in char_sprites]))
+                    chosen_height = int(np.median([h for _w, h in char_sprites]))
                     chosen_method = "best_effort_warning"
                 else:
                     chosen_width, chosen_height = 48, 48

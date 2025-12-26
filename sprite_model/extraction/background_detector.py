@@ -5,6 +5,7 @@ Background Color Detection Module
 Detects background colors in sprite sheets for transparency application.
 """
 
+from typing import cast
 
 import numpy as np
 from PIL import Image
@@ -144,7 +145,8 @@ def _test_color_key_background(img_array: np.ndarray, background_color: np.ndarr
 
         # Use connected components to count separate sprites
         from scipy import ndimage
-        _labeled_array, num_components = ndimage.label(sprite_mask.astype(np.uint8))
+        labeled_result = ndimage.label(sprite_mask.astype(np.uint8))
+        _labeled_array, num_components = cast('tuple[np.ndarray, int]', labeled_result)
 
         # Calculate quality score based on background percentage and component count
         # Good background detection should have high background % and reasonable component count
