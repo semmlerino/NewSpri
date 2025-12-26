@@ -78,9 +78,9 @@ class SpriteCanvas(QLabel):
         # Call parent update to trigger repaint
         super().update()
 
-    def update(self):
+    def update(self, *args, **kwargs):
         """Standard update - just trigger repaint without fetching frame."""
-        super().update()
+        super().update(*args, **kwargs)
 
     def set_frame_info(self, current: int, total: int):
         """Update frame information."""
@@ -367,10 +367,6 @@ class SpriteCanvas(QLabel):
             return (sprite_coord_x, sprite_coord_y)
 
         return None
-
-    def get_zoom_factor(self):
-        """Get current zoom factor."""
-        return self._zoom_factor
 
 
 # Export for easy importing

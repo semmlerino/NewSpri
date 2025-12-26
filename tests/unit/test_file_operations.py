@@ -593,8 +593,9 @@ def test_file_size_formatting_parametrized(file_size, expected_unit):
     (".JPEG", True),
     (".bmp", True),
     (".gif", True),
-    (".tiff", True),
-    (".webp", True),
+    # Note: .tiff and .webp removed - not supported by Config.File.SUPPORTED_EXTENSIONS
+    (".tiff", False),
+    (".webp", False),
     (".txt", False),
     (".doc", False),
     (".xyz", False),

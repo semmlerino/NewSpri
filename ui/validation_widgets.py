@@ -497,7 +497,7 @@ class PatternEdit(ValidatedLineEdit):
         try:
             preview = pattern.format(name="frame", index=0, frame=1)
             self.previewChanged.emit(f"Example: {preview}.png")
-        except:
+        except (KeyError, ValueError, IndexError):
             self.previewChanged.emit("Invalid pattern")
 
 

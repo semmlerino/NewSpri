@@ -4,8 +4,10 @@ Provides structured menu definitions and dynamic updates.
 Part of Phase 5: Architecture refactoring for better maintainability.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMainWindow, QMenu, QMenuBar, QToolBar
@@ -29,7 +31,7 @@ class MenuItemDefinition:
     action_id: str | None = None      # Action ID for ACTION type
     text: str | None = None           # Text for SUBMENU type
     items: list['MenuItemDefinition'] | None = None  # Items for SUBMENU type
-    handler: callable | None = None   # Custom handler for CUSTOM type
+    handler: Callable[..., Any] | None = None   # Custom handler for CUSTOM type
 
     def __post_init__(self):
         """Validate menu item definition."""
