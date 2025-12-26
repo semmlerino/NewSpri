@@ -4,8 +4,11 @@ Tests the export workflow UX fixes and tab switching behavior that was recently 
 """
 
 import pytest
+
+# Mark all tests as slow integration tests - they create full SpriteViewer windows
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
 from unittest.mock import Mock, patch, MagicMock
-from PySide6.QtWidgets import QTabWidget
+from PySide6.QtWidgets import QTabWidget, QApplication
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QColor
 
@@ -70,8 +73,8 @@ class TestAnimationSplittingWorkflow:
         assert success, f"Failed to extract frames: {msg}"
         assert count == 12
         
-        # Wait for extraction to complete and segments to be loaded
-        qtbot.wait(100)
+        # Process events to complete extraction and segment loading
+        QApplication.processEvents()
         
         # Manually trigger grid view update with real frames
         animation_grid.set_frames(viewer._sprite_model.sprite_frames)
@@ -114,7 +117,7 @@ class TestAnimationSplittingWorkflow:
         assert segments_created[1].name == "Attack"
         
         # After refactoring, verify segments in the manager
-        qtbot.wait(100)  # Give time for signal processing
+        QApplication.processEvents()  # Process pending signals
         manager_segments = viewer._segment_manager.get_all_segments()
         assert len(manager_segments) == 2
         
@@ -520,10 +523,11 @@ class TestRealAnimationSplittingIntegration:
         success = controller.start_animation()
         assert success
         assert controller.is_playing
-        
-        # Let it run briefly
-        qtbot.wait(100)
-        
+
+        # Wait for at least one frame to advance
+        with qtbot.waitSignal(controller.frameAdvanced, timeout=500):
+            pass  # Signal should fire within timeout
+
         controller.stop_animation()
         assert not controller.is_playing
     
@@ -589,9 +593,11 @@ class TestRealAnimationSplittingIntegration:
         success = controller.start_animation()
         assert success
         assert controller.is_playing
-        
-        qtbot.wait(100)
-        
+
+        # Wait for at least one frame to advance
+        with qtbot.waitSignal(controller.frameAdvanced, timeout=500):
+            pass  # Signal should fire within timeout
+
         controller.stop_animation()
         assert not controller.is_playing
 

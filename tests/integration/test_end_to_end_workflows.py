@@ -4,6 +4,9 @@ Comprehensive integration tests covering complete user workflows from startup to
 """
 
 import pytest
+
+# Mark all tests as slow integration tests - they create full SpriteViewer windows
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
 import tempfile
 import os
 import shutil
@@ -72,12 +75,11 @@ class TestCompleteApplicationLifecycle:
         # 4. Test animation playback
         viewer._animation_controller.start_animation()
         assert viewer._animation_controller.is_playing is True
-        
-        # Process some animation frames
-        for _ in range(5):
-            QApplication.processEvents()
-            qtbot.wait(50)
-        
+
+        # Wait for at least one frame to advance
+        with qtbot.waitSignal(viewer._animation_controller.frameAdvanced, timeout=500):
+            pass
+
         viewer._animation_controller.stop_animation()
         assert viewer._animation_controller.is_playing is False
         
@@ -117,13 +119,8 @@ class TestCompleteApplicationLifecycle:
         assert success, "Export should succeed"
         
         # Wait for export to complete (it runs in a thread)
-        timeout = 5000  # 5 seconds
-        start_time = QApplication.instance().processEvents()
-        while not export_complete['done'] and timeout > 0:
-            QApplication.processEvents()
-            qtbot.wait(50)
-            timeout -= 50
-        
+        qtbot.waitUntil(lambda: export_complete['done'], timeout=5000)
+
         assert export_complete['done'], "Export should complete within timeout"
         assert export_complete['success'], "Export should complete successfully"
         
@@ -211,8 +208,8 @@ class TestCompleteApplicationLifecycle:
         
         # Ensure button states are updated for no frames
         viewer._sprite_model.frameChanged.emit(0, 0)
-        qtbot.wait(50)
-        
+        QApplication.processEvents()
+
         # Test button navigation with no frames
         assert not viewer._playback_controls.prev_btn.isEnabled()
         assert not viewer._playback_controls.next_btn.isEnabled()
@@ -472,10 +469,10 @@ class TestComplexUserScenarios:
             scale_factor=1.0,  # Use 1x to avoid threading issues in tests
             pattern='{name}_{index:03d}'
         )
-        
-        # Wait a bit for export to complete  
-        qtbot.wait(100)
-        
+
+        # Process export completion
+        QApplication.processEvents()
+
         # 5. Export as sprite sheet with different layout
         from export.core.frame_exporter import SpriteSheetLayout
         layout = SpriteSheetLayout(
@@ -493,10 +490,10 @@ class TestComplexUserScenarios:
             scale_factor=1.0,
             sprite_sheet_layout=layout
         )
-        
-        # Wait a bit for export to complete
-        qtbot.wait(100)
-    
+
+        # Process export completion
+        QApplication.processEvents()
+
     @pytest.mark.integration
     def test_batch_processing_workflow(self, qtbot, tmp_path):
         """Test processing multiple sprite sheets in sequence."""
@@ -539,10 +536,10 @@ class TestComplexUserScenarios:
                 mode='individual'
             )
             assert success, "Export should succeed"
-            
-            # Wait for export to complete
-            qtbot.wait(100)
-    
+
+            # Process export completion
+            QApplication.processEvents()
+
     # Helper methods
     def _create_test_sprite_sheet(self, size_variant=0):
         """Create test sprite sheets with variations."""
@@ -670,6 +667,54 @@ def mock_sprite_viewer(qtbot):
     
     viewer._sprite_model.frameChanged.emit(0, 16)
     return viewer
+
+
+class TestAPIContracts:
+    """Test API contracts to prevent integration failures (consolidated from test_complete_user_workflows.py)."""
+
+    @pytest.mark.integration
+    def test_api_contract_enforcement(self, qtbot):
+        """Test that enforces all the API contracts we fixed."""
+        viewer = SpriteViewer()
+        qtbot.addWidget(viewer)
+
+        # Test all the API contracts that were violated and fixed
+        api_tests = [
+            ("SpriteCanvas.update()", lambda: viewer._canvas.update()),
+            ("SpriteCanvas.reset_view()", lambda: viewer._canvas.reset_view()),
+            ("RecentFiles.add_file_to_recent()", lambda: viewer._recent_files.add_file_to_recent("/test")),
+            ("StatusManager.show_message()", lambda: viewer._status_manager.show_message("test")),
+            ("StatusManager.update_mouse_position()", lambda: viewer._status_manager.update_mouse_position(0, 0)),
+            ("AnimationController.is_playing property", lambda: viewer._animation_controller.is_playing),
+            ("AutoDetectionController.run_comprehensive_detection_with_dialog()",
+             lambda: hasattr(viewer._auto_detection_controller, 'run_comprehensive_detection_with_dialog')),
+        ]
+
+        for description, test_func in api_tests:
+            try:
+                # Execute the test - we just care that it doesn't raise
+                test_func()
+            except AttributeError as e:
+                pytest.fail(f"{description} - API contract violation: {e}")
+            except TypeError as e:
+                pytest.fail(f"{description} - Type error (property vs method): {e}")
+
+    @pytest.mark.integration
+    def test_signal_connection_contracts(self, qtbot):
+        """Test that all signal connections use correct signal names."""
+        viewer = SpriteViewer()
+        qtbot.addWidget(viewer)
+
+        # Test signal contracts that were wrong
+        signal_tests = [
+            ("SpriteCanvas.mouseMoved", viewer._canvas, "mouseMoved"),
+            ("SpriteCanvas.zoomChanged", viewer._canvas, "zoomChanged"),
+            ("FrameExtractor.settingsChanged", viewer._frame_extractor, "settingsChanged"),
+            ("AnimationController.animationStarted", viewer._animation_controller, "animationStarted"),
+        ]
+
+        for description, obj, signal_name in signal_tests:
+            assert hasattr(obj, signal_name), f"{description} - Signal does not exist"
 
 
 @pytest.fixture

@@ -57,8 +57,8 @@ class TestFrameDetector:
         frames_x = width // frame_width
         frames_y = height // frame_height
         total_frames = frames_x * frames_y
-        assert total_frames >= Config.Animation.MIN_REASONABLE_FRAMES
-        assert total_frames <= Config.Animation.MAX_REASONABLE_FRAMES
+        assert total_frames >= Config.FrameExtraction.MIN_REASONABLE_FRAMES
+        assert total_frames <= Config.FrameExtraction.MAX_REASONABLE_FRAMES
     
     def test_detect_frame_size_gcd_fallback(self, qapp):
         """Test GCD fallback for non-standard dimensions."""
@@ -766,8 +766,8 @@ def test_detection_parametrized_sizes(qapp, sheet_size, frame_size, expected_fra
         frames_x = sheet_size[0] // width
         frames_y = sheet_size[1] // height
         total_frames = frames_x * frames_y
-        assert total_frames >= Config.Animation.MIN_REASONABLE_FRAMES
-        assert total_frames <= Config.Animation.MAX_REASONABLE_FRAMES
+        assert total_frames >= Config.FrameExtraction.MIN_REASONABLE_FRAMES
+        assert total_frames <= Config.FrameExtraction.MAX_REASONABLE_FRAMES
 
 
 @pytest.mark.performance

@@ -235,5 +235,14 @@ class TestExportDialog:
         assert default_dir.parent.exists()
 
 
+class TestExportDialogClassIdentity:
+    """Test that ExportDialog is the correct integrated wizard class."""
+
+    def test_export_dialog_is_integrated_wizard(self):
+        """Verify we're using the integrated wizard dialog."""
+        from export.dialogs.export_wizard import ExportDialog as ExportDialogDirect
+        assert ExportDialog is ExportDialogDirect, "ExportDialog should be the wizard dialog"
+
+
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])

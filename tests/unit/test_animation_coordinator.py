@@ -288,17 +288,18 @@ class TestAnimationCoordinator:
         mock_sprite_model.sprite_frames = []
         assert coordinator.get_frame_count() == 0
     
-    def test_update_context(self, mock_main_window, mock_sprite_model, 
+    def test_update_context(self, mock_main_window, mock_sprite_model,
                            mock_action_manager, mock_animation_controller):
         """Test _update_context method."""
         coordinator = AnimationCoordinator(mock_main_window)
         coordinator.sprite_model = mock_sprite_model
         coordinator.action_manager = mock_action_manager
         coordinator.animation_controller = mock_animation_controller
-        
+        coordinator.shortcut_manager = mock_main_window._shortcut_manager
+
         # Test context update
         coordinator._update_context()
-        
+
         # Verify managers were updated
         mock_main_window._shortcut_manager.update_context.assert_called_once_with(
             has_frames=True,

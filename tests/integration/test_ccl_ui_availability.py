@@ -4,8 +4,12 @@ Tests the fix for CCL button being disabled when auto-detection fails.
 """
 
 import pytest
+
+# Mark all tests as integration tests (requires_files only for specific tests)
+pytestmark = [pytest.mark.integration]
 from pathlib import Path
 from unittest.mock import patch, MagicMock
+from PySide6.QtWidgets import QApplication
 
 
 class TestCCLUIAvailability:
@@ -91,10 +95,10 @@ class TestCCLUIAvailability:
             # Simulate loading through file controller
             with patch.object(viewer._file_controller, 'load_file') as mock_file_load:
                 viewer._file_controller.file_loaded.emit(test_sprite_path)
-                
-                # Wait for any async operations
-                qtbot.wait(100)
-                
+
+                # Process pending events
+                QApplication.processEvents()
+
                 # CCL should still be enabled
                 assert ccl_button.isEnabled(), "CCL button should remain enabled after sprite load"
                 print("✅ CCL button remains enabled after sprite loading")
@@ -123,8 +127,8 @@ class TestCCLUIAvailability:
                 
                 # Simulate file loading through controller
                 viewer._file_controller.file_loaded.emit("/fake/test.png")
-                qtbot.wait(100)
-                
+                QApplication.processEvents()
+
                 # CCL should still be enabled despite auto-detection issues
                 assert ccl_button.isEnabled(), "CCL should remain enabled regardless of auto-detection"
                 print("✅ CCL remains enabled independent of auto-detection")

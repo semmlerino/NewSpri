@@ -47,8 +47,9 @@ class TestAnimationConfig:
     
     def test_frame_limits(self):
         """Test frame count limits."""
-        assert AnimationConfig.MIN_REASONABLE_FRAMES >= 1
-        assert AnimationConfig.MAX_REASONABLE_FRAMES >= 10
+        # Frame limits are in FrameExtractionConfig
+        assert FrameExtractionConfig.MIN_REASONABLE_FRAMES >= 1
+        assert FrameExtractionConfig.MAX_REASONABLE_FRAMES >= 10
 
 
 class TestFrameExtractionConfig:
@@ -143,9 +144,10 @@ class TestMainConfig:
         assert hasattr(Config, 'Drawing')
         assert hasattr(Config, 'File')
         assert hasattr(Config, 'Slider')
-        assert hasattr(Config, 'Color')
         assert hasattr(Config, 'Font')
         assert hasattr(Config, 'App')
+        assert hasattr(Config, 'Settings')
+        assert hasattr(Config, 'Export')
     
     def test_config_consistency(self):
         """Test configuration values are internally consistent."""

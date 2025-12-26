@@ -29,39 +29,29 @@ class TestExportCoordinator:
         """Create mock segment manager."""
         return Mock()
     
-    @pytest.fixture
-    def mock_export_handler(self):
-        """Create mock export handler."""
-        handler = Mock()
-        handler.handle_unified_export_request = Mock()
-        return handler
-    
     def test_initialization(self, mock_main_window):
         """Test ExportCoordinator initialization."""
         coordinator = ExportCoordinator(mock_main_window)
-        
+
         assert coordinator.main_window == mock_main_window
         assert not coordinator.is_initialized
         assert coordinator.sprite_model is None
         assert coordinator.segment_manager is None
-        assert coordinator.export_handler is None
-    
-    def test_initialize_with_dependencies(self, mock_main_window, mock_sprite_model, 
-                                          mock_segment_manager, mock_export_handler):
+
+    def test_initialize_with_dependencies(self, mock_main_window, mock_sprite_model,
+                                          mock_segment_manager):
         """Test initialization with dependencies."""
         coordinator = ExportCoordinator(mock_main_window)
-        
+
         dependencies = {
             'sprite_model': mock_sprite_model,
-            'segment_manager': mock_segment_manager,
-            'export_handler': mock_export_handler
+            'segment_manager': mock_segment_manager
         }
-        
+
         coordinator.initialize(dependencies)
-        
+
         assert coordinator.sprite_model == mock_sprite_model
         assert coordinator.segment_manager == mock_segment_manager
-        assert coordinator.export_handler == mock_export_handler
         assert coordinator.is_initialized
     
     def test_cleanup(self, mock_main_window):
@@ -132,24 +122,23 @@ class TestExportCoordinator:
         )
     
     @patch('coordinators.export_coordinator.ExportDialog')
-    def test_export_current_frame(self, mock_dialog_class, mock_main_window, 
-                                 mock_sprite_model, mock_segment_manager, mock_export_handler):
+    def test_export_current_frame(self, mock_dialog_class, mock_main_window,
+                                 mock_sprite_model, mock_segment_manager):
         """Test export_current_frame method."""
         coordinator = ExportCoordinator(mock_main_window)
         coordinator.sprite_model = mock_sprite_model
         coordinator.segment_manager = mock_segment_manager
-        coordinator.export_handler = mock_export_handler
-        
+
         # Create mock dialog instance
         mock_dialog = Mock()
         mock_dialog.set_sprites = Mock()
         mock_dialog.exportRequested = MagicMock()  # Signal mock
         mock_dialog.exec = Mock()
         mock_dialog_class.return_value = mock_dialog
-        
+
         # Call export_current_frame
         coordinator.export_current_frame()
-        
+
         # Verify dialog creation (same as export_frames)
         mock_dialog_class.assert_called_once_with(
             mock_main_window,
@@ -157,35 +146,36 @@ class TestExportCoordinator:
             current_frame=2,
             segment_manager=mock_segment_manager
         )
-        
+
         # Verify dialog was configured and shown
         mock_dialog.set_sprites.assert_called_once_with(mock_sprite_model.sprite_frames)
         mock_dialog.exec.assert_called_once()
-    
-    def test_handle_export_request(self, mock_main_window, mock_sprite_model, 
-                                  mock_segment_manager, mock_export_handler):
-        """Test _handle_export_request method."""
+
+    def test_handle_export_request(self, mock_main_window, mock_sprite_model,
+                                  mock_segment_manager):
+        """Test _handle_export_request method with valid settings."""
         coordinator = ExportCoordinator(mock_main_window)
         coordinator.sprite_model = mock_sprite_model
         coordinator.segment_manager = mock_segment_manager
-        coordinator.export_handler = mock_export_handler
-        
-        # Test export settings
+
+        # Mock the exporter to prevent actual export
+        coordinator._exporter = Mock()
+        coordinator._exporter.export_frames = Mock(return_value=True)
+
+        # Test export settings with all required keys
         settings = {
-            'export_type': 'frames',
+            'output_dir': '/tmp/test',
+            'base_name': 'test_sprite',
             'format': 'png',
-            'scale': 1.0
+            'mode': 'individual',
+            'scale_factor': 1.0
         }
-        
+
         # Call handler
         coordinator._handle_export_request(settings)
-        
-        # Verify export handler was called
-        mock_export_handler.handle_unified_export_request.assert_called_once_with(
-            settings,
-            mock_sprite_model,
-            mock_segment_manager
-        )
+
+        # Verify exporter was called
+        coordinator._exporter.export_frames.assert_called_once()
     
     def test_validate_export_with_frames(self, mock_main_window, mock_sprite_model):
         """Test _validate_export returns True when frames exist."""

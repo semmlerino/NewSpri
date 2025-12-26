@@ -4,6 +4,9 @@ Tests Connected Component Labeling algorithm with actual sprite sheets.
 """
 
 import pytest
+
+# Mark all tests in this file as requiring external files
+pytestmark = [pytest.mark.integration, pytest.mark.requires_files]
 import os
 from pathlib import Path
 from PySide6.QtGui import QPixmap, QImage
