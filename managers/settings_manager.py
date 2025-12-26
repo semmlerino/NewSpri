@@ -174,18 +174,6 @@ class SettingsManager(QObject):
         self.set_value('extraction/last_spacing_y', spacing_y)
         self.set_value('extraction/last_mode', mode)
 
-    def get_extraction_settings(self) -> dict[str, Any]:
-        """Get last used frame extraction settings."""
-        return {
-            'width': self.get_value('extraction/last_width'),
-            'height': self.get_value('extraction/last_height'),
-            'offset_x': self.get_value('extraction/last_offset_x'),
-            'offset_y': self.get_value('extraction/last_offset_y'),
-            'spacing_x': self.get_value('extraction/last_spacing_x'),
-            'spacing_y': self.get_value('extraction/last_spacing_y'),
-            'mode': self.get_value('extraction/last_mode')
-        }
-
     # Display preferences
     def save_display_settings(self, grid_visible: bool, zoom: float, zoom_fit_tiny: bool) -> None:
         """Save display preferences."""
@@ -193,26 +181,11 @@ class SettingsManager(QObject):
         self.set_value('display/last_zoom', zoom)
         self.set_value('display/zoom_fit_tiny', zoom_fit_tiny)
 
-    def get_display_settings(self) -> dict[str, Any]:
-        """Get display preferences."""
-        return {
-            'grid_visible': self.get_value('display/grid_visible'),
-            'last_zoom': self.get_value('display/last_zoom'),
-            'zoom_fit_tiny': self.get_value('display/zoom_fit_tiny')
-        }
-
     # Animation settings
     def save_animation_settings(self, fps: int, loop_mode: bool) -> None:
         """Save animation preferences."""
         self.set_value('animation/last_fps', fps)
         self.set_value('animation/loop_mode', loop_mode)
-
-    def get_animation_settings(self) -> dict[str, Any]:
-        """Get animation preferences."""
-        return {
-            'fps': self.get_value('animation/last_fps'),
-            'loop_mode': self.get_value('animation/loop_mode')
-        }
 
     # Recent files management
     def add_recent_file(self, filepath: str) -> None:

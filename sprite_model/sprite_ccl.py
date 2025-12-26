@@ -39,85 +39,66 @@ class CCLOperations:
         # Mode state
         self._extraction_mode: str = "ccl"  # "grid" or "ccl" - CCL is now the default
 
-        # Callbacks for integration with main model
-        self._get_original_sprite_sheet: Callable[[], QPixmap] | None = None
-        self._get_sprite_sheet_path: Callable[[], str] | None = None
-        self._emit_extraction_completed: Callable[[int], None] | None = None
-
-    def set_callbacks(self,
-                     get_original_sprite_sheet: Callable[[], QPixmap],
-                     get_sprite_sheet_path: Callable[[], str],
-                     emit_extraction_completed: Callable[[int], None]) -> None:
-        """
-        Set callback functions for integration with main sprite model.
-
-        Args:
-            get_original_sprite_sheet: Function to get the original sprite sheet QPixmap
-            get_sprite_sheet_path: Function to get the sprite sheet file path
-            emit_extraction_completed: Function to emit extraction completed signal
-        """
-        self._get_original_sprite_sheet = get_original_sprite_sheet
-        self._get_sprite_sheet_path = get_sprite_sheet_path
-        self._emit_extraction_completed = emit_extraction_completed
-
-    def extract_ccl_frames(self, ccl_available: bool,
-                          detect_sprites_ccl_enhanced: Callable[[str], dict | None],
-                          detect_background_color: Callable[[str], tuple[tuple[int, int, int], int] | None]) -> tuple[bool, str, int, list[QPixmap], str]:
+    def extract_ccl_frames(
+        self,
+        sprite_sheet: QPixmap,
+        sprite_sheet_path: str,
+        ccl_available: bool,
+        detect_sprites_ccl_enhanced: Callable[[str], dict | None],
+        detect_background_color: Callable[[str], tuple[tuple[int, int, int], int] | None],
+        emit_extraction_completed: Callable[[int], None] | None = None
+    ) -> tuple[bool, str, int, list[QPixmap], str]:
         """
         Extract frames using CCL-detected sprite boundaries (for irregular sprite collections).
 
         Args:
+            sprite_sheet: The original sprite sheet QPixmap
+            sprite_sheet_path: Path to the sprite sheet file
             ccl_available: Whether CCL functionality is available
             detect_sprites_ccl_enhanced: Function to detect sprites using CCL
             detect_background_color: Function to detect background color
+            emit_extraction_completed: Optional callback to emit extraction completed signal
 
         Returns:
             Tuple of (success, error_message, frame_count, sprite_frames, updated_info)
         """
-        if not self._get_original_sprite_sheet:
-            return False, "CCL operations not properly initialized", 0, [], ""
-
-        original_sprite_sheet = self._get_original_sprite_sheet()
-        if not original_sprite_sheet or original_sprite_sheet.isNull():
+        if sprite_sheet is None or sprite_sheet.isNull():
             return False, "No sprite sheet loaded", 0, [], ""
 
         # If no CCL sprite bounds, try to run auto-detection first
         if not self._ccl_sprite_bounds:
-            if ccl_available and self._get_sprite_sheet_path:
-                sprite_sheet_path = self._get_sprite_sheet_path()
-                if sprite_sheet_path:
-                    # Try to run CCL detection automatically
-                    try:
-                        ccl_result = detect_sprites_ccl_enhanced(sprite_sheet_path)
-
-                        # Ensure we got a dictionary result
-                        if not isinstance(ccl_result, dict):
-                            return False, f"CCL auto-detection returned unexpected type: {type(ccl_result)}", 0, [], ""
-
-                        if ccl_result and ccl_result.get('success', False):
-                            # Store CCL sprite boundaries
-                            if 'ccl_sprite_bounds' in ccl_result:
-                                self._ccl_sprite_bounds = ccl_result['ccl_sprite_bounds']
-                                self._ccl_available = True
-
-                                # Store background color info if available
-                                if ccl_available:
-                                    bg_color_info = detect_background_color(sprite_sheet_path)
-                                    if bg_color_info is not None:
-                                        self._ccl_background_color = bg_color_info[0]
-                                        # Cap tolerance at 25 for CCL mode to prevent destroying sprite content
-                                        raw_tolerance = bg_color_info[1]
-                                        self._ccl_color_tolerance = min(raw_tolerance, 25)
-                                        if raw_tolerance > 25:
-                                            print(f"   🛡️ CCL: Reduced tolerance from {raw_tolerance} to {self._ccl_color_tolerance} to preserve sprite content")
-                        else:
-                            return False, "CCL auto-detection failed. Cannot extract CCL frames.", 0, [], ""
-                    except Exception as e:
-                        return False, f"CCL auto-detection error: {e!s}", 0, [], ""
-                else:
-                    return False, "No sprite sheet path available for CCL detection.", 0, [], ""
-            else:
+            if not ccl_available:
                 return False, "No CCL sprite boundaries available. Auto-detection not possible.", 0, [], ""
+            if not sprite_sheet_path:
+                return False, "No sprite sheet path available for CCL detection.", 0, [], ""
+
+            # Try to run CCL detection automatically
+            try:
+                ccl_result = detect_sprites_ccl_enhanced(sprite_sheet_path)
+
+                # Ensure we got a dictionary result
+                if not isinstance(ccl_result, dict):
+                    return False, f"CCL auto-detection returned unexpected type: {type(ccl_result)}", 0, [], ""
+
+                if ccl_result and ccl_result.get('success', False):
+                    # Store CCL sprite boundaries
+                    if 'ccl_sprite_bounds' in ccl_result:
+                        self._ccl_sprite_bounds = ccl_result['ccl_sprite_bounds']
+                        self._ccl_available = True
+
+                        # Store background color info if available
+                        bg_color_info = detect_background_color(sprite_sheet_path)
+                        if bg_color_info is not None:
+                            self._ccl_background_color = bg_color_info[0]
+                            # Cap tolerance at 25 for CCL mode to prevent destroying sprite content
+                            raw_tolerance = bg_color_info[1]
+                            self._ccl_color_tolerance = min(raw_tolerance, 25)
+                            if raw_tolerance > 25:
+                                print(f"   🛡️ CCL: Reduced tolerance from {raw_tolerance} to {self._ccl_color_tolerance} to preserve sprite content")
+                else:
+                    return False, "CCL auto-detection failed. Cannot extract CCL frames.", 0, [], ""
+            except Exception as e:
+                return False, f"CCL auto-detection error: {e!s}", 0, [], ""
 
         # Check again after potential auto-detection
         if not self._ccl_sprite_bounds:
@@ -129,8 +110,8 @@ class CCLOperations:
             filtered_count = 0
             null_frame_count = 0
 
-            sheet_width = original_sprite_sheet.width()
-            sheet_height = original_sprite_sheet.height()
+            sheet_width = sprite_sheet.width()
+            sheet_height = sprite_sheet.height()
             print(f"   📐 Sheet dimensions: {sheet_width}×{sheet_height}")
             print(f"   🎯 Processing {len(self._ccl_sprite_bounds)} detected sprite bounds...")
 
@@ -138,7 +119,7 @@ class CCLOperations:
                 # Ensure bounds are within sheet dimensions
                 if x >= 0 and y >= 0 and x + width <= sheet_width and y + height <= sheet_height:
                     frame_rect = QRect(x, y, width, height)
-                    frame = original_sprite_sheet.copy(frame_rect)
+                    frame = sprite_sheet.copy(frame_rect)
 
                     if not frame.isNull():
                         # Apply background color transparency if available
@@ -184,27 +165,37 @@ class CCLOperations:
                 updated_info = "<br><b>CCL Frames:</b> 0"
 
             # Emit extraction completed signal if callback available
-            if self._emit_extraction_completed:
-                self._emit_extraction_completed(len(sprite_frames))
+            if emit_extraction_completed:
+                emit_extraction_completed(len(sprite_frames))
 
             return True, "", len(sprite_frames), sprite_frames, updated_info
 
         except Exception as e:
             return False, f"Error extracting CCL frames: {e!s}", 0, [], ""
 
-    def set_extraction_mode(self, mode: str, ccl_available: bool,
-                           extract_grid_frames_callback: Callable[[], tuple[bool, str, int]],
-                           detect_sprites_ccl_enhanced: Callable[[str], dict | None],
-                           detect_background_color: Callable[[str], tuple[tuple[int, int, int], int] | None]) -> bool:
+    def set_extraction_mode(
+        self,
+        mode: str,
+        sprite_sheet: QPixmap,
+        sprite_sheet_path: str,
+        ccl_available: bool,
+        extract_grid_frames_callback: Callable[[], tuple[bool, str, int]],
+        detect_sprites_ccl_enhanced: Callable[[str], dict | None],
+        detect_background_color: Callable[[str], tuple[tuple[int, int, int], int] | None],
+        emit_extraction_completed: Callable[[int], None] | None = None
+    ) -> bool:
         """
         Set extraction mode and extract frames accordingly.
 
         Args:
             mode: Extraction mode ("grid" or "ccl")
+            sprite_sheet: The original sprite sheet QPixmap
+            sprite_sheet_path: Path to the sprite sheet file
             ccl_available: Whether CCL functionality is available
             extract_grid_frames_callback: Callback to extract grid frames
             detect_sprites_ccl_enhanced: Function to detect sprites using CCL
             detect_background_color: Function to detect background color
+            emit_extraction_completed: Optional callback to emit extraction completed signal
 
         Returns:
             True if successful, False otherwise
@@ -221,7 +212,12 @@ class CCLOperations:
         # Re-extract frames with new mode
         if mode == "ccl":
             success, _error, _count, frames, info = self.extract_ccl_frames(
-                ccl_available, detect_sprites_ccl_enhanced, detect_background_color
+                sprite_sheet=sprite_sheet,
+                sprite_sheet_path=sprite_sheet_path,
+                ccl_available=ccl_available,
+                detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
+                detect_background_color=detect_background_color,
+                emit_extraction_completed=emit_extraction_completed
             )
             # Store the extracted frames and info for the main model to retrieve
             self._last_extracted_frames = frames if success else []

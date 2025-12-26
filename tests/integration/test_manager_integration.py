@@ -262,13 +262,13 @@ class TestManagerStateConsistency:
             assert success, f"Failed to add segment {name}: {msg}"
 
         # Verify count
-        assert len(segment_manager.get_segments()) == 3
+        assert len(segment_manager.get_all_segments()) == 3
 
         # Remove middle segment
         segment_manager.remove_segment("Walk")
 
         # Verify state is consistent
-        remaining = segment_manager.get_segments()
+        remaining = segment_manager.get_all_segments()
         assert len(remaining) == 2
         assert remaining[0].name == "Idle"
         assert remaining[1].name == "Run"

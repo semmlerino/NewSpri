@@ -246,17 +246,6 @@ class EnhancedStatusBar(QStatusBar):
         """Show error message."""
         self.show_message(f"Error: {error}", 5000)
 
-    def show_export_message(self, export_type: str, count: int = 1) -> None:
-        """Show export completion message."""
-        if count == 1:
-            self.show_message(f"Exported {export_type}", 3000)
-        else:
-            self.show_message(f"Exported {count} {export_type}", 3000)
-
-    def show_auto_detection_message(self, result: str) -> None:
-        """Show auto-detection result message."""
-        self.show_message(f"Auto-detect: {result}", 4000)
-
     def show_welcome_message(self) -> None:
         """Show welcome message."""
         self.show_permanent_message(Config.App.WELCOME_MESSAGE)

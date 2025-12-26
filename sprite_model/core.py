@@ -80,18 +80,7 @@ class SpriteModel(QObject):
         self._animation_state.frameChanged.connect(self.frameChanged.emit)
         self._animation_state.playbackStateChanged.connect(self.playbackStateChanged.emit)
 
-        # Setup CCLOperations callbacks for state access (TODO: refactor to direct params)
-        def get_sprite_sheet_callback() -> QPixmap:
-            """Get original sprite sheet with None check."""
-            if self._original_sprite_sheet is None:
-                return QPixmap()  # Return empty QPixmap if None
-            return self._original_sprite_sheet
-
-        self._ccl_operations.set_callbacks(
-            get_original_sprite_sheet=get_sprite_sheet_callback,
-            get_sprite_sheet_path=lambda: self._sprite_sheet_path,
-            emit_extraction_completed=lambda count: self.extractionCompleted.emit(count)
-        )
+        # Note: CCLOperations now uses direct parameters instead of callbacks
 
     # File Operations Methods
     def load_sprite_sheet(self, file_path: str) -> tuple[bool, str]:
@@ -272,25 +261,22 @@ class SpriteModel(QObject):
 
     def extract_ccl_frames(self) -> tuple[bool, str, int]:
         """Extract frames using Connected Component Labeling."""
-        # Setup detection callbacks for CCLOperations
-        def ccl_available_callback():
-            return self.is_ccl_available()
+        from sprite_model.sprite_extraction import (
+            detect_background_color,
+            detect_sprites_ccl_enhanced,
+        )
 
-        def detect_sprites_callback(sprite_sheet_path):
-            # Import the actual CCL detection function to return dictionary format
-            from sprite_model.sprite_extraction import detect_sprites_ccl_enhanced
-            return detect_sprites_ccl_enhanced(sprite_sheet_path)
+        # Get sprite sheet, defaulting to empty QPixmap if None
+        sprite_sheet = self._original_sprite_sheet if self._original_sprite_sheet else QPixmap()
 
-        def detect_background_callback(sprite_sheet_path):
-            # Import the actual background detection function
-            from sprite_model.sprite_extraction import detect_background_color
-            return detect_background_color(sprite_sheet_path)
-
-        # Call CCLOperations with callbacks
+        # Call CCLOperations with direct parameters
         success, message, frame_count, frames, _info = self._ccl_operations.extract_ccl_frames(
-            ccl_available=ccl_available_callback(),  # Call the function to get bool
-            detect_sprites_ccl_enhanced=detect_sprites_callback,
-            detect_background_color=detect_background_callback
+            sprite_sheet=sprite_sheet,
+            sprite_sheet_path=self._sprite_sheet_path,
+            ccl_available=self.is_ccl_available(),
+            detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
+            detect_background_color=detect_background_color,
+            emit_extraction_completed=lambda count: self.extractionCompleted.emit(count)
         )
 
         if success:
@@ -298,15 +284,15 @@ class SpriteModel(QObject):
             self._sprite_frames.clear()
             self._sprite_frames.extend(frames)
             self._animation_state.update_frame_count(frame_count)
-            # extractionCompleted already emitted by CCLOperations callback
 
         return success, message, frame_count
 
     def set_extraction_mode(self, mode: str) -> bool:
         """Set extraction mode (grid or ccl)."""
-        # Setup callbacks for CCLOperations
-        def ccl_available_callback():
-            return self.is_ccl_available()
+        from sprite_model.sprite_extraction import (
+            detect_background_color,
+            detect_sprites_ccl_enhanced,
+        )
 
         def extract_grid_callback():
             # Re-extract using current settings
@@ -316,22 +302,18 @@ class SpriteModel(QObject):
                 self._spacing_x, self._spacing_y
             )
 
-        def detect_sprites_callback(sprite_sheet_path):
-            # Import the actual CCL detection function
-            from sprite_model.sprite_extraction import detect_sprites_ccl_enhanced
-            return detect_sprites_ccl_enhanced(sprite_sheet_path)
-
-        def detect_background_callback(sprite_sheet_path):
-            # Import the actual background detection function
-            from sprite_model.sprite_extraction import detect_background_color
-            return detect_background_color(sprite_sheet_path)
+        # Get sprite sheet, defaulting to empty QPixmap if None
+        sprite_sheet = self._original_sprite_sheet if self._original_sprite_sheet else QPixmap()
 
         success = self._ccl_operations.set_extraction_mode(
             mode=mode,
-            ccl_available=ccl_available_callback(),  # Call the function to get the boolean
+            sprite_sheet=sprite_sheet,
+            sprite_sheet_path=self._sprite_sheet_path,
+            ccl_available=self.is_ccl_available(),
             extract_grid_frames_callback=extract_grid_callback,
-            detect_sprites_ccl_enhanced=detect_sprites_callback,
-            detect_background_color=detect_background_callback
+            detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
+            detect_background_color=detect_background_color,
+            emit_extraction_completed=lambda count: self.extractionCompleted.emit(count)
         )
 
         # If CCL mode succeeded, retrieve and store the extracted frames

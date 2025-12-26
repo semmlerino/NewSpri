@@ -413,23 +413,12 @@ class AnimationSegmentManager(QObject):
                 return segment.name
         return None
 
-    def get_segments_containing_frame(self, frame_index: int) -> list[str]:
-        """Get names of all segments containing the given frame."""
-        return [
-            name for name, segment in self._segments.items()
-            if segment.start_frame <= frame_index <= segment.end_frame
-        ]
-
     def get_segment_at_frame(self, frame_index: int) -> AnimationSegmentData | None:
         """Get the first segment that contains a specific frame."""
         for _name, segment in self._segments.items():
             if segment.start_frame <= frame_index <= segment.end_frame:
                 return segment
         return None
-
-    def get_segments(self) -> list[AnimationSegmentData]:
-        """Alias for get_all_segments() for backward compatibility."""
-        return self.get_all_segments()
 
     def extract_frames_for_segment(self, segment_name: str,
                                  all_frames: list[QPixmap]) -> list[QPixmap]:
@@ -584,17 +573,3 @@ class AnimationSegmentManager(QObject):
     def set_auto_save_enabled(self, enabled: bool):
         """Enable or disable auto-save functionality."""
         self._auto_save_enabled = enabled
-
-    def export_segments_list(self) -> list[dict[str, Any]]:
-        """Export segments as a list of dictionaries for external use."""
-        return [
-            {
-                "name": segment.name,
-                "start_frame": segment.start_frame,
-                "end_frame": segment.end_frame,
-                "frame_count": segment.frame_count,
-                "description": segment.description,
-                "tags": segment.tags.copy() if segment.tags else []
-            }
-            for segment in self._segments.values()
-        ]

@@ -334,11 +334,3 @@ class FrameScoreCalculator:
                 print(f"Warning: {component.name} scoring failed: {e}")
 
         return FrameScore.combine(component_scores, params)
-
-    def add_component(self, component: ScoringComponent):
-        """Add a custom scoring component."""
-        self.components.append(component)
-
-    def remove_component(self, component_name: str):
-        """Remove a scoring component by name."""
-        self.components = [c for c in self.components if c.name != component_name]

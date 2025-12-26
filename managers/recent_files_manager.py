@@ -255,10 +255,6 @@ class RecentFilesManager(QObject):
         """Clear all recent files."""
         self._settings.clear_recent_files()
 
-    def cleanup_recent_files(self) -> None:
-        """Remove non-existent files from recent files list."""
-        self._settings.cleanup_recent_files()
-
     def get_recent_files_for_welcome(self) -> list[dict]:
         """
         Get recent files formatted for welcome screen display.

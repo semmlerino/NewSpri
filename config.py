@@ -454,7 +454,7 @@ class ExportConfig:
     # ==========================================
 
     # Layout calculation modes
-    LAYOUT_MODES = ['auto', 'rows', 'columns', 'square', 'custom']
+    LAYOUT_MODES = ['auto', 'rows', 'columns', 'square', 'custom', 'segments_per_row']
     DEFAULT_LAYOUT_MODE = 'auto'
 
     # Spacing and padding settings

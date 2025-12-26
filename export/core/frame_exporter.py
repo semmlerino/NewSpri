@@ -34,9 +34,8 @@ class SpriteSheetLayout:
 
     def __post_init__(self):
         """Validate layout configuration."""
-        # Validate layout mode (including custom modes)
-        valid_modes = [*Config.Export.LAYOUT_MODES, 'segments_per_row']
-        if self.mode not in valid_modes:
+        # Validate layout mode
+        if self.mode not in Config.Export.LAYOUT_MODES:
             raise ValueError(f"Invalid layout mode: {self.mode}")
 
         # Validate spacing

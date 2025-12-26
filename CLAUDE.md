@@ -49,7 +49,6 @@ ui/                         - UI components
   animation_grid_view.py    - Animation splitting interface
   animation_segment_preview.py - Segment preview panel
   animation_segment_widget.py - Segment list widget
-  collapsible_section.py    - Collapsible UI sections
   enhanced_status_bar.py    - Status bar with enhanced info
   validation_widgets.py     - Input validation widgets
 
