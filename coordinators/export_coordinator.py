@@ -65,9 +65,12 @@ class ExportCoordinator(QObject):
         
         # Emit signal to notify export has been requested
         self.exportRequested.emit({'mode': 'all_frames'})
-        
+
+        # sprite_model guaranteed non-None after _validate_export() succeeds
+        assert self.sprite_model is not None
+
         dialog = self._create_export_dialog()
-        
+
         # Set sprites for visual preview (Phase 4 enhancement)
         dialog.set_sprites(self.sprite_model.sprite_frames)
         
@@ -81,9 +84,12 @@ class ExportCoordinator(QObject):
         
         # Emit signal to notify export has been requested
         self.exportRequested.emit({'mode': 'current_frame'})
-        
+
+        # sprite_model guaranteed non-None after _validate_export() succeeds
+        assert self.sprite_model is not None
+
         dialog = self._create_export_dialog()
-        
+
         # Set sprites for visual preview (Phase 4 enhancement)
         dialog.set_sprites(self.sprite_model.sprite_frames)
         
@@ -114,10 +120,12 @@ class ExportCoordinator(QObject):
     def _create_export_dialog(self) -> ExportDialog:
         """
         Create and configure export dialog.
-        
+
         Returns:
             ExportDialog: Configured export dialog
         """
+        # Callers must validate sprite_model before calling this method
+        assert self.sprite_model is not None
         return ExportDialog(
             self.main_window,
             frame_count=len(self.sprite_model.sprite_frames),
@@ -277,18 +285,7 @@ class ExportCoordinator(QObject):
                     mode='sheet',
                     scale_factor=settings['scale_factor'],
                 )
-            elif mode_index == 2:  # Animated GIF per segment
-                success = self._exporter.export_frames(
-                    frames=segment_frames,
-                    output_dir=str(segment_output_dir),
-                    base_name=segment_name,
-                    format='GIF',
-                    mode='gif',
-                    scale_factor=settings['scale_factor'],
-                    fps=settings.get('fps', 10),
-                    loop=settings.get('loop', True),
-                )
-            else:  # Individual frames (all segments)
+            else:  # All frames (with segment prefixes)
                 success = self._exporter.export_frames(
                     frames=segment_frames,
                     output_dir=str(base_output_dir),

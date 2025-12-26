@@ -710,10 +710,13 @@ class FrameExporter(QObject):
             export_format = ExportFormat.from_string(format)
             logger.debug("Parsed export format: %s", export_format)
 
-            # Handle special mode for segments_sheet
+            # Handle special modes
             if mode == 'segments_sheet':
                 logger.debug("Converting segments_sheet mode to SPRITE_SHEET")
                 export_mode = ExportMode.SPRITE_SHEET
+            elif mode == 'selected':
+                logger.debug("Converting selected mode to INDIVIDUAL_FRAMES")
+                export_mode = ExportMode.INDIVIDUAL_FRAMES
             else:
                 export_mode = ExportMode(mode)
             logger.debug("Parsed export mode: %s", export_mode)

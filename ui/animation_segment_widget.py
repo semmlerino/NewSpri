@@ -8,7 +8,7 @@ from typing import List, Dict, Any, Optional
 from PySide6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QListWidget, QListWidgetItem, QGroupBox, QComboBox,
-    QCheckBox, QSpinBox, QTextEdit, QFrame, QFormLayout
+    QCheckBox, QTextEdit, QFrame, QFormLayout
 )
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
@@ -216,7 +216,6 @@ class AnimationSegmentSelector(QGroupBox):
         self.segment_mode_combo.addItems([
             "Individual segments (separate folders)",
             "Combined sprite sheet per segment",
-            "Animated GIF per segment",
             "All frames (with segment prefixes)"
         ])
         self.segment_mode_combo.setToolTip("Choose how to organize exported segments")
@@ -227,24 +226,7 @@ class AnimationSegmentSelector(QGroupBox):
         self.include_metadata_check.setChecked(True)
         self.include_metadata_check.setToolTip("Include JSON file with segment information")
         options_layout.addRow("Include Metadata:", self.include_metadata_check)
-        
-        # GIF settings (for animated export)
-        gif_layout = QHBoxLayout()
-        
-        self.fps_spin = QSpinBox()
-        self.fps_spin.setRange(1, 60)
-        self.fps_spin.setValue(10)
-        self.fps_spin.setSuffix(" fps")
-        self.fps_spin.setMaximumWidth(80)
-        gif_layout.addWidget(self.fps_spin)
-        
-        self.loop_check = QCheckBox("Loop")
-        self.loop_check.setChecked(True)
-        gif_layout.addWidget(self.loop_check)
-        
-        gif_layout.addStretch()
-        options_layout.addRow("GIF Settings:", gif_layout)
-        
+
         layout.addWidget(options_group)
     
     def _connect_signals(self):
@@ -348,8 +330,6 @@ class AnimationSegmentSelector(QGroupBox):
             'segment_mode': self.segment_mode_combo.currentText(),
             'segment_mode_index': self.segment_mode_combo.currentIndex(),
             'include_metadata': getattr(self.include_metadata_check, 'isChecked', lambda: False)(),
-            'fps': getattr(self.fps_spin, 'value', lambda: 10)(),
-            'loop': getattr(self.loop_check, 'isChecked', lambda: True)()
         }
     
     def has_segments(self) -> bool:
