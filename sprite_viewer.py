@@ -12,8 +12,9 @@ from PySide6.QtWidgets import (
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 
 
-# Coordinator system (Phase 1 refactoring)
-from coordinators import CoordinatorRegistry, UISetupHelper, ViewCoordinator, ExportCoordinator, AnimationCoordinator, EventCoordinator
+# Coordinator system
+from coordinators import UISetupHelper, ExportCoordinator, AnimationCoordinator, EventCoordinator
+from config import Config
 
 # Core MVC Components
 from sprite_model import SpriteModel
@@ -67,10 +68,9 @@ class SpriteViewer(QMainWindow):
             - Returns dict of UI components for distribution
 
         Phase 4: Coordinator Initialization (requires UI components)
-            - ViewCoordinator: canvas, zoom controls
             - ExportCoordinator: sprite_model, segment_manager
             - AnimationCoordinator: model, controller, playback_controls, status
-            - EventCoordinator: shortcuts, file_controller, view_coordinator
+            - EventCoordinator: shortcuts, file_controller, canvas
 
         Phase 5: Manager Setup (injects remaining dependencies)
             - AnimationSegmentController receives: segment_manager, grid_view,
@@ -95,10 +95,7 @@ class SpriteViewer(QMainWindow):
         - Signal connections require coordinators to be initialized first
         """
         super().__init__()
-        
-        # Initialize coordinator registry (Phase 1 refactoring)
-        self._coordinator_registry = CoordinatorRegistry()
-        
+
         # Initialize managers first
         self._init_managers()
         
@@ -110,9 +107,8 @@ class SpriteViewer(QMainWindow):
             lambda menu: self._recent_files.populate_recent_files_directly(menu)
         )
         
-        # Initialize UI Setup Helper (Phase 2 refactoring)
+        # Initialize UI Setup Helper
         self._ui_helper = UISetupHelper(self)
-        self._coordinator_registry.register('ui_setup', self._ui_helper)
         
         # Initialize UI helper with dependencies
         ui_dependencies = {
@@ -140,21 +136,13 @@ class SpriteViewer(QMainWindow):
         self._main_toolbar = ui_components['main_toolbar']
         self._status_manager = ui_components['status_manager']
         self._menus = ui_components['menus']
-        
-        # Initialize View Coordinator (Phase 3 refactoring)
-        self._view_coordinator = ViewCoordinator(self)
-        self._coordinator_registry.register('view', self._view_coordinator)
-        
-        # Initialize view coordinator with dependencies
-        view_dependencies = {
-            'canvas': self._canvas,
-            'zoom_label': self._zoom_label
-        }
-        self._view_coordinator.initialize(view_dependencies)
-        
-        # Initialize Export Coordinator (Phase 4 refactoring)
+
+        # Set up canvas zoom label connection and grid state
+        self._grid_enabled = False
+        self._canvas.zoomChanged.connect(self._on_zoom_changed)
+
+        # Initialize Export Coordinator
         self._export_coordinator = ExportCoordinator(self)
-        self._coordinator_registry.register('export', self._export_coordinator)
         
         # Initialize export coordinator with dependencies
         export_dependencies = {
@@ -163,9 +151,8 @@ class SpriteViewer(QMainWindow):
         }
         self._export_coordinator.initialize(export_dependencies)
         
-        # Initialize Animation Coordinator (Phase 5 refactoring)
+        # Initialize Animation Coordinator
         self._animation_coordinator = AnimationCoordinator(self)
-        self._coordinator_registry.register('animation', self._animation_coordinator)
         
         # Initialize animation coordinator with dependencies
         animation_dependencies = {
@@ -178,15 +165,14 @@ class SpriteViewer(QMainWindow):
         }
         self._animation_coordinator.initialize(animation_dependencies)
         
-        # Initialize Event Coordinator (Phase 6 refactoring)
+        # Initialize Event Coordinator
         self._event_coordinator = EventCoordinator(self)
-        self._coordinator_registry.register('event', self._event_coordinator)
         
         # Initialize event coordinator with dependencies
         event_dependencies = {
             'shortcut_manager': self._shortcut_manager,
             'file_controller': self._file_controller,
-            'view_coordinator': self._view_coordinator,
+            'canvas': self._canvas,
             'status_manager': self._status_manager,
             'show_welcome_message': self._show_welcome_message
         }
@@ -267,12 +253,12 @@ class SpriteViewer(QMainWindow):
         self._action_manager.set_action_callback('file_export_frames', self._export_coordinator.export_frames)
         self._action_manager.set_action_callback('file_export_current', self._export_coordinator.export_current_frame)
         
-        # View actions (Phase 3 refactoring - use ViewCoordinator)
-        self._action_manager.set_action_callback('view_zoom_in', self._view_coordinator.zoom_in)
-        self._action_manager.set_action_callback('view_zoom_out', self._view_coordinator.zoom_out)
-        self._action_manager.set_action_callback('view_zoom_fit', self._view_coordinator.zoom_fit)
-        self._action_manager.set_action_callback('view_zoom_reset', self._view_coordinator.zoom_reset)
-        self._action_manager.set_action_callback('view_toggle_grid', self._view_coordinator.toggle_grid)
+        # View actions - direct canvas calls
+        self._action_manager.set_action_callback('view_zoom_in', self._zoom_in)
+        self._action_manager.set_action_callback('view_zoom_out', self._zoom_out)
+        self._action_manager.set_action_callback('view_zoom_fit', self._canvas.fit_to_window)
+        self._action_manager.set_action_callback('view_zoom_reset', self._canvas.reset_view)
+        self._action_manager.set_action_callback('view_toggle_grid', self._toggle_grid)
         
         # Animation actions (Phase 5 refactoring - use AnimationCoordinator)
         self._action_manager.set_action_callback('animation_toggle', self._animation_coordinator.toggle_playback)
@@ -319,8 +305,7 @@ class SpriteViewer(QMainWindow):
         self._auto_detection_controller.frameSettingsDetected.connect(self._on_frame_settings_detected)
         self._auto_detection_controller.statusUpdate.connect(self._status_manager.show_message)
         
-        # Canvas signals (Phase 3 refactoring - zoom handled by ViewCoordinator)
-        # self._canvas.zoomChanged is now connected in ViewCoordinator
+        # Canvas signals (zoom connected in __init__)
         self._canvas.mouseMoved.connect(self._status_manager.update_mouse_position)
         
         # Frame extractor signals
@@ -390,7 +375,7 @@ class SpriteViewer(QMainWindow):
             self._update_manager_context()
             
             # Update display first (fast) - Phase 3 refactoring
-            self._view_coordinator.update_canvas()
+            self._canvas.update()
             self._info_label.setText(self._sprite_model.sprite_info)
             
             # Trigger appropriate detection based on current extraction mode
@@ -408,7 +393,33 @@ class SpriteViewer(QMainWindow):
     def _on_file_load_failed(self, error_message: str):
         """Handle file load failure from FileController."""
         QMessageBox.critical(self, "Load Error", error_message)
-    
+
+    # ============================================================================
+    # VIEW OPERATIONS
+    # ============================================================================
+
+    def _zoom_in(self):
+        """Zoom in on canvas."""
+        current_zoom = self._canvas.get_zoom_factor()
+        new_zoom = current_zoom * Config.Canvas.ZOOM_FACTOR
+        self._canvas.set_zoom(new_zoom)
+
+    def _zoom_out(self):
+        """Zoom out on canvas."""
+        current_zoom = self._canvas.get_zoom_factor()
+        new_zoom = current_zoom / Config.Canvas.ZOOM_FACTOR
+        self._canvas.set_zoom(new_zoom)
+
+    def _toggle_grid(self):
+        """Toggle grid overlay."""
+        self._grid_enabled = not self._grid_enabled
+        self._canvas.set_grid_overlay(self._grid_enabled)
+
+    def _on_zoom_changed(self, zoom_factor: float):
+        """Handle zoom change from canvas."""
+        percentage = int(zoom_factor * 100)
+        self._zoom_label.setText(f"{percentage}%")
+
     # ============================================================================
     # SIGNAL HANDLERS
     # ============================================================================
@@ -416,8 +427,8 @@ class SpriteViewer(QMainWindow):
     def _on_frame_changed(self, frame_index: int, total_frames: int):
         """Handle frame change."""
         # Update canvas frame info and trigger repaint with new frame (Phase 3 refactoring)
-        self._view_coordinator.set_frame_info(frame_index, total_frames)
-        self._view_coordinator.update_with_current_frame()
+        self._canvas.set_frame_info(frame_index, total_frames)
+        self._canvas.update_with_current_frame()
         
         # Update playback controls
         self._playback_controls.set_current_frame(frame_index)
@@ -431,7 +442,8 @@ class SpriteViewer(QMainWindow):
     def _on_sprite_loaded(self, file_path: str):
         """Handle sprite loaded."""
         # Reset and update canvas view (Phase 3 refactoring)
-        self._view_coordinator.reset_view()
+        self._canvas.reset_view()
+        self._canvas.update()
         
         # Update managers context
         self._update_manager_context()
@@ -455,7 +467,7 @@ class SpriteViewer(QMainWindow):
         if frame_count > 0:
             # Update canvas with frame info (Phase 3 refactoring)
             current_frame = self._sprite_model.current_frame
-            self._view_coordinator.set_frame_info(current_frame, frame_count)
+            self._canvas.set_frame_info(current_frame, frame_count)
             
             # Update grid view with new frames
             self._segment_controller.update_grid_view_frames()
@@ -468,7 +480,7 @@ class SpriteViewer(QMainWindow):
                 if self._grid_view:
                     self._grid_view.sync_segments_with_manager(self._segment_manager)
         else:
-            self._view_coordinator.set_frame_info(0, 0)
+            self._canvas.set_frame_info(0, 0)
             
             # Clear grid view if no frames
             if self._grid_view:
@@ -478,7 +490,7 @@ class SpriteViewer(QMainWindow):
         self._update_manager_context()
         
         # Update display with current frame (Phase 3 refactoring)
-        self._view_coordinator.update_with_current_frame()
+        self._canvas.update_with_current_frame()
     
     
     def _on_frame_settings_detected(self, width: int, height: int):
@@ -540,7 +552,7 @@ class SpriteViewer(QMainWindow):
         # Ensure first frame is displayed after extraction (Phase 3 refactoring)
         if total_frames > 0:
             self._sprite_model.set_current_frame(0)
-            self._view_coordinator.update_with_current_frame()
+            self._canvas.update_with_current_frame()
     
     # ============================================================================
     # HELP DIALOGS
@@ -619,8 +631,11 @@ class SpriteViewer(QMainWindow):
         # Save settings
         self._settings_manager.save_window_geometry(self)
         
-        # Clean up coordinators (Phase 1 refactoring)
-        self._coordinator_registry.cleanup_all()
+        # Clean up coordinators
+        self._event_coordinator.cleanup()
+        self._animation_coordinator.cleanup()
+        self._export_coordinator.cleanup()
+        self._ui_helper.cleanup()
         
         # Accept close
         event.accept()

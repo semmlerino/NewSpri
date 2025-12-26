@@ -1,10 +1,11 @@
 """
-Animation Coordinator for SpriteViewer refactoring.
+Animation Coordinator for SpriteViewer.
 Handles animation navigation, playback state management, and UI updates.
 """
 
 from PySide6.QtWidgets import QMessageBox
 
+from config import Config
 from .base import CoordinatorBase
 
 
@@ -240,29 +241,23 @@ class AnimationCoordinator(CoordinatorBase):
         """Decrease animation speed by one step."""
         if self.animation_controller:
             current_fps = self.animation_controller.current_fps
-            # Define speed steps
-            speed_steps = [1, 2, 4, 6, 8, 10, 12, 15, 20, 24, 30, 60]
-            # Find current step and go to previous
+            speed_steps = Config.Animation.SPEED_STEPS
             for i in range(len(speed_steps) - 1, -1, -1):
                 if current_fps > speed_steps[i]:
                     self.animation_controller.set_fps(speed_steps[i])
                     return
-            # If we're at or below the lowest, set to lowest
             if current_fps > speed_steps[0]:
                 self.animation_controller.set_fps(speed_steps[0])
-    
+
     def increase_animation_speed(self):
         """Increase animation speed by one step."""
         if self.animation_controller:
             current_fps = self.animation_controller.current_fps
-            # Define speed steps
-            speed_steps = [1, 2, 4, 6, 8, 10, 12, 15, 20, 24, 30, 60]
-            # Find current step and go to next
+            speed_steps = Config.Animation.SPEED_STEPS
             for i in range(len(speed_steps)):
                 if current_fps < speed_steps[i]:
                     self.animation_controller.set_fps(speed_steps[i])
                     return
-            # If we're at or above the highest, set to highest
             if current_fps < speed_steps[-1]:
                 self.animation_controller.set_fps(speed_steps[-1])
     

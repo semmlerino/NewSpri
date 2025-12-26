@@ -36,12 +36,11 @@ class TestEventCoordinator:
         return controller
     
     @pytest.fixture
-    def mock_view_coordinator(self):
-        """Create mock view coordinator."""
-        coordinator = Mock()
-        coordinator.set_drag_hover_style = Mock()
-        coordinator.reset_canvas_style = Mock()
-        return coordinator
+    def mock_canvas(self):
+        """Create mock canvas."""
+        canvas = Mock()
+        canvas.setStyleSheet = Mock()
+        return canvas
     
     @pytest.fixture
     def mock_status_manager(self):
@@ -58,30 +57,30 @@ class TestEventCoordinator:
         assert not coordinator.is_initialized
         assert coordinator.shortcut_manager is None
         assert coordinator.file_controller is None
-        assert coordinator.view_coordinator is None
+        assert coordinator.canvas is None
         assert coordinator.status_manager is None
         assert coordinator._show_welcome_message is None
     
     def test_initialize_with_dependencies(self, mock_main_window, mock_shortcut_manager,
-                                          mock_file_controller, mock_view_coordinator,
+                                          mock_file_controller, mock_canvas,
                                           mock_status_manager):
         """Test initialization with dependencies."""
         coordinator = EventCoordinator(mock_main_window)
-        
+
         welcome_callback = Mock()
         dependencies = {
             'shortcut_manager': mock_shortcut_manager,
             'file_controller': mock_file_controller,
-            'view_coordinator': mock_view_coordinator,
+            'canvas': mock_canvas,
             'status_manager': mock_status_manager,
             'show_welcome_message': welcome_callback
         }
-        
+
         coordinator.initialize(dependencies)
-        
+
         assert coordinator.shortcut_manager == mock_shortcut_manager
         assert coordinator.file_controller == mock_file_controller
-        assert coordinator.view_coordinator == mock_view_coordinator
+        assert coordinator.canvas == mock_canvas
         assert coordinator.status_manager == mock_status_manager
         assert coordinator._show_welcome_message == welcome_callback
         assert coordinator.is_initialized
@@ -159,28 +158,28 @@ class TestEventCoordinator:
         assert result is False
     
     @patch('coordinators.event_coordinator.StyleManager')
-    def test_handle_drag_enter(self, mock_style_manager, mock_main_window, 
-                               mock_file_controller, mock_view_coordinator):
+    def test_handle_drag_enter(self, mock_style_manager, mock_main_window,
+                               mock_file_controller, mock_canvas):
         """Test handling drag enter event."""
         coordinator = EventCoordinator(mock_main_window)
         coordinator.file_controller = mock_file_controller
-        coordinator.view_coordinator = mock_view_coordinator
-        
+        coordinator.canvas = mock_canvas
+
         # Mock event
         event = Mock()
         event.mimeData = Mock(return_value=Mock())
         event.acceptProposedAction = Mock()
-        
+
         # Mock style manager
         mock_style_manager.get_canvas_drag_hover.return_value = "drag-hover-style"
-        
+
         # Handle event
         coordinator.handle_drag_enter(event)
-        
+
         # Verify
         mock_file_controller.is_valid_drop.assert_called_once()
         event.acceptProposedAction.assert_called_once()
-        mock_view_coordinator.set_drag_hover_style.assert_called_once_with("drag-hover-style")
+        mock_canvas.setStyleSheet.assert_called_once_with("drag-hover-style")
     
     def test_handle_drag_enter_invalid_drop(self, mock_main_window, mock_file_controller):
         """Test handling drag enter with invalid drop."""
@@ -200,45 +199,45 @@ class TestEventCoordinator:
         event.acceptProposedAction.assert_not_called()
     
     @patch('coordinators.event_coordinator.StyleManager')
-    def test_handle_drag_leave(self, mock_style_manager, mock_main_window, 
-                              mock_view_coordinator):
+    def test_handle_drag_leave(self, mock_style_manager, mock_main_window,
+                              mock_canvas):
         """Test handling drag leave event."""
         coordinator = EventCoordinator(mock_main_window)
-        coordinator.view_coordinator = mock_view_coordinator
+        coordinator.canvas = mock_canvas
         welcome_callback = Mock()
         coordinator._show_welcome_message = welcome_callback
-        
+
         # Mock style manager
         mock_style_manager.get_canvas_normal.return_value = "normal-style"
-        
+
         # Handle event
         event = Mock()
         coordinator.handle_drag_leave(event)
-        
+
         # Verify
-        mock_view_coordinator.reset_canvas_style.assert_called_once_with("normal-style")
+        mock_canvas.setStyleSheet.assert_called_once_with("normal-style")
         welcome_callback.assert_called_once()
     
     @patch('coordinators.event_coordinator.StyleManager')
-    def test_handle_drop(self, mock_style_manager, mock_main_window, 
-                        mock_file_controller, mock_view_coordinator):
+    def test_handle_drop(self, mock_style_manager, mock_main_window,
+                        mock_file_controller, mock_canvas):
         """Test handling drop event."""
         coordinator = EventCoordinator(mock_main_window)
         coordinator.file_controller = mock_file_controller
-        coordinator.view_coordinator = mock_view_coordinator
-        
+        coordinator.canvas = mock_canvas
+
         # Mock event
         event = Mock()
         event.acceptProposedAction = Mock()
-        
+
         # Mock style manager
         mock_style_manager.get_canvas_normal.return_value = "normal-style"
-        
+
         # Handle event
         coordinator.handle_drop(event)
-        
+
         # Verify
-        mock_view_coordinator.reset_canvas_style.assert_called_once_with("normal-style")
+        mock_canvas.setStyleSheet.assert_called_once_with("normal-style")
         mock_file_controller.extract_file_from_drop.assert_called_once_with(event)
         mock_file_controller.load_file.assert_called_once_with("/test/file.png")
         event.acceptProposedAction.assert_called_once()

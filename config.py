@@ -39,18 +39,17 @@ class CanvasConfig:
 
 class AnimationConfig:
     """Animation playback settings."""
-    
+
     # FPS settings
     DEFAULT_FPS = 10
     MIN_FPS = 1
     MAX_FPS = 60
-    
+
+    # Speed stepping (for increase/decrease speed controls)
+    SPEED_STEPS = (1, 2, 4, 6, 8, 10, 12, 15, 20, 24, 30, 60)
+
     # Timer calculation
-    TIMER_BASE = 1000  # milliseconds
-    
-    # Frame limits for auto-detection
-    MAX_REASONABLE_FRAMES = 100
-    MIN_REASONABLE_FRAMES = 1
+    TIMER_BASE = 1000  # milliseconds  # milliseconds
 
 
 class FrameExtractionConfig:
@@ -89,9 +88,6 @@ class FrameExtractionConfig:
         ("24×32", 24, 32, "Small characters"),
         ("40×48", 40, 48, "Medium portraits"),
     ]
-    
-    # Legacy combined presets (for backward compatibility)
-    FRAME_PRESETS = SQUARE_PRESETS
     
     # Offset/margin settings
     MAX_OFFSET = 1000  # Maximum offset value for X and Y
@@ -197,17 +193,6 @@ class FileConfig:
     # File dialog filter
     IMAGE_FILTER = "Image Files (*.png *.jpg *.jpeg *.bmp *.gif);;All Files (*)"
     
-    # Test sprite locations
-    TEST_SPRITE_PATHS = [
-        "test_sprite_sheet.png",
-        "Archer/*.png",
-        "sprites/*.png", 
-        "assets/*.png"
-    ]
-    
-    # Common frame sizes for auto-detection (ordered by preference)
-    COMMON_FRAME_SIZES = [16, 32, 64, 128, 192, 256]
-    
     @staticmethod
     def get_default_export_directory():
         """Get default export directory."""
@@ -246,22 +231,9 @@ class SliderConfig:
     FPS_VALUE_MIN_WIDTH = 35  # Reduced from 50
 
 
-class ColorConfig:
-    """Color constants used throughout the application."""
-
-    # Transparency
-    TRANSPARENT = QColor(0, 0, 0, 0)  # Fully transparent
-
-
 class FontConfig:
     """Font and text styling settings."""
-    
-    # Font sizes (in points)
-    LARGE_FONT_SIZE = 14
-    MEDIUM_FONT_SIZE = 12
-    SMALL_FONT_SIZE = 10
-    TINY_FONT_SIZE = 9
-    
+
     # Frame info overlay font
     FRAME_INFO_FONT_SIZE = 11
 
@@ -279,21 +251,6 @@ class AppConfig:
     # Status messages
     WELCOME_MESSAGE = "Welcome! Drag & drop sprite sheets or click Open to get started"
     READY_MESSAGE = "Ready. Drag & drop sprite sheets or use File > Open"
-    NO_SPRITE_MESSAGE = "No sprite sheet loaded"
-    
-    # Keyboard shortcuts (for documentation)
-    SHORTCUTS = {
-        "Space": "Play/Pause animation",
-        "← / →": "Previous/Next frame", 
-        "Home/End": "First/Last frame",
-        "Ctrl+O": "Open sprite sheet",
-        "Ctrl++/-": "Zoom in/out",
-        "Ctrl+0": "Fit to window",
-        "Ctrl+1": "Reset zoom (100%)",
-        "G": "Toggle grid overlay",
-        "Mouse wheel": "Zoom in/out",
-        "Click+drag": "Pan view"
-    }
 
 
 class SettingsConfig:
@@ -305,7 +262,6 @@ class SettingsConfig:
     
     # Recent files
     MAX_RECENT_FILES = 10
-    THUMBNAIL_CACHE_SIZE_MB = 50
     
     # Auto-save settings
     AUTOSAVE_DELAY_MS = 1000  # Debounce delay before saving
@@ -347,19 +303,11 @@ class ExportConfig:
     # Supported image formats
     IMAGE_FORMATS = ['PNG', 'JPG', 'BMP']
     DEFAULT_FORMAT = 'PNG'
-    
-    # GIF export settings
-    GIF_OPTIMIZATION = True
-    GIF_DEFAULT_LOOP = 0  # Infinite loop
-    GIF_MAX_COLORS = 256
-    
+
     # Default naming patterns
     DEFAULT_PATTERN = "{name}_{index:03d}"
     DEFAULT_SCALE_FACTORS = [1.0, 2.0, 4.0]
-    
-    # Export directories
-    DEFAULT_EXPORT_DIR = "exports"
-    
+
     # Enhanced Sprite Sheet Layout Configuration
     # ==========================================
     
@@ -396,14 +344,7 @@ class ExportConfig:
     
     # Layout calculation preferences
     PREFER_HORIZONTAL = False       # For auto mode: prefer horizontal vs vertical layouts
-
-    # Export quality settings for sprite sheets
-    SPRITE_SHEET_QUALITY_MODE = 'balanced'  # 'speed', 'balanced', 'quality'
     ENABLE_ANTIALIASING = True      # Enable antialiasing for scaled sprites
-    
-    # File size estimation factors
-    SPACING_SIZE_FACTOR = 1.1       # Multiplier for size estimation with spacing
-    PADDING_SIZE_FACTOR = 1.05      # Multiplier for size estimation with padding
 
 
 # Convenience access to all configs
@@ -417,7 +358,6 @@ class Config:
     Drawing = DrawingConfig
     File = FileConfig
     Slider = SliderConfig
-    Color = ColorConfig
     Font = FontConfig
     App = AppConfig
     Settings = SettingsConfig
@@ -427,16 +367,15 @@ class Config:
 # Export for easy importing
 __all__ = [
     'Config',
-    'CanvasConfig', 
+    'CanvasConfig',
     'AnimationConfig',
     'FrameExtractionConfig',
     'UIConfig',
-    'DrawingConfig', 
+    'DrawingConfig',
     'FileConfig',
     'SliderConfig',
-    'ColorConfig',
     'FontConfig',
     'AppConfig',
     'SettingsConfig',
-    'ExportConfig'
+    'ExportConfig',
 ]

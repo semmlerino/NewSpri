@@ -37,7 +37,7 @@ class EventCoordinator(CoordinatorBase):
         # Component references
         self.shortcut_manager = None
         self.file_controller = None
-        self.view_coordinator = None
+        self.canvas = None
         self.status_manager = None
         
         # Status message callback for welcome message
@@ -51,13 +51,13 @@ class EventCoordinator(CoordinatorBase):
             dependencies: Dict containing:
                 - shortcut_manager: ShortcutManager instance
                 - file_controller: FileController instance
-                - view_coordinator: ViewCoordinator instance
+                - canvas: SpriteCanvas instance
                 - status_manager: StatusBarManager instance
                 - show_welcome_message: Callback for showing welcome message
         """
         self.shortcut_manager = dependencies['shortcut_manager']
         self.file_controller = dependencies['file_controller']
-        self.view_coordinator = dependencies['view_coordinator']
+        self.canvas = dependencies['canvas']
         self.status_manager = dependencies.get('status_manager')
         self._show_welcome_message = dependencies.get('show_welcome_message')
         
@@ -143,8 +143,8 @@ class EventCoordinator(CoordinatorBase):
         if self.file_controller.is_valid_drop(event.mimeData()):
             event.acceptProposedAction()
             # Update canvas style for drag hover
-            if self.view_coordinator:
-                self.view_coordinator.set_drag_hover_style(StyleManager.get_canvas_drag_hover())
+            if self.canvas:
+                self.canvas.setStyleSheet(StyleManager.get_canvas_drag_hover())
     
     def handle_drag_leave(self, event):
         """
@@ -154,9 +154,9 @@ class EventCoordinator(CoordinatorBase):
             event: Qt drag leave event
         """
         # Reset canvas style
-        if self.view_coordinator:
-            self.view_coordinator.reset_canvas_style(StyleManager.get_canvas_normal())
-        
+        if self.canvas:
+            self.canvas.setStyleSheet(StyleManager.get_canvas_normal())
+
         # Show welcome message
         if self._show_welcome_message:
             self._show_welcome_message()
@@ -164,13 +164,13 @@ class EventCoordinator(CoordinatorBase):
     def handle_drop(self, event: QDropEvent):
         """
         Handle drop event.
-        
+
         Args:
             event: Qt drop event
         """
         # Reset canvas style
-        if self.view_coordinator:
-            self.view_coordinator.reset_canvas_style(StyleManager.get_canvas_normal())
+        if self.canvas:
+            self.canvas.setStyleSheet(StyleManager.get_canvas_normal())
         
         if not self.file_controller:
             return

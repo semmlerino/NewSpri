@@ -116,23 +116,23 @@ class TestCompleteUserWorkflows:
         qtbot.addWidget(viewer)
         
         try:
-            # Test zoom operations using new coordinator API
-            viewer._view_coordinator.zoom_in()
-            viewer._view_coordinator.zoom_out()
-            viewer._view_coordinator.zoom_reset()  # ← Triggers canvas.reset_view() - Was reset_zoom (FIXED)
-            viewer._view_coordinator.zoom_fit()
-            
+            # Test zoom operations using SpriteViewer helper methods
+            viewer._zoom_in()
+            viewer._zoom_out()
+            viewer._canvas.reset_view()
+            viewer._canvas.fit_to_window()
+
             print("✅ Zoom workflow completed")
-            
-            # Test grid toggle using new coordinator API
-            viewer._view_coordinator.toggle_grid()
-            
+
+            # Test grid toggle
+            viewer._toggle_grid()
+
             print("✅ Grid toggle workflow completed")
-            
+
             # Test direct canvas operations
-            viewer._canvas.update()  # ← Was update_display (FIXED)
-            viewer._canvas.reset_view()  # ← Was reset_zoom (FIXED)
-            
+            viewer._canvas.update()
+            viewer._canvas.reset_view()
+
             print("✅ Direct canvas operations completed")
             
         except AttributeError as e:
