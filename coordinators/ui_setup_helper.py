@@ -17,10 +17,8 @@ from PySide6.QtWidgets import (
 from config import Config
 from utils import StyleManager
 
-from .base import CoordinatorBase
 
-
-class UISetupHelper(CoordinatorBase):
+class UISetupHelper:
     """
     Coordinator responsible for UI setup and initialization.
 
@@ -30,7 +28,8 @@ class UISetupHelper(CoordinatorBase):
 
     def __init__(self, main_window):
         """Initialize UI setup helper."""
-        super().__init__(main_window)
+        self.main_window = main_window
+        self._initialized = False
 
         # References to created UI components
         self.central_widget = None
@@ -82,10 +81,17 @@ class UISetupHelper(CoordinatorBase):
         self._status_bar_class = EnhancedStatusBar
         self._status_manager_class = StatusBarManager
 
+        self._initialized = True
+
     def cleanup(self):
         """Clean up resources."""
         # UI components are owned by Qt and will be cleaned up automatically
         pass
+
+    @property
+    def is_initialized(self) -> bool:
+        """Check if coordinator has been initialized."""
+        return self._initialized
 
     def setup_ui(self):
         """

@@ -9,7 +9,7 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtGui import QPixmap, QColor
 from PySide6.QtCore import Qt
 
-from sprite_model.core_integrated import SpriteModel
+from sprite_model.core import SpriteModel
 from ui.animation_grid_view import AnimationGridView, AnimationSegment
 from ui.animation_segment_preview import AnimationSegmentPreview
 from core.animation_segment_controller import AnimationSegmentController

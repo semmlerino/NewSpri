@@ -1,22 +1,13 @@
 """
-Export Module - Consolidated and reorganized
-Maintains backward compatibility while providing cleaner structure
+Export Module - Public API for sprite export functionality.
 """
 
-from .core.export_presets import ExportPreset, get_preset_manager
-from .core.frame_exporter import FrameExporter, get_frame_exporter
-from .dialogs.base.wizard_base import WizardWidget
+from .core.export_presets import ExportPreset
+from .core.frame_exporter import get_frame_exporter
 from .dialogs.export_wizard import ExportDialog
-from .steps.type_selection import ExportTypeStepSimple
-from .widgets.settings_widgets import ExportProgressDialog
 
 __all__ = [
     'ExportDialog',
     'ExportPreset',
-    'ExportProgressDialog',
-    'ExportTypeStepSimple',
-    'FrameExporter',
-    'WizardWidget',
     'get_frame_exporter',
-    'get_preset_manager',
 ]

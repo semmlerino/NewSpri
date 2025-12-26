@@ -8,10 +8,8 @@ from PySide6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence
 
 from utils import StyleManager
 
-from .base import CoordinatorBase
 
-
-class EventCoordinator(CoordinatorBase):
+class EventCoordinator:
     """
     Coordinator responsible for event handling.
 
@@ -33,7 +31,8 @@ class EventCoordinator(CoordinatorBase):
 
     def __init__(self, main_window):
         """Initialize event coordinator."""
-        super().__init__(main_window)
+        self.main_window = main_window
+        self._initialized = False
 
         # Component references
         self.shortcut_manager = None
@@ -68,6 +67,11 @@ class EventCoordinator(CoordinatorBase):
         """Clean up resources."""
         # No specific cleanup needed for event coordinator
         pass
+
+    @property
+    def is_initialized(self) -> bool:
+        """Check if coordinator has been initialized."""
+        return self._initialized
 
     # ============================================================================
     # KEYBOARD EVENT HANDLING

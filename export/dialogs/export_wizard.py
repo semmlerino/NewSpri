@@ -13,9 +13,9 @@ from PySide6.QtWidgets import QDialog, QMessageBox, QVBoxLayout
 from config import Config
 
 from ..core.frame_exporter import SpriteSheetLayout, get_frame_exporter
-from ..steps.modern_settings_preview import ModernExportSettings
-from ..steps.type_selection import ExportTypeStepSimple as ExportTypeStep
 from .base.wizard_base import WizardWidget
+from .modern_settings_preview import ModernExportSettings
+from .type_selection import ExportTypeStepSimple as ExportTypeStep
 
 logger = logging.getLogger(__name__)
 

@@ -12,7 +12,7 @@ from PySide6.QtGui import QPixmap, QColor, QPainter
 from PySide6.QtWidgets import QApplication
 
 from sprite_viewer import SpriteViewer
-from sprite_model.core_integrated import SpriteModel
+from sprite_model.core import SpriteModel
 from core.animation_controller import AnimationController
 
 

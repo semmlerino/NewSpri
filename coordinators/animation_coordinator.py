@@ -7,10 +7,8 @@ from PySide6.QtWidgets import QMessageBox
 
 from config import Config
 
-from .base import CoordinatorBase
 
-
-class AnimationCoordinator(CoordinatorBase):
+class AnimationCoordinator:
     """
     Coordinator responsible for animation operations.
 
@@ -21,7 +19,8 @@ class AnimationCoordinator(CoordinatorBase):
 
     def __init__(self, main_window):
         """Initialize animation coordinator."""
-        super().__init__(main_window)
+        self.main_window = main_window
+        self._initialized = False
 
         # Component references
         self.sprite_model = None
@@ -57,6 +56,11 @@ class AnimationCoordinator(CoordinatorBase):
         """Clean up resources."""
         # No specific cleanup needed for animation coordinator
         pass
+
+    @property
+    def is_initialized(self) -> bool:
+        """Check if coordinator has been initialized."""
+        return self._initialized
 
     # ============================================================================
     # FRAME NAVIGATION

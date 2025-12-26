@@ -12,7 +12,7 @@ from PySide6.QtCore import QObject, QTimer, Signal
 from config import Config
 
 if TYPE_CHECKING:
-    from sprite_model.core_integrated import SpriteModel
+    from sprite_model.core import SpriteModel
     from sprite_viewer import SpriteViewer
 
 

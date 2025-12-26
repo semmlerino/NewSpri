@@ -21,14 +21,14 @@ from core import (
     FileController,
 )
 
-# Managers (Phase 5 refactoring)
+# Managers
 from managers import (
+    ActionManager,
     AnimationSegmentManager,
-    get_actionmanager,
-    get_menu_manager,
-    get_recent_files_manager,
-    get_settings_manager,
-    get_shortcut_manager,
+    MenuManager,
+    RecentFilesManager,
+    SettingsManager,
+    ShortcutManager,
 )
 
 # Core MVC Components
@@ -201,12 +201,13 @@ class SpriteViewer(QMainWindow):
 
     def _init_managers(self):
         """Initialize all centralized managers."""
-        # Get manager instances (singletons)
-        self._shortcut_manager = get_shortcut_manager(self)
-        self._action_manager = get_actionmanager(self)
-        self._menu_manager = get_menu_manager(self)
-        self._settings_manager = get_settings_manager()
-        self._recent_files = get_recent_files_manager()
+        # Settings must be first (used by other managers)
+        self._settings_manager = SettingsManager()
+        self._recent_files = RecentFilesManager()
+        # Shortcut manager must be before ActionManager (used internally)
+        self._shortcut_manager = ShortcutManager(self)
+        self._action_manager = ActionManager(self)
+        self._menu_manager = MenuManager(self)
 
     def _init_core_components(self):
         """Initialize core MVC components."""
