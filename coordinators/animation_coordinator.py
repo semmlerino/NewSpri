@@ -239,7 +239,7 @@ class AnimationCoordinator(CoordinatorBase):
     def decrease_animation_speed(self):
         """Decrease animation speed by one step."""
         if self.animation_controller:
-            current_fps = self.animation_controller._current_fps
+            current_fps = self.animation_controller.current_fps
             # Define speed steps
             speed_steps = [1, 2, 4, 6, 8, 10, 12, 15, 20, 24, 30, 60]
             # Find current step and go to previous
@@ -254,7 +254,7 @@ class AnimationCoordinator(CoordinatorBase):
     def increase_animation_speed(self):
         """Increase animation speed by one step."""
         if self.animation_controller:
-            current_fps = self.animation_controller._current_fps
+            current_fps = self.animation_controller.current_fps
             # Define speed steps
             speed_steps = [1, 2, 4, 6, 8, 10, 12, 15, 20, 24, 30, 60]
             # Find current step and go to next

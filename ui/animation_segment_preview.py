@@ -702,6 +702,10 @@ class AnimationSegmentPreview(QWidget):
     def set_frames(self, frames: List[QPixmap]):
         """Set the available frames for segment extraction."""
         self._all_frames = frames
+
+    def has_frames(self) -> bool:
+        """Check if frames have been set for segment preview."""
+        return bool(self._all_frames)
         
     def add_segment(self, name: str, start_frame: int, end_frame: int, color: QColor,
                    bounce_mode: bool = False, frame_holds: Dict[int, int] = None):

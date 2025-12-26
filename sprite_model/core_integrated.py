@@ -18,7 +18,6 @@ from sprite_model.detection import (
     DetectionCoordinator
 )
 from sprite_model.ccl import CCLOperations
-from sprite_model.extraction.background_detector import BackgroundDetector
 
 
 class SpriteModel(QObject):
@@ -46,15 +45,13 @@ class SpriteModel(QObject):
         self._file_validator = FileValidator()
         self._metadata_extractor = MetadataExtractor()
         self._grid_extractor = GridExtractor()
-        self._ccl_extractor = CCLExtractor()
         self._animation_state = AnimationStateManager()
         self._frame_detector = FrameDetector()
         self._margin_detector = MarginDetector()
         self._spacing_detector = SpacingDetector()
         self._detection_coordinator = DetectionCoordinator()
         self._ccl_operations = CCLOperations()
-        self._background_detector = BackgroundDetector()
-        
+
         # Primary state variables (maintaining compatibility)
         self._original_sprite_sheet: Optional[QPixmap] = None
         self._sprite_frames: List[QPixmap] = []
@@ -501,7 +498,7 @@ class SpriteModel(QObject):
             original_mode = self._ccl_operations.get_extraction_mode()
             
             # Temporarily switch to grid mode for testing detected parameters
-            self._ccl_operations._extraction_mode = "grid"
+            self._ccl_operations.set_extraction_mode("grid")
             
             try:
                 extract_success, extract_msg, count = self.extract_frames(
@@ -516,7 +513,7 @@ class SpriteModel(QObject):
                     return True, message
             finally:
                 # Always restore original mode
-                self._ccl_operations._extraction_mode = original_mode
+                self._ccl_operations.set_extraction_mode(original_mode)
         
         return False, message
     

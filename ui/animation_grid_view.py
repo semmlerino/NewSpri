@@ -781,6 +781,53 @@ class AnimationGridView(QWidget):
             segment.name = new_name
             self._segments[new_name] = segment
             self._update_segment_visualization()
+
+    # ============================================================================
+    # PUBLIC SEGMENT MANIPULATION API
+    # ============================================================================
+    
+    def delete_segment(self, segment_name: str) -> bool:
+        """
+        Delete an animation segment by name.
+        
+        Args:
+            segment_name: Name of segment to delete
+            
+        Returns:
+            True if segment was deleted, False if not found
+        """
+        if segment_name in self._segments:
+            self._delete_segment(segment_name)
+            return True
+        return False
+    
+    def rename_segment(self, old_name: str, new_name: str) -> bool:
+        """
+        Rename an animation segment.
+        
+        Args:
+            old_name: Current name of segment
+            new_name: New name for segment
+            
+        Returns:
+            True if renamed successfully, False if old_name not found or new_name exists
+        """
+        if old_name in self._segments and new_name not in self._segments:
+            self._rename_segment(old_name, new_name)
+            return True
+        return False
+    
+    def has_segment(self, segment_name: str) -> bool:
+        """
+        Check if a segment with the given name exists.
+        
+        Args:
+            segment_name: Name to check
+            
+        Returns:
+            True if segment exists, False otherwise
+        """
+        return segment_name in self._segments
     
     def _update_segment_visualization(self):
         """Update visual markers for all segments."""

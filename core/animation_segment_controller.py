@@ -44,7 +44,6 @@ class AnimationSegmentController(QObject):
         
         # Dependencies injected via setters
         self._segment_manager: Optional[AnimationSegmentManager] = None
-        self._export_handler = None
         self._grid_view = None
         self._sprite_model = None
         self._tab_widget = None
@@ -67,10 +66,6 @@ class AnimationSegmentController(QObject):
         # Connect manager signals to update grid view
         if self._segment_manager and self._grid_view:
             self._connect_manager_signals()
-    
-    def set_export_handler(self, handler) -> None:
-        """Set the export handler dependency."""
-        self._export_handler = handler
     
     def set_grid_view(self, grid_view) -> None:
         """Set the animation grid view dependency."""
@@ -160,7 +155,7 @@ class AnimationSegmentController(QObject):
             frames = self._get_sprite_frames()
             if frames:
                 # Ensure preview has frames set
-                if not self._segment_preview._all_frames:
+                if not self._segment_preview.has_frames():
                     self._segment_preview.set_frames(frames)
                 
                 self._segment_preview.add_segment(
@@ -212,7 +207,7 @@ class AnimationSegmentController(QObject):
                     frames = self._get_sprite_frames()
                     if frames:
                         # Ensure preview has frames set
-                        if not self._segment_preview._all_frames:
+                        if not self._segment_preview.has_frames():
                             self._segment_preview.set_frames(frames)
                         
                         self._segment_preview.add_segment(
@@ -230,29 +225,25 @@ class AnimationSegmentController(QObject):
     
     def _update_grid_view_segment_name(self, old_name: str, new_name: str, segment) -> None:
         """Update segment name in grid view after successful rename."""
-        if not self._grid_view or not hasattr(self._grid_view, '_segments'):
+        if not self._grid_view:
             return
-        
-        if old_name in self._grid_view._segments:
-            # Remove old entry and add new one
-            segment_data = self._grid_view._segments.pop(old_name)
-            segment_data.name = new_name
-            self._grid_view._segments[new_name] = segment_data
-            
-            # Update the segment list widget
-            if hasattr(self._grid_view, '_segment_list'):
-                self._grid_view._segment_list.remove_segment(old_name)
-                self._grid_view._segment_list.add_segment(segment_data)
+
+        # Use public API to rename segment
+        if hasattr(self._grid_view, 'rename_segment'):
+            self._grid_view.rename_segment(old_name, new_name)
+        elif hasattr(self._grid_view, 'has_segment') and self._grid_view.has_segment(old_name):
+            # Fallback for backward compatibility
+            self._grid_view.delete_segment(old_name)
+            self._grid_view.add_segment(segment)
     
     def _remove_from_grid_view(self, segment_name: str) -> None:
         """Remove failed segment from grid view."""
-        if not self._grid_view or not hasattr(self._grid_view, '_segments'):
+        if not self._grid_view:
             return
-        
-        if segment_name in self._grid_view._segments:
-            del self._grid_view._segments[segment_name]
-            if hasattr(self._grid_view, '_segment_list'):
-                self._grid_view._segment_list.remove_segment(segment_name)
+
+        # Use public API to delete segment
+        if hasattr(self._grid_view, 'delete_segment'):
+            self._grid_view.delete_segment(segment_name)
     
     # ============================================================================
     # SEGMENT OPERATIONS
@@ -287,7 +278,7 @@ class AnimationSegmentController(QObject):
                     self._segment_preview.remove_segment(old_name)
                     if self._sprite_model:
                         frames = self._get_sprite_frames()
-                        if frames and not self._segment_preview._all_frames:
+                        if frames and not self._segment_preview.has_frames():
                             self._segment_preview.set_frames(frames)
                         
                         self._segment_preview.add_segment(
@@ -492,23 +483,42 @@ class AnimationSegmentController(QObject):
             self.statusMessage.emit(f"Exported segment '{segment.name}'")
     
     def _handle_segment_export(
-        self, 
-        settings: Dict[str, Any], 
-        segment_frames: List, 
+        self,
+        settings: Dict[str, Any],
+        segment_frames: List,
         segment_name: str
     ) -> None:
         """
         Handle segment-specific export request.
-        
+
         Args:
             settings: Export settings
             segment_frames: Frames to export
             segment_name: Name of segment being exported
         """
-        if self._export_handler:
-            self._export_handler.handle_segment_specific_export(
-                settings, segment_frames, segment_name
-            )
+        from export.core.frame_exporter import get_frame_exporter
+
+        required_keys = ['output_dir', 'base_name', 'format', 'mode', 'scale_factor']
+        for key in required_keys:
+            if key not in settings:
+                return
+
+        if not segment_frames:
+            return
+
+        exporter = get_frame_exporter()
+        base_name = f"{settings['base_name']}_{segment_name}"
+
+        exporter.export_frames(
+            frames=segment_frames,
+            output_dir=settings['output_dir'],
+            base_name=base_name,
+            format=settings['format'],
+            mode=settings['mode'],
+            scale_factor=settings['scale_factor'],
+            pattern=settings.get('pattern'),
+            sprite_sheet_layout=settings.get('sprite_sheet_layout'),
+        )
     
     # ============================================================================
     # GRID VIEW SYNCHRONIZATION
@@ -592,13 +602,13 @@ class AnimationSegmentController(QObject):
     def _on_manager_segment_removed(self, segment_name: str) -> None:
         """
         Handle segment removal from manager by updating grid view.
-        
+
         Args:
             segment_name: Name of removed segment
         """
-        if self._grid_view and hasattr(self._grid_view, '_delete_segment'):
-            # Call the grid view's internal delete method to update visualization
-            self._grid_view._delete_segment(segment_name)
+        if self._grid_view and hasattr(self._grid_view, 'delete_segment'):
+            # Use public API to update visualization
+            self._grid_view.delete_segment(segment_name)
     
     def _on_manager_segments_cleared(self) -> None:
         """Handle all segments being cleared from manager."""
