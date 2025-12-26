@@ -4,6 +4,7 @@ Displays each animation segment with individual playback controls.
 Part of Animation Segment System Enhancement.
 """
 
+import contextlib
 
 from PySide6.QtCore import Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QPainter, QPixmap
@@ -362,6 +363,14 @@ class SegmentPreviewItem(QFrame):
             self._toggle_playback()
         self._current_frame = 0
         self._display_frame(0)
+
+    def cleanup(self):
+        """Clean up timer and signal connections before deletion."""
+        self._timer.stop()
+        with contextlib.suppress(RuntimeError, TypeError):
+            self._timer.timeout.disconnect(self._update_frame)
+        with contextlib.suppress(RuntimeError, TypeError):
+            self.customContextMenuRequested.disconnect(self._show_context_menu)
 
     def _show_context_menu(self, pos):
         """Show context menu for segment actions."""
@@ -744,6 +753,7 @@ class AnimationSegmentPreview(QWidget):
         if name in self._preview_items:
             preview_item = self._preview_items[name]
             preview_item.stop_playback()
+            preview_item.cleanup()  # Disconnect signals before deletion
             self.container_layout.removeWidget(preview_item)
             preview_item.deleteLater()
             del self._preview_items[name]

@@ -6,6 +6,7 @@ Part of Animation Splitting Feature implementation.
 
 import contextlib
 import json
+import logging
 import os
 import tempfile
 from dataclasses import asdict, dataclass
@@ -14,6 +15,8 @@ from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QColor, QPixmap
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -541,7 +544,11 @@ class AnimationSegmentManager(QObject):
         """Load segments for the current sprite sheet if they exist."""
         segments_file = self._get_segments_file_path()
         if segments_file and os.path.exists(segments_file):
-            self.load_segments_from_file(segments_file)
+            success, message = self.load_segments_from_file(segments_file)
+            if not success:
+                logger.warning("Failed to load segments from %s: %s", segments_file, message)
+            elif message:  # Partial success with skipped segments
+                logger.info("Segment load: %s", message)
 
     def _auto_save(self):
         """Auto-save segments if enabled and sprite sheet is loaded."""

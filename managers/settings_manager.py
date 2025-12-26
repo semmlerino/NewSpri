@@ -7,7 +7,10 @@ Manages application settings persistence using QSettings.
 Provides centralized access to user preferences and application state.
 """
 
+import contextlib
 import json
+import os
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -277,7 +280,7 @@ class SettingsManager(QObject):
 
     def export_settings(self, filepath: str) -> bool:
         """
-        Export settings to a JSON file.
+        Export settings to a JSON file using atomic write.
 
         Args:
             filepath: Path to save the settings file
@@ -285,6 +288,7 @@ class SettingsManager(QObject):
         Returns:
             True if successful, False otherwise
         """
+        temp_path = None
         try:
             # Gather all settings
             settings_dict = {}
@@ -295,12 +299,26 @@ class SettingsManager(QObject):
                     value = bytes(value.toBase64().data()).decode('ascii')
                 settings_dict[key] = value
 
-            # Save to JSON file
-            with open(filepath, 'w', encoding='utf-8') as f:
+            # Atomic write: write to temp file, then rename
+            dir_path = os.path.dirname(filepath) or "."
+            with tempfile.NamedTemporaryFile(
+                mode='w',
+                dir=dir_path,
+                delete=False,
+                suffix='.tmp',
+                encoding='utf-8'
+            ) as f:
                 json.dump(settings_dict, f, indent=2, ensure_ascii=False)
+                temp_path = f.name
 
+            # Atomic rename (works on POSIX and Windows)
+            os.replace(temp_path, filepath)
             return True
         except Exception as e:
+            # Clean up temp file if it exists
+            if temp_path is not None:
+                with contextlib.suppress(OSError):
+                    os.unlink(temp_path)
             print(f"Failed to export settings: {e}")
             return False
 

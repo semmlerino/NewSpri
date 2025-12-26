@@ -9,6 +9,7 @@ separation of concerns and testability.
 Part of safe refactoring phase to reduce god class responsibilities.
 """
 
+import contextlib
 import time
 from typing import Any
 
@@ -53,8 +54,9 @@ class AnimationSegmentController(QObject):
         # Configuration
         self.MAX_NAME_RETRY_ATTEMPTS = 10
 
-        # Track signal connections
+        # Track signal connections for cleanup
         self._manager_signals_connected = False
+        self._signal_connections: list[tuple] = []
 
     # ============================================================================
     # DEPENDENCY INJECTION
@@ -72,10 +74,11 @@ class AnimationSegmentController(QObject):
         """Set the animation grid view dependency."""
         self._grid_view = grid_view
 
-        # Connect grid view signals
+        # Connect grid view signals - track for cleanup
         if self._grid_view and hasattr(self._grid_view, 'exportRequested'):
-            # Connect export signal if it exists
-            self._grid_view.exportRequested.connect(self._on_export_requested)
+            signal = self._grid_view.exportRequested
+            signal.connect(self._on_export_requested)
+            self._signal_connections.append((signal, self._on_export_requested))
 
         # Connect manager signals to update grid view if manager already set
         if self._segment_manager and self._grid_view:
@@ -93,11 +96,16 @@ class AnimationSegmentController(QObject):
         """Set the animation segment preview widget dependency."""
         self._segment_preview = preview_widget
         if self._segment_preview:
-            # Connect preview widget signals
-            self._segment_preview.segmentRemoved.connect(self.delete_segment)
-            self._segment_preview.playbackStateChanged.connect(self._on_preview_playback_changed)
-            self._segment_preview.segmentBounceChanged.connect(self._on_segment_bounce_changed)
-            self._segment_preview.segmentFrameHoldsChanged.connect(self._on_segment_frame_holds_changed)
+            # Connect preview widget signals - track for cleanup
+            connections = [
+                (self._segment_preview.segmentRemoved, self.delete_segment),
+                (self._segment_preview.playbackStateChanged, self._on_preview_playback_changed),
+                (self._segment_preview.segmentBounceChanged, self._on_segment_bounce_changed),
+                (self._segment_preview.segmentFrameHoldsChanged, self._on_segment_frame_holds_changed),
+            ]
+            for signal, slot in connections:
+                signal.connect(slot)
+                self._signal_connections.append((signal, slot))
 
     # ============================================================================
     # SEGMENT CREATION
@@ -625,7 +633,20 @@ class AnimationSegmentController(QObject):
     def _connect_manager_signals(self) -> None:
         """Connect segment manager signals to grid view updates."""
         if not self._manager_signals_connected and self._segment_manager and self._grid_view:
-            # Connect signals only once
-            self._segment_manager.segmentRemoved.connect(self._on_manager_segment_removed)
-            self._segment_manager.segmentsCleared.connect(self._on_manager_segments_cleared)
+            # Connect signals only once - track for cleanup
+            connections = [
+                (self._segment_manager.segmentRemoved, self._on_manager_segment_removed),
+                (self._segment_manager.segmentsCleared, self._on_manager_segments_cleared),
+            ]
+            for signal, slot in connections:
+                signal.connect(slot)
+                self._signal_connections.append((signal, slot))
             self._manager_signals_connected = True
+
+    def cleanup(self) -> None:
+        """Clean up signal connections to prevent memory leaks."""
+        for signal, slot in self._signal_connections:
+            with contextlib.suppress(RuntimeError, TypeError):
+                signal.disconnect(slot)
+        self._signal_connections.clear()
+        self._manager_signals_connected = False

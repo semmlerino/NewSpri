@@ -29,9 +29,9 @@ def detect_background_color(image_path: str) -> tuple[tuple[int, int, int], int]
         ...     print(f"Background: RGB{rgb_color}, tolerance: {tolerance}")
     """
     try:
-        # Load image as RGBA numpy array
-        img = Image.open(image_path).convert('RGBA')
-        img_array = np.array(img)
+        # Load image as RGBA numpy array - use context manager to ensure file handle is closed
+        with Image.open(image_path) as img:
+            img_array = np.array(img.convert('RGBA'))
 
         # Check if image is mostly opaque (needs color key detection)
         alpha_channel = img_array[:, :, 3]

@@ -42,11 +42,12 @@ class CCLExtractor:
         Returns:
             Tuple of (sprites_list, info_string)
         """
-        try:
-            # Save QPixmap to temporary file for processing
-            import os
-            import tempfile
+        import contextlib
+        import os
+        import tempfile
 
+        temp_path = None
+        try:
             # Create temporary file
             with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp_file:
                 temp_path = tmp_file.name
@@ -55,41 +56,40 @@ class CCLExtractor:
             if not sprite_sheet.save(temp_path, 'PNG'):
                 return [], "Failed to save sprite sheet for CCL processing"
 
-            try:
-                # Run CCL detection
-                ccl_result = detect_sprites_ccl_enhanced(temp_path)
+            # Run CCL detection
+            ccl_result = detect_sprites_ccl_enhanced(temp_path)
 
-                # Ensure we got a dictionary result
-                if not isinstance(ccl_result, dict):
-                    return [], f"CCL detection returned unexpected type: {type(ccl_result)}"
+            # Ensure we got a dictionary result
+            if not isinstance(ccl_result, dict):
+                return [], f"CCL detection returned unexpected type: {type(ccl_result)}"
 
-                if ccl_result and ccl_result.get('success', False):
-                    sprite_bounds = ccl_result.get('ccl_sprite_bounds', [])
-                    sprite_count = len(sprite_bounds)
+            if ccl_result and ccl_result.get('success', False):
+                sprite_bounds = ccl_result.get('ccl_sprite_bounds', [])
+                sprite_count = len(sprite_bounds)
 
-                    if sprite_count >= 2:
-                        # Create list of individual sprite QPixmaps
-                        sprites = []
-                        for x, y, w, h in sprite_bounds:
-                            sprite_pixmap = sprite_sheet.copy(x, y, w, h)
-                            sprites.append(sprite_pixmap)
+                if sprite_count >= 2:
+                    # Create list of individual sprite QPixmaps
+                    sprites = []
+                    for x, y, w, h in sprite_bounds:
+                        sprite_pixmap = sprite_sheet.copy(x, y, w, h)
+                        sprites.append(sprite_pixmap)
 
-                        info_string = f"CCL detected {sprite_count} sprites"
-                        return sprites, info_string
-                    else:
-                        return [], f"CCL detected only {sprite_count} sprites (need at least 2)"
+                    info_string = f"CCL detected {sprite_count} sprites"
+                    return sprites, info_string
                 else:
-                    error_msg = ccl_result.get('error', 'Unknown error') if ccl_result else 'No result returned'
-                    return [], f"CCL detection failed: {error_msg}"
-
-            finally:
-                # Clean up temporary file
-                import contextlib
-                with contextlib.suppress(Exception):
-                    os.unlink(temp_path)
+                    return [], f"CCL detected only {sprite_count} sprites (need at least 2)"
+            else:
+                error_msg = ccl_result.get('error', 'Unknown error') if ccl_result else 'No result returned'
+                return [], f"CCL detection failed: {error_msg}"
 
         except Exception as e:
             return [], f"CCL extraction error: {e!s}"
+
+        finally:
+            # Clean up temporary file - guaranteed to run on all exit paths
+            if temp_path is not None:
+                with contextlib.suppress(OSError):
+                    os.unlink(temp_path)
 
 
 def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
@@ -128,9 +128,9 @@ def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
     try:
         debug_log.append(f"CCL Detection starting on: {image_path}")
 
-        # Load image as RGBA numpy array
-        img = Image.open(image_path).convert('RGBA')
-        img_array = np.array(img)
+        # Load image as RGBA numpy array - use context manager to ensure file handle is closed
+        with Image.open(image_path) as img:
+            img_array = np.array(img.convert('RGBA'))
         debug_log.append(f"Loaded image: {img_array.shape} (height, width, channels)")
 
         # Create binary mask based on alpha channel
