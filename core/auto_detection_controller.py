@@ -282,22 +282,22 @@ class AutoDetectionController(QObject):
     def _emit_detected_settings(self):
         """Emit signals with current detected settings."""
         if self._sprite_model:
-            self.frameSettingsDetected.emit(self._sprite_model._frame_width, self._sprite_model._frame_height)
-            self.marginSettingsDetected.emit(self._sprite_model._offset_x, self._sprite_model._offset_y)
-            self.spacingSettingsDetected.emit(self._sprite_model._spacing_x, self._sprite_model._spacing_y)
+            self.frameSettingsDetected.emit(self._sprite_model.frame_width, self._sprite_model.frame_height)
+            self.marginSettingsDetected.emit(self._sprite_model.offset_x, self._sprite_model.offset_y)
+            self.spacingSettingsDetected.emit(self._sprite_model.spacing_x, self._sprite_model.spacing_y)
 
     def _create_detection_summary(self) -> str:
         """Create a brief summary of detected settings."""
         if not self._sprite_model:
             return "No detection results"
 
-        summary = f"Auto-detected: {self._sprite_model._frame_width}×{self._sprite_model._frame_height}"
+        summary = f"Auto-detected: {self._sprite_model.frame_width}×{self._sprite_model.frame_height}"
 
-        if self._sprite_model._offset_x > 0 or self._sprite_model._offset_y > 0:
-            summary += f", margins ({self._sprite_model._offset_x},{self._sprite_model._offset_y})"
+        if self._sprite_model.offset_x > 0 or self._sprite_model.offset_y > 0:
+            summary += f", margins ({self._sprite_model.offset_x},{self._sprite_model.offset_y})"
 
-        if self._sprite_model._spacing_x > 0 or self._sprite_model._spacing_y > 0:
-            summary += f", spacing ({self._sprite_model._spacing_x},{self._sprite_model._spacing_y})"
+        if self._sprite_model.spacing_x > 0 or self._sprite_model.spacing_y > 0:
+            summary += f", spacing ({self._sprite_model.spacing_x},{self._sprite_model.spacing_y})"
 
         return summary
 

@@ -54,7 +54,7 @@ class TestSegmentRenameWorkflow:
         grid_view.set_frames(viewer._sprite_model.sprite_frames)
         
         # Create a segment and add it both to manager and grid view
-        segment = AnimationSegment("Original_Name", 0, 3)
+        segment = AnimationSegment("Original_Name", 0, 3, QColor(233, 30, 99))
         # Add to manager
         success, msg = viewer._segment_manager.add_segment("Original_Name", 0, 3)
         assert success, f"Failed to add segment: {msg}"
@@ -119,8 +119,8 @@ class TestSegmentRenameWorkflow:
         grid_view = viewer._grid_view
         
         # Create two segments
-        segment1 = AnimationSegment("Segment1", 0, 3)
-        segment2 = AnimationSegment("Segment2", 4, 7)
+        segment1 = AnimationSegment("Segment1", 0, 3, QColor(233, 30, 99))
+        segment2 = AnimationSegment("Segment2", 4, 7, QColor(76, 175, 80))
         grid_view.add_segment(segment1)
         grid_view.add_segment(segment2)
         

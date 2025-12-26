@@ -306,11 +306,11 @@ class TestAnimationSegmentController(unittest.TestCase):
         with tempfile.NamedTemporaryFile(suffix=".png") as tmp:
             frames = [Mock() for _ in range(5)]
             self.mock_sprite_model.get_all_frames.return_value = frames
-            self.mock_sprite_model._file_path = tmp.name
-            
+            self.mock_sprite_model.file_path = tmp.name
+
             # Act
             self.controller.update_grid_view_frames()
-            
+
             # Assert
             self.mock_grid_view.set_frames.assert_called_once_with(frames)
             # Verify segment manager was called with real path
@@ -320,50 +320,24 @@ class TestAnimationSegmentController(unittest.TestCase):
         """Test updating grid view with no frames."""
         # Arrange
         self.mock_sprite_model.get_all_frames.return_value = []
-        # Remove fallback attributes to ensure empty result
-        self.mock_sprite_model.sprite_frames = []
-        self.mock_sprite_model._sprite_frames = []
-        # Remove file paths
-        if hasattr(self.mock_sprite_model, '_file_path'):
-            delattr(self.mock_sprite_model, '_file_path')
-        if hasattr(self.mock_sprite_model, '_sprite_sheet_path'):
-            delattr(self.mock_sprite_model, '_sprite_sheet_path')
-        
+        self.mock_sprite_model.file_path = ""
+
         # Act
         self.controller.update_grid_view_frames()
-        
+
         # Assert
         self.mock_grid_view.set_frames.assert_called_once_with([])
-    
-    def test_update_grid_view_frames_fallback_methods(self):
-        """Test frame retrieval fallback methods."""
-        # Arrange
-        with tempfile.NamedTemporaryFile(suffix=".png") as tmp:
-            frames = [Mock() for _ in range(3)]
-            
-            # Remove get_all_frames method
-            del self.mock_sprite_model.get_all_frames
-            
-            # Set sprite_frames property
-            self.mock_sprite_model.sprite_frames = frames
-            self.mock_sprite_model._file_path = tmp.name
-            
-            # Act
-            self.controller.update_grid_view_frames()
-            
-            # Assert
-            self.mock_grid_view.set_frames.assert_called_once_with(frames)
-    
+
     def test_on_tab_changed_to_animation_splitting(self):
         """Test tab change to animation splitting tab."""
         # Arrange
         with tempfile.NamedTemporaryFile(suffix=".png") as tmp:
-            self.mock_sprite_model._file_path = tmp.name
+            self.mock_sprite_model.file_path = tmp.name
             self.mock_sprite_model.get_all_frames.return_value = [Mock()]
-            
+
             # Act
             self.controller.on_tab_changed(1)  # Animation splitting tab
-            
+
             # Assert
             self.mock_grid_view.set_frames.assert_called_once()
     

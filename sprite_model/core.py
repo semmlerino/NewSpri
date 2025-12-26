@@ -459,10 +459,6 @@ class SpriteModel(QObject):
         else:
             return False, 0, 0, message
 
-    def auto_detect_spacing(self) -> tuple[bool, int, int, str]:
-        """Legacy alias for auto_detect_spacing_enhanced."""
-        return self.auto_detect_spacing_enhanced()
-
     def comprehensive_auto_detect(self) -> tuple[bool, str]:
         """Run comprehensive auto-detection."""
         if not self._original_sprite_sheet:
@@ -605,6 +601,36 @@ class SpriteModel(QObject):
     def sprite_frames(self) -> list[QPixmap]:
         """Get list of extracted frames."""
         return self._sprite_frames
+
+    @property
+    def frame_width(self) -> int:
+        """Get configured frame width."""
+        return self._frame_width
+
+    @property
+    def frame_height(self) -> int:
+        """Get configured frame height."""
+        return self._frame_height
+
+    @property
+    def offset_x(self) -> int:
+        """Get horizontal offset (left margin)."""
+        return self._offset_x
+
+    @property
+    def offset_y(self) -> int:
+        """Get vertical offset (top margin)."""
+        return self._offset_y
+
+    @property
+    def spacing_x(self) -> int:
+        """Get horizontal spacing between frames."""
+        return self._spacing_x
+
+    @property
+    def spacing_y(self) -> int:
+        """Get vertical spacing between frames."""
+        return self._spacing_y
 
     def get_all_frames(self) -> list[QPixmap]:
         """Get all extracted frames (convenience method for animation splitting)."""

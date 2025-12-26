@@ -596,13 +596,13 @@ class TestAutoDetectionController:
         mock_sprite_model.comprehensive_auto_detect.return_value = (True, "Test report")
         
         # Mock attributes that get set
-        mock_sprite_model._frame_width = 32
-        mock_sprite_model._frame_height = 32
-        mock_sprite_model._offset_x = 0
-        mock_sprite_model._offset_y = 0
-        mock_sprite_model._spacing_x = 0
-        mock_sprite_model._spacing_y = 0
-        
+        mock_sprite_model.frame_width = 32
+        mock_sprite_model.frame_height = 32
+        mock_sprite_model.offset_x = 0
+        mock_sprite_model.offset_y = 0
+        mock_sprite_model.spacing_x = 0
+        mock_sprite_model.spacing_y = 0
+
         controller.initialize(mock_sprite_model, Mock())
         
         # Test signals
@@ -720,13 +720,13 @@ class TestAutoDetectionController:
         
         # Mock sprite model with detected values
         mock_sprite_model = Mock()
-        mock_sprite_model._frame_width = 64
-        mock_sprite_model._frame_height = 48
-        mock_sprite_model._offset_x = 4
-        mock_sprite_model._offset_y = 4
-        mock_sprite_model._spacing_x = 2
-        mock_sprite_model._spacing_y = 2
-        
+        mock_sprite_model.frame_width = 64
+        mock_sprite_model.frame_height = 48
+        mock_sprite_model.offset_x = 4
+        mock_sprite_model.offset_y = 4
+        mock_sprite_model.spacing_x = 2
+        mock_sprite_model.spacing_y = 2
+
         controller._sprite_model = mock_sprite_model
         
         summary = controller._create_detection_summary()

@@ -72,7 +72,7 @@ class AnimationSegmentController(QObject):
     def _connect_signals(self) -> None:
         """Connect all signals from dependencies."""
         # Grid view signals
-        if self._grid_view and hasattr(self._grid_view, 'exportRequested'):
+        if self._grid_view:
             self._grid_view.exportRequested.connect(self._on_export_requested)
 
         # Manager signals
@@ -210,17 +210,11 @@ class AnimationSegmentController(QObject):
         if not self._grid_view:
             return
 
-        if hasattr(self._grid_view, 'rename_segment'):
-            self._grid_view.rename_segment(old_name, new_name)
-        elif hasattr(self._grid_view, 'has_segment') and self._grid_view.has_segment(old_name):
-            self._grid_view.delete_segment(old_name)
-            updated_segment = self._segment_manager.get_segment(new_name)
-            if updated_segment:
-                self._grid_view.add_segment(updated_segment)
+        self._grid_view.rename_segment(old_name, new_name)
 
     def _remove_from_grid_view(self, segment_name: str) -> None:
         """Remove failed segment from grid view."""
-        if self._grid_view and hasattr(self._grid_view, 'delete_segment'):
+        if self._grid_view:
             self._grid_view.delete_segment(segment_name)
 
     # ============================================================================
@@ -464,34 +458,16 @@ class AnimationSegmentController(QObject):
                 self._segment_preview.clear_segments()
 
     def _get_sprite_frames(self) -> list:
-        """Get frames from sprite model using various methods."""
+        """Get frames from sprite model."""
         if not self._sprite_model:
             return []
-
-        if hasattr(self._sprite_model, 'get_all_frames'):
-            frames = self._sprite_model.get_all_frames()
-            if frames:
-                return frames
-
-        if hasattr(self._sprite_model, 'sprite_frames'):
-            frames = self._sprite_model.sprite_frames
-            if frames:
-                return frames
-
-        if hasattr(self._sprite_model, '_sprite_frames'):
-            return self._sprite_model._sprite_frames
-
-        return []
+        return self._sprite_model.get_all_frames()
 
     def _get_sprite_path(self) -> str:
         """Get sprite sheet path from model."""
         if not self._sprite_model:
             return ""
-        if hasattr(self._sprite_model, '_file_path'):
-            return self._sprite_model._file_path
-        elif hasattr(self._sprite_model, '_sprite_sheet_path'):
-            return self._sprite_model._sprite_sheet_path
-        return ""
+        return self._sprite_model.file_path
 
     def on_tab_changed(self, index: int) -> None:
         """Handle tab change event to refresh grid view."""
@@ -500,10 +476,10 @@ class AnimationSegmentController(QObject):
 
     def _on_manager_segment_removed(self, segment_name: str) -> None:
         """Handle segment removal from manager by updating grid view."""
-        if self._grid_view and hasattr(self._grid_view, 'delete_segment'):
+        if self._grid_view:
             self._grid_view.delete_segment(segment_name)
 
     def _on_manager_segments_cleared(self) -> None:
         """Handle all segments being cleared from manager."""
-        if self._grid_view and hasattr(self._grid_view, 'clear_segments'):
+        if self._grid_view:
             self._grid_view.clear_segments()

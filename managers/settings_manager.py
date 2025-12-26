@@ -349,7 +349,3 @@ def reset_settings_manager() -> None:
     """Reset the global settings manager instance (for testing)."""
     global _settings_instance
     _settings_instance = None
-
-def initialize_settings() -> SettingsManager:
-    """Initialize and return the settings manager."""
-    return get_settings_manager()

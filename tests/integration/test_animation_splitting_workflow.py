@@ -92,7 +92,7 @@ class TestAnimationSplittingWorkflow:
         
         # Create segment directly (bypass dialog)
         from ui.animation_grid_view import AnimationSegment
-        walk_segment = AnimationSegment("Walk", 0, 3)
+        walk_segment = AnimationSegment("Walk", 0, 3, QColor(233, 30, 99))
         animation_grid.add_segment(walk_segment)
         animation_grid.segmentCreated.emit(walk_segment)
         
@@ -109,7 +109,7 @@ class TestAnimationSplittingWorkflow:
                 animation_grid._selected_frames.add(i)
         
         # Create segment directly
-        attack_segment = AnimationSegment("Attack", 4, 7)
+        attack_segment = AnimationSegment("Attack", 4, 7, QColor(76, 175, 80))
         animation_grid.add_segment(attack_segment)
         animation_grid.segmentCreated.emit(attack_segment)
         
@@ -138,12 +138,12 @@ class TestAnimationSplittingWorkflow:
         """Test segment creation and management in the grid view."""
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
-        
+
         animation_grid = viewer._grid_view
-        
+
         # Add segments
-        walk_segment = AnimationSegment("Walk_Cycle", 0, 7)
-        attack_segment = AnimationSegment("Attack_Sequence", 8, 15)
+        walk_segment = AnimationSegment("Walk_Cycle", 0, 7, QColor(233, 30, 99))
+        attack_segment = AnimationSegment("Attack_Sequence", 8, 15, QColor(76, 175, 80))
         
         animation_grid.add_segment(walk_segment)
         animation_grid.add_segment(attack_segment)
@@ -167,7 +167,7 @@ class TestAnimationSplittingWorkflow:
         animation_grid = viewer._grid_view
         
         # Add test segment
-        test_segment = AnimationSegment("Export_Test", 5, 10)
+        test_segment = AnimationSegment("Export_Test", 5, 10, QColor(33, 150, 243))
         animation_grid.add_segment(test_segment)
         
         # Set up signal spy
@@ -194,10 +194,10 @@ class TestAnimationSplittingWorkflow:
         
         # Create multiple segments
         segments = [
-            AnimationSegment("Idle", 0, 3),
-            AnimationSegment("Walk", 4, 11),
-            AnimationSegment("Run", 12, 19),
-            AnimationSegment("Jump", 20, 27)
+            AnimationSegment("Idle", 0, 3, QColor(233, 30, 99)),
+            AnimationSegment("Walk", 4, 11, QColor(76, 175, 80)),
+            AnimationSegment("Run", 12, 19, QColor(33, 150, 243)),
+            AnimationSegment("Jump", 20, 27, QColor(255, 152, 0))
         ]
         
         for segment in segments:
@@ -237,7 +237,7 @@ class TestAnimationSplittingWorkflow:
         animation_grid.set_frames(test_frames)
         
         # Add segment
-        segment = AnimationSegment("Visual_Test", 2, 5)
+        segment = AnimationSegment("Visual_Test", 2, 5, QColor(156, 39, 176))
         animation_grid.add_segment(segment)
         
         # Check that thumbnails have segment markers
@@ -277,7 +277,7 @@ class TestAnimationSplittingWorkflow:
             end_frame = max(animation_grid._selected_frames)
             
             from ui.animation_grid_view import AnimationSegment
-            segment = AnimationSegment("NonContiguous_Test", start_frame, end_frame)
+            segment = AnimationSegment("NonContiguous_Test", start_frame, end_frame, QColor(0, 188, 212))
             animation_grid.add_segment(segment)
             animation_grid.segmentCreated.emit(segment)
         
@@ -299,7 +299,7 @@ class TestAnimationSplittingErrorHandling:
         animation_grid = viewer._grid_view
         
         # Add segment but don't select it
-        segment = AnimationSegment("Unselected", 0, 3)
+        segment = AnimationSegment("Unselected", 0, 3, QColor(158, 158, 158))
         animation_grid.add_segment(segment)
         
         # Try to export (should do nothing)
@@ -343,7 +343,7 @@ class TestAnimationSplittingErrorHandling:
         animation_grid = viewer._grid_view
         
         # Add first segment
-        segment1 = AnimationSegment("Duplicate_Name", 0, 3)
+        segment1 = AnimationSegment("Duplicate_Name", 0, 3, QColor(121, 85, 72))
         animation_grid.add_segment(segment1)
         
         # Try to rename segment to existing name
@@ -398,7 +398,9 @@ class TestAnimationSplittingPerformance:
         # Create many segments
         segment_count = 50
         for i in range(segment_count):
-            segment = AnimationSegment(f"Segment_{i:02d}", i*4, i*4+3)
+            # Generate unique colors by cycling through hues
+            color = QColor.fromHsv((i * 7) % 360, 200, 200)
+            segment = AnimationSegment(f"Segment_{i:02d}", i*4, i*4+3, color)
             animation_grid.add_segment(segment)
         
         assert len(animation_grid.get_segments()) == segment_count

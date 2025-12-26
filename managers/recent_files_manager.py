@@ -88,35 +88,8 @@ class RecentFilesManager(QObject):
         Args:
             parent_menu: Menu to add the recent files to
         """
-        # Clear any existing file actions from our tracking
         self._file_actions.clear()
-
-        # Get recent files from settings
-        recent_files = self._settings.get_recent_files()
-
-        if not recent_files:
-            # Show "No recent files" placeholder
-            no_files_action = parent_menu.addAction("No recent files")
-            no_files_action.setEnabled(False)
-            no_files_action.setToolTip("No sprite sheets have been opened recently")
-            self._file_actions.append(no_files_action)
-        else:
-            # Add actions for each recent file
-            for i, filepath in enumerate(recent_files):
-                if i >= Config.Settings.MAX_RECENT_FILES:
-                    break
-
-                # Create action
-                action = self._create_file_action(filepath, i + 1)
-                parent_menu.addAction(action)
-                self._file_actions.append(action)
-
-            # Add separator and clear action
-            parent_menu.addSeparator()
-            clear_action = parent_menu.addAction("Clear Recent Files")
-            clear_action.setToolTip("Remove all files from recent files list")
-            clear_action.triggered.connect(self._clear_recent_files)
-            self._file_actions.append(clear_action)
+        self._populate_menu_items(parent_menu)
 
     def _update_menu(self) -> None:
         """Update the recent files menu with current files."""
@@ -128,37 +101,37 @@ class RecentFilesManager(QObject):
             with contextlib.suppress(RuntimeError, TypeError):
                 action.triggered.disconnect()
 
-        # Clear existing actions
         self._recent_menu.clear()
         self._file_actions.clear()
+        self._populate_menu_items(self._recent_menu)
+        self.menuUpdated.emit()
 
-        # Get recent files from settings
+    def _populate_menu_items(self, menu: QMenu) -> None:
+        """
+        Populate a menu with recent file actions.
+
+        Args:
+            menu: Menu to populate with recent file actions
+        """
         recent_files = self._settings.get_recent_files()
 
         if not recent_files:
-            # Show "No recent files" placeholder
-            no_files_action = self._recent_menu.addAction("No recent files")
+            no_files_action = menu.addAction("No recent files")
             no_files_action.setEnabled(False)
             no_files_action.setToolTip("No sprite sheets have been opened recently")
-        else:
-            # Add actions for each recent file
-            for i, filepath in enumerate(recent_files):
-                if i >= Config.Settings.MAX_RECENT_FILES:
-                    break
+            return
 
-                # Create action
-                action = self._create_file_action(filepath, i + 1)
-                self._recent_menu.addAction(action)
-                self._file_actions.append(action)
+        for i, filepath in enumerate(recent_files):
+            if i >= Config.Settings.MAX_RECENT_FILES:
+                break
+            action = self._create_file_action(filepath, i + 1)
+            menu.addAction(action)
+            self._file_actions.append(action)
 
-            # Add separator and clear action
-            self._recent_menu.addSeparator()
-            clear_action = self._recent_menu.addAction("Clear Recent Files")
-            clear_action.setToolTip("Remove all files from recent files list")
-            clear_action.triggered.connect(self._clear_recent_files)
-
-        # Emit update signal
-        self.menuUpdated.emit()
+        menu.addSeparator()
+        clear_action = menu.addAction("Clear Recent Files")
+        clear_action.setToolTip("Remove all files from recent files list")
+        clear_action.triggered.connect(self._clear_recent_files)
 
     def _create_file_action(self, filepath: str, index: int) -> QAction:
         """
