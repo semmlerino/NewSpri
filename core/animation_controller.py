@@ -81,6 +81,14 @@ class AnimationController(QObject):
         self._animation_timer.timeout.connect(self._on_timer_timeout)
         self._signal_connections.append((self._animation_timer.timeout, self._on_timer_timeout))
 
+        # Initialization tracking
+        self._initialized: bool = False
+
+    @property
+    def is_ready(self) -> bool:
+        """Check if controller has been initialized with required dependencies."""
+        return self._initialized
+
     # ============================================================================
     # CONTROLLER LIFECYCLE
     # ============================================================================
@@ -106,6 +114,7 @@ class AnimationController(QObject):
             self._sync_state_from_model()
 
             self._is_active = True
+            self._initialized = True
             self.statusChanged.emit("Animation controller initialized")
             return True
 

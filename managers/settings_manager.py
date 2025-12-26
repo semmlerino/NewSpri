@@ -11,6 +11,7 @@ import contextlib
 import json
 import os
 import tempfile
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -357,14 +358,17 @@ class SettingsManager(QObject):
             return False
 
 
-# Singleton implementation (consolidated pattern)
+# Singleton implementation (thread-safe double-checked locking)
 _settings_instance: SettingsManager | None = None
+_settings_lock = threading.Lock()
 
 def get_settings_manager() -> SettingsManager:
-    """Get the global settings manager instance."""
+    """Get the global settings manager instance (thread-safe)."""
     global _settings_instance
     if _settings_instance is None:
-        _settings_instance = SettingsManager()
+        with _settings_lock:
+            if _settings_instance is None:
+                _settings_instance = SettingsManager()
     return _settings_instance
 
 

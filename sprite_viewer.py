@@ -177,6 +177,11 @@ class SpriteViewer(QMainWindow):
         # Initialize auto-detection controller after UI setup
         self._auto_detection_controller.initialize(self._sprite_model, self._frame_extractor)
 
+        # Verify all controllers are properly initialized
+        assert self._animation_controller.is_ready, "AnimationController not initialized"
+        assert self._auto_detection_controller.is_ready, "AutoDetectionController not initialized"
+        assert self._export_coordinator.is_ready, "ExportCoordinator not initialized"
+
         # Apply settings and show welcome
         self._apply_settings()
         self._show_welcome_message()
@@ -390,6 +395,11 @@ class SpriteViewer(QMainWindow):
         self._segment_controller.set_sprite_model(self._sprite_model)
         self._segment_controller.set_tab_widget(self._tab_widget)
         self._segment_controller.set_segment_preview(self._segment_preview)
+
+        # Validate segment controller initialization is complete
+        assert self._segment_controller.is_ready, (
+            "AnimationSegmentController not fully initialized - check setter calls above"
+        )
 
         # Connect segment controller status messages
         if self._status_manager is not None:

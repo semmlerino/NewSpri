@@ -70,7 +70,8 @@ class ExportDialog(QDialog):
         # Step 1: Export type selection
         self.type_step = ExportTypeStep(
             frame_count=self.frame_count,
-            segment_manager=self.segment_manager
+            segment_manager=self.segment_manager,
+            parent=self.wizard
         )
         self.wizard.add_step(self.type_step)
 
@@ -79,7 +80,8 @@ class ExportDialog(QDialog):
             frame_count=self.frame_count,
             current_frame=self.current_frame,
             sprites=self.sprites,
-            segment_manager=self.segment_manager
+            segment_manager=self.segment_manager,
+            parent=self.wizard
         )
         self.wizard.add_step(self.settings_preview_step)
 

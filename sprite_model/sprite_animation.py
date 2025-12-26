@@ -60,15 +60,17 @@ class AnimationStateManager(QObject):
 
     def update_frame_count(self, total_frames: int) -> None:
         """
-        Update the total frame count and reset current frame if needed.
+        Handle frame count changes and reset current frame if needed.
 
         Args:
-            total_frames: New total frame count
+            total_frames: Expected total frame count (used for bounds check)
+
+        Note: The actual frame count is computed dynamically via the total_frames
+        property. This method just ensures the current frame stays in bounds.
         """
-        self._total_frames = total_frames
         if self._current_frame >= total_frames:
             self._current_frame = 0
-            self.frameChanged.emit(self._current_frame, self._total_frames)
+            self.frameChanged.emit(self._current_frame, self.total_frames)
 
     # ============================================================================
     # FRAME NAVIGATION
@@ -90,8 +92,7 @@ class AnimationStateManager(QObject):
 
         if 0 <= frame < len(frames):
             self._current_frame = frame
-            self._total_frames = len(frames)
-            self.frameChanged.emit(self._current_frame, self._total_frames)
+            self.frameChanged.emit(self._current_frame, self.total_frames)
             return True
         return False
 
@@ -108,7 +109,6 @@ class AnimationStateManager(QObject):
 
         # Core animation advancement logic
         self._current_frame += 1
-        self._total_frames = len(frames)
 
         if self._current_frame >= len(frames):
             if self._loop_enabled:
@@ -121,7 +121,7 @@ class AnimationStateManager(QObject):
             should_continue = True
 
         # Emit frame change signal
-        self.frameChanged.emit(self._current_frame, self._total_frames)
+        self.frameChanged.emit(self._current_frame, self.total_frames)
 
         return self._current_frame, should_continue
 
@@ -135,8 +135,7 @@ class AnimationStateManager(QObject):
         frames = self._get_frames()
         if frames and self._current_frame > 0:
             self._current_frame -= 1
-            self._total_frames = len(frames)
-            self.frameChanged.emit(self._current_frame, self._total_frames)
+            self.frameChanged.emit(self._current_frame, self.total_frames)
         return self._current_frame
 
     def first_frame(self) -> int:
@@ -149,8 +148,7 @@ class AnimationStateManager(QObject):
         frames = self._get_frames()
         if frames:
             self._current_frame = 0
-            self._total_frames = len(frames)
-            self.frameChanged.emit(self._current_frame, self._total_frames)
+            self.frameChanged.emit(self._current_frame, self.total_frames)
         return self._current_frame
 
     def last_frame(self) -> int:
@@ -163,8 +161,7 @@ class AnimationStateManager(QObject):
         frames = self._get_frames()
         if frames:
             self._current_frame = len(frames) - 1
-            self._total_frames = len(frames)
-            self.frameChanged.emit(self._current_frame, self._total_frames)
+            self.frameChanged.emit(self._current_frame, self.total_frames)
         return self._current_frame
 
     # ============================================================================
@@ -183,7 +180,6 @@ class AnimationStateManager(QObject):
             return False
 
         self._is_playing = True
-        self._total_frames = len(frames)
         self.playbackStateChanged.emit(True)
         return True
 
@@ -198,8 +194,7 @@ class AnimationStateManager(QObject):
         frames = self._get_frames()
         if frames:
             self._current_frame = 0
-            self._total_frames = len(frames)
-            self.frameChanged.emit(self._current_frame, self._total_frames)
+            self.frameChanged.emit(self._current_frame, self.total_frames)
         self.playbackStateChanged.emit(False)
 
     def toggle_playback(self) -> bool:
@@ -312,7 +307,7 @@ class AnimationStateManager(QObject):
         """
         return {
             'current_frame': self._current_frame,
-            'total_frames': self._total_frames,
+            'total_frames': self.total_frames,
             'is_playing': self._is_playing,
             'loop_enabled': self._loop_enabled,
             'fps': self._fps,

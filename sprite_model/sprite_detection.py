@@ -608,6 +608,10 @@ def _detect_horizontal_spacing(image, frame_width: int, frame_height: int,
         score = 0
         positions_checked = 0
 
+        # Guard against division by zero
+        if frame_width <= 0:
+            continue
+
         # Calculate how many frames we could check with this spacing
         frames_per_row = (available_width + test_spacing) // (frame_width + test_spacing) if test_spacing > 0 else available_width // frame_width
         positions_to_check = min(3, frames_per_row - 1)  # Check up to 3 gap positions
@@ -683,6 +687,10 @@ def _detect_vertical_spacing(image, frame_width: int, frame_height: int,
     for test_spacing in range(0, 11):
         score = 0
         positions_checked = 0
+
+        # Guard against division by zero
+        if frame_height <= 0:
+            continue
 
         # Calculate how many frames we could check with this spacing
         frames_per_col = (available_height + test_spacing) // (frame_height + test_spacing) if test_spacing > 0 else available_height // frame_height

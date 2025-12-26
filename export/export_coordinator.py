@@ -49,6 +49,11 @@ class ExportCoordinator(QObject):
 
         self._initialized = True
 
+    @property
+    def is_ready(self) -> bool:
+        """Check if coordinator has been initialized with required dependencies."""
+        return self._initialized
+
     def cleanup(self):
         """Clean up resources."""
         # No specific cleanup needed for export coordinator

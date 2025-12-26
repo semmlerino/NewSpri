@@ -11,7 +11,7 @@ Part of safe refactoring phase to reduce god class responsibilities.
 
 import contextlib
 import time
-from typing import Any
+from typing import Any, ClassVar
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QDialog, QMessageBox
@@ -29,7 +29,28 @@ class AnimationSegmentController(QObject):
     - Coordinate segment export operations
     - Synchronize segment data between grid view and manager
     - Handle segment selection and preview
+
+    Initialization Contract:
+        This controller requires setter injection after construction because
+        UI components don't exist when the controller is created. All 5 setters
+        MUST be called before using any public methods:
+
+        Required setters:
+            - set_segment_manager(manager)
+            - set_grid_view(view)
+            - set_sprite_model(model)
+            - set_tab_widget(widget)
+            - set_segment_preview(preview)
+
+        Check ``is_ready`` property before use, or methods may fail with
+        AttributeError if initialization is incomplete.
     """
+
+    # Required dependencies - all must be set via setters before use
+    _REQUIRED_DEPS: ClassVar[tuple[str, ...]] = (
+        '_segment_manager', '_grid_view', '_sprite_model',
+        '_tab_widget', '_segment_preview'
+    )
 
     # Signals for status updates
     statusMessage = Signal(str)
@@ -57,6 +78,11 @@ class AnimationSegmentController(QObject):
         # Track signal connections for cleanup
         self._manager_signals_connected = False
         self._signal_connections: list[tuple] = []
+
+    @property
+    def is_ready(self) -> bool:
+        """Check if all required dependencies have been set."""
+        return all(getattr(self, dep, None) is not None for dep in self._REQUIRED_DEPS)
 
     # ============================================================================
     # DEPENDENCY INJECTION

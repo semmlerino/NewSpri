@@ -52,10 +52,19 @@ class AutoDetectionController(QObject):
         self._current_workflow = None
         self._workflow_state = "idle"
 
+        # Initialization tracking
+        self._initialized: bool = False
+
+    @property
+    def is_ready(self) -> bool:
+        """Check if controller has been initialized with required dependencies."""
+        return self._initialized
+
     def initialize(self, sprite_model, frame_extractor):
         """Initialize with references to sprite model and frame extractor."""
         self._sprite_model = sprite_model
         self._frame_extractor = frame_extractor
+        self._initialized = True
 
     # ============================================================================
     # NEW SPRITE SHEET WORKFLOW
@@ -98,14 +107,16 @@ class AutoDetectionController(QObject):
         default_width = Config.FrameExtraction.DEFAULT_FRAME_WIDTH
         default_height = Config.FrameExtraction.DEFAULT_FRAME_HEIGHT
 
-        # Update model with defaults
+        # Update model with defaults via public API
         if self._sprite_model:
-            self._sprite_model._frame_width = default_width
-            self._sprite_model._frame_height = default_height
-            self._sprite_model._offset_x = 0
-            self._sprite_model._offset_y = 0
-            self._sprite_model._spacing_x = 0
-            self._sprite_model._spacing_y = 0
+            self._sprite_model.set_frame_settings(
+                width=default_width,
+                height=default_height,
+                offset_x=0,
+                offset_y=0,
+                spacing_x=0,
+                spacing_y=0
+            )
 
         # Reset button styles
         self.buttonConfidenceUpdate.emit('frame', 'reset', '')

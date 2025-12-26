@@ -8,6 +8,7 @@ Provides integration between settings persistence and menu display.
 """
 
 import contextlib
+import threading
 from collections.abc import Callable
 from pathlib import Path
 
@@ -324,14 +325,17 @@ class RecentFilesManager(QObject):
         return self.get_recent_files_count() > 0
 
 
-# Singleton implementation (consolidated pattern)
+# Singleton implementation (thread-safe double-checked locking)
 _recent_files_instance: RecentFilesManager | None = None
+_recent_files_lock = threading.Lock()
 
 def get_recent_files_manager() -> RecentFilesManager:
-    """Get the global recent files manager instance."""
+    """Get the global recent files manager instance (thread-safe)."""
     global _recent_files_instance
     if _recent_files_instance is None:
-        _recent_files_instance = RecentFilesManager()
+        with _recent_files_lock:
+            if _recent_files_instance is None:
+                _recent_files_instance = RecentFilesManager()
     return _recent_files_instance
 
 
