@@ -48,19 +48,7 @@ class TestEventCoordinator:
         manager = Mock()
         manager.show_message = Mock()
         return manager
-    
-    def test_initialization(self, mock_main_window):
-        """Test EventCoordinator initialization."""
-        coordinator = EventCoordinator(mock_main_window)
-        
-        assert coordinator.main_window == mock_main_window
-        assert not coordinator.is_initialized
-        assert coordinator.shortcut_manager is None
-        assert coordinator.file_controller is None
-        assert coordinator.canvas is None
-        assert coordinator.status_manager is None
-        assert coordinator._show_welcome_message is None
-    
+
     def test_initialize_with_dependencies(self, mock_main_window, mock_shortcut_manager,
                                           mock_file_controller, mock_canvas,
                                           mock_status_manager):

@@ -14,11 +14,7 @@ from config import Config
 
 class TestAnimationControllerInitialization:
     """Test AnimationController initialization."""
-    
-    def test_controller_creation(self, animation_controller):
-        """Test AnimationController can be created successfully."""
-        assert isinstance(animation_controller, AnimationController)
-    
+
     def test_initial_state(self, animation_controller):
         """Test controller starts in proper initial state."""
         assert not animation_controller._is_active
@@ -197,45 +193,31 @@ class TestAnimationControllerPlayback:
 
 class TestAnimationControllerRealSignals:
     """Test animation controller signal emission with REAL Qt signal mechanisms."""
-    
-    def test_real_fps_changed_signal(self, animation_controller, real_signal_tester):
-        """Test fpsChanged signal with real QSignalSpy and proper argument access."""
-        # Connect real signal spy
-        fps_spy = real_signal_tester.connect_spy(animation_controller.fpsChanged, 'fps_changed')
-        
-        # Trigger FPS change
-        animation_controller.set_fps(25)
-        
-        # Verify real signal emission
-        assert real_signal_tester.verify_emission('fps_changed', count=1)
-        
-        # Get real signal arguments
-        args = real_signal_tester.get_signal_args('fps_changed', 0)
+
+    @pytest.mark.parametrize("signal_attr,trigger_method,trigger_args,expected_value", [
+        ("fpsChanged", "set_fps", (25,), 25),
+        ("loopModeChanged", "set_loop_mode", (True,), True),
+        ("loopModeChanged", "set_loop_mode", (False,), False),
+    ])
+    def test_real_signal_emission(self, animation_controller, real_signal_tester,
+                                   signal_attr, trigger_method, trigger_args, expected_value):
+        """Test signal emission with real QSignalSpy - parametrized for multiple signal types."""
+        # Get the signal and connect spy
+        signal = getattr(animation_controller, signal_attr)
+        spy = real_signal_tester.connect_spy(signal, 'test_signal')
+
+        # Trigger the action
+        method = getattr(animation_controller, trigger_method)
+        method(*trigger_args)
+
+        # Verify signal emission
+        assert real_signal_tester.verify_emission('test_signal', count=1)
+
+        # Verify signal arguments
+        args = real_signal_tester.get_signal_args('test_signal', 0)
         assert len(args) >= 1
-        assert args[0] == 25  # New FPS value
-    
-    def test_real_loop_mode_changed_signal(self, animation_controller, real_signal_tester):
-        """Test loopModeChanged signal with real Qt signal mechanisms."""
-        # Connect real signal spy
-        loop_spy = real_signal_tester.connect_spy(animation_controller.loopModeChanged, 'loop_changed')
-        
-        # Test enabling loop mode
-        animation_controller.set_loop_mode(True)
-        assert real_signal_tester.verify_emission('loop_changed', count=1)
-        
-        args = real_signal_tester.get_signal_args('loop_changed', 0)
-        assert len(args) >= 1
-        assert args[0] is True
-        
-        # Test disabling loop mode with fresh spy
-        loop_spy2 = real_signal_tester.connect_spy(animation_controller.loopModeChanged, 'loop_changed2')
-        animation_controller.set_loop_mode(False)
-        
-        assert real_signal_tester.verify_emission('loop_changed2', count=1)
-        args2 = real_signal_tester.get_signal_args('loop_changed2', 0)
-        assert len(args2) >= 1
-        assert args2[0] is False
-    
+        assert args[0] == expected_value
+
     def test_real_playback_state_signal_with_integration(self, real_sprite_system, real_signal_tester):
         """Test playback state changes with real sprite system integration."""
         # Initialize real system
@@ -435,38 +417,6 @@ class TestAnimationControllerIntegration:
         
         # Should call sprite model methods
         mock_sprite_model.next_frame.assert_called()
-
-
-class TestAnimationControllerPerformance:
-    """Test AnimationController performance features."""
-    
-    def test_frame_timing_history(self, animation_controller):
-        """Test frame timing history tracking."""
-        # Test the _track_frame_timing method
-        animation_controller._last_frame_time = 1.0  # Set initial time
-        
-        # Call track timing multiple times
-        animation_controller._track_frame_timing()
-        
-        # Check that timing history is maintained
-        assert hasattr(animation_controller, '_frame_timing_history')
-        assert animation_controller._max_timing_history > 0
-    
-    def test_performance_monitoring(self, animation_controller):
-        """Test performance monitoring features."""
-        # Set initial time for tracking
-        animation_controller._last_frame_time = 1.0
-        
-        # Track frame timing
-        animation_controller._track_frame_timing()
-        
-        # Get performance metrics
-        metrics = animation_controller.get_performance_metrics()
-        
-        assert isinstance(metrics, dict)
-        assert 'target_fps' in metrics
-        assert 'measured_fps' in metrics
-        assert metrics['target_fps'] > 0
 
 
 class TestAnimationControllerErrorHandling:

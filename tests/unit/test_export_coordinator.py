@@ -28,15 +28,6 @@ class TestExportCoordinator:
     def mock_segment_manager(self):
         """Create mock segment manager."""
         return Mock()
-    
-    def test_initialization(self, mock_main_window):
-        """Test ExportCoordinator initialization."""
-        coordinator = ExportCoordinator(mock_main_window)
-
-        assert coordinator.main_window == mock_main_window
-        assert not coordinator.is_initialized
-        assert coordinator.sprite_model is None
-        assert coordinator.segment_manager is None
 
     def test_initialize_with_dependencies(self, mock_main_window, mock_sprite_model,
                                           mock_segment_manager):

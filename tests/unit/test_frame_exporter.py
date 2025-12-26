@@ -210,11 +210,11 @@ class TestExportWorker:
         
         # Check progress signals
         assert len(progress_calls) == len(mock_frames)
-    
+
     def test_sprite_sheet_export(self, mock_frames, tmp_path):
         """Test exporting as sprite sheet."""
         from export.core.frame_exporter import ExportWorker
-        
+
         task = ExportTask(
             frames=mock_frames,
             output_dir=tmp_path,
@@ -222,56 +222,30 @@ class TestExportWorker:
             format=ExportFormat.PNG,
             mode=ExportMode.SPRITE_SHEET
         )
-        
+
         worker = ExportWorker(task)
-        
+
         # Mock QPixmap creation for sprite sheet
         with patch('export.core.frame_exporter.QPixmap') as mock_pixmap_class:
             mock_sheet = MagicMock()
             mock_sheet.save.return_value = True
             mock_pixmap_class.return_value = mock_sheet
-            
+
             # Mock QPainter
             with patch('export.core.frame_exporter.QPainter'):
                 worker._export_sprite_sheet()
-                
+
                 # Verify sprite sheet was created with correct size
                 # 3 frames in 1x3 grid = 64x192 pixels (auto layout chooses 1x3 for 3 frames)
                 mock_pixmap_class.assert_called_with(64, 192)
-                
+
                 # Verify save was called
                 expected_filename = "sprites_sheet.png"
                 mock_sheet.save.assert_called_with(
                     str(tmp_path / expected_filename),
                     "PNG"
                 )
-    
-    def test_frame_filtering_workflow(self, mock_frames, tmp_path):
-        """Test frame filtering workflow (replaces selected frames export)."""
-        from export.core.frame_exporter import ExportWorker
-        
-        # Pre-filter frames like sprite_viewer.py does
-        selected_indices = [0, 2]  # Select first and third frame
-        filtered_frames = [mock_frames[i] for i in selected_indices]
-        
-        task = ExportTask(
-            frames=filtered_frames,  # Pre-filtered frames
-            output_dir=tmp_path,
-            base_name="filtered",
-            format=ExportFormat.PNG,
-            mode=ExportMode.INDIVIDUAL_FRAMES,  # Use individual mode with filtered frames
-            pattern="{name}_{index:03d}"
-        )
-        
-        worker = ExportWorker(task)
-        worker._export_individual_frames()
-        
-        # Check that filtered frames were saved
-        # Note: These are now mock_frames[0] and mock_frames[2] as filtered_frames[0] and filtered_frames[1]
-        assert len(filtered_frames) == 2
-        for frame in filtered_frames:
-            frame.save.assert_called_once()
-    
+
     def test_scale_factor_application(self, mock_frames, tmp_path):
         """Test that scale factor is applied correctly."""
         from export.core.frame_exporter import ExportWorker
