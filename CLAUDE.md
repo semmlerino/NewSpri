@@ -68,9 +68,8 @@ managers/                   - Manager classes
 
 utils/                      - Utilities
   styles.py                 - Centralized styling (StyleManager)
-  sprite_rendering.py       - Sprite rendering helpers
+  sprite_rendering.py       - Sprite pixmap utilities (create_padded_pixmap)
   extraction_modes.py       - Extraction mode definitions
-  scoring_system.py         - Frame scoring algorithms
   ui_common.py              - Common UI utilities
 
 coordinators/               - Component coordination
@@ -117,6 +116,8 @@ These are real API contracts discovered through testing. Violating them causes r
 |-----------|-------------|-----------|
 | `PlaybackControls` | `set_current_frame(n)` | `on_frame_changed(n)` |
 | `SpriteModel.sprite_frames` | Read-only property | Cannot be set directly |
+| `SpriteModel` frame settings | `frame_width`, `frame_height`, `offset_x`, `offset_y`, `spacing_x`, `spacing_y` (read-only properties) | `_frame_width`, `_offset_x` (private attrs) |
+| `SpriteModel.file_path` | Read-only property | `_file_path` (private attr) |
 | `FrameExtractor` | `width_spin`, `height_spin` | `frame_width_spin` |
 | `ViewCoordinator` zoom | `canvas.set_zoom(level)` | `zoom_in()`, `zoom_out()` |
 | `ViewCoordinator` grid | `set_grid_overlay(bool)` | `toggle_grid()` |
