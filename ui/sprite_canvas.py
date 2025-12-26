@@ -43,15 +43,12 @@ class SpriteCanvas(QLabel):
         self._current_frame = 0
         self._total_frames = 0
 
-        # Sprite model reference
-        self._sprite_model = None
+        # Cached checkerboard pattern (regenerated on resize)
+        self._checkerboard_cache: QPixmap | None = None
+        self._checkerboard_cache_size: tuple[int, int] = (0, 0)
 
         # Enable mouse tracking for pan and coordinate tracking
         self.setMouseTracking(True)
-
-    def set_sprite_model(self, sprite_model):
-        """Set reference to sprite model for getting current frame."""
-        self._sprite_model = sprite_model
 
     def set_pixmap(self, pixmap: QPixmap, auto_fit=None):
         """Set the sprite pixmap to display."""
@@ -65,17 +62,6 @@ class SpriteCanvas(QLabel):
             self.auto_fit_sprite()
         else:
             self.update()
-
-    def update_with_current_frame(self):
-        """Update canvas with current frame from sprite model."""
-        # Get current frame from sprite model if available
-        if self._sprite_model:
-            current_pixmap = self._sprite_model.current_frame_pixmap
-            if current_pixmap and not current_pixmap.isNull():
-                self._pixmap = current_pixmap
-
-        # Call parent update to trigger repaint
-        super().update()
 
     def update(self, *args, **kwargs):
         """Standard update - just trigger repaint without fetching frame."""
@@ -248,15 +234,33 @@ class SpriteCanvas(QLabel):
         painter.drawText(info_rect, Qt.AlignmentFlag.AlignCenter, f"Frame {self._current_frame + 1}/{self._total_frames}")
 
     def _draw_checkerboard(self, painter: QPainter, rect: QRect):
-        """Draw checkerboard background pattern."""
+        """Draw checkerboard background pattern using cached pixmap."""
+        current_size = (rect.width(), rect.height())
+
+        # Regenerate cache if size changed
+        if self._checkerboard_cache is None or self._checkerboard_cache_size != current_size:
+            self._checkerboard_cache = self._generate_checkerboard(rect.width(), rect.height())
+            self._checkerboard_cache_size = current_size
+
+        # Draw cached checkerboard
+        painter.drawPixmap(0, 0, self._checkerboard_cache)
+
+    def _generate_checkerboard(self, width: int, height: int) -> QPixmap:
+        """Generate checkerboard pattern pixmap."""
         tile_size = Config.Drawing.CHECKERBOARD_TILE_SIZE
         light_color = Config.Drawing.CHECKERBOARD_LIGHT_COLOR
         dark_color = Config.Drawing.CHECKERBOARD_DARK_COLOR
 
-        for y in range(0, rect.height(), tile_size):
-            for x in range(0, rect.width(), tile_size):
+        pixmap = QPixmap(width, height)
+        cache_painter = QPainter(pixmap)
+
+        for y in range(0, height, tile_size):
+            for x in range(0, width, tile_size):
                 color = light_color if (x // tile_size + y // tile_size) % 2 == 0 else dark_color
-                painter.fillRect(x, y, tile_size, tile_size, color)
+                cache_painter.fillRect(x, y, tile_size, tile_size, color)
+
+        cache_painter.end()
+        return pixmap
 
     def _draw_grid(self, painter: QPainter, sprite_rect: QRect):
         """Draw grid overlay on sprite."""

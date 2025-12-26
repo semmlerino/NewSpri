@@ -163,8 +163,8 @@ class FrameThumbnail(QLabel):
         """Handle mouse press events with modifier support."""
         if event.button() == Qt.MouseButton.LeftButton:
             self._mouse_press_pos = event.position()
-            # Convert modifiers to integer - int() works on Qt enum flags
-            modifiers_value = int(event.modifiers())
+            # Convert modifiers to integer via .value attribute
+            modifiers_value = event.modifiers().value
             self.clicked.emit(self.frame_index, modifiers_value)
         elif event.button() == Qt.MouseButton.RightButton:
             self.rightClicked.emit(self.frame_index, event.globalPosition().toPoint())

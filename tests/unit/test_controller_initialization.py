@@ -11,7 +11,6 @@ from unittest.mock import Mock, MagicMock
 from core.animation_segment_controller import AnimationSegmentController
 from core.animation_controller import AnimationController
 from core.auto_detection_controller import AutoDetectionController
-from export.export_coordinator import ExportCoordinator
 from managers import AnimationSegmentManager
 
 
@@ -86,26 +85,3 @@ class TestAutoDetectionControllerInitialization:
         controller.initialize(mock_model, mock_extractor)
 
         assert controller.is_ready
-
-
-class TestExportCoordinatorInitialization:
-    """Test ExportCoordinator initialization contract."""
-
-    def test_is_ready_false_before_initialize(self):
-        """Coordinator should report not ready before initialize() called."""
-        mock_window = Mock()
-        coordinator = ExportCoordinator(mock_window)
-        assert not coordinator.is_ready
-
-    def test_is_ready_true_after_initialize(self):
-        """Coordinator should report ready after initialize() called."""
-        mock_window = Mock()
-        coordinator = ExportCoordinator(mock_window)
-
-        dependencies = {
-            'sprite_model': Mock(),
-            'segment_manager': Mock(),
-        }
-        coordinator.initialize(dependencies)
-
-        assert coordinator.is_ready

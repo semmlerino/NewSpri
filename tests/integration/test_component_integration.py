@@ -89,10 +89,11 @@ class TestModelViewControllerIntegration:
         os.unlink(tmp_path)
         
         # Verify views updated
-        # Canvas needs to receive the current frame from the model
+        # Canvas receives pixmap from controller (MVC pattern)
         if model.sprite_frames:
-            canvas.set_sprite_model(model)
-            canvas.update_with_current_frame()
+            pixmap = model.current_frame_pixmap
+            if pixmap and not pixmap.isNull():
+                canvas.set_pixmap(pixmap, auto_fit=False)
         
         # Now check if canvas has a pixmap
         assert canvas._pixmap is not None or model.current_frame_pixmap is not None
