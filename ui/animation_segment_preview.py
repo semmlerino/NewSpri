@@ -7,7 +7,7 @@ Part of Animation Segment System Enhancement.
 import contextlib
 
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QPainter, QPixmap
+from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import (
     QCheckBox,
     QFrame,
@@ -22,6 +22,9 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
+
+from config import Config
+from utils.sprite_rendering import create_padded_pixmap
 
 
 class SegmentPreviewItem(QFrame):
@@ -123,7 +126,7 @@ class SegmentPreviewItem(QFrame):
 
         # Play/Pause button
         self.play_button = QPushButton("▶")
-        self.play_button.setFixedSize(32, 32)
+        self.play_button.setFixedSize(Config.UI.ICON_BUTTON_SIZE, Config.UI.ICON_BUTTON_SIZE)
         self.play_button.setStyleSheet("""
             QPushButton {
                 background-color: #4CAF50;
@@ -232,7 +235,7 @@ class SegmentPreviewItem(QFrame):
 
         # Right side: Animation preview
         self.preview_label = QLabel()
-        self.preview_label.setFixedSize(120, 120)  # Keep fixed size
+        self.preview_label.setFixedSize(Config.UI.PREVIEW_SIZE, Config.UI.PREVIEW_SIZE)
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview_label.setContentsMargins(0, 0, 0, 0)
         self.preview_label.setStyleSheet("""
@@ -256,15 +259,10 @@ class SegmentPreviewItem(QFrame):
             pixmap = self._frames[index]
 
             # Create padded pixmap to prevent edge cutoff
-            padded = QPixmap(pixmap.width() + 2, pixmap.height() + 2)
-            padded.fill(Qt.GlobalColor.transparent)
-
-            painter = QPainter(padded)
-            painter.drawPixmap(1, 1, pixmap)
-            painter.end()
+            padded = create_padded_pixmap(pixmap, padding=1)
 
             # Scale to fit preview area
-            scaled_size = int(112 * self._zoom_factor)  # Adjust for padding
+            scaled_size = int(Config.UI.PREVIEW_SCALED * self._zoom_factor)
             scaled = padded.scaled(
                 scaled_size, scaled_size,
                 Qt.AspectRatioMode.KeepAspectRatio,

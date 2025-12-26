@@ -260,28 +260,23 @@ class FrameExtractor(QGroupBox):
         if button == self.grid_mode_btn:
             mode = "grid"
             self.mode_status.setText("🔲 Grid mode active")
-            self.mode_status.setStyleSheet("""
-                QLabel {
-                    color: #2e7d32;
-                    font-size: 11px;
-                    font-style: italic;
-                }
-            """)
+            color = Config.Colors.MODE_GRID
             # Enable grid controls
             self._set_grid_controls_enabled(True)
         else:  # CCL mode
             mode = "ccl"
             self.mode_status.setText("🎯 CCL mode active")
-            self.mode_status.setStyleSheet("""
-                QLabel {
-                    color: #d32f2f;
-                    font-size: 11px;
-                    font-style: italic;
-                }
-            """)
+            color = Config.Colors.MODE_CCL
             # Disable grid controls since CCL uses exact boundaries
             self._set_grid_controls_enabled(False)
 
+        self.mode_status.setStyleSheet(f"""
+            QLabel {{
+                color: {color};
+                font-size: 11px;
+                font-style: italic;
+            }}
+        """)
         self.modeChanged.emit(mode)
 
     def _set_grid_controls_enabled(self, enabled: bool):

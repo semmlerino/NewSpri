@@ -99,34 +99,20 @@ class EnhancedStatusBar(QStatusBar):
     def _get_mode_style(self, mode: str) -> str:
         """Get stylesheet for extraction mode indicator."""
         if mode.lower() == "grid":
-            return """
-                QLabel {
-                    background-color: #4CAF50;
-                    color: white;
-                    padding: 2px 6px;
-                    border-radius: 3px;
-                    font-weight: bold;
-                }
-            """
+            bg_color = Config.Colors.MODE_GRID
         elif mode.lower() == "ccl":
-            return """
-                QLabel {
-                    background-color: #2196F3;
-                    color: white;
-                    padding: 2px 6px;
-                    border-radius: 3px;
-                    font-weight: bold;
-                }
-            """
+            bg_color = Config.Colors.MODE_CCL
         else:
-            return """
-                QLabel {
-                    background-color: #888888;
-                    color: white;
-                    padding: 2px 6px;
-                    border-radius: 3px;
-                    font-weight: bold;
-                }
+            bg_color = "#888888"
+
+        return f"""
+            QLabel {{
+                background-color: {bg_color};
+                color: white;
+                padding: 2px 6px;
+                border-radius: 3px;
+                font-weight: bold;
+            }}
             """
 
     def _reset_to_defaults(self) -> None:
@@ -288,50 +274,36 @@ class EnhancedStatusBar(QStatusBar):
 
 
 class StatusBarManager(QObject):
-    """
-    Manager class for coordinating status bar updates with application state.
+    """Signal router for coordinating status bar updates with application state.
+
+    This manager connects to various components and forwards their signals
+    to the status bar. It does not maintain redundant state.
     """
 
     def __init__(self, status_bar: EnhancedStatusBar):
         super().__init__()
         self._status_bar = status_bar
 
-        # Track current state
-        self._current_frame = 0
-        self._total_frames = 0
-        self._sprite_width = 0
-        self._sprite_height = 0
-        self._extraction_mode = "Grid"
-        self._zoom_level = 100.0
-        self._fps = Config.Animation.DEFAULT_FPS
-
     def connect_to_sprite_model(self, sprite_model) -> None:
         """Connect to sprite model signals for automatic updates."""
         if hasattr(sprite_model, 'frameChanged'):
-            sprite_model.frameChanged.connect(self._on_frame_changed)
+            sprite_model.frameChanged.connect(self._status_bar.update_frame_info)
         if hasattr(sprite_model, 'dataLoaded'):
             sprite_model.dataLoaded.connect(self._on_sprite_loaded)
 
     def connect_to_animation_controller(self, animation_controller) -> None:
         """Connect to animation controller signals."""
         if hasattr(animation_controller, 'frameChanged'):
-            animation_controller.frameChanged.connect(self._on_frame_changed)
+            animation_controller.frameChanged.connect(self._status_bar.update_frame_info)
         if hasattr(animation_controller, 'fpsChanged'):
-            animation_controller.fpsChanged.connect(self._on_fps_changed)
+            animation_controller.fpsChanged.connect(self._status_bar.update_fps)
 
     def connect_to_canvas(self, canvas) -> None:
         """Connect to canvas signals for zoom and mouse tracking."""
         if hasattr(canvas, 'zoomChanged'):
             canvas.zoomChanged.connect(self._on_zoom_changed)
         if hasattr(canvas, 'mouseMoved'):
-            canvas.mouseMoved.connect(self._on_mouse_moved)
-
-    def _on_frame_changed(self, current_frame: int, total_frames: int | None = None) -> None:
-        """Handle frame change signal."""
-        self._current_frame = current_frame
-        if total_frames is not None:
-            self._total_frames = total_frames
-        self._status_bar.update_frame_info(self._current_frame, self._total_frames)
+            canvas.mouseMoved.connect(self._status_bar.update_mouse_position)
 
     def _on_sprite_loaded(self, filepath: str) -> None:
         """Handle sprite loaded signal."""
@@ -339,32 +311,18 @@ class StatusBarManager(QObject):
         # Implementation depends on sprite model interface
         pass
 
-    def _on_fps_changed(self, fps: int) -> None:
-        """Handle FPS change signal."""
-        self._fps = fps
-        self._status_bar.update_fps(fps)
-
     def _on_zoom_changed(self, zoom_factor: float) -> None:
-        """Handle zoom change signal."""
-        self._zoom_level = zoom_factor * 100.0
-        self._status_bar.update_zoom_level(self._zoom_level)
-
-    def _on_mouse_moved(self, x: int, y: int) -> None:
-        """Handle mouse movement signal."""
-        self._status_bar.update_mouse_position(x, y)
+        """Handle zoom change signal - converts factor to percentage."""
+        self._status_bar.update_zoom_level(zoom_factor * 100.0)
 
     def update_extraction_mode(self, mode: str) -> None:
         """Update extraction mode."""
-        self._extraction_mode = mode
         self._status_bar.update_extraction_mode(mode)
 
     def update_sprite_info(self, width: int, height: int, frame_count: int) -> None:
         """Update sprite information."""
-        self._sprite_width = width
-        self._sprite_height = height
-        self._total_frames = frame_count
         self._status_bar.update_sprite_size(width, height)
-        self._status_bar.update_frame_info(self._current_frame, frame_count)
+        # Note: frame_count update requires current frame which comes from model signals
 
     def show_message(self, message: str, timeout: int = 5000) -> None:
         """Show a status message. Delegates to wrapped status bar."""

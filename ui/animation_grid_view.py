@@ -7,9 +7,8 @@ Part of Animation Splitting Feature implementation.
 from dataclasses import dataclass
 
 from PySide6.QtCore import QPoint, Qt, Signal
-from PySide6.QtGui import QColor, QMouseEvent, QPainter, QPixmap
+from PySide6.QtGui import QColor, QMouseEvent, QPixmap
 from PySide6.QtWidgets import (
-    QApplication,
     QGridLayout,
     QHBoxLayout,
     QInputDialog,
@@ -22,6 +21,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from config import Config
+from utils.sprite_rendering import create_padded_pixmap
+
 
 @dataclass
 class AnimationSegment:
@@ -29,36 +31,11 @@ class AnimationSegment:
     name: str
     start_frame: int
     end_frame: int
-    color: QColor | None = None
+    color: QColor
     bounce_mode: bool = False
     frame_holds: dict[int, int] | None = None
 
-    # Class variable to track color index for unique colors
-    _color_index = 0
-    _predefined_colors = [
-        QColor("#E91E63"),  # Pink
-        QColor("#9C27B0"),  # Purple
-        QColor("#673AB7"),  # Deep Purple
-        QColor("#3F51B5"),  # Indigo
-        QColor("#2196F3"),  # Blue
-        QColor("#03A9F4"),  # Light Blue
-        QColor("#00BCD4"),  # Cyan
-        QColor("#009688"),  # Teal
-        QColor("#4CAF50"),  # Green
-        QColor("#8BC34A"),  # Light Green
-        QColor("#CDDC39"),  # Lime
-        QColor("#FFC107"),  # Amber
-        QColor("#FF9800"),  # Orange
-        QColor("#FF5722"),  # Deep Orange
-        QColor("#795548"),  # Brown
-        QColor("#607D8B"),  # Blue Grey
-    ]
-
     def __post_init__(self):
-        if self.color is None:
-            # Use predefined colors in sequence for better visual distinction
-            self.color = AnimationSegment._predefined_colors[AnimationSegment._color_index % len(AnimationSegment._predefined_colors)]
-            AnimationSegment._color_index += 1
         if self.frame_holds is None:
             self.frame_holds = {}
 
@@ -88,7 +65,7 @@ class FrameThumbnail(QLabel):
 
         # Mouse interaction tracking
         self._mouse_press_pos = None
-        self._drag_threshold = 8  # Increased for less sensitive drag detection
+        self._drag_threshold = Config.UI.DRAG_THRESHOLD
 
         # Set up the thumbnail
         self._setup_thumbnail(pixmap)
@@ -98,22 +75,19 @@ class FrameThumbnail(QLabel):
         """Set up the thumbnail display."""
         if pixmap and not pixmap.isNull():
             # Create padded pixmap to prevent edge cutoff
-            padded = QPixmap(pixmap.width() + 2, pixmap.height() + 2)
-            padded.fill(Qt.GlobalColor.transparent)
-
-            painter = QPainter(padded)
-            painter.drawPixmap(1, 1, pixmap)
-            painter.end()
+            padded = create_padded_pixmap(pixmap, padding=1)
 
             # Scale to fit available space
-            available_size = self._thumbnail_size - 4  # Account for padding
+            padding = Config.UI.THUMBNAIL_PADDING
+            available_size = self._thumbnail_size - padding
             scaled_pixmap = padded.scaled(
                 available_size, available_size,
                 Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
             )
             self.setPixmap(scaled_pixmap)
 
-        self.setFixedSize(self._thumbnail_size + 8, self._thumbnail_size + 8)  # +8 for border
+        border_space = Config.UI.THUMBNAIL_PADDING * 2
+        self.setFixedSize(self._thumbnail_size + border_space, self._thumbnail_size + border_space)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setToolTip(f"Frame {self.frame_index}")
 
@@ -298,7 +272,10 @@ class AnimationGridView(QWidget):
 
         # UI settings
         self._grid_columns = 8
-        self._thumbnail_size = 80
+        self._thumbnail_size = Config.UI.THUMBNAIL_SIZE
+
+        # Color assignment for segments
+        self._segment_color_index = 0
 
         self._setup_ui()
         self._connect_signals()
@@ -557,7 +534,7 @@ class AnimationGridView(QWidget):
             # Delete segment action
             delete_action = segment_menu.addAction("Delete Segment")
             delete_action.triggered.connect(
-                lambda: self._delete_segment(segment.name)
+                lambda: self.delete_segment(segment.name)
             )
 
             menu.addSeparator()
@@ -686,7 +663,12 @@ class AnimationGridView(QWidget):
         )
 
         if ok and name.strip():
-            segment = AnimationSegment(name.strip(), start, end)
+            segment = AnimationSegment(
+                name=name.strip(),
+                start_frame=start,
+                end_frame=end,
+                color=self._get_next_segment_color(),
+            )
             self.add_segment(segment)
             self._clear_selection()
 
@@ -710,6 +692,13 @@ class AnimationGridView(QWidget):
                 import time
                 timestamp = int(time.time() * 1000) % 100000
                 return f"{base_name}_{timestamp}"
+
+    def _get_next_segment_color(self) -> QColor:
+        """Get the next color for a new segment from the palette."""
+        palette = Config.Colors.SEGMENT_PALETTE
+        color_hex = palette[self._segment_color_index % len(palette)]
+        self._segment_color_index += 1
+        return QColor(color_hex)
 
     def add_segment(self, segment: AnimationSegment):
         """Add a new animation segment."""
@@ -744,12 +733,21 @@ class AnimationGridView(QWidget):
         # Update visualization
         self._update_segment_visualization()
 
-    def _delete_segment(self, segment_name: str):
-        """Delete an animation segment."""
+    def delete_segment(self, segment_name: str) -> bool:
+        """Delete an animation segment by name.
+
+        Args:
+            segment_name: Name of segment to delete
+
+        Returns:
+            True if segment was deleted, False if not found
+        """
         if segment_name in self._segments:
             del self._segments[segment_name]
             self._update_segment_visualization()
             self.segmentDeleted.emit(segment_name)
+            return True
+        return False
 
     def _prompt_rename_segment(self, old_name: str):
         """Prompt user to rename a segment."""
@@ -772,41 +770,16 @@ class AnimationGridView(QWidget):
                 return
 
             # Perform the rename
-            if new_name != old_name:
-                self._rename_segment(old_name, new_name)
+            if new_name != old_name and self.rename_segment(old_name, new_name):
                 # Emit signal to notify other components
                 self.segmentRenamed.emit(old_name, new_name)
-
-    def _rename_segment(self, old_name: str, new_name: str):
-        """Rename an animation segment."""
-        if old_name in self._segments and new_name not in self._segments:
-            segment = self._segments.pop(old_name)
-            segment.name = new_name
-            self._segments[new_name] = segment
-            self._update_segment_visualization()
 
     # ============================================================================
     # PUBLIC SEGMENT MANIPULATION API
     # ============================================================================
 
-    def delete_segment(self, segment_name: str) -> bool:
-        """
-        Delete an animation segment by name.
-
-        Args:
-            segment_name: Name of segment to delete
-
-        Returns:
-            True if segment was deleted, False if not found
-        """
-        if segment_name in self._segments:
-            self._delete_segment(segment_name)
-            return True
-        return False
-
     def rename_segment(self, old_name: str, new_name: str) -> bool:
-        """
-        Rename an animation segment.
+        """Rename an animation segment.
 
         Args:
             old_name: Current name of segment
@@ -816,7 +789,10 @@ class AnimationGridView(QWidget):
             True if renamed successfully, False if old_name not found or new_name exists
         """
         if old_name in self._segments and new_name not in self._segments:
-            self._rename_segment(old_name, new_name)
+            segment = self._segments.pop(old_name)
+            segment.name = new_name
+            self._segments[new_name] = segment
+            self._update_segment_visualization()
             return True
         return False
 
@@ -834,12 +810,9 @@ class AnimationGridView(QWidget):
 
     def _update_segment_visualization(self):
         """Update visual markers for all segments."""
-        # First, forcefully clear all thumbnails to default state
+        # Clear all thumbnails to default state
         for thumbnail in self._thumbnails:
             thumbnail.force_clear_style()
-
-        # Process clearing before applying new markers
-        QApplication.processEvents()
 
         # Apply segment markers
         for segment in self._segments.values():
@@ -849,16 +822,8 @@ class AnimationGridView(QWidget):
                     is_end = (i == segment.end_frame)
                     self._thumbnails[i].set_segment_markers(is_start, is_end, segment.color)
 
-        # Force a final refresh of the entire widget hierarchy
+        # Single update call is sufficient - Qt will batch repaints
         self.update()
-        self.repaint()
-
-        # Also update the parent scroll area to ensure complete refresh
-        if self._scroll_area:
-            self._scroll_area.update()
-            self._scroll_area.viewport().update()
-
-        QApplication.processEvents()
 
 
     def _preview_selection(self):
@@ -867,11 +832,12 @@ class AnimationGridView(QWidget):
             return
 
         sorted_frames = sorted(self._selected_frames)
-        # Create temporary segment for preview
+        # Create temporary segment for preview with default color
         temp_segment = AnimationSegment(
-            "Preview",
-            sorted_frames[0],
-            sorted_frames[-1]
+            name="Preview",
+            start_frame=sorted_frames[0],
+            end_frame=sorted_frames[-1],
+            color=QColor(Config.Colors.SEGMENT_PALETTE[0]),
         )
         self.segmentPreviewRequested.emit(temp_segment)
 
@@ -883,7 +849,7 @@ class AnimationGridView(QWidget):
         """Clear all animation segments."""
         self._segments.clear()
         # Reset color index for fresh color sequence
-        AnimationSegment._color_index = 0
+        self._segment_color_index = 0
         self._update_segment_visualization()
 
     def mouseMoveEvent(self, event: QMouseEvent):

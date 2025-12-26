@@ -7,6 +7,56 @@ Centralizes all magic numbers and settings for better maintainability.
 from PySide6.QtGui import QColor
 
 
+class ColorsConfig:
+    """Semantic color constants for consistent UI styling."""
+
+    # Mode indicators (Grid vs CCL detection)
+    MODE_GRID = "#4CAF50"  # Material Green 500
+    MODE_GRID_HOVER = "#45a049"
+    MODE_CCL = "#2196F3"  # Material Blue 500
+    MODE_CCL_HOVER = "#1976D2"
+
+    # Play button states
+    PLAY_STOPPED = "#4CAF50"  # Green - ready to play
+    PLAY_STOPPED_HOVER = "#45a049"
+    PLAY_PLAYING = "#FF9800"  # Orange - currently playing
+    PLAY_PLAYING_HOVER = "#F57C00"
+
+    # Selection and highlighting
+    SELECTION_HIGHLIGHT = "#2196F3"  # Blue for selected items
+    SELECTION_BORDER = "#1976D2"
+
+    # Action buttons
+    BUTTON_DANGER = "#f44336"  # Red for destructive actions
+    BUTTON_DANGER_HOVER = "#d32f2f"
+    BUTTON_PRIMARY = "#1976D2"  # Blue for primary actions
+    BUTTON_PRIMARY_HOVER = "#1565C0"
+
+    # Neutral/disabled
+    BUTTON_DISABLED_BG = "#cccccc"
+    BUTTON_DISABLED_TEXT = "#666666"
+
+    # Segment colors (Material Design palette for animation segments)
+    SEGMENT_PALETTE = [
+        "#E91E63",  # Pink
+        "#9C27B0",  # Purple
+        "#673AB7",  # Deep Purple
+        "#3F51B5",  # Indigo
+        "#2196F3",  # Blue
+        "#03A9F4",  # Light Blue
+        "#00BCD4",  # Cyan
+        "#009688",  # Teal
+        "#4CAF50",  # Green
+        "#8BC34A",  # Light Green
+        "#CDDC39",  # Lime
+        "#FFEB3B",  # Yellow
+        "#FFC107",  # Amber
+        "#FF9800",  # Orange
+        "#FF5722",  # Deep Orange
+        "#795548",  # Brown
+    ]
+
+
 class CanvasConfig:
     """Canvas display and interaction settings."""
 
@@ -161,6 +211,20 @@ class UIConfig:
 
     # Zoom display
     ZOOM_LABEL_MIN_WIDTH = 60
+
+    # Thumbnail and grid settings
+    THUMBNAIL_SIZE = 80  # Default thumbnail size in grid views
+    THUMBNAIL_PADDING = 4  # Padding around thumbnails
+    DRAG_THRESHOLD = 8  # Pixels before drag is detected
+
+    # Icon button sizes
+    ICON_BUTTON_SIZE = 32  # Standard icon button (play, etc.)
+    ICON_BUTTON_SMALL = 24  # Small icon buttons (zoom +/-)
+    ICON_BUTTON_TINY = 20  # Tiny buttons (remove, etc.)
+
+    # Preview widget sizes
+    PREVIEW_SIZE = 120  # Segment preview display size
+    PREVIEW_SCALED = 112  # Scaled preview (with margin)
 
 
 class DrawingConfig:
@@ -438,6 +502,75 @@ class StylesConfig:
     OFFSET_LABEL = "font-weight: normal; margin-top: 10px;"
     GRID_CHECKBOX = "margin-top: 10px;"
 
+    @staticmethod
+    def colored_button(
+        bg_color: str,
+        hover_color: str,
+        text_color: str = "white",
+        border_radius: int = 4,
+    ) -> str:
+        """Generate a colored button stylesheet.
+
+        Args:
+            bg_color: Background color (hex string)
+            hover_color: Hover background color (hex string)
+            text_color: Text color (default: white)
+            border_radius: Border radius in pixels (default: 4)
+
+        Returns:
+            CSS stylesheet string for QPushButton
+        """
+        return f"""
+            QPushButton {{
+                background-color: {bg_color};
+                color: {text_color};
+                border: none;
+                border-radius: {border_radius}px;
+            }}
+            QPushButton:hover {{
+                background-color: {hover_color};
+            }}
+            QPushButton:disabled {{
+                background-color: {ColorsConfig.BUTTON_DISABLED_BG};
+                color: {ColorsConfig.BUTTON_DISABLED_TEXT};
+            }}
+        """
+
+    @staticmethod
+    def round_button(
+        bg_color: str,
+        hover_color: str,
+        size: int = 32,
+        text_color: str = "white",
+    ) -> str:
+        """Generate a circular button stylesheet.
+
+        Args:
+            bg_color: Background color (hex string)
+            hover_color: Hover background color (hex string)
+            size: Button diameter in pixels (default: 32)
+            text_color: Text color (default: white)
+
+        Returns:
+            CSS stylesheet string for circular QPushButton
+        """
+        radius = size // 2
+        return f"""
+            QPushButton {{
+                background-color: {bg_color};
+                color: {text_color};
+                border: none;
+                border-radius: {radius}px;
+            }}
+            QPushButton:hover {{
+                background-color: {hover_color};
+            }}
+            QPushButton:disabled {{
+                background-color: {ColorsConfig.BUTTON_DISABLED_BG};
+                color: {ColorsConfig.BUTTON_DISABLED_TEXT};
+            }}
+        """
+
 
 class ExportConfig:
     """Export functionality settings."""
@@ -505,6 +638,7 @@ class Config:
     Settings = SettingsConfig
     Export = ExportConfig
     Styles = StylesConfig
+    Colors = ColorsConfig
 
 
 # Export for easy importing
@@ -512,6 +646,7 @@ __all__ = [
     'AnimationConfig',
     'AppConfig',
     'CanvasConfig',
+    'ColorsConfig',
     'Config',
     'DrawingConfig',
     'ExportConfig',

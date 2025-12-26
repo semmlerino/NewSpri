@@ -3,9 +3,10 @@ Utils package - Utility functions and helpers.
 
 Contains utility modules and helper functions:
 - Common UI utilities and patterns
-- Scoring systems and validation
+- Sprite rendering helpers
 """
 
+from .sprite_rendering import create_padded_pixmap
 from .ui_common import (
     AutoButtonManager,
     DetectionResult,
@@ -13,11 +14,10 @@ from .ui_common import (
     parse_detection_tuple,
 )
 
-# Note: scoring_system functions will be imported directly when needed
-
 __all__ = [
     'AutoButtonManager',
     'DetectionResult',
+    'create_padded_pixmap',
     'extract_confidence_from_message',
-    'parse_detection_tuple'
+    'parse_detection_tuple',
 ]
