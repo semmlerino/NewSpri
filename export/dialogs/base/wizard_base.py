@@ -18,6 +18,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from utils.styles import StyleManager
+
 
 class WizardStep(QWidget):
     """Base class for wizard steps."""
@@ -100,12 +102,7 @@ class WizardWidget(QWidget):
         """Create the header section with title and progress."""
         header = QWidget()
         header.setObjectName("wizardHeader")
-        header.setStyleSheet("""
-            #wizardHeader {
-                background-color: #f8f9fa;
-                border-bottom: 1px solid #dee2e6;
-            }
-        """)
+        header.setStyleSheet(StyleManager.frame_wizard_header())
 
         layout = QVBoxLayout(header)
         layout.setContentsMargins(24, 20, 24, 20)
@@ -123,7 +120,7 @@ class WizardWidget(QWidget):
         subtitle_font = QFont()
         subtitle_font.setPointSize(11)
         self.step_subtitle_label.setFont(subtitle_font)
-        self.step_subtitle_label.setStyleSheet("color: #6c757d;")
+        self.step_subtitle_label.setStyleSheet(StyleManager.label_subtitle())
         self.step_subtitle_label.setWordWrap(True)
         layout.addWidget(self.step_subtitle_label)
 
@@ -134,29 +131,13 @@ class WizardWidget(QWidget):
         progress_layout.setSpacing(16)
 
         self.step_indicator_label = QLabel()
-        self.step_indicator_label.setStyleSheet("""
-            QLabel {
-                color: #495057;
-                font-size: 12px;
-                font-weight: 500;
-            }
-        """)
+        self.step_indicator_label.setStyleSheet(StyleManager.label_step_indicator())
         progress_layout.addWidget(self.step_indicator_label)
 
         self.progress_bar = QProgressBar()
         self.progress_bar.setMaximumHeight(6)
         self.progress_bar.setTextVisible(False)
-        self.progress_bar.setStyleSheet("""
-            QProgressBar {
-                background-color: #e9ecef;
-                border: none;
-                border-radius: 3px;
-            }
-            QProgressBar::chunk {
-                background-color: #007bff;
-                border-radius: 3px;
-            }
-        """)
+        self.progress_bar.setStyleSheet(StyleManager.progress_bar())
         progress_layout.addWidget(self.progress_bar, 1)
 
         layout.addWidget(progress_container)
@@ -167,12 +148,7 @@ class WizardWidget(QWidget):
         """Create the navigation section with buttons."""
         nav = QWidget()
         nav.setObjectName("wizardNav")
-        nav.setStyleSheet("""
-            #wizardNav {
-                background-color: #f8f9fa;
-                border-top: 1px solid #dee2e6;
-            }
-        """)
+        nav.setStyleSheet(StyleManager.frame_wizard_nav())
 
         layout = QHBoxLayout(nav)
         layout.setContentsMargins(24, 16, 24, 16)
@@ -182,24 +158,7 @@ class WizardWidget(QWidget):
         self.cancel_button = QPushButton("Cancel")
         self.cancel_button.setFixedHeight(40)
         self.cancel_button.setMinimumWidth(100)
-        self.cancel_button.setStyleSheet("""
-            QPushButton {
-                background-color: #ffffff;
-                border: 1px solid #dee2e6;
-                border-radius: 6px;
-                padding: 8px 16px;
-                font-size: 14px;
-                font-weight: 500;
-                color: #495057;
-            }
-            QPushButton:hover {
-                background-color: #f8f9fa;
-                border-color: #adb5bd;
-            }
-            QPushButton:pressed {
-                background-color: #e9ecef;
-            }
-        """)
+        self.cancel_button.setStyleSheet(StyleManager.button_secondary_large())
         self.cancel_button.clicked.connect(self._on_cancel)
         layout.addWidget(self.cancel_button)
 
@@ -209,29 +168,7 @@ class WizardWidget(QWidget):
         self.back_button = QPushButton("← Back")
         self.back_button.setFixedHeight(40)
         self.back_button.setMinimumWidth(100)
-        self.back_button.setStyleSheet("""
-            QPushButton {
-                background-color: #ffffff;
-                border: 1px solid #dee2e6;
-                border-radius: 6px;
-                padding: 8px 16px;
-                font-size: 14px;
-                font-weight: 500;
-                color: #495057;
-            }
-            QPushButton:hover {
-                background-color: #f8f9fa;
-                border-color: #adb5bd;
-            }
-            QPushButton:pressed {
-                background-color: #e9ecef;
-            }
-            QPushButton:disabled {
-                background-color: #f8f9fa;
-                color: #adb5bd;
-                border-color: #e9ecef;
-            }
-        """)
+        self.back_button.setStyleSheet(StyleManager.button_secondary_large())
         self.back_button.clicked.connect(self._on_back)
         layout.addWidget(self.back_button)
 
@@ -239,27 +176,7 @@ class WizardWidget(QWidget):
         self.next_button = QPushButton("Next →")
         self.next_button.setFixedHeight(40)
         self.next_button.setMinimumWidth(120)
-        self.next_button.setStyleSheet("""
-            QPushButton {
-                background-color: #007bff;
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 8px 24px;
-                font-size: 14px;
-                font-weight: 600;
-            }
-            QPushButton:hover {
-                background-color: #0056b3;
-            }
-            QPushButton:pressed {
-                background-color: #004085;
-            }
-            QPushButton:disabled {
-                background-color: #6c757d;
-                color: #adb5bd;
-            }
-        """)
+        self.next_button.setStyleSheet(StyleManager.button_primary_bootstrap())
         self.next_button.clicked.connect(self._on_next)
         layout.addWidget(self.next_button)
 

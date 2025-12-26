@@ -36,6 +36,7 @@ from PySide6.QtWidgets import (
 )
 
 from config import Config
+from utils.styles import StyleManager
 
 from ..core.export_presets import ExportPreset
 from ..dialogs.base.wizard_base import WizardStep
@@ -55,13 +56,7 @@ class CompactLivePreview(QGraphicsView):
 
         # Modern frame style
         self.setFrameStyle(QFrame.Shape.NoFrame)
-        self.setStyleSheet("""
-            QGraphicsView {
-                background-color: #f8f9fa;
-                border: 1px solid #e9ecef;
-                border-radius: 8px;
-            }
-        """)
+        self.setStyleSheet(StyleManager.graphics_view_preview())
 
         # Checkerboard for transparency
         self.setBackgroundBrush(self._create_checkerboard())
@@ -153,39 +148,19 @@ class _SheetSettingsBuilder:
 
         # Filename
         filename_label = QLabel("Filename")
-        filename_label.setStyleSheet("font-weight: bold; color: #212529;")
+        filename_label.setStyleSheet(StyleManager.label_field())
         layout.addWidget(filename_label)
 
         self._parent.sheet_filename = QLineEdit()
         self._parent.sheet_filename.setText("spritesheet")
         self._parent.sheet_filename.setPlaceholderText("Enter filename (no extension)")
-        self._parent.sheet_filename.setStyleSheet("""
-            QLineEdit {
-                padding: 8px;
-                border: 1px solid #ced4da;
-                border-radius: 4px;
-            }
-        """)
+        self._parent.sheet_filename.setStyleSheet(StyleManager.line_edit_standard())
         self._parent.sheet_filename.textChanged.connect(self._parent._on_setting_changed)
         layout.addWidget(self._parent.sheet_filename)
 
         # Layout tabs
         self._parent.layout_tabs = QTabWidget()
-        self._parent.layout_tabs.setStyleSheet("""
-            QTabWidget::pane {
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                background-color: white;
-            }
-            QTabBar::tab {
-                padding: 6px 16px;
-                margin-right: 4px;
-            }
-            QTabBar::tab:selected {
-                background-color: white;
-                border-bottom: 2px solid #007bff;
-            }
-        """)
+        self._parent.layout_tabs.setStyleSheet(StyleManager.tab_widget())
 
         # Layout tab
         layout_tab = self._create_layout_tab()
@@ -332,25 +307,19 @@ class _IndividualSettingsBuilder:
 
         # Base name
         name_label = QLabel("Base Name")
-        name_label.setStyleSheet("font-weight: bold; color: #212529;")
+        name_label.setStyleSheet(StyleManager.label_field())
         layout.addWidget(name_label)
 
         self._parent.base_name = QLineEdit()
         self._parent.base_name.setText("frame")
         self._parent.base_name.setPlaceholderText("Base filename")
-        self._parent.base_name.setStyleSheet("""
-            QLineEdit {
-                padding: 8px;
-                border: 1px solid #ced4da;
-                border-radius: 4px;
-            }
-        """)
+        self._parent.base_name.setStyleSheet(StyleManager.line_edit_standard())
         self._parent.base_name.textChanged.connect(self._on_base_name_changed)
         layout.addWidget(self._parent.base_name)
 
         # Naming pattern
         pattern_label = QLabel("Naming Pattern")
-        pattern_label.setStyleSheet("font-weight: bold; color: #212529; margin-top: 8px;")
+        pattern_label.setStyleSheet(StyleManager.label_field())
         layout.addWidget(pattern_label)
 
         pattern_group = QButtonGroup()
@@ -439,7 +408,7 @@ class _SelectedSettingsBuilder:
 
         # Frame selection
         selection_label = QLabel("Select Frames")
-        selection_label.setStyleSheet("font-weight: bold; color: #212529;")
+        selection_label.setStyleSheet(StyleManager.label_field())
         layout.addWidget(selection_label)
 
         # Quick select buttons
@@ -459,12 +428,7 @@ class _SelectedSettingsBuilder:
         # Frame list
         self._parent.frame_list = QListWidget()
         self._parent.frame_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
-        self._parent.frame_list.setStyleSheet("""
-            QListWidget {
-                border: 1px solid #ced4da;
-                border-radius: 4px;
-            }
-        """)
+        self._parent.frame_list.setStyleSheet(StyleManager.list_widget())
 
         # Populate frames
         for i in range(self._parent.frame_count):
@@ -479,7 +443,7 @@ class _SelectedSettingsBuilder:
 
         # Selection info
         self._parent.selection_info = QLabel()
-        self._parent.selection_info.setStyleSheet("color: #6c757d; font-size: 12px;")
+        self._parent.selection_info.setStyleSheet(StyleManager.label_info())
         layout.addWidget(self._parent.selection_info)
 
         self._update_selection_info()
@@ -882,11 +846,7 @@ class ModernExportSettings(WizardStep):
         self.splitter = QSplitter(Qt.Orientation.Horizontal)
         self.splitter.setChildrenCollapsible(False)
         self.splitter.setHandleWidth(1)
-        self.splitter.setStyleSheet("""
-            QSplitter::handle {
-                background-color: #dee2e6;
-            }
-        """)
+        self.splitter.setStyleSheet(StyleManager.splitter())
 
         # Left: Settings panel
         settings_panel = self._create_settings_panel()
@@ -909,12 +869,7 @@ class ModernExportSettings(WizardStep):
         """Create compact settings panel."""
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.NoFrame)
-        panel.setStyleSheet("""
-            QFrame {
-                background-color: #ffffff;
-                border-right: 1px solid #dee2e6;
-            }
-        """)
+        panel.setStyleSheet(StyleManager.settings_panel())
 
         layout = QVBoxLayout(panel)
         layout.setContentsMargins(20, 20, 20, 20)
@@ -927,7 +882,7 @@ class ModernExportSettings(WizardStep):
         # Separator
         separator = QFrame()
         separator.setFrameStyle(QFrame.Shape.HLine)
-        separator.setStyleSheet("background-color: #e9ecef;")
+        separator.setStyleSheet(StyleManager.separator_line())
         separator.setFixedHeight(1)
         layout.addWidget(separator)
 
@@ -947,7 +902,7 @@ class ModernExportSettings(WizardStep):
 
         # Output location
         output_label = QLabel("Output Location")
-        output_label.setStyleSheet("font-weight: bold; color: #212529;")
+        output_label.setStyleSheet(StyleManager.label_field())
         layout.addWidget(output_label)
 
         output_layout = QHBoxLayout()
@@ -956,14 +911,7 @@ class ModernExportSettings(WizardStep):
         self.path_edit = QLineEdit()
         self.path_edit.setReadOnly(True)
         self.path_edit.setPlaceholderText("Select output folder...")
-        self.path_edit.setStyleSheet("""
-            QLineEdit {
-                padding: 8px;
-                border: 1px solid #ced4da;
-                border-radius: 4px;
-                background-color: #f8f9fa;
-            }
-        """)
+        self.path_edit.setStyleSheet(StyleManager.line_edit_readonly())
 
         # Load last used export directory from settings
         from managers.settings_manager import get_settings_manager
@@ -983,19 +931,7 @@ class ModernExportSettings(WizardStep):
 
         self.browse_btn = QPushButton("Browse")
         self.browse_btn.setFixedSize(70, 32)
-        self.browse_btn.setStyleSheet("""
-            QPushButton {
-                padding: 6px 12px;
-                border: 1px solid #ced4da;
-                border-radius: 4px;
-                background-color: #ffffff;
-                font-weight: 500;
-            }
-            QPushButton:hover {
-                background-color: #f8f9fa;
-                border-color: #adb5bd;
-            }
-        """)
+        self.browse_btn.setStyleSheet(StyleManager.browse_button())
         self.browse_btn.clicked.connect(self._browse_output)
         output_layout.addWidget(self.browse_btn)
 
@@ -1006,26 +942,13 @@ class ModernExportSettings(WizardStep):
         format_layout.setSpacing(12)
 
         format_label = QLabel("Format:")
-        format_label.setStyleSheet("color: #495057;")
+        format_label.setStyleSheet(StyleManager.label_secondary())
         format_layout.addWidget(format_label)
 
         self.format_combo = QComboBox()
         self.format_combo.addItems(["PNG", "JPG", "BMP"])
         self.format_combo.setMinimumWidth(100)
-        self.format_combo.setStyleSheet("""
-            QComboBox {
-                padding: 6px 12px;
-                border: 1px solid #ced4da;
-                border-radius: 4px;
-                background-color: #ffffff;
-            }
-            QComboBox:hover {
-                border-color: #adb5bd;
-            }
-            QComboBox::drop-down {
-                border: none;
-            }
-        """)
+        self.format_combo.setStyleSheet(StyleManager.combo_standard())
         self.format_combo.currentTextChanged.connect(self._on_format_changed)
         format_layout.addWidget(self.format_combo)
 
@@ -1033,7 +956,7 @@ class ModernExportSettings(WizardStep):
 
         # Scale selection (inline buttons)
         scale_label = QLabel("Scale:")
-        scale_label.setStyleSheet("color: #495057;")
+        scale_label.setStyleSheet(StyleManager.label_secondary())
         format_layout.addWidget(scale_label)
 
         self.scale_group = QButtonGroup()
@@ -1041,22 +964,7 @@ class ModernExportSettings(WizardStep):
             btn = QPushButton(f"{scale}x")
             btn.setCheckable(True)
             btn.setFixedSize(40, 28)
-            btn.setStyleSheet("""
-                QPushButton {
-                    border: 1px solid #ced4da;
-                    border-radius: 4px;
-                    background-color: #ffffff;
-                    font-weight: 500;
-                }
-                QPushButton:checked {
-                    background-color: #007bff;
-                    border-color: #007bff;
-                    color: white;
-                }
-                QPushButton:hover {
-                    border-color: #007bff;
-                }
-            """)
+            btn.setStyleSheet(StyleManager.scale_button_toggle())
             if scale == 1:
                 btn.setChecked(True)
             self.scale_group.addButton(btn, scale)
@@ -1076,7 +984,7 @@ class ModernExportSettings(WizardStep):
         """Create modern preview panel."""
         panel = QFrame()
         panel.setFrameStyle(QFrame.Shape.NoFrame)
-        panel.setStyleSheet("background-color: #f8f9fa;")
+        panel.setStyleSheet(StyleManager.preview_panel())
 
         layout = QVBoxLayout(panel)
         layout.setContentsMargins(20, 20, 20, 20)
@@ -1086,11 +994,7 @@ class ModernExportSettings(WizardStep):
         header_layout = QHBoxLayout()
 
         preview_label = QLabel("Preview")
-        preview_label.setStyleSheet("""
-            font-size: 16px;
-            font-weight: bold;
-            color: #212529;
-        """)
+        preview_label.setStyleSheet(StyleManager.preview_header())
         header_layout.addWidget(preview_label)
 
         header_layout.addStretch()
@@ -1109,15 +1013,7 @@ class ModernExportSettings(WizardStep):
         # Info overlay (floating)
         self.info_label = QLabel()
         self.info_label.setParent(self.preview_view)
-        self.info_label.setStyleSheet("""
-            QLabel {
-                background-color: rgba(33, 37, 41, 0.9);
-                color: white;
-                padding: 6px 12px;
-                border-radius: 4px;
-                font-size: 12px;
-            }
-        """)
+        self.info_label.setStyleSheet(StyleManager.info_overlay())
         self.info_label.hide()
 
         return panel
@@ -1130,17 +1026,7 @@ class ModernExportSettings(WizardStep):
         # Fit button
         fit_btn = QToolButton()
         fit_btn.setText("Fit")
-        fit_btn.setStyleSheet("""
-            QToolButton {
-                padding: 4px 8px;
-                border: 1px solid #ced4da;
-                border-radius: 4px;
-                background-color: #ffffff;
-            }
-            QToolButton:hover {
-                background-color: #f8f9fa;
-            }
-        """)
+        fit_btn.setStyleSheet(StyleManager.tool_button())
         fit_btn.clicked.connect(lambda: self.preview_view.fit_to_view())
         layout.addWidget(fit_btn)
 
@@ -1158,19 +1044,14 @@ class ModernExportSettings(WizardStep):
         bar = QFrame()
         bar.setFrameStyle(QFrame.Shape.NoFrame)
         bar.setFixedHeight(70)
-        bar.setStyleSheet("""
-            QFrame {
-                background-color: #f8f9fa;
-                border-top: 1px solid #dee2e6;
-            }
-        """)
+        bar.setStyleSheet(StyleManager.bottom_bar())
 
         layout = QHBoxLayout(bar)
         layout.setContentsMargins(20, 15, 20, 15)
 
         # Export summary
         self.summary_label = QLabel()
-        self.summary_label.setStyleSheet("color: #6c757d;")
+        self.summary_label.setStyleSheet(StyleManager.label_muted())
         layout.addWidget(self.summary_label)
 
         layout.addStretch()
@@ -1179,26 +1060,7 @@ class ModernExportSettings(WizardStep):
         self.export_btn = QPushButton("Export Now")
         self.export_btn.setFixedHeight(40)
         self.export_btn.setMinimumWidth(120)
-        self.export_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #28a745;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-size: 14px;
-                font-weight: bold;
-                padding: 0 24px;
-            }
-            QPushButton:hover {
-                background-color: #218838;
-            }
-            QPushButton:pressed {
-                background-color: #1e7e34;
-            }
-            QPushButton:disabled {
-                background-color: #6c757d;
-            }
-        """)
+        self.export_btn.setStyleSheet(StyleManager.export_button())
         layout.addWidget(self.export_btn)
 
         return bar

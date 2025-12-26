@@ -11,6 +11,8 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QButtonGroup, QFrame, QLabel, QRadioButton, QVBoxLayout, QWidget
 
+from utils.styles import StyleManager
+
 from ..core.export_presets import ExportPreset, get_preset
 from ..dialogs.base.wizard_base import WizardStep
 
@@ -51,7 +53,7 @@ class SimpleExportOption(QFrame):
         # Simple description
         desc_label = QLabel(self.preset.short_description or self.preset.description)
         desc_label.setWordWrap(True)
-        desc_label.setStyleSheet("color: #6c757d; margin-left: 23px;")
+        desc_label.setStyleSheet(f"color: {StyleManager.Colors.TEXT_SECONDARY}; margin-left: 23px;")
         layout.addWidget(desc_label)
 
         # Use cases (compact)
@@ -59,33 +61,14 @@ class SimpleExportOption(QFrame):
             uses_text = "Best for: " + ", ".join(self.preset.use_cases[:3])
             uses_label = QLabel(uses_text)
             uses_label.setWordWrap(True)
-            uses_label.setStyleSheet("color: #6c757d; font-size: 10px; margin-left: 23px;")
+            uses_label.setStyleSheet(f"color: {StyleManager.Colors.TEXT_SECONDARY}; font-size: 10px; margin-left: 23px;")
             layout.addWidget(uses_label)
 
         self._update_style()
 
     def _update_style(self):
         """Update frame style based on selection."""
-        if self._is_selected:
-            self.setStyleSheet("""
-                SimpleExportOption {
-                    background-color: #e7f3ff;
-                    border: 2px solid #007bff;
-                    border-radius: 8px;
-                }
-            """)
-        else:
-            self.setStyleSheet("""
-                SimpleExportOption {
-                    background-color: #ffffff;
-                    border: 1px solid #dee2e6;
-                    border-radius: 8px;
-                }
-                SimpleExportOption:hover {
-                    background-color: #f8f9fa;
-                    border: 1px solid #007bff;
-                }
-            """)
+        self.setStyleSheet(StyleManager.export_option(self._is_selected))
 
     def set_selected(self, selected: bool):
         """Set selection state."""
@@ -149,24 +132,17 @@ class ExportTypeStepSimple(WizardStep):
         # Show recommendation if segments exist
         if self._has_segments:
             rec_frame = QFrame()
-            rec_frame.setStyleSheet("""
-                QFrame {
-                    background-color: #e3f2fd;
-                    border: 1px solid #2196f3;
-                    border-radius: 4px;
-                    padding: 8px;
-                }
-            """)
+            rec_frame.setStyleSheet(StyleManager.frame_recommendation())
             rec_layout = QVBoxLayout(rec_frame)
             rec_layout.setContentsMargins(12, 8, 12, 8)
 
             rec_label = QLabel("💡 <b>Animation segments detected!</b>")
-            rec_label.setStyleSheet("color: #1976d2; font-size: 12px;")
+            rec_label.setStyleSheet(f"color: {StyleManager.Colors.PRIMARY}; font-size: 12px;")
             rec_layout.addWidget(rec_label)
 
             rec_desc = QLabel("We recommend using 'Segments Per Row' to export each animation as a separate row.")
             rec_desc.setWordWrap(True)
-            rec_desc.setStyleSheet("color: #424242; font-size: 11px;")
+            rec_desc.setStyleSheet(f"color: {StyleManager.Colors.TEXT_DARK}; font-size: 11px;")
             rec_layout.addWidget(rec_desc)
 
             layout.addWidget(rec_frame)
@@ -177,7 +153,7 @@ class ExportTypeStepSimple(WizardStep):
 
         # Simple help text
         help_label = QLabel("Select an export type above to continue.")
-        help_label.setStyleSheet("color: #6c757d; font-size: 11px;")
+        help_label.setStyleSheet(f"color: {StyleManager.Colors.TEXT_SECONDARY}; font-size: 11px;")
         layout.addWidget(help_label)
 
     def _create_export_options(self) -> QWidget:
@@ -215,15 +191,7 @@ class ExportTypeStepSimple(WizardStep):
 
                 # Add visual emphasis to segments_per_row when segments exist
                 if self._has_segments and preset_name == "segments_per_row":
-                    option.setStyleSheet("""
-                        SimpleExportOption {
-                            border: 2px solid #2196f3;
-                            background-color: #f5f5f5;
-                        }
-                        SimpleExportOption:hover {
-                            background-color: #e3f2fd;
-                        }
-                    """)
+                    option.setStyleSheet(StyleManager.export_option_recommended())
                     # Pre-select it
                     if first_option and option._radio_button is not None:
                         option._radio_button.setChecked(True)

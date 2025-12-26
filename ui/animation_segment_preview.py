@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 
 from config import Config
 from utils.sprite_rendering import create_padded_pixmap
+from utils.styles import StyleManager
 
 
 class SegmentPreviewItem(QFrame):
@@ -78,18 +79,7 @@ class SegmentPreviewItem(QFrame):
     def _setup_ui(self):
         """Set up the preview item UI."""
         self.setFrameStyle(QFrame.Shape.Box)
-        self.setStyleSheet(f"""
-            QFrame {{
-                border: 2px solid {self.segment_color.name()};
-                border-radius: 8px;
-                background-color: #FAFAFA;
-                margin: 4px;
-                padding: 8px;
-            }}
-            QFrame:hover {{
-                background-color: #F0F0F0;
-            }}
-        """)
+        self.setStyleSheet(StyleManager.segment_frame(self.segment_color.name()))
 
         layout = QHBoxLayout(self)
 
@@ -100,17 +90,11 @@ class SegmentPreviewItem(QFrame):
         name_layout = QHBoxLayout()
         color_indicator = QLabel()
         color_indicator.setFixedSize(16, 16)
-        color_indicator.setStyleSheet(f"""
-            QLabel {{
-                background-color: {self.segment_color.name()};
-                border: 1px solid #666;
-                border-radius: 3px;
-            }}
-        """)
+        color_indicator.setStyleSheet(StyleManager.color_indicator(self.segment_color.name()))
         name_layout.addWidget(color_indicator)
 
         name_label = QLabel(self.segment_name)
-        name_label.setStyleSheet("font-weight: bold;")
+        name_label.setStyleSheet(StyleManager.label_bold())
         name_layout.addWidget(name_label)
         name_layout.addStretch()
 
@@ -118,7 +102,7 @@ class SegmentPreviewItem(QFrame):
 
         # Frame info
         frame_info = QLabel(f"{len(self._frames)} frames")
-        frame_info.setStyleSheet("color: #666; font-size: 10px;")
+        frame_info.setStyleSheet(StyleManager.label_muted())
         info_layout.addWidget(frame_info)
 
         # Controls
@@ -127,32 +111,18 @@ class SegmentPreviewItem(QFrame):
         # Play/Pause button
         self.play_button = QPushButton("▶")
         self.play_button.setFixedSize(Config.UI.ICON_BUTTON_SIZE, Config.UI.ICON_BUTTON_SIZE)
-        self.play_button.setStyleSheet("""
-            QPushButton {
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                border-radius: 16px;
-                font-size: 16px;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-            QPushButton:pressed {
-                background-color: #3d8b40;
-            }
-        """)
+        self.play_button.setStyleSheet(StyleManager.button_success())
         self.play_button.clicked.connect(self._toggle_playback)
         controls_layout.addWidget(self.play_button)
 
         # Frame counter
         self.frame_counter = QLabel("1 / " + str(len(self._frames)))
-        self.frame_counter.setStyleSheet("color: #666; font-size: 10px;")
+        self.frame_counter.setStyleSheet(StyleManager.label_muted())
         controls_layout.addWidget(self.frame_counter)
 
         # FPS control
         fps_label = QLabel("FPS:")
-        fps_label.setStyleSheet("color: #666; font-size: 10px;")
+        fps_label.setStyleSheet(StyleManager.label_muted())
         controls_layout.addWidget(fps_label)
 
         self.fps_spinner = QSpinBox()
@@ -160,18 +130,7 @@ class SegmentPreviewItem(QFrame):
         self.fps_spinner.setMaximum(60)
         self.fps_spinner.setValue(self._fps)
         self.fps_spinner.setFixedWidth(50)
-        self.fps_spinner.setStyleSheet("""
-            QSpinBox {
-                background-color: white;
-                border: 1px solid #DDD;
-                border-radius: 4px;
-                padding: 2px;
-                font-size: 10px;
-            }
-            QSpinBox::up-button, QSpinBox::down-button {
-                width: 12px;
-            }
-        """)
+        self.fps_spinner.setStyleSheet(StyleManager.spinbox_compact())
         self.fps_spinner.valueChanged.connect(self._on_fps_changed)
         controls_layout.addWidget(self.fps_spinner)
 
@@ -184,7 +143,7 @@ class SegmentPreviewItem(QFrame):
         self.bounce_checkbox = QCheckBox("Bounce")
         self.bounce_checkbox.setChecked(self._bounce_mode)
         self.bounce_checkbox.setToolTip("Play animation forward then backward")
-        self.bounce_checkbox.setStyleSheet("font-size: 10px; color: #666;")
+        self.bounce_checkbox.setStyleSheet(StyleManager.label_muted())
         self.bounce_checkbox.toggled.connect(self._on_bounce_toggled)
         mode_layout.addWidget(self.bounce_checkbox)
 
@@ -192,18 +151,7 @@ class SegmentPreviewItem(QFrame):
         self.hold_button = QPushButton("Holds")
         self.hold_button.setFixedSize(40, 20)
         self.hold_button.setToolTip("Set frame hold durations")
-        self.hold_button.setStyleSheet("""
-            QPushButton {
-                font-size: 10px;
-                padding: 2px;
-                background-color: #E0E0E0;
-                border: 1px solid #999;
-                border-radius: 3px;
-            }
-            QPushButton:hover {
-                background-color: #D0D0D0;
-            }
-        """)
+        self.hold_button.setStyleSheet(StyleManager.button_small_hold())
         self.hold_button.clicked.connect(self._show_hold_menu)
         mode_layout.addWidget(self.hold_button)
 
@@ -214,19 +162,7 @@ class SegmentPreviewItem(QFrame):
         remove_button = QToolButton()
         remove_button.setText("×")
         remove_button.setFixedSize(20, 20)
-        remove_button.setStyleSheet("""
-            QToolButton {
-                background-color: #f44336;
-                color: white;
-                border: none;
-                border-radius: 10px;
-                font-size: 16px;
-                font-weight: bold;
-            }
-            QToolButton:hover {
-                background-color: #da190b;
-            }
-        """)
+        remove_button.setStyleSheet(StyleManager.button_danger())
         remove_button.clicked.connect(lambda: self.removeRequested.emit(self.segment_name))
         controls_layout.addWidget(remove_button)
 
@@ -238,14 +174,7 @@ class SegmentPreviewItem(QFrame):
         self.preview_label.setFixedSize(Config.UI.PREVIEW_SIZE, Config.UI.PREVIEW_SIZE)
         self.preview_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.preview_label.setContentsMargins(0, 0, 0, 0)
-        self.preview_label.setStyleSheet("""
-            QLabel {
-                border: 1px solid #DDD;
-                background-color: white;
-                border-radius: 4px;
-                padding: 2px;
-            }
-        """)
+        self.preview_label.setStyleSheet(StyleManager.preview_label())
 
         # Display first frame
         if self._frames:
@@ -308,33 +237,11 @@ class SegmentPreviewItem(QFrame):
 
         if self._is_playing:
             self.play_button.setText("⏸")
-            self.play_button.setStyleSheet("""
-                QPushButton {
-                    background-color: #FF9800;
-                    color: white;
-                    border: none;
-                    border-radius: 16px;
-                    font-size: 14px;
-                }
-                QPushButton:hover {
-                    background-color: #F57C00;
-                }
-            """)
+            self.play_button.setStyleSheet(StyleManager.button_warning())
             self._timer.start()
         else:
             self.play_button.setText("▶")
-            self.play_button.setStyleSheet("""
-                QPushButton {
-                    background-color: #4CAF50;
-                    color: white;
-                    border: none;
-                    border-radius: 16px;
-                    font-size: 16px;
-                }
-                QPushButton:hover {
-                    background-color: #45a049;
-                }
-            """)
+            self.play_button.setStyleSheet(StyleManager.button_success())
             self._timer.stop()
 
         self.playToggled.emit(self.segment_name, self._is_playing)
@@ -410,18 +317,7 @@ class SegmentPreviewItem(QFrame):
     def _show_hold_menu(self):
         """Show menu for setting frame holds."""
         menu = QMenu(self)
-        menu.setStyleSheet("""
-            QMenu {
-                background-color: white;
-                border: 1px solid #ccc;
-            }
-            QMenu::item {
-                padding: 4px 20px;
-            }
-            QMenu::item:selected {
-                background-color: #e0e0e0;
-            }
-        """)
+        menu.setStyleSheet(StyleManager.menu_standard())
 
         # Show current frame holds
         if self._frame_holds:
@@ -572,49 +468,21 @@ class AnimationSegmentPreview(QWidget):
 
         # Title bar
         title_bar = QFrame()
-        title_bar.setStyleSheet("""
-            QFrame {
-                background-color: #E3F2FD;
-                border-bottom: 2px solid #2196F3;
-                padding: 8px;
-            }
-        """)
+        title_bar.setStyleSheet(StyleManager.frame_title_bar())
         title_layout = QHBoxLayout(title_bar)
 
         title = QLabel("Animation Segments")
-        title.setStyleSheet("font-size: 14px; font-weight: bold; color: #1976D2;")
+        title.setStyleSheet(StyleManager.label_title())
         title_layout.addWidget(title)
 
         # Global controls
         self.play_all_button = QPushButton("Play All")
-        self.play_all_button.setStyleSheet("""
-            QPushButton {
-                background-color: #2196F3;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 4px 12px;
-            }
-            QPushButton:hover {
-                background-color: #1976D2;
-            }
-        """)
+        self.play_all_button.setStyleSheet(StyleManager.button_primary())
         self.play_all_button.clicked.connect(self._toggle_all_playback)
         title_layout.addWidget(self.play_all_button)
 
         self.stop_all_button = QPushButton("Stop All")
-        self.stop_all_button.setStyleSheet("""
-            QPushButton {
-                background-color: #F44336;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 4px 12px;
-            }
-            QPushButton:hover {
-                background-color: #D32F2F;
-            }
-        """)
+        self.stop_all_button.setStyleSheet(StyleManager.button_stop())
         self.stop_all_button.clicked.connect(self._stop_all_playback)
         title_layout.addWidget(self.stop_all_button)
 
@@ -627,50 +495,20 @@ class AnimationSegmentPreview(QWidget):
         # Zoom out button
         self.zoom_out_button = QPushButton("-")
         self.zoom_out_button.setFixedSize(24, 24)
-        self.zoom_out_button.setStyleSheet("""
-            QPushButton {
-                background-color: #666;
-                color: white;
-                border: none;
-                border-radius: 12px;
-                font-size: 16px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #555;
-            }
-            QPushButton:disabled {
-                background-color: #ccc;
-            }
-        """)
+        self.zoom_out_button.setStyleSheet(StyleManager.button_zoom())
         self.zoom_out_button.clicked.connect(self._zoom_out)
         zoom_layout.addWidget(self.zoom_out_button)
 
         # Zoom level label
         self.zoom_label = QLabel("100%")
-        self.zoom_label.setStyleSheet("color: #666; font-size: 12px; min-width: 40px; text-align: center;")
+        self.zoom_label.setStyleSheet(f"color: {StyleManager.Colors.TEXT_MUTED}; font-size: 12px; min-width: 40px; text-align: center;")
         self.zoom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         zoom_layout.addWidget(self.zoom_label)
 
         # Zoom in button
         self.zoom_in_button = QPushButton("+")
         self.zoom_in_button.setFixedSize(24, 24)
-        self.zoom_in_button.setStyleSheet("""
-            QPushButton {
-                background-color: #666;
-                color: white;
-                border: none;
-                border-radius: 12px;
-                font-size: 16px;
-                font-weight: bold;
-            }
-            QPushButton:hover {
-                background-color: #555;
-            }
-            QPushButton:disabled {
-                background-color: #ccc;
-            }
-        """)
+        self.zoom_in_button.setStyleSheet(StyleManager.button_zoom())
         self.zoom_in_button.clicked.connect(self._zoom_in)
         zoom_layout.addWidget(self.zoom_in_button)
 
@@ -704,13 +542,7 @@ class AnimationSegmentPreview(QWidget):
         # Empty state
         self.empty_label = QLabel("No animation segments yet.\nSelect frames and right-click to create.")
         self.empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.empty_label.setStyleSheet("""
-            QLabel {
-                color: #999;
-                font-style: italic;
-                padding: 40px;
-            }
-        """)
+        self.empty_label.setStyleSheet(StyleManager.label_empty_state())
         self.container_layout.addWidget(self.empty_label)
 
     def set_frames(self, frames: list[QPixmap]):

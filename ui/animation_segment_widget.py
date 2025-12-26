@@ -23,6 +23,8 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
+from utils.styles import StyleManager
+
 if TYPE_CHECKING:
     from managers.animation_segment_manager import AnimationSegmentManager
 else:
@@ -76,14 +78,7 @@ class AnimationSegmentSelector(QGroupBox):
     def _create_no_segments_ui(self, layout: QVBoxLayout):
         """Create UI for when no segments are available."""
         no_segments_frame = QFrame()
-        no_segments_frame.setStyleSheet("""
-            QFrame {
-                background-color: #f8f9fa;
-                border: 2px dashed #dee2e6;
-                border-radius: 8px;
-                padding: 20px;
-            }
-        """)
+        no_segments_frame.setStyleSheet(StyleManager.frame_empty_state())
 
         no_segments_layout = QVBoxLayout(no_segments_frame)
         no_segments_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -103,14 +98,14 @@ class AnimationSegmentSelector(QGroupBox):
         message_font.setBold(True)
         message_label.setFont(message_font)
         message_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        message_label.setStyleSheet("color: #6c757d; margin: 10px;")
+        message_label.setStyleSheet(f"color: {StyleManager.Colors.TEXT_SECONDARY}; margin: 10px;")
         no_segments_layout.addWidget(message_label)
 
         # Help text
         help_label = QLabel("Create animation segments in the Animation Splitting tab to use this feature.")
         help_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         help_label.setWordWrap(True)
-        help_label.setStyleSheet("color: #6c757d; font-size: 11px;")
+        help_label.setStyleSheet(f"color: {StyleManager.Colors.TEXT_SECONDARY}; font-size: 11px;")
         no_segments_layout.addWidget(help_label)
 
         layout.addWidget(no_segments_frame)
@@ -130,26 +125,7 @@ class AnimationSegmentSelector(QGroupBox):
         self.segment_list = QListWidget()
         self.segment_list.setSelectionMode(QListWidget.SelectionMode.MultiSelection)
         self.segment_list.setMaximumHeight(150)
-        self.segment_list.setStyleSheet("""
-            QListWidget {
-                border: 1px solid #ddd;
-                border-radius: 6px;
-                background-color: white;
-                alternate-background-color: #f8f9fa;
-            }
-            QListWidget::item {
-                padding: 8px;
-                border-bottom: 1px solid #eee;
-            }
-            QListWidget::item:selected {
-                background-color: #e3f2fd;
-                color: #1976d2;
-                border-left: 3px solid #1976d2;
-            }
-            QListWidget::item:hover {
-                background-color: #f5f5f5;
-            }
-        """)
+        self.segment_list.setStyleSheet(StyleManager.list_widget())
         layout.addWidget(self.segment_list)
 
     def _create_segment_info(self, layout: QVBoxLayout):
@@ -158,15 +134,7 @@ class AnimationSegmentSelector(QGroupBox):
         self.segment_info.setMaximumHeight(80)
         self.segment_info.setReadOnly(True)
         self.segment_info.setPlaceholderText("Select segments to see details...")
-        self.segment_info.setStyleSheet("""
-            QTextEdit {
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                background-color: #f8f9fa;
-                font-size: 10px;
-                color: #495057;
-            }
-        """)
+        self.segment_info.setStyleSheet(StyleManager.text_edit_readonly())
         layout.addWidget(self.segment_info)
 
     def _create_selection_controls(self, layout: QVBoxLayout):
@@ -176,36 +144,14 @@ class AnimationSegmentSelector(QGroupBox):
         # Select all button
         select_all_btn = QPushButton("Select All")
         select_all_btn.setFixedHeight(28)
-        select_all_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #f8f9fa;
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 4px 12px;
-                font-size: 10px;
-            }
-            QPushButton:hover {
-                background-color: #e9ecef;
-            }
-        """)
+        select_all_btn.setStyleSheet(StyleManager.button_secondary())
         select_all_btn.clicked.connect(self._select_all_segments)
         controls_layout.addWidget(select_all_btn)
 
         # Clear selection button
         clear_btn = QPushButton("Clear")
         clear_btn.setFixedHeight(28)
-        clear_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #f8f9fa;
-                border: 1px solid #dee2e6;
-                border-radius: 4px;
-                padding: 4px 12px;
-                font-size: 10px;
-            }
-            QPushButton:hover {
-                background-color: #e9ecef;
-            }
-        """)
+        clear_btn.setStyleSheet(StyleManager.button_secondary())
         clear_btn.clicked.connect(self._clear_selection)
         controls_layout.addWidget(clear_btn)
 
@@ -213,7 +159,7 @@ class AnimationSegmentSelector(QGroupBox):
 
         # Selection summary
         self.selection_summary = QLabel("0 segments selected")
-        self.selection_summary.setStyleSheet("color: #666; font-size: 10px;")
+        self.selection_summary.setStyleSheet(StyleManager.label_secondary())
         controls_layout.addWidget(self.selection_summary)
 
         layout.addLayout(controls_layout)

@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 
 from config import Config
 from utils.sprite_rendering import create_padded_pixmap
+from utils.styles import StyleManager
 
 
 @dataclass
@@ -93,62 +94,20 @@ class FrameThumbnail(QLabel):
 
     def _update_style(self):
         """Update visual style based on selection state."""
-        if self._selected:
-            border_color = "#4CAF50"  # Green for selected
-            border_width = "3px"
-            background = "#E8F5E8"
-        elif self._highlighted:
-            border_color = "#2196F3"  # Blue for highlighted/drag-over
-            border_width = "2px"
-            background = "#E3F2FD"
-        elif self._segment_color is not None and self._segment_color.isValid():
-            # Enhanced segment visualization
-            border_color = self._segment_color.name()
-            border_width = "3px"
-            # Create lighter background from segment color
-            lighter_color = self._segment_color.lighter(180)
-            background = lighter_color.name()
-        else:
-            border_color = "#CCCCCC"
-            border_width = "1px"
-            background = "white"  # Use named color instead of hex
+        segment_color = None
+        segment_bg = None
+        if self._segment_color is not None and self._segment_color.isValid():
+            segment_color = self._segment_color.name()
+            segment_bg = self._segment_color.lighter(180).name()
 
-        hover_style = ""
-        if not self._selected and not self._highlighted:
-            hover_style = """
-            QLabel:hover {
-                border-color: #2196F3;
-                background-color: #F0F8FF;
-            }
-            """
-
-        # Add segment marker overlays for start/end frames
-        overlay_style = ""
-        if self._is_segment_start:
-            overlay_style += """
-                border-left-width: 5px;
-                border-left-style: solid;
-            """
-        if self._is_segment_end:
-            overlay_style += """
-                border-right-width: 5px;
-                border-right-style: solid;
-            """
-
-        # Build the complete style
-        style = f"""
-            QLabel {{
-                border: {border_width} solid {border_color};
-                background-color: {background};
-                border-radius: 4px;
-                margin: 2px;
-                padding: 2px;
-                {overlay_style}
-            }}
-            {hover_style}
-        """
-
-        self.setStyleSheet(style)
+        self.setStyleSheet(StyleManager.thumbnail_style(
+            selected=self._selected,
+            highlighted=self._highlighted,
+            segment_color=segment_color,
+            segment_bg=segment_bg,
+            is_segment_start=self._is_segment_start,
+            is_segment_end=self._is_segment_end,
+        ))
 
     def set_selected(self, selected: bool):
         """Set selection state."""
@@ -169,9 +128,8 @@ class FrameThumbnail(QLabel):
         # Update the visual style
         self._update_style()
 
-        # Force visual update
+        # Schedule visual update (Qt batches efficiently)
         self.update()
-        self.repaint()
 
     def force_clear_style(self):
         """Forcefully clear all styles and reset to default."""
@@ -198,23 +156,15 @@ class FrameThumbnail(QLabel):
         """
         self.setStyleSheet(default_style)
 
-        # Force update
+        # Schedule visual update (Qt batches efficiently)
         self.update()
-        self.repaint()
 
     def mousePressEvent(self, event: QMouseEvent):
         """Handle mouse press events with modifier support."""
         if event.button() == Qt.MouseButton.LeftButton:
             self._mouse_press_pos = event.position()
-            # Convert modifiers to integer safely
-            modifiers = event.modifiers()
-            try:
-                # Try the newer PySide6 approach first
-                modifiers_value = modifiers.value  # type: ignore[attr-defined]
-            except AttributeError:
-                # Fallback: cast the enum directly to int
-                modifiers_value = int(modifiers.value) if hasattr(modifiers, 'value') else 0
-
+            # Convert modifiers to integer - int() works on Qt enum flags
+            modifiers_value = int(event.modifiers())
             self.clicked.emit(self.frame_index, modifiers_value)
         elif event.button() == Qt.MouseButton.RightButton:
             self.rightClicked.emit(self.frame_index, event.globalPosition().toPoint())
