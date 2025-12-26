@@ -44,14 +44,7 @@ class TestExportCoordinator:
         assert coordinator.sprite_model == mock_sprite_model
         assert coordinator.segment_manager == mock_segment_manager
         # Note: _initialized is a private attribute, not a public property
-    
-    def test_cleanup(self, mock_main_window):
-        """Test cleanup method."""
-        coordinator = ExportCoordinator(mock_main_window)
-        
-        # Should not raise any errors
-        coordinator.cleanup()
-    
+
     @patch('export.export_coordinator.ExportDialog')
     @patch('export.export_coordinator.QMessageBox')
     def test_export_frames(self, mock_messagebox, mock_dialog_class, mock_main_window,

@@ -7,7 +7,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import Qt, QPoint
-from PySide6.QtGui import QPixmap, QMouseEvent
+from PySide6.QtGui import QColor, QPixmap, QMouseEvent
 
 from ui.animation_grid_view import AnimationGridView, FrameThumbnail, AnimationSegment
 
@@ -450,22 +450,25 @@ class TestAnimationSegment:
     
     def test_segment_creation(self):
         """Test creating animation segments."""
-        segment = AnimationSegment("Walk", 0, 7)
-        
+        color = QColor(233, 30, 99)
+        segment = AnimationSegment("Walk", 0, 7, color)
+
         assert segment.name == "Walk"
         assert segment.start_frame == 0
         assert segment.end_frame == 7
         assert segment.frame_count == 8
-        assert segment.color is not None  # Should auto-generate color
+        assert segment.color == color
     
     def test_segment_frame_count_calculation(self):
         """Test frame count calculation."""
+        color = QColor(76, 175, 80)
+
         # Single frame
-        single = AnimationSegment("Idle", 5, 5)
+        single = AnimationSegment("Idle", 5, 5, color)
         assert single.frame_count == 1
-        
+
         # Multiple frames
-        multi = AnimationSegment("Run", 10, 17)
+        multi = AnimationSegment("Run", 10, 17, color)
         assert multi.frame_count == 8
 
 

@@ -211,7 +211,7 @@ class TestAnimationSplittingWorkflow:
         delete_signals = []
         animation_grid.segmentDeleted.connect(lambda name: delete_signals.append(name))
         
-        animation_grid._delete_segment("Walk")
+        animation_grid.delete_segment("Walk")
         
         assert len(delete_signals) == 1
         assert delete_signals[0] == "Walk"
@@ -355,7 +355,7 @@ class TestAnimationSplittingErrorHandling:
         original_count = len(animation_grid.get_segments())
         
         # Simulate renaming attempt
-        animation_grid._rename_segment("Duplicate_Name", "Duplicate_Name")
+        animation_grid.rename_segment("Duplicate_Name", "Duplicate_Name")
         
         # Should still have same number of segments
         assert len(animation_grid.get_segments()) == original_count
