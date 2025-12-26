@@ -354,10 +354,6 @@ class AnimationController(QObject):
         if hasattr(self._sprite_viewer, 'aboutToClose'):
             self._sprite_viewer.aboutToClose.connect(self._on_view_closing)  # type: ignore[union-attr]
 
-        # Connect to canvas frame change signals for UI synchronization
-        if hasattr(self._sprite_viewer, '_canvas') and hasattr(self._sprite_viewer._canvas, 'frameChanged'):
-            self._sprite_viewer._canvas.frameChanged.connect(self._on_view_frame_display_changed)
-
         self.statusChanged.emit("View ↔ Controller signal communication established")
 
     def _sync_state_from_model(self) -> None:
@@ -467,11 +463,6 @@ class AnimationController(QObject):
         if self._is_playing:
             self.stop_animation()
         self.statusChanged.emit("View closing, animation stopped")
-
-    def _on_view_frame_display_changed(self, frame_index: int) -> None:
-        """Handle frame display changes from view for UI sync."""
-        # Sync controller awareness of view's displayed frame
-        pass
 
     # ============================================================================
     # PROPERTIES & STATUS

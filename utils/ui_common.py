@@ -18,39 +18,6 @@ class DetectionResult:
     message: str = ""
     parameters: dict[str, Any] = field(default_factory=dict)
 
-    def to_ui_format(self) -> dict[str, Any]:
-        """Convert to UI-friendly format."""
-        return {
-            'success': self.success,
-            'confidence': self.confidence,
-            'message': self.message,
-            **self.parameters
-        }
-
-    def merge_with(self, other: 'DetectionResult') -> 'DetectionResult':
-        """Combine multiple detection results."""
-        # If either failed, the merge fails
-        if not self.success or not other.success:
-            return DetectionResult(
-                success=False,
-                confidence='failed',
-                message=f"{self.message}; {other.message}".strip('; '),
-                parameters={**self.parameters, **other.parameters}
-            )
-
-        # Determine merged confidence (lowest wins)
-        confidence_order = ['failed', 'low', 'medium', 'high']
-        self_idx = confidence_order.index(self.confidence)
-        other_idx = confidence_order.index(other.confidence)
-        merged_confidence = confidence_order[min(self_idx, other_idx)]
-
-        return DetectionResult(
-            success=True,
-            confidence=merged_confidence,
-            message=f"{self.message}; {other.message}".strip('; '),
-            parameters={**self.parameters, **other.parameters}
-        )
-
 
 class AutoButtonManager(QObject):
     """Manages auto-detection button states and styles."""

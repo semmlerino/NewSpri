@@ -56,11 +56,6 @@ class ExportCoordinator(QObject):
         """Check if coordinator has been initialized with required dependencies."""
         return self._initialized
 
-    def cleanup(self):
-        """Clean up resources."""
-        # No specific cleanup needed for export coordinator
-        pass
-
     # ============================================================================
     # EXPORT OPERATIONS
     # ============================================================================

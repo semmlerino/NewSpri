@@ -265,12 +265,11 @@ class SpriteViewer(QMainWindow):
 
         # Recent files manager setup - handle clicks on recent file menu items
         self._recent_files = get_recent_files_manager()
-        if hasattr(self._recent_files, 'set_file_open_callback'):
 
-            def _on_recent_file(path: str) -> None:
-                self._load_sprite_file(path)
+        def _on_recent_file(path: str) -> None:
+            self._load_sprite_file(path)
 
-            self._recent_files.set_file_open_callback(_on_recent_file)
+        self._recent_files.set_file_open_callback(_on_recent_file)
 
         # Animation splitting components
         self._segment_manager = AnimationSegmentManager()
@@ -606,8 +605,7 @@ class SpriteViewer(QMainWindow):
             return False
 
         # Add to recent files on successful load
-        if hasattr(self._recent_files, 'add_file_to_recent'):
-            self._recent_files.add_file_to_recent(file_path)
+        self._recent_files.add_file_to_recent(file_path)
 
         # Update context for managers
         self._update_manager_context()
@@ -725,10 +723,9 @@ class SpriteViewer(QMainWindow):
         self._frame_extractor.set_ccl_available(True, 0)
 
         # Check if frames are available immediately after loading
-        if hasattr(self._sprite_model, 'sprite_frames'):
-            frame_count = len(self._sprite_model.sprite_frames)
-            if frame_count > 0:
-                self._segment_controller.update_grid_view_frames()
+        frame_count = len(self._sprite_model.sprite_frames)
+        if frame_count > 0:
+            self._segment_controller.update_grid_view_frames()
 
         if self._status_manager is not None:
             self._status_manager.show_message(f"Loaded sprite sheet: {file_path}")
@@ -994,9 +991,6 @@ class SpriteViewer(QMainWindow):
 
         # Clean up controllers
         self._animation_controller.shutdown()
-
-        # Clean up coordinators
-        self._export_coordinator.cleanup()
 
         # Force settings sync to ensure all pending changes are saved
         self._settings_manager.sync()

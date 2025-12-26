@@ -278,7 +278,6 @@ class AnimationGridView(QWidget):
         self._segment_color_index = 0
 
         self._setup_ui()
-        self._connect_signals()
 
         # Enable mouse tracking for drag selection
         self.setMouseTracking(True)
@@ -360,11 +359,6 @@ class AnimationGridView(QWidget):
 
         self._scroll_area.setWidget(self._grid_container)
         parent_layout.addWidget(self._scroll_area)
-
-    def _connect_signals(self):
-        """Connect internal signals."""
-        # Currently no internal signals to connect as segment list is removed
-        pass
 
     def set_frames(self, frames: list[QPixmap]):
         """Set the frames to display in the grid."""

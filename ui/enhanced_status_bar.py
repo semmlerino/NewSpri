@@ -288,8 +288,6 @@ class StatusBarManager(QObject):
         """Connect to sprite model signals for automatic updates."""
         if hasattr(sprite_model, 'frameChanged'):
             sprite_model.frameChanged.connect(self._status_bar.update_frame_info)
-        if hasattr(sprite_model, 'dataLoaded'):
-            sprite_model.dataLoaded.connect(self._on_sprite_loaded)
 
     def connect_to_animation_controller(self, animation_controller) -> None:
         """Connect to animation controller signals."""
@@ -304,12 +302,6 @@ class StatusBarManager(QObject):
             canvas.zoomChanged.connect(self._on_zoom_changed)
         if hasattr(canvas, 'mouseMoved'):
             canvas.mouseMoved.connect(self._status_bar.update_mouse_position)
-
-    def _on_sprite_loaded(self, filepath: str) -> None:
-        """Handle sprite loaded signal."""
-        # This would need to be connected to get sprite dimensions and frame count
-        # Implementation depends on sprite model interface
-        pass
 
     def _on_zoom_changed(self, zoom_factor: float) -> None:
         """Handle zoom change signal - converts factor to percentage."""
