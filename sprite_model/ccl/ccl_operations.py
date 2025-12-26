@@ -290,8 +290,8 @@ class CCLOperations:
             image = pixmap.toImage()
 
             # Convert to ARGB format for transparency support
-            if image.format() != QImage.Format_ARGB32:
-                image = image.convertToFormat(QImage.Format_ARGB32)
+            if image.format() != QImage.Format.Format_ARGB32:
+                image = image.convertToFormat(QImage.Format.Format_ARGB32)
 
             # Get image dimensions
             width = image.width()

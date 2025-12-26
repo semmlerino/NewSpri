@@ -395,14 +395,14 @@ class FrameExtractor(QGroupBox):
 
         # Check corresponding preset if it matches
         # First check square presets
-        for i, (label, w, h, _) in enumerate(Config.FrameExtraction.SQUARE_PRESETS):
+        for i, (_label, w, h, _) in enumerate(Config.FrameExtraction.SQUARE_PRESETS):
             if w == width and h == height:
                 self.preset_group.button(i).setChecked(True)
                 return
 
         # Then check rectangular presets
         square_count = len(Config.FrameExtraction.SQUARE_PRESETS)
-        for i, (label, w, h, _) in enumerate(Config.FrameExtraction.RECTANGULAR_PRESETS):
+        for i, (_label, w, h, _) in enumerate(Config.FrameExtraction.RECTANGULAR_PRESETS):
             if w == width and h == height:
                 self.preset_group.button(square_count + i).setChecked(True)
                 return

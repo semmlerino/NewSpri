@@ -240,22 +240,24 @@ class MenuManager(QObject):
         """
         for item in items:
             if item.item_type == MenuItemType.ACTION:
-                self._add_action_to_menu(menu, item.action_id)
+                if item.action_id:  # None check for type safety
+                    self._add_action_to_menu(menu, item.action_id)
 
             elif item.item_type == MenuItemType.SEPARATOR:
                 menu.addSeparator()
 
             elif item.item_type == MenuItemType.SUBMENU:
-                submenu = menu.addMenu(item.text)
-                if item.items:
-                    self._populate_menu_items(submenu, item.items)
+                if item.text:  # None check for type safety
+                    submenu = menu.addMenu(item.text)
+                    if item.items:
+                        self._populate_menu_items(submenu, item.items)
 
             elif item.item_type == MenuItemType.RECENT_FILES:
                 self._add_recent_files_to_menu(menu)
 
-            elif item.item_type == MenuItemType.CUSTOM:
-                if item.handler:
-                    item.handler(menu)
+            elif item.item_type == MenuItemType.CUSTOM and item.handler:
+                # SIM102: Combined nested if statements
+                item.handler(menu)
 
     def _add_action_to_menu(self, menu: QMenu, action_id: str):
         """
@@ -343,14 +345,15 @@ class MenuManager(QObject):
         """
         for item in items:
             if item.item_type == MenuItemType.ACTION:
-                self._add_action_to_toolbar(toolbar, item.action_id)
+                if item.action_id:  # None check for type safety
+                    self._add_action_to_toolbar(toolbar, item.action_id)
 
             elif item.item_type == MenuItemType.SEPARATOR:
                 toolbar.addSeparator()
 
-            elif item.item_type == MenuItemType.CUSTOM:
-                if item.handler:
-                    item.handler(toolbar)
+            elif item.item_type == MenuItemType.CUSTOM and item.handler:
+                # SIM102: Combined nested if statements
+                item.handler(toolbar)
 
     def _add_action_to_toolbar(self, toolbar: QToolBar, action_id: str):
         """

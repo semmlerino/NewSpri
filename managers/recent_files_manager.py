@@ -7,6 +7,7 @@ Manages the recent files menu and related UI functionality.
 Provides integration between settings persistence and menu display.
 """
 
+import contextlib
 from collections.abc import Callable
 from pathlib import Path
 
@@ -65,11 +66,10 @@ class RecentFilesManager(QObject):
         """
         # Remove existing recent menu if it exists
         if self._recent_menu:
-            try:
-                parent_menu.removeAction(self._recent_menu.menuAction())
-            except RuntimeError:
+            # SIM105: Use contextlib.suppress instead of try/except/pass
+            with contextlib.suppress(RuntimeError):
                 # Menu was already deleted by Qt
-                pass
+                parent_menu.removeAction(self._recent_menu.menuAction())
 
         # Create new recent files submenu
         self._recent_menu = parent_menu.addMenu("Recent Files")

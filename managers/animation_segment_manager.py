@@ -4,6 +4,7 @@ Manages animation segments with save/load functionality and validation.
 Part of Animation Splitting Feature implementation.
 """
 
+import contextlib
 import json
 import os
 import tempfile
@@ -479,10 +480,9 @@ class AnimationSegmentManager(QObject):
         except Exception as e:
             # Clean up temp file if it exists
             if temp_path is not None:
-                try:
+                # SIM105: Use contextlib.suppress instead of try/except/pass
+                with contextlib.suppress(OSError):
                     os.unlink(temp_path)
-                except OSError:
-                    pass
             return False, f"Failed to save segments: {e!s}"
 
     def load_segments_from_file(self, file_path: str) -> tuple[bool, str]:

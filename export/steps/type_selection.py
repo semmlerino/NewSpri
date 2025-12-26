@@ -90,7 +90,8 @@ class SimpleExportOption(QFrame):
     def set_selected(self, selected: bool):
         """Set selection state."""
         self._is_selected = selected
-        self._radio_button.setChecked(selected)
+        if self._radio_button is not None:
+            self._radio_button.setChecked(selected)
         self._update_style()
 
     def mousePressEvent(self, event):
@@ -225,14 +226,15 @@ class ExportTypeStepSimple(WizardStep):
                         }
                     """)
                     # Pre-select it
-                    if first_option:
+                    if first_option and option._radio_button is not None:
                         option._radio_button.setChecked(True)
                         self._select_preset(preset)
 
                 layout.addWidget(option)
 
                 # Add radio button to group
-                self._button_group.addButton(option._radio_button)
+                if option._radio_button is not None:
+                    self._button_group.addButton(option._radio_button)
                 first_option = False
 
         layout.addStretch()
@@ -293,8 +295,7 @@ class ExportTypeStepSimple(WizardStep):
 class EnhancedExportPreset(ExportPreset):
     """Enhanced export preset with additional metadata."""
 
-    short_description: str = ""
-    recommended_for: list[str] = None
+    recommended_for: list[str] | None = None
 
     def __post_init__(self):
         if self.recommended_for is None:

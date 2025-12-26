@@ -146,7 +146,7 @@ class ModernExportSettings(WizardStep):
     previewUpdateRequested = Signal()
 
     def __init__(self, frame_count: int = 0, current_frame: int = 0,
-                 sprites: list[QPixmap] = None, segment_manager=None, parent=None):
+                 sprites: list[QPixmap] | None = None, segment_manager=None, parent=None):
         super().__init__(
             title="Export Settings",
             subtitle="Configure your export",

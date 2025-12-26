@@ -129,7 +129,7 @@ class CollapsibleSection(QWidget):
         # Height animation for the content frame
         self.height_animation = QPropertyAnimation(self.content_frame, b"maximumHeight")
         self.height_animation.setDuration(self._animation_duration)
-        self.height_animation.setEasingCurve(QEasingCurve.InOutCubic)
+        self.height_animation.setEasingCurve(QEasingCurve.Type.InOutCubic)
 
         # Opacity animation for smooth visual effect
         self.opacity_effect = QGraphicsOpacityEffect()
@@ -137,7 +137,7 @@ class CollapsibleSection(QWidget):
 
         self.opacity_animation = QPropertyAnimation(self.opacity_effect, b"opacity")
         self.opacity_animation.setDuration(self._animation_duration)
-        self.opacity_animation.setEasingCurve(QEasingCurve.InOutCubic)
+        self.opacity_animation.setEasingCurve(QEasingCurve.Type.InOutCubic)
 
         # Group animations together
         self.animation_group = QParallelAnimationGroup()
@@ -255,12 +255,16 @@ class CollapsibleSection(QWidget):
     def replace_content(self, new_content: QWidget):
         """Replace the content widget with a new one."""
         # Remove old content
-        self.content_frame.layout().removeWidget(self.content_widget)
+        layout = self.content_frame.layout()
+        if layout is not None:
+            layout.removeWidget(self.content_widget)
         self.content_widget.setParent(None)
 
         # Add new content
         self.content_widget = new_content
-        self.content_frame.layout().addWidget(self.content_widget)
+        layout = self.content_frame.layout()
+        if layout is not None:
+            layout.addWidget(self.content_widget)
 
         # Update layout if expanded
         if self._is_expanded:

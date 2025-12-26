@@ -35,7 +35,7 @@ class SpriteSheetLayout:
     def __post_init__(self):
         """Validate layout configuration."""
         # Validate layout mode (including custom modes)
-        valid_modes = Config.Export.LAYOUT_MODES + ['segments_per_row']
+        valid_modes = [*Config.Export.LAYOUT_MODES, 'segments_per_row']
         if self.mode not in valid_modes:
             raise ValueError(f"Invalid layout mode: {self.mode}")
 
@@ -48,13 +48,11 @@ class SpriteSheetLayout:
             raise ValueError(f"Padding must be between {Config.Export.MIN_SHEET_PADDING} and {Config.Export.MAX_SHEET_PADDING}")
 
         # Validate grid constraints
-        if self.max_columns is not None:
-            if not (Config.Export.MIN_GRID_SIZE <= self.max_columns <= Config.Export.MAX_GRID_SIZE):
-                raise ValueError(f"Max columns must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}")
+        if self.max_columns is not None and not (Config.Export.MIN_GRID_SIZE <= self.max_columns <= Config.Export.MAX_GRID_SIZE):
+            raise ValueError(f"Max columns must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}")
 
-        if self.max_rows is not None:
-            if not (Config.Export.MIN_GRID_SIZE <= self.max_rows <= Config.Export.MAX_GRID_SIZE):
-                raise ValueError(f"Max rows must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}")
+        if self.max_rows is not None and not (Config.Export.MIN_GRID_SIZE <= self.max_rows <= Config.Export.MAX_GRID_SIZE):
+            raise ValueError(f"Max rows must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}")
 
         # Validate custom grid (for custom mode)
         if self.mode == 'custom':
@@ -820,9 +818,8 @@ def reset_frame_exporter() -> None:
     Properly waits for any running export thread to complete before resetting.
     """
     global _exporter_instance
-    if _exporter_instance is not None:
+    if _exporter_instance is not None and _exporter_instance._worker is not None and _exporter_instance._worker.isRunning():
         # Wait for any running export thread to complete
-        if _exporter_instance._worker is not None and _exporter_instance._worker.isRunning():
-            _exporter_instance._worker.quit()
-            _exporter_instance._worker.wait()
+        _exporter_instance._worker.quit()
+        _exporter_instance._worker.wait()
     _exporter_instance = None

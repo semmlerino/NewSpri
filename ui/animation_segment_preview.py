@@ -43,7 +43,7 @@ class SegmentPreviewItem(QFrame):
     frameHoldsChanged = Signal(str, dict)  # segment_name, frame_holds
 
     def __init__(self, segment_name: str, color: QColor, frames: list[QPixmap],
-                 bounce_mode: bool = False, frame_holds: dict[int, int] = None,
+                 bounce_mode: bool = False, frame_holds: dict[int, int] | None = None,
                  zoom_factor: float = 1.0):
         super().__init__()
         self.segment_name = segment_name
@@ -715,7 +715,7 @@ class AnimationSegmentPreview(QWidget):
         return bool(self._all_frames)
 
     def add_segment(self, name: str, start_frame: int, end_frame: int, color: QColor,
-                   bounce_mode: bool = False, frame_holds: dict[int, int] = None):
+                   bounce_mode: bool = False, frame_holds: dict[int, int] | None = None):
         """Add a new segment preview."""
         if not self._all_frames:
             return
@@ -752,7 +752,7 @@ class AnimationSegmentPreview(QWidget):
             if not self._preview_items:
                 self.empty_label.show()
 
-    def update_segment(self, name: str, new_name: str = None, color: QColor = None):
+    def update_segment(self, name: str, new_name: str | None = None, color: QColor | None = None):
         """Update an existing segment."""
         if name in self._preview_items and new_name and new_name != name:
             # Handle rename by recreating (simpler than updating internals)

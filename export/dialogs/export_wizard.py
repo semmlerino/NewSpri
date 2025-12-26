@@ -31,7 +31,7 @@ class ExportDialog(QDialog):
     exportRequested = Signal(dict)  # Emitted when export is requested (for compatibility)
 
     def __init__(self, parent=None, frame_count: int = 0, current_frame: int = 0,
-                 sprites: list[QPixmap] = None, segment_manager=None):
+                 sprites: list[QPixmap] | None = None, segment_manager=None):
         super().__init__(parent)
 
         self.frame_count = frame_count

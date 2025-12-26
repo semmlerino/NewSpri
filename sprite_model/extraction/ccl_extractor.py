@@ -193,7 +193,7 @@ def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
         size_range_h = max(heights) - min(heights)
         size_diversity = (width_std + height_std) / 2
 
-        small_sprites = [(w, h) for w, h in zip(widths, heights) if w < 24 or h < 24]
+        small_sprites = [(w, h) for w, h in zip(widths, heights, strict=False) if w < 24 or h < 24]
 
         is_irregular_collection = (
             len(sprite_bounds) > 50 and
@@ -227,7 +227,7 @@ def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
 
 
 def _merge_nearby_components(sprite_bounds: list[tuple[int, int, int, int]],
-                           threshold: int, debug_log: list[str] = None) -> list[tuple[int, int, int, int]]:
+                           threshold: int, debug_log: list[str] | None = None) -> list[tuple[int, int, int, int]]:
     """
     Merge sprite components that are close to each other (multi-part sprites).
 
@@ -290,7 +290,7 @@ def _merge_nearby_components(sprite_bounds: list[tuple[int, int, int, int]],
 
 
 def _analyze_ccl_results(sprite_bounds: list[tuple[int, int, int, int]],
-                        sheet_width: int, sheet_height: int, debug_log: list[str] = None) -> dict:
+                        sheet_width: int, sheet_height: int, debug_log: list[str] | None = None) -> dict:
     """Analyze CCL results and suggest frame settings."""
     if debug_log is None:
         debug_log = []
@@ -366,7 +366,7 @@ def _analyze_ccl_results(sprite_bounds: list[tuple[int, int, int, int]],
     if len(sprite_bounds) >= 4:
         # Find most common sprite size
         size_frequency = {}
-        for w, h in zip(widths, heights):
+        for w, h in zip(widths, heights, strict=False):
             size_key = (w, h)
             size_frequency[size_key] = size_frequency.get(size_key, 0) + 1
 
@@ -384,8 +384,8 @@ def _analyze_ccl_results(sprite_bounds: list[tuple[int, int, int, int]],
             size_range_h = max(heights) - min(heights)
             size_diversity = (width_std + height_std) / 2
 
-            small_sprites = [(w, h) for w, h in zip(widths, heights) if w < 24 or h < 24]
-            medium_sprites = [(w, h) for w, h in zip(widths, heights) if 24 <= w <= 64 and 24 <= h <= 64]
+            small_sprites = [(w, h) for w, h in zip(widths, heights, strict=False) if w < 24 or h < 24]
+            medium_sprites = [(w, h) for w, h in zip(widths, heights, strict=False) if 24 <= w <= 64 and 24 <= h <= 64]
 
             is_irregular_collection = (
                 len(sprite_bounds) > 50 and
@@ -395,7 +395,7 @@ def _analyze_ccl_results(sprite_bounds: list[tuple[int, int, int, int]],
             )
 
             if is_irregular_collection:
-                char_sprites = [(w, h) for w, h in zip(widths, heights) if 20 <= w <= 80 and 20 <= h <= 80]
+                char_sprites = [(w, h) for w, h in zip(widths, heights, strict=False) if 20 <= w <= 80 and 20 <= h <= 80]
                 if len(char_sprites) >= 10:
                     chosen_width = int(np.median([w for w, h in char_sprites]))
                     chosen_height = int(np.median([h for w, h in char_sprites]))

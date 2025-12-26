@@ -18,6 +18,8 @@ Architecture:
 try:
     from sprite_model.core_integrated import SpriteModel
 
+    __all__ = ['SpriteModel']
+
 except ImportError as e:
     # Critical error - the modular implementation should always be available
 

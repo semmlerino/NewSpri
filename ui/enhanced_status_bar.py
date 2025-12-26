@@ -337,7 +337,7 @@ class StatusBarManager(QObject):
         if hasattr(canvas, 'mouseMoved'):
             canvas.mouseMoved.connect(self._on_mouse_moved)
 
-    def _on_frame_changed(self, current_frame: int, total_frames: int = None) -> None:
+    def _on_frame_changed(self, current_frame: int, total_frames: int | None = None) -> None:
         """Handle frame change signal."""
         self._current_frame = current_frame
         if total_frames is not None:
