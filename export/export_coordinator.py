@@ -9,8 +9,9 @@ from typing import Any
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox
 
+from .core.frame_exporter import SpriteSheetLayout, get_frame_exporter
 from .dialogs.export_wizard import ExportDialog
-from .core.frame_exporter import get_frame_exporter
+from .widgets.settings_widgets import ExportProgressDialog
 
 
 class ExportCoordinator(QObject):
@@ -30,6 +31,7 @@ class ExportCoordinator(QObject):
         self.main_window = main_window
         self._initialized = False
         self._exporter = get_frame_exporter()
+        self._progress_dialog: ExportProgressDialog | None = None
 
         # Component references
         self.sprite_model = None
@@ -147,6 +149,38 @@ class ExportCoordinator(QObject):
         """
         mode = settings.get('mode', '')
 
+        # Determine export type name for progress dialog
+        export_type_names = {
+            'individual': 'Individual Frames',
+            'selected': 'Selected Frames',
+            'sheet': 'Sprite Sheet',
+            'segments': 'Animation Segments',
+            'segments_sheet': 'Segments Per Row Sheet',
+        }
+        export_type = export_type_names.get(mode, 'Frames')
+
+        # Get frame count for progress dialog
+        frame_count = 0
+        if self.sprite_model and self.sprite_model.sprite_frames:
+            frame_count = len(self.sprite_model.sprite_frames)
+
+        # Create and configure progress dialog
+        self._progress_dialog = ExportProgressDialog(
+            export_type=export_type,
+            total_frames=frame_count,
+            parent=self.main_window
+        )
+
+        # Connect exporter signals
+        self._exporter.exportProgress.connect(self._progress_dialog.update_progress)
+        self._exporter.exportFinished.connect(self._on_export_finished)
+        self._exporter.exportError.connect(self._on_export_error)
+        self._progress_dialog.cancelled.connect(self._exporter.cancel_export)
+
+        # Show progress dialog
+        self._progress_dialog.show()
+
+        # Route to appropriate export handler
         if mode == 'segments' and 'selected_segments' in settings:
             self._export_segments(settings)
         elif mode == 'segments_sheet':
@@ -187,6 +221,22 @@ class ExportCoordinator(QObject):
                     f"{invalid_count} invalid selection(s) skipped."
                 )
 
+        # Create sprite sheet layout if mode is 'sheet' and layout not provided
+        sprite_sheet_layout = settings.get('sprite_sheet_layout')
+        if export_mode == 'sheet' and sprite_sheet_layout is None:
+            layout_mode = settings.get('layout_mode', 'auto')
+            sprite_sheet_layout = SpriteSheetLayout(
+                mode=layout_mode,
+                spacing=settings.get('spacing', 0),
+                padding=settings.get('padding', 0),
+                max_columns=settings.get('columns', 8) if layout_mode == 'rows' else None,
+                max_rows=settings.get('rows', 8) if layout_mode == 'columns' else None,
+                custom_columns=settings.get('columns', 8) if layout_mode == 'custom' else None,
+                custom_rows=settings.get('rows', 8) if layout_mode == 'custom' else None,
+                background_mode=settings.get('background_mode', 'transparent'),
+                background_color=settings.get('background_color', (255, 255, 255, 255))
+            )
+
         success = self._exporter.export_frames(
             frames=frames_to_export,
             output_dir=settings['output_dir'],
@@ -196,7 +246,7 @@ class ExportCoordinator(QObject):
             scale_factor=settings['scale_factor'],
             pattern=settings.get('pattern'),
             selected_indices=selected_indices if selected_indices else None,
-            sprite_sheet_layout=settings.get('sprite_sheet_layout'),
+            sprite_sheet_layout=sprite_sheet_layout,
         )
 
         if not success:
@@ -314,6 +364,53 @@ class ExportCoordinator(QObject):
     def _show_info(self, message: str):
         """Show information message box."""
         QMessageBox.information(self.main_window, "Export Info", message)
+
+    def _on_export_finished(self, success: bool, message: str):
+        """Handle export completion."""
+        # Disconnect signals and close progress dialog
+        if self._progress_dialog:
+            try:
+                self._exporter.exportProgress.disconnect(self._progress_dialog.update_progress)
+                self._exporter.exportFinished.disconnect(self._on_export_finished)
+                self._exporter.exportError.disconnect(self._on_export_error)
+            except RuntimeError:
+                pass  # Signals may already be disconnected
+            self._progress_dialog.close()
+            self._progress_dialog = None
+
+        # Show result message
+        if success:
+            QMessageBox.information(
+                self.main_window,
+                "Export Complete",
+                f"Export completed successfully!\n\n{message}"
+            )
+        else:
+            QMessageBox.warning(
+                self.main_window,
+                "Export Failed",
+                f"Export failed:\n\n{message}"
+            )
+
+    def _on_export_error(self, error_message: str):
+        """Handle export error."""
+        # Disconnect signals and close progress dialog
+        if self._progress_dialog:
+            try:
+                self._exporter.exportProgress.disconnect(self._progress_dialog.update_progress)
+                self._exporter.exportFinished.disconnect(self._on_export_finished)
+                self._exporter.exportError.disconnect(self._on_export_error)
+            except RuntimeError:
+                pass  # Signals may already be disconnected
+            self._progress_dialog.close()
+            self._progress_dialog = None
+
+        # Show error message
+        QMessageBox.critical(
+            self.main_window,
+            "Export Error",
+            f"Export failed:\n\n{error_message}"
+        )
 
     # ============================================================================
     # STATE QUERIES

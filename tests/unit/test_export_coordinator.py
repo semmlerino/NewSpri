@@ -141,9 +141,14 @@ class TestExportCoordinator:
         mock_dialog.set_sprites.assert_called_once_with(mock_sprite_model.sprite_frames)
         mock_dialog.exec.assert_called_once()
 
-    def test_handle_export_request(self, mock_main_window, mock_sprite_model,
-                                  mock_segment_manager):
+    @patch('export.export_coordinator.ExportProgressDialog')
+    def test_handle_export_request(self, mock_progress_dialog_class, mock_main_window,
+                                   mock_sprite_model, mock_segment_manager):
         """Test _handle_export_request method with valid settings."""
+        # Configure mock progress dialog
+        mock_progress_dialog = Mock()
+        mock_progress_dialog_class.return_value = mock_progress_dialog
+
         coordinator = ExportCoordinator(mock_main_window)
         coordinator.sprite_model = mock_sprite_model
         coordinator.segment_manager = mock_segment_manager
@@ -151,6 +156,9 @@ class TestExportCoordinator:
         # Mock the exporter to prevent actual export
         coordinator._exporter = Mock()
         coordinator._exporter.export_frames = Mock(return_value=True)
+        coordinator._exporter.exportProgress = Mock()
+        coordinator._exporter.exportFinished = Mock()
+        coordinator._exporter.exportError = Mock()
 
         # Test export settings with all required keys
         settings = {
@@ -163,6 +171,10 @@ class TestExportCoordinator:
 
         # Call handler
         coordinator._handle_export_request(settings)
+
+        # Verify progress dialog was created and shown
+        mock_progress_dialog_class.assert_called_once()
+        mock_progress_dialog.show.assert_called_once()
 
         # Verify exporter was called
         coordinator._exporter.export_frames.assert_called_once()
