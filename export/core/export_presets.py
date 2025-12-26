@@ -183,16 +183,3 @@ def get_all_presets() -> list[ExportPreset]:
     return list(PRESETS.values())
 
 
-# Backwards compatibility: get_preset_manager returns a simple object with same interface
-class _PresetManagerCompat:
-    """Minimal compatibility shim for code using get_preset_manager()."""
-    def get_preset(self, name: str) -> ExportPreset | None:
-        return get_preset(name)
-
-    def get_all_presets(self) -> list[ExportPreset]:
-        return get_all_presets()
-
-
-def get_preset_manager() -> _PresetManagerCompat:
-    """Backwards compatible function - prefer using get_preset() directly."""
-    return _PresetManagerCompat()

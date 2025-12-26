@@ -19,7 +19,7 @@ from core.auto_detection_controller import AutoDetectionController
 from ui.sprite_canvas import SpriteCanvas
 from ui.playback_controls import PlaybackControls
 from ui.frame_extractor import FrameExtractor
-from managers import RecentFilesManager, ShortcutManager
+from managers import RecentFilesManager
 from export import ExportDialog
 from export.core.frame_exporter import FrameExporter
 
@@ -308,31 +308,6 @@ class TestManagerIntegration:
         count_after = recent_files.get_recent_files_count()
         assert count_after >= len(test_files)
     
-    @pytest.mark.integration
-    def test_shortcut_manager_integration(self, qtbot):
-        """Test ShortcutManager properly connects to actions."""
-        viewer = SpriteViewer()
-        qtbot.addWidget(viewer)
-        
-        shortcuts = viewer._shortcut_manager
-        
-        # Test shortcut registration
-        from managers.shortcut_manager import ShortcutDefinition, ShortcutContext
-        test_definition = ShortcutDefinition(
-            key="Ctrl+T",
-            description="Test action",
-            category="test",
-            context=ShortcutContext.GLOBAL
-        )
-        shortcuts.register_shortcut("test_action", test_definition)
-        
-        # Verify shortcut exists
-        assert "test_action" in shortcuts._registered_shortcuts
-        
-        # Test shortcut conflict detection
-        conflicts = shortcuts.detect_conflicts()
-        # Should find our test shortcut in the registered shortcuts
-        assert len(shortcuts._registered_shortcuts) > 0
 
 
 class TestExportSystemIntegration:

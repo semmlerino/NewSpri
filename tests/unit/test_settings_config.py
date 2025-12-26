@@ -8,7 +8,10 @@ import pytest
 
 def test_settings_config_import():
     """Test that SettingsConfig can be imported and has expected structure."""
-    from config import SettingsConfig, ExportConfig, Config
+    from config import ExportConfig, Config
+
+    # Access SettingsConfig via Config (now nested under AppConfig)
+    SettingsConfig = Config.Settings
 
     # Verify settings config structure
     assert hasattr(SettingsConfig, 'ORGANIZATION_NAME')
@@ -23,15 +26,14 @@ def test_settings_config_import():
     # Verify integration with main Config class
     assert hasattr(Config, 'Settings')
     assert hasattr(Config, 'Export')
-    assert Config.Settings == SettingsConfig
     assert Config.Export == ExportConfig
 
 
 def test_settings_defaults_structure():
     """Test that settings defaults are properly structured."""
-    from config import SettingsConfig
+    from config import Config
 
-    defaults = SettingsConfig.DEFAULTS
+    defaults = Config.Settings.DEFAULTS
 
     # Test required settings exist
     required_settings = [

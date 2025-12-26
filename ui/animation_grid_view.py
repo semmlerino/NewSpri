@@ -269,6 +269,7 @@ class AnimationGridView(QWidget):
         self._last_clicked_frame: int | None = None  # For range selection
         self._drag_start_frame: int | None = None  # For drag selection
         self._is_dragging: bool = False
+        self._pre_drag_selection: set[int] = set()  # Selection state before drag
 
         # UI settings
         self._grid_columns = 8
@@ -419,15 +420,12 @@ class AnimationGridView(QWidget):
 
         if ctrl_pressed or alt_pressed:
             # Ctrl/Alt+Click: Toggle individual frame selection
-            print(f"DEBUG: Toggle selecting frame {frame_index}")
             self._toggle_frame_selection(frame_index)
         elif shift_pressed and self._last_clicked_frame is not None:
             # Shift+Click: Range selection from last clicked frame
-            print(f"DEBUG: Range selecting from {self._last_clicked_frame} to {frame_index}")
             self._select_frame_range(self._last_clicked_frame, frame_index)
         else:
             # Normal click: Clear previous selection and select this frame
-            print(f"DEBUG: Normal click selecting frame {frame_index}")
             self._clear_selection()
             self._select_frame(frame_index)
 
@@ -439,9 +437,7 @@ class AnimationGridView(QWidget):
         self.frameSelected.emit(frame_index)
 
         # Emit selection changed signal
-        selected_list = list(self._selected_frames)
-        print(f"DEBUG: Selection changed to {len(selected_list)} frames: {sorted(selected_list)}")
-        self.selectionChanged.emit(selected_list)
+        self.selectionChanged.emit(list(self._selected_frames))
 
     def _on_frame_double_clicked(self, frame_index: int):
         """Handle frame double-click for preview."""
@@ -452,20 +448,13 @@ class AnimationGridView(QWidget):
         self._drag_start_frame = frame_index
         self._is_dragging = True
 
-        # Store current selection before starting drag
-        self._pre_drag_selection = self._selected_frames.copy()
-
-        # Only clear selection if this frame isn't already selected
-        # This preserves existing selections when dragging from selected frames
+        # If starting drag from unselected frame, clear and select it
         if frame_index not in self._selected_frames:
-            self._clear_selection()
-            self._select_frame(frame_index)
-            # Update the pre-drag selection to reflect the new state
-            self._pre_drag_selection = self._selected_frames.copy()
-        else:
-            # If dragging from an already selected frame, keep the selection
-            print(f"DEBUG: Extending selection from frame {frame_index}")
+            self._selected_frames.clear()
+            self._selected_frames.add(frame_index)
 
+        # Store current selection state for drag extension
+        self._pre_drag_selection = self._selected_frames.copy()
         self._update_selection_display()
 
     def _toggle_frame_selection(self, frame_index: int):
@@ -607,14 +596,8 @@ class AnimationGridView(QWidget):
         self._last_clicked_frame = None
         self._drag_start_frame = None
         self._is_dragging = False
-
-        # Clean up drag selection state
-        if hasattr(self, '_pre_drag_selection'):
-            delattr(self, '_pre_drag_selection')
-
-        for thumbnail in self._thumbnails:
-            thumbnail.set_selected(False)
-
+        self._pre_drag_selection.clear()
+        self._update_selection_display()
         self._update_selection_controls()
 
     def _create_segment_from_selection(self):
@@ -863,12 +846,7 @@ class AnimationGridView(QWidget):
         if event.button() == Qt.MouseButton.LeftButton and self._is_dragging:
             self._is_dragging = False
             self._drag_start_frame = None
-
-            # Clean up drag selection state
-            if hasattr(self, '_pre_drag_selection'):
-                delattr(self, '_pre_drag_selection')
-
-            # Emit selection changed signal
+            self._pre_drag_selection.clear()
             self.selectionChanged.emit(list(self._selected_frames))
             self._update_selection_controls()
 
@@ -890,22 +868,10 @@ class AnimationGridView(QWidget):
 
     def _update_drag_selection(self, start_frame: int, end_frame: int):
         """Update selection during drag operation."""
-        # For drag selection, we want to show the range being dragged
-        # but preserve any existing selection outside this range
         start = min(start_frame, end_frame)
         end = max(start_frame, end_frame)
 
-        # Start with pre-drag selection (should be initialized in _on_drag_started)
-        if hasattr(self, '_pre_drag_selection'):
-            self._selected_frames = self._pre_drag_selection.copy()
-        else:
-            # Fallback if something went wrong
-            self._selected_frames.clear()
-
-        # Add the current drag range
-        for i in range(start, end + 1):
-            if i < len(self._thumbnails):
-                self._selected_frames.add(i)
-
-        # Update visual display
+        # Start with pre-drag selection and add drag range
+        self._selected_frames = self._pre_drag_selection.copy()
+        self._selected_frames.update(range(start, min(end + 1, len(self._thumbnails))))
         self._update_selection_display()

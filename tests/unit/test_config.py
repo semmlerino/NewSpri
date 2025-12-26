@@ -4,10 +4,10 @@ Tests the centralized configuration classes and validation.
 """
 
 import pytest
-from config import (
-    Config, CanvasConfig, AnimationConfig, FrameExtractionConfig,
-    UIConfig, DrawingConfig, FileConfig, SliderConfig
-)
+from config import Config, CanvasConfig, AnimationConfig, FrameExtractionConfig, UIConfig
+
+# Access nested configs via the Config class (backwards compatible aliases)
+FileConfig = Config.File
 
 
 class TestCanvasConfig:

@@ -506,21 +506,21 @@ class TestSelectionUIInteraction:
         """Test selection clearing cleans up all state properly."""
         grid_view = AnimationGridView()
         qtbot.addWidget(grid_view)
-        
+
         # Set up state
         grid_view._selected_frames.update([1, 2, 3])
         grid_view._last_clicked_frame = 2
         grid_view._is_dragging = True
         grid_view._pre_drag_selection = {1, 2}
-        
+
         # Clear selection
         grid_view._clear_selection()
-        
+
         # Verify complete cleanup
         assert len(grid_view._selected_frames) == 0
         assert grid_view._last_clicked_frame is None
         assert not grid_view._is_dragging
-        assert not hasattr(grid_view, '_pre_drag_selection')
+        assert len(grid_view._pre_drag_selection) == 0
 
 
 if __name__ == '__main__':

@@ -245,7 +245,7 @@ class TestMouseZoomPanWorkflow:
         viewer._sprite_model.frameChanged.emit(0, 1)
         
         # Update manager context since we added frames manually
-        viewer._update_manager_context()
+        viewer._update_has_frames_actions()
         
         canvas = viewer._canvas
         initial_zoom = canvas.get_zoom_factor()
@@ -291,7 +291,7 @@ class TestMouseZoomPanWorkflow:
         viewer._sprite_model.frameChanged.emit(0, 1)
         
         # Update manager context since we added frames manually
-        viewer._update_manager_context()
+        viewer._update_has_frames_actions()
         
         canvas = viewer._canvas
         
@@ -380,14 +380,14 @@ class TestAdvancedKeyboardShortcuts:
         viewer._sprite_model.frameChanged.emit(0, 8)
         
         # Update manager context since we added frames manually
-        viewer._update_manager_context()
+        viewer._update_has_frames_actions()
         
         # Test 'R' for restart animation
         viewer._sprite_model.set_current_frame(5)
         assert viewer._sprite_model.current_frame == 5  # Verify it's set to 5
         
-        # Verify shortcut is registered
-        assert 'animation_restart' in viewer._shortcut_manager._registered_shortcuts
+        # Verify action is registered
+        assert 'animation_restart' in viewer._actions
         
         # Test direct method call first
         viewer._restart_animation()

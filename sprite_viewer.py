@@ -6,9 +6,10 @@ Refactored to use centralized managers for better maintainability.
 
 import os
 import sys
+from collections.abc import Callable
 
 from PySide6.QtCore import QMimeData, Qt
-from PySide6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence
+from PySide6.QtGui import QAction, QDragEnterEvent, QDropEvent, QKeySequence
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -117,10 +118,7 @@ from export import ExportCoordinator
 
 # Managers
 from managers import (
-    ActionManager,
     AnimationSegmentManager,
-    MenuManager,
-    ShortcutManager,
     get_recent_files_manager,
     get_settings_manager,
 )
@@ -138,6 +136,50 @@ from ui import (
     StatusBarManager,
 )
 from ui.animation_segment_preview import AnimationSegmentPreview
+
+# ============================================================================
+# KEYBOARD SHORTCUTS
+# ============================================================================
+
+SHORTCUTS = {
+    # File actions
+    'file_open': ('Ctrl+O', 'Open sprite sheet'),
+    'file_quit': ('Ctrl+Q', 'Quit application'),
+    'file_export_frames': ('Ctrl+E', 'Export frames'),
+    'file_export_current': ('Ctrl+Shift+E', 'Export current frame'),
+
+    # View actions
+    'view_zoom_in': ('Ctrl++', 'Zoom in'),
+    'view_zoom_out': ('Ctrl+-', 'Zoom out'),
+    'view_zoom_fit': ('Ctrl+0', 'Fit to window'),
+    'view_zoom_reset': ('Ctrl+1', 'Reset zoom (100%)'),
+    'view_toggle_grid': ('G', 'Toggle grid overlay'),
+
+    # Animation actions
+    'animation_toggle': ('Space', 'Play/Pause animation'),
+    'animation_prev_frame': ('Left', 'Previous frame'),
+    'animation_next_frame': ('Right', 'Next frame'),
+    'animation_first_frame': ('Home', 'First frame'),
+    'animation_last_frame': ('End', 'Last frame'),
+    'animation_restart': ('R', 'Restart animation'),
+    'animation_speed_decrease': ('[', 'Decrease animation speed'),
+    'animation_speed_increase': (']', 'Increase animation speed'),
+}
+
+# Actions that require frames to be loaded
+ACTIONS_REQUIRING_FRAMES = {
+    'file_export_frames',
+    'file_export_current',
+    'animation_toggle',
+    'animation_prev_frame',
+    'animation_next_frame',
+    'animation_first_frame',
+    'animation_last_frame',
+    'animation_restart',
+    'animation_speed_decrease',
+    'animation_speed_increase',
+    'toolbar_export',
+}
 
 
 class SpriteViewer(QMainWindow):
@@ -183,13 +225,9 @@ class SpriteViewer(QMainWindow):
         # Initialize core MVC components
         self._init_core_components()
 
-        # Set up recent files handler BEFORE creating menus
-        self._menu_manager.set_recent_files_handler(
-            lambda menu: self._recent_files.populate_recent_files_directly(menu)
-        )
-
         # Set up UI directly
         self._setup_window()
+        self._setup_actions()
         self._setup_menu_bar()
         self._setup_toolbar()
         self._setup_status_bar()
@@ -223,6 +261,9 @@ class SpriteViewer(QMainWindow):
         }
         self._export_coordinator.initialize(export_dependencies)
 
+        # Connect action callbacks now that all components exist
+        self._connect_action_callbacks()
+
         # Set up managers with UI components
         self._setup_managers()
 
@@ -247,10 +288,9 @@ class SpriteViewer(QMainWindow):
         self._settings_manager = get_settings_manager()
         self._recent_files = get_recent_files_manager()
 
-        # Core managers (DI chain - explicit dependencies)
-        self._shortcut_manager = ShortcutManager(self)
-        self._action_manager = ActionManager(self, shortcut_manager=self._shortcut_manager)
-        self._menu_manager = MenuManager(self, action_manager=self._action_manager)
+        # Actions storage
+        self._actions: dict[str, QAction] = {}
+        self._shortcut_to_action: dict[str, str] = {}  # Key sequence -> action_id
 
     def _init_core_components(self):
         """Initialize core MVC components."""
@@ -284,27 +324,147 @@ class SpriteViewer(QMainWindow):
         self.setMinimumSize(Config.UI.MIN_WINDOW_WIDTH, Config.UI.MIN_WINDOW_HEIGHT)
         self.setAcceptDrops(True)
 
+    def _setup_actions(self):
+        """Create all QActions with shortcuts and callbacks."""
+        # File actions
+        self._create_action('file_open', '📁 Open...', self._load_sprites)
+        self._create_action('file_quit', 'Quit', self.close)
+        self._create_action('file_export_frames', 'Export Frames...', None, requires_frames=True)
+        self._create_action('file_export_current', 'Export Current Frame...', None, requires_frames=True)
+
+        # View actions (callbacks connected later after canvas is created)
+        self._create_action('view_zoom_in', '🔍+ Zoom In', self._zoom_in)
+        self._create_action('view_zoom_out', '🔍- Zoom Out', self._zoom_out)
+        self._create_action('view_zoom_fit', '🔍⇄ Fit to Window', None)
+        self._create_action('view_zoom_reset', '🔍1:1 Reset Zoom', None)
+        self._create_action('view_toggle_grid', 'Toggle Grid', self._toggle_grid)
+
+        # Animation actions (some callbacks connected later)
+        self._create_action('animation_toggle', 'Play/Pause', None, requires_frames=True)
+        self._create_action('animation_prev_frame', 'Previous Frame', None, requires_frames=True)
+        self._create_action('animation_next_frame', 'Next Frame', None, requires_frames=True)
+        self._create_action('animation_first_frame', 'First Frame', None, requires_frames=True)
+        self._create_action('animation_last_frame', 'Last Frame', None, requires_frames=True)
+        self._create_action('animation_restart', 'Restart Animation', self._restart_animation, requires_frames=True)
+        self._create_action('animation_speed_decrease', 'Decrease Speed', self._decrease_animation_speed, requires_frames=True)
+        self._create_action('animation_speed_increase', 'Increase Speed', self._increase_animation_speed, requires_frames=True)
+
+        # Toolbar actions
+        self._create_action('toolbar_export', '💾 Export', None, requires_frames=True)
+
+        # Help actions
+        self._create_action('help_shortcuts', 'Keyboard Shortcuts', self._show_shortcuts)
+        self._create_action('help_about', 'About', self._show_about)
+
+    def _connect_action_callbacks(self):
+        """Connect callbacks that depend on components created after actions."""
+        # Export callbacks (need export_coordinator)
+        self._actions['file_export_frames'].triggered.connect(self._export_coordinator.export_frames)
+        self._actions['file_export_current'].triggered.connect(self._export_coordinator.export_current_frame)
+        self._actions['toolbar_export'].triggered.connect(self._export_coordinator.export_frames)
+
+        # View callbacks (need canvas)
+        self._actions['view_zoom_fit'].triggered.connect(self._canvas.fit_to_window)
+        self._actions['view_zoom_reset'].triggered.connect(self._canvas.reset_view)
+
+        # Animation callbacks (need animation_controller and sprite_model)
+        self._actions['animation_toggle'].triggered.connect(self._animation_controller.toggle_playback)
+        self._actions['animation_prev_frame'].triggered.connect(self._sprite_model.previous_frame)
+        self._actions['animation_next_frame'].triggered.connect(self._sprite_model.next_frame)
+        self._actions['animation_first_frame'].triggered.connect(self._sprite_model.first_frame)
+        self._actions['animation_last_frame'].triggered.connect(self._sprite_model.last_frame)
+
+    def _create_action(self, action_id: str, text: str, callback: Callable[..., object] | None, requires_frames: bool = False):
+        """
+        Create a QAction with shortcut and callback.
+
+        Args:
+            action_id: Action identifier (used for shortcut lookup)
+            text: Display text for action
+            callback: Function to call when triggered (can be None if connected later)
+            requires_frames: Whether action requires frames to be loaded
+        """
+        action = QAction(text, self)
+
+        # Add shortcut and tooltip
+        if action_id in SHORTCUTS:
+            shortcut_key, description = SHORTCUTS[action_id]
+            action.setShortcut(shortcut_key)
+            action.setToolTip(f"{description} ({shortcut_key})")
+            self._shortcut_to_action[shortcut_key] = action_id
+        else:
+            # Actions without shortcuts still get tooltips from text
+            action.setToolTip(text)
+
+        # Connect callback if provided
+        if callback is not None:
+            action.triggered.connect(callback)
+
+        # Set initial enabled state
+        if requires_frames:
+            action.setEnabled(False)
+
+        # Store action
+        self._actions[action_id] = action
+
     def _setup_menu_bar(self):
-        """Set up menu bar using MenuManager."""
+        """Create menu bar with all menus."""
         menubar = self.menuBar()
-        self._menus = self._menu_manager.create_menu_bar(menubar)
+
+        # File menu
+        file_menu = menubar.addMenu('File')
+        file_menu.addAction(self._actions['file_open'])
+
+        # Recent files submenu
+        self._recent_files_menu = file_menu.addMenu('Recent Files')
+        self._recent_files_menu.setToolTip('Recently opened sprite sheets')
+        self._recent_files_menu.aboutToShow.connect(self._update_recent_files_menu)
+        self._update_recent_files_menu()  # Initial population
+
+        file_menu.addSeparator()
+        file_menu.addAction(self._actions['file_export_frames'])
+        file_menu.addAction(self._actions['file_export_current'])
+        file_menu.addSeparator()
+        file_menu.addAction(self._actions['file_quit'])
+
+        # View menu
+        view_menu = menubar.addMenu('View')
+        view_menu.addAction(self._actions['view_zoom_in'])
+        view_menu.addAction(self._actions['view_zoom_out'])
+        view_menu.addAction(self._actions['view_zoom_fit'])
+        view_menu.addAction(self._actions['view_zoom_reset'])
+        view_menu.addSeparator()
+        view_menu.addAction(self._actions['view_toggle_grid'])
+
+        # Help menu
+        help_menu = menubar.addMenu('Help')
+        help_menu.addAction(self._actions['help_shortcuts'])
+        help_menu.addSeparator()
+        help_menu.addAction(self._actions['help_about'])
+
+    def _update_recent_files_menu(self):
+        """Update recent files menu content."""
+        self._recent_files_menu.clear()
+        self._recent_files.populate_recent_files_directly(self._recent_files_menu)
 
     def _setup_toolbar(self):
-        """Set up toolbar using MenuManager."""
-        # Create main toolbar
-        self._main_toolbar = self._menu_manager.create_toolbar('main')
+        """Create main toolbar."""
+        self._main_toolbar = self.addToolBar('Main Toolbar')
+        self._main_toolbar.setMovable(False)
+        self._main_toolbar.setStyleSheet(Config.Styles.MAIN_TOOLBAR)
 
-        # Apply styling
-        if self._main_toolbar:
-            self._main_toolbar.setStyleSheet(Config.Styles.MAIN_TOOLBAR)
+        # Add toolbar actions
+        self._main_toolbar.addAction(self._actions['file_open'])
+        self._main_toolbar.addSeparator()
+        self._main_toolbar.addAction(self._actions['toolbar_export'])
 
-            # Add zoom display widget
-            self._main_toolbar.addSeparator()
-            self._zoom_label = QLabel("100%")
-            self._zoom_label.setMinimumWidth(Config.UI.ZOOM_LABEL_MIN_WIDTH)
-            self._zoom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self._zoom_label.setStyleSheet(Config.Styles.ZOOM_DISPLAY)
-            self._main_toolbar.addWidget(self._zoom_label)
+        # Add zoom display widget
+        self._main_toolbar.addSeparator()
+        self._zoom_label = QLabel("100%")
+        self._zoom_label.setMinimumWidth(Config.UI.ZOOM_LABEL_MIN_WIDTH)
+        self._zoom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._zoom_label.setStyleSheet(Config.Styles.ZOOM_DISPLAY)
+        self._main_toolbar.addWidget(self._zoom_label)
 
     def _setup_status_bar(self):
         """Set up status bar."""
@@ -435,47 +595,12 @@ class SpriteViewer(QMainWindow):
 
     def _setup_managers(self):
         """Configure managers with application-specific settings."""
-        # Configure action manager with callbacks
-        self._setup_action_callbacks()
-
         # Connect segment controller status messages
         if self._status_manager is not None:
             self._segment_controller.statusMessage.connect(self._status_manager.show_message)
 
-        # Configure shortcut manager context
-        self._update_manager_context()
-
-    def _setup_action_callbacks(self):
-        """Set up action callbacks using ActionManager."""
-        # File actions
-        self._action_manager.set_action_callback('file_open', self._load_sprites)
-        self._action_manager.set_action_callback('file_quit', self.close)
-        self._action_manager.set_action_callback('file_export_frames', self._export_coordinator.export_frames)
-        self._action_manager.set_action_callback('file_export_current', self._export_coordinator.export_current_frame)
-
-        # View actions - direct canvas calls
-        self._action_manager.set_action_callback('view_zoom_in', self._zoom_in)
-        self._action_manager.set_action_callback('view_zoom_out', self._zoom_out)
-        self._action_manager.set_action_callback('view_zoom_fit', self._canvas.fit_to_window)
-        self._action_manager.set_action_callback('view_zoom_reset', self._canvas.reset_view)
-        self._action_manager.set_action_callback('view_toggle_grid', self._toggle_grid)
-
-        # Animation actions - direct controller/model calls
-        self._action_manager.set_action_callback('animation_toggle', self._animation_controller.toggle_playback)
-        self._action_manager.set_action_callback('animation_prev_frame', self._sprite_model.previous_frame)
-        self._action_manager.set_action_callback('animation_next_frame', self._sprite_model.next_frame)
-        self._action_manager.set_action_callback('animation_first_frame', self._sprite_model.first_frame)
-        self._action_manager.set_action_callback('animation_last_frame', self._sprite_model.last_frame)
-        self._action_manager.set_action_callback('animation_restart', self._restart_animation)
-        self._action_manager.set_action_callback('animation_speed_decrease', self._decrease_animation_speed)
-        self._action_manager.set_action_callback('animation_speed_increase', self._increase_animation_speed)
-
-        # Toolbar actions (reuse same callbacks)
-        self._action_manager.set_action_callback('toolbar_export', self._export_coordinator.export_frames)
-
-        # Help actions
-        self._action_manager.set_action_callback('help_shortcuts', self._show_shortcuts)
-        self._action_manager.set_action_callback('help_about', self._show_about)
+        # Update action states based on initial context
+        self._update_has_frames_actions()
 
 
 
@@ -545,20 +670,14 @@ class SpriteViewer(QMainWindow):
         # Restore window geometry
         self._settings_manager.restore_window_geometry(self)
 
-    def _update_manager_context(self):
-        """Update manager context based on current state."""
+    def _update_has_frames_actions(self):
+        """Update action enabled state based on whether frames are loaded."""
         has_frames = bool(self._sprite_model.sprite_frames)
-        is_playing = self._animation_controller.is_playing
 
-        # Update both managers
-        self._shortcut_manager.update_context(
-            has_frames=has_frames,
-            is_playing=is_playing
-        )
-        self._action_manager.update_context(
-            has_frames=has_frames,
-            is_playing=is_playing
-        )
+        # Enable/disable actions that require frames
+        for action_id in ACTIONS_REQUIRING_FRAMES:
+            if action_id in self._actions:
+                self._actions[action_id].setEnabled(has_frames)
 
 
     # ============================================================================
@@ -607,8 +726,8 @@ class SpriteViewer(QMainWindow):
         # Add to recent files on successful load
         self._recent_files.add_file_to_recent(file_path)
 
-        # Update context for managers
-        self._update_manager_context()
+        # Update action states
+        self._update_has_frames_actions()
 
         # Update display first (fast)
         self._canvas.update()
@@ -716,8 +835,8 @@ class SpriteViewer(QMainWindow):
         self._canvas.reset_view()
         self._canvas.update()
 
-        # Update managers context
-        self._update_manager_context()
+        # Update action states
+        self._update_has_frames_actions()
 
         # Enable CCL mode - always available when sprite is loaded
         self._frame_extractor.set_ccl_available(True, 0)
@@ -733,22 +852,18 @@ class SpriteViewer(QMainWindow):
     def _on_playback_started(self):
         """Handle playback start."""
         self._playback_controls.update_button_states(False, True, True)
-        self._update_manager_context()
 
     def _on_playback_paused(self):
         """Handle playback pause."""
         self._playback_controls.update_button_states(True, True, True)
-        self._update_manager_context()
 
     def _on_playback_stopped(self):
         """Handle playback stop."""
         self._playback_controls.update_button_states(True, True, False)
-        self._update_manager_context()
 
     def _on_playback_completed(self):
         """Handle playback completion."""
         self._playback_controls.update_button_states(True, True, False)
-        self._update_manager_context()
 
     def _on_animation_error(self, error_message: str):
         """Handle animation controller error."""
@@ -790,8 +905,8 @@ class SpriteViewer(QMainWindow):
             if self._grid_view:
                 self._grid_view.set_frames([])
 
-        # Update managers context
-        self._update_manager_context()
+        # Update action states
+        self._update_has_frames_actions()
 
         # Update display with current frame (Phase 3 refactoring)
         self._canvas.update_with_current_frame()
@@ -857,8 +972,8 @@ class SpriteViewer(QMainWindow):
         # Update info
         self._info_label.setText(self._sprite_model.sprite_info)
 
-        # Update managers context
-        self._update_manager_context()
+        # Update action states
+        self._update_has_frames_actions()
 
         # Ensure first frame is displayed after extraction (Phase 3 refactoring)
         if total_frames > 0:
@@ -912,11 +1027,51 @@ class SpriteViewer(QMainWindow):
 
     def _show_shortcuts(self):
         """Show keyboard shortcuts dialog."""
-        if self._shortcut_manager:
-            help_html = self._shortcut_manager.generate_help_html()
-            QMessageBox.information(self, "Keyboard Shortcuts", help_html)
-        else:
-            QMessageBox.warning(self, "Error", "Shortcut manager not available")
+        help_html = self._generate_shortcuts_help_html()
+        QMessageBox.information(self, "Keyboard Shortcuts", help_html)
+
+    def _generate_shortcuts_help_html(self) -> str:
+        """Generate HTML help documentation for all shortcuts."""
+        html = ["<h3>Keyboard Shortcuts</h3>"]
+
+        # Organize shortcuts by category
+        categories = {
+            'File': ['file_open', 'file_export_frames', 'file_export_current', 'file_quit'],
+            'View': ['view_zoom_in', 'view_zoom_out', 'view_zoom_fit', 'view_zoom_reset', 'view_toggle_grid'],
+            'Animation': [
+                'animation_toggle', 'animation_prev_frame', 'animation_next_frame',
+                'animation_first_frame', 'animation_last_frame', 'animation_restart',
+                'animation_speed_decrease', 'animation_speed_increase'
+            ],
+        }
+
+        for category_name, action_ids in categories.items():
+            html.append(f"<h4>{category_name}</h4>")
+            html.append("<table>")
+
+            for action_id in action_ids:
+                if action_id in SHORTCUTS:
+                    shortcut_key, description = SHORTCUTS[action_id]
+                    context_info = ""
+                    if action_id in ACTIONS_REQUIRING_FRAMES:
+                        context_info = " <i>(requires frames)</i>"
+
+                    html.append(
+                        f"<tr><td><b>{shortcut_key}</b></td>"
+                        f"<td>{description}{context_info}</td></tr>"
+                    )
+
+            html.append("</table>")
+            html.append("<br>")
+
+        # Add mouse actions
+        html.append("<h4>Mouse Actions</h4>")
+        html.append("<table>")
+        html.append("<tr><td><b>Mouse wheel</b></td><td>Zoom in/out</td></tr>")
+        html.append("<tr><td><b>Click+drag</b></td><td>Pan view</td></tr>")
+        html.append("</table>")
+
+        return "\n".join(html)
 
     def _show_about(self):
         """Show about dialog."""
@@ -978,11 +1133,30 @@ class SpriteViewer(QMainWindow):
             super().keyPressEvent(event)
             return
 
-        # Try to handle with shortcut manager
-        if self._shortcut_manager.handle_key_press(key_sequence_str):
+        # Try to find and trigger matching action
+        if self._handle_shortcut(key_sequence_str):
             event.accept()
         else:
             super().keyPressEvent(event)
+
+    def _handle_shortcut(self, key_sequence: str) -> bool:
+        """
+        Handle a keyboard shortcut.
+
+        Args:
+            key_sequence: String representation of key sequence
+
+        Returns:
+            True if shortcut was handled
+        """
+        # Find action with matching shortcut
+        for action_id, (shortcut_key, _) in SHORTCUTS.items():
+            if shortcut_key == key_sequence and action_id in self._actions:
+                action = self._actions[action_id]
+                if action.isEnabled():
+                    action.trigger()
+                    return True
+        return False
 
     def closeEvent(self, event):
         """Handle close event."""

@@ -92,15 +92,7 @@ class AnimationSegmentController(QObject):
     # ============================================================================
 
     def create_segment(self, segment) -> tuple[bool, str]:
-        """
-        Create a new animation segment with automatic name conflict resolution.
-
-        Args:
-            segment: Segment object with name, start_frame, end_frame, color, etc.
-
-        Returns:
-            Tuple of (success, message)
-        """
+        """Create a new segment with automatic name conflict resolution. Returns (success, message)."""
         original_name = segment.name
 
         # Try to add segment to manager
@@ -126,7 +118,8 @@ class AnimationSegmentController(QObject):
 
         if not success:
             # Clean up grid view if segment was added there but failed in manager
-            self._remove_from_grid_view(original_name)
+            if self._grid_view:
+                self._grid_view.delete_segment(original_name)
             error_msg = f"{error}\n\nPlease try a different name."
             return False, error_msg
 
@@ -135,34 +128,15 @@ class AnimationSegmentController(QObject):
         self.statusMessage.emit(message)
 
         # Add to preview panel if available
-        if self._segment_preview and self._sprite_model:
-            frames = self._get_sprite_frames()
-            if frames:
-                if not self._segment_preview.has_frames():
-                    self._segment_preview.set_frames(frames)
-
-                self._segment_preview.add_segment(
-                    segment.name,
-                    segment.start_frame,
-                    segment.end_frame,
-                    segment.color,
-                    segment.bounce_mode,
-                    segment.frame_holds
-                )
+        self._add_segment_to_preview(
+            segment.name, segment.start_frame, segment.end_frame,
+            segment.color, segment.bounce_mode, segment.frame_holds
+        )
 
         return True, message
 
     def _resolve_name_conflict(self, segment, original_name: str) -> tuple[bool, str | None]:
-        """
-        Attempt to resolve naming conflicts by generating unique names.
-
-        Args:
-            segment: The segment object to add
-            original_name: Original segment name that conflicted
-
-        Returns:
-            Tuple of (success, final_name)
-        """
+        """Generate unique name variants until one succeeds. Returns (success, final_name)."""
         base_name = original_name.split('_')[0] if '_' in original_name else original_name
         retry_count = 0
 
@@ -182,56 +156,41 @@ class AnimationSegmentController(QObject):
             )
 
             if success:
-                # Update segment data in grid view
-                self._update_grid_view_segment_name(original_name, new_name, segment)
+                # Update segment name in grid view
+                if self._grid_view:
+                    self._grid_view.rename_segment(original_name, new_name)
 
                 # Add to preview panel with new name
-                if self._segment_preview and self._sprite_model:
-                    frames = self._get_sprite_frames()
-                    if frames:
-                        if not self._segment_preview.has_frames():
-                            self._segment_preview.set_frames(frames)
-
-                        self._segment_preview.add_segment(
-                            new_name,
-                            segment.start_frame,
-                            segment.end_frame,
-                            segment.color,
-                            segment.bounce_mode,
-                            segment.frame_holds
-                        )
-
+                self._add_segment_to_preview(
+                    new_name, segment.start_frame, segment.end_frame,
+                    segment.color, segment.bounce_mode, segment.frame_holds
+                )
                 return True, new_name
 
         return False, None
 
-    def _update_grid_view_segment_name(self, old_name: str, new_name: str, segment) -> None:
-        """Update segment name in grid view after successful rename."""
-        if not self._grid_view:
+    def _add_segment_to_preview(
+        self, name: str, start_frame: int, end_frame: int,
+        color, bounce_mode: bool, frame_holds: dict[int, int] | None
+    ) -> None:
+        """Add segment to preview panel if available and frames exist."""
+        if not self._segment_preview or not self._sprite_model:
             return
-
-        self._grid_view.rename_segment(old_name, new_name)
-
-    def _remove_from_grid_view(self, segment_name: str) -> None:
-        """Remove failed segment from grid view."""
-        if self._grid_view:
-            self._grid_view.delete_segment(segment_name)
+        frames = self._sprite_model.get_all_frames()
+        if not frames:
+            return
+        if not self._segment_preview.has_frames():
+            self._segment_preview.set_frames(frames)
+        self._segment_preview.add_segment(
+            name, start_frame, end_frame, color, bounce_mode, frame_holds
+        )
 
     # ============================================================================
     # SEGMENT OPERATIONS
     # ============================================================================
 
     def rename_segment(self, old_name: str, new_name: str) -> tuple[bool, str]:
-        """
-        Rename an animation segment.
-
-        Args:
-            old_name: Current name of the segment
-            new_name: New name for the segment
-
-        Returns:
-            Tuple of (success, message)
-        """
+        """Rename an animation segment. Returns (success, message)."""
         success, error = self._segment_manager.rename_segment(old_name, new_name)
 
         if success:
@@ -240,37 +199,20 @@ class AnimationSegmentController(QObject):
 
             # Update preview panel if available
             if self._segment_preview:
+                self._segment_preview.remove_segment(old_name)
                 segment = self._segment_manager.get_segment(new_name)
                 if segment:
-                    self._segment_preview.remove_segment(old_name)
-                    if self._sprite_model:
-                        frames = self._get_sprite_frames()
-                        if frames and not self._segment_preview.has_frames():
-                            self._segment_preview.set_frames(frames)
-
-                        self._segment_preview.add_segment(
-                            new_name,
-                            segment.start_frame,
-                            segment.end_frame,
-                            segment.color,
-                            segment.bounce_mode,
-                            segment.frame_holds
-                        )
+                    self._add_segment_to_preview(
+                        new_name, segment.start_frame, segment.end_frame,
+                        segment.color, segment.bounce_mode, segment.frame_holds
+                    )
 
             return True, message
 
         return False, error
 
     def delete_segment(self, segment_name: str) -> tuple[bool, str]:
-        """
-        Delete an animation segment.
-
-        Args:
-            segment_name: Name of segment to delete
-
-        Returns:
-            Tuple of (success, message)
-        """
+        """Delete an animation segment. Returns (success, message)."""
         if self._segment_manager.remove_segment(segment_name):
             message = f"Deleted animation segment '{segment_name}'"
             self.statusMessage.emit(message)
@@ -304,10 +246,8 @@ class AnimationSegmentController(QObject):
 
     def _on_preview_playback_changed(self, segment_name: str, is_playing: bool) -> None:
         """Handle playback state change from preview panel."""
-        if is_playing:
-            self.statusMessage.emit(f"Playing animation segment '{segment_name}'")
-        else:
-            self.statusMessage.emit(f"Paused animation segment '{segment_name}'")
+        action = "Playing" if is_playing else "Paused"
+        self.statusMessage.emit(f"{action} animation segment '{segment_name}'")
 
     def _on_segment_bounce_changed(self, segment_name: str, bounce_mode: bool) -> None:
         """Handle bounce mode change from preview panel."""
@@ -336,16 +276,12 @@ class AnimationSegmentController(QObject):
 
     def _on_export_requested(self, segment_name: str) -> None:
         """Handle export request from grid view or preview panel."""
-        segments = self._segment_manager.get_all_segments()
-        segment = None
-        for seg in segments:
-            if seg.name == segment_name:
-                segment = seg
-                break
-
+        segment = next(
+            (s for s in self._segment_manager.get_all_segments() if s.name == segment_name),
+            None
+        )
         if segment:
-            parent_widget = self._tab_widget or self._grid_view
-            self.export_segment(segment, parent_widget)
+            self.export_segment(segment, self._tab_widget or self._grid_view)
 
     def export_segment(self, segment, parent_widget=None) -> None:
         """Export a specific animation segment."""
@@ -389,29 +325,19 @@ class AnimationSegmentController(QObject):
             self.statusMessage.emit(f"Exported segment '{segment.name}'")
 
     def _handle_segment_export(
-        self,
-        settings: dict[str, Any],
-        segment_frames: list,
-        segment_name: str
+        self, settings: dict[str, Any], segment_frames: list, segment_name: str
     ) -> None:
         """Handle segment-specific export request."""
-        from export.core.frame_exporter import get_frame_exporter
-
-        required_keys = ['output_dir', 'base_name', 'format', 'mode', 'scale_factor']
-        for key in required_keys:
-            if key not in settings:
-                return
-
-        if not segment_frames:
+        required = {'output_dir', 'base_name', 'format', 'mode', 'scale_factor'}
+        if not segment_frames or not required.issubset(settings):
             return
 
-        exporter = get_frame_exporter()
-        base_name = f"{settings['base_name']}_{segment_name}"
+        from export.core.frame_exporter import get_frame_exporter
 
-        exporter.export_frames(
+        get_frame_exporter().export_frames(
             frames=segment_frames,
             output_dir=settings['output_dir'],
-            base_name=base_name,
+            base_name=f"{settings['base_name']}_{segment_name}",
             format=settings['format'],
             mode=settings['mode'],
             scale_factor=settings['scale_factor'],
@@ -428,7 +354,7 @@ class AnimationSegmentController(QObject):
         if not self._grid_view or not self._sprite_model:
             return
 
-        frames = self._get_sprite_frames()
+        frames = self._sprite_model.get_all_frames()
 
         if frames:
             self._grid_view.set_frames(frames)
@@ -437,18 +363,13 @@ class AnimationSegmentController(QObject):
                 self._segment_preview.set_frames(frames)
                 self._segment_preview.clear_segments()
 
-                segments = self._segment_manager.get_all_segments()
-                for segment_data in segments:
+                for seg in self._segment_manager.get_all_segments():
                     self._segment_preview.add_segment(
-                        segment_data.name,
-                        segment_data.start_frame,
-                        segment_data.end_frame,
-                        segment_data.color,
-                        segment_data.bounce_mode,
-                        segment_data.frame_holds
+                        seg.name, seg.start_frame, seg.end_frame,
+                        seg.color, seg.bounce_mode, seg.frame_holds
                     )
 
-            sprite_path = self._get_sprite_path()
+            sprite_path = self._sprite_model.file_path
             if sprite_path:
                 self._segment_manager.set_sprite_context(sprite_path, len(frames))
         else:
@@ -456,18 +377,6 @@ class AnimationSegmentController(QObject):
             if self._segment_preview:
                 self._segment_preview.set_frames([])
                 self._segment_preview.clear_segments()
-
-    def _get_sprite_frames(self) -> list:
-        """Get frames from sprite model."""
-        if not self._sprite_model:
-            return []
-        return self._sprite_model.get_all_frames()
-
-    def _get_sprite_path(self) -> str:
-        """Get sprite sheet path from model."""
-        if not self._sprite_model:
-            return ""
-        return self._sprite_model.file_path
 
     def on_tab_changed(self, index: int) -> None:
         """Handle tab change event to refresh grid view."""

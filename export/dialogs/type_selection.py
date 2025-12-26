@@ -11,7 +11,7 @@ from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QButtonGroup, QFrame, QLabel, QRadioButton, QVBoxLayout, QWidget
 
-from ..core.export_presets import ExportPreset, get_preset_manager
+from ..core.export_presets import ExportPreset, get_preset
 from ..dialogs.base.wizard_base import WizardStep
 
 logger = logging.getLogger(__name__)
@@ -118,7 +118,6 @@ class ExportTypeStepSimple(WizardStep):
         )
         self.frame_count = frame_count
         self.segment_manager = segment_manager
-        self._preset_manager = get_preset_manager()
         self._selected_preset: ExportPreset | None = None
         self._options: list[SimpleExportOption] = []
         self._button_group = QButtonGroup()
@@ -208,7 +207,7 @@ class ExportTypeStepSimple(WizardStep):
         # Create option widgets
         first_option = True
         for preset_name in preset_names:
-            preset = self._preset_manager.get_preset(preset_name)
+            preset = get_preset(preset_name)
             if preset:
                 option = SimpleExportOption(preset)
                 option.clicked.connect(lambda p=preset: self._on_option_clicked(p))
@@ -286,7 +285,7 @@ class ExportTypeStepSimple(WizardStep):
         """Set data (for going back in wizard)."""
         preset_name = data.get('preset_name')
         if preset_name:
-            preset = self._preset_manager.get_preset(preset_name)
+            preset = get_preset(preset_name)
             if preset:
                 self._select_preset(preset)
 

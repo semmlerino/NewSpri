@@ -3,14 +3,15 @@ Integration tests for the integrated export dialog workflow.
 Updated to match current ModernExportSettings API.
 """
 
-import pytest
 from unittest.mock import Mock
-from PySide6.QtWidgets import QApplication
+
+import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap, QColor
+from PySide6.QtGui import QColor, QPixmap
+from PySide6.QtWidgets import QApplication
 
 from export import ExportDialog
-from export.core.export_presets import get_preset_manager
+from export.core.export_presets import get_preset
 
 
 class TestIntegratedExportWorkflow:
@@ -74,8 +75,7 @@ class TestIntegratedExportWorkflow:
         qtbot.addWidget(export_dialog)
 
         # Select sprite sheet type
-        preset_manager = get_preset_manager()
-        sheet_preset = preset_manager.get_preset("sprite_sheet")
+        sheet_preset = get_preset("sprite_sheet")
         export_dialog.type_step._select_preset(sheet_preset)
 
         # Navigate to settings and wait for step change
@@ -97,8 +97,7 @@ class TestIntegratedExportWorkflow:
         qtbot.addWidget(export_dialog)
 
         # Navigate to sprite sheet settings
-        preset_manager = get_preset_manager()
-        sheet_preset = preset_manager.get_preset("sprite_sheet")
+        sheet_preset = get_preset("sprite_sheet")
         export_dialog.type_step._select_preset(sheet_preset)
         qtbot.mouseClick(export_dialog.wizard.next_button, Qt.LeftButton)
         self._wait_for_step(qtbot, export_dialog, 1)
@@ -135,8 +134,7 @@ class TestIntegratedExportWorkflow:
         qtbot.addWidget(export_dialog)
 
         # Navigate to settings
-        preset_manager = get_preset_manager()
-        export_dialog.type_step._select_preset(preset_manager.get_preset("individual_frames"))
+        export_dialog.type_step._select_preset(get_preset("individual_frames"))
         qtbot.mouseClick(export_dialog.wizard.next_button, Qt.LeftButton)
         self._wait_for_step(qtbot, export_dialog, 1)
 
@@ -161,8 +159,7 @@ class TestIntegratedExportWorkflow:
         qtbot.addWidget(export_dialog)
 
         # Select individual frames
-        preset_manager = get_preset_manager()
-        export_dialog.type_step._select_preset(preset_manager.get_preset("individual_frames"))
+        export_dialog.type_step._select_preset(get_preset("individual_frames"))
         qtbot.mouseClick(export_dialog.wizard.next_button, Qt.LeftButton)
         self._wait_for_step(qtbot, export_dialog, 1)
 
@@ -193,8 +190,7 @@ class TestIntegratedExportWorkflow:
         qtbot.addWidget(export_dialog)
 
         # Select sprite sheet
-        preset_manager = get_preset_manager()
-        export_dialog.type_step._select_preset(preset_manager.get_preset("sprite_sheet"))
+        export_dialog.type_step._select_preset(get_preset("sprite_sheet"))
         qtbot.mouseClick(export_dialog.wizard.next_button, Qt.LeftButton)
         self._wait_for_step(qtbot, export_dialog, 1)
 
@@ -228,8 +224,7 @@ class TestIntegratedExportWorkflow:
         qtbot.addWidget(export_dialog)
 
         # Select selected frames preset
-        preset_manager = get_preset_manager()
-        export_dialog.type_step._select_preset(preset_manager.get_preset("selected_frames"))
+        export_dialog.type_step._select_preset(get_preset("selected_frames"))
         qtbot.mouseClick(export_dialog.wizard.next_button, Qt.LeftButton)
         self._wait_for_step(qtbot, export_dialog, 1)
 
@@ -259,8 +254,7 @@ class TestIntegratedExportWorkflow:
         qtbot.addWidget(export_dialog)
 
         # Navigate to settings
-        preset_manager = get_preset_manager()
-        export_dialog.type_step._select_preset(preset_manager.get_preset("sprite_sheet"))
+        export_dialog.type_step._select_preset(get_preset("sprite_sheet"))
         qtbot.mouseClick(export_dialog.wizard.next_button, Qt.LeftButton)
         self._wait_for_step(qtbot, export_dialog, 1)
 
@@ -280,8 +274,7 @@ class TestIntegratedExportWorkflow:
         qtbot.addWidget(export_dialog)
 
         # Navigate to settings with content
-        preset_manager = get_preset_manager()
-        export_dialog.type_step._select_preset(preset_manager.get_preset("sprite_sheet"))
+        export_dialog.type_step._select_preset(get_preset("sprite_sheet"))
         qtbot.mouseClick(export_dialog.wizard.next_button, Qt.LeftButton)
         self._wait_for_step(qtbot, export_dialog, 1)
 
@@ -305,8 +298,7 @@ class TestIntegratedExportWorkflow:
         qtbot.addWidget(export_dialog)
 
         # Navigate to settings
-        preset_manager = get_preset_manager()
-        export_dialog.type_step._select_preset(preset_manager.get_preset("individual_frames"))
+        export_dialog.type_step._select_preset(get_preset("individual_frames"))
         qtbot.mouseClick(export_dialog.wizard.next_button, Qt.LeftButton)
         self._wait_for_step(qtbot, export_dialog, 1)
 
@@ -338,8 +330,7 @@ class TestIntegratedExportWorkflow:
         qtbot.addWidget(export_dialog)
 
         # Navigate to settings
-        preset_manager = get_preset_manager()
-        export_dialog.type_step._select_preset(preset_manager.get_preset("individual_frames"))
+        export_dialog.type_step._select_preset(get_preset("individual_frames"))
         qtbot.mouseClick(export_dialog.wizard.next_button, Qt.LeftButton)
         self._wait_for_step(qtbot, export_dialog, 1)
 
@@ -363,8 +354,7 @@ class TestIntegratedExportWorkflow:
         qtbot.addWidget(export_dialog)
 
         # Navigate through wizard
-        preset_manager = get_preset_manager()
-        export_dialog.type_step._select_preset(preset_manager.get_preset("individual_frames"))
+        export_dialog.type_step._select_preset(get_preset("individual_frames"))
         qtbot.mouseClick(export_dialog.wizard.next_button, Qt.LeftButton)
         self._wait_for_step(qtbot, export_dialog, 1)
 

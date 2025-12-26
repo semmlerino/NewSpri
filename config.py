@@ -2,59 +2,17 @@
 """
 Configuration and Constants for Sprite Viewer
 Centralizes all magic numbers and settings for better maintainability.
+
+Consolidated from 13 classes to 6 logical groups:
+- CanvasConfig: Canvas display and interaction
+- AnimationConfig: Animation playback
+- FrameExtractionConfig: Frame size and detection
+- UIConfig: All UI-related settings (layout, styles, colors, fonts, sliders, drawing)
+- AppConfig: Application-wide settings (metadata, files, persistence)
+- ExportConfig: Export functionality
 """
 
 from PySide6.QtGui import QColor
-
-
-class ColorsConfig:
-    """Semantic color constants for consistent UI styling."""
-
-    # Mode indicators (Grid vs CCL detection)
-    MODE_GRID = "#4CAF50"  # Material Green 500
-    MODE_GRID_HOVER = "#45a049"
-    MODE_CCL = "#2196F3"  # Material Blue 500
-    MODE_CCL_HOVER = "#1976D2"
-
-    # Play button states
-    PLAY_STOPPED = "#4CAF50"  # Green - ready to play
-    PLAY_STOPPED_HOVER = "#45a049"
-    PLAY_PLAYING = "#FF9800"  # Orange - currently playing
-    PLAY_PLAYING_HOVER = "#F57C00"
-
-    # Selection and highlighting
-    SELECTION_HIGHLIGHT = "#2196F3"  # Blue for selected items
-    SELECTION_BORDER = "#1976D2"
-
-    # Action buttons
-    BUTTON_DANGER = "#f44336"  # Red for destructive actions
-    BUTTON_DANGER_HOVER = "#d32f2f"
-    BUTTON_PRIMARY = "#1976D2"  # Blue for primary actions
-    BUTTON_PRIMARY_HOVER = "#1565C0"
-
-    # Neutral/disabled
-    BUTTON_DISABLED_BG = "#cccccc"
-    BUTTON_DISABLED_TEXT = "#666666"
-
-    # Segment colors (Material Design palette for animation segments)
-    SEGMENT_PALETTE = [
-        "#E91E63",  # Pink
-        "#9C27B0",  # Purple
-        "#673AB7",  # Deep Purple
-        "#3F51B5",  # Indigo
-        "#2196F3",  # Blue
-        "#03A9F4",  # Light Blue
-        "#00BCD4",  # Cyan
-        "#009688",  # Teal
-        "#4CAF50",  # Green
-        "#8BC34A",  # Light Green
-        "#CDDC39",  # Lime
-        "#FFEB3B",  # Yellow
-        "#FFC107",  # Amber
-        "#FF9800",  # Orange
-        "#FF5722",  # Deep Orange
-        "#795548",  # Brown
-    ]
 
 
 class CanvasConfig:
@@ -99,7 +57,7 @@ class AnimationConfig:
     SPEED_STEPS = (1, 2, 4, 6, 8, 10, 12, 15, 20, 24, 30, 60)
 
     # Timer calculation
-    TIMER_BASE = 1000  # milliseconds  # milliseconds
+    TIMER_BASE = 1000  # milliseconds
 
 
 class FrameExtractionConfig:
@@ -172,7 +130,14 @@ class FrameExtractionConfig:
 
 
 class UIConfig:
-    """User interface layout and sizing settings."""
+    """
+    User interface settings - consolidated from UIConfig, StylesConfig,
+    ColorsConfig, FontConfig, SliderConfig, and DrawingConfig.
+    """
+
+    # ==========================================================================
+    # LAYOUT AND SIZING (formerly UIConfig)
+    # ==========================================================================
 
     # Main window (optimized sizing - 17% smaller)
     DEFAULT_WINDOW_WIDTH = 1000
@@ -226,281 +191,362 @@ class UIConfig:
     PREVIEW_SIZE = 120  # Segment preview display size
     PREVIEW_SCALED = 112  # Scaled preview (with margin)
 
+    # ==========================================================================
+    # COLORS (formerly ColorsConfig)
+    # ==========================================================================
 
-class DrawingConfig:
-    """Drawing and rendering settings."""
+    class Colors:
+        """Semantic color constants for consistent UI styling."""
 
-    # Checkerboard background
-    CHECKERBOARD_TILE_SIZE = 16
-    CHECKERBOARD_LIGHT_COLOR = QColor(255, 255, 255)
-    CHECKERBOARD_DARK_COLOR = QColor(192, 192, 192)
+        # Mode indicators (Grid vs CCL detection)
+        MODE_GRID = "#4CAF50"  # Material Green 500
+        MODE_GRID_HOVER = "#45a049"
+        MODE_CCL = "#2196F3"  # Material Blue 500
+        MODE_CCL_HOVER = "#1976D2"
 
-    # Frame info overlay
-    FRAME_INFO_WIDTH = 140
-    FRAME_INFO_HEIGHT = 30
-    FRAME_INFO_MARGIN_RIGHT = 150
-    FRAME_INFO_MARGIN_TOP = 10
-    FRAME_INFO_BG_ALPHA = 180  # Semi-transparent background
-    FRAME_INFO_TEXT_COLOR = QColor(255, 255, 255)
+        # Play button states
+        PLAY_STOPPED = "#4CAF50"  # Green - ready to play
+        PLAY_STOPPED_HOVER = "#45a049"
+        PLAY_PLAYING = "#FF9800"  # Orange - currently playing
+        PLAY_PLAYING_HOVER = "#F57C00"
 
-    # Grid overlay
-    GRID_PEN_WIDTH = 1
-    GRID_COLOR = QColor(255, 0, 0, 128)  # Semi-transparent red
+        # Selection and highlighting
+        SELECTION_HIGHLIGHT = "#2196F3"  # Blue for selected items
+        SELECTION_BORDER = "#1976D2"
+
+        # Action buttons
+        BUTTON_DANGER = "#f44336"  # Red for destructive actions
+        BUTTON_DANGER_HOVER = "#d32f2f"
+        BUTTON_PRIMARY = "#1976D2"  # Blue for primary actions
+        BUTTON_PRIMARY_HOVER = "#1565C0"
+
+        # Neutral/disabled
+        BUTTON_DISABLED_BG = "#cccccc"
+        BUTTON_DISABLED_TEXT = "#666666"
+
+        # Segment colors (Material Design palette for animation segments)
+        SEGMENT_PALETTE = [
+            "#E91E63",  # Pink
+            "#9C27B0",  # Purple
+            "#673AB7",  # Deep Purple
+            "#3F51B5",  # Indigo
+            "#2196F3",  # Blue
+            "#03A9F4",  # Light Blue
+            "#00BCD4",  # Cyan
+            "#009688",  # Teal
+            "#4CAF50",  # Green
+            "#8BC34A",  # Light Green
+            "#CDDC39",  # Lime
+            "#FFEB3B",  # Yellow
+            "#FFC107",  # Amber
+            "#FF9800",  # Orange
+            "#FF5722",  # Deep Orange
+            "#795548",  # Brown
+        ]
+
+    # ==========================================================================
+    # STYLES (formerly StylesConfig)
+    # ==========================================================================
+
+    class Styles:
+        """CSS stylesheet constants for UI components."""
+
+        # Canvas styles
+        CANVAS_NORMAL = """
+            QLabel {
+                border: 2px solid #ccc;
+                border-radius: 4px;
+                background-color: #f5f5f5;
+            }
+        """
+        CANVAS_DRAG_HOVER = """
+            QLabel {
+                border: 4px dashed #4CAF50;
+                border-radius: 8px;
+                background-color: #e8f5e9;
+            }
+        """
+
+        # Button styles
+        PLAY_BUTTON_STOPPED = """
+            QPushButton {
+                font-size: 14pt;
+                font-weight: bold;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QPushButton:pressed {
+                background-color: #3d8b40;
+            }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #666666;
+            }
+        """
+        PLAY_BUTTON_PLAYING = """
+            QPushButton {
+                font-size: 14pt;
+                font-weight: bold;
+                background-color: #ff9800;
+                color: white;
+                border: none;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #e68900;
+            }
+            QPushButton:pressed {
+                background-color: #cc7a00;
+            }
+        """
+
+        # Container styles
+        PLAYBACK_CONTROLS_FRAME = """
+            QFrame {
+                background-color: #f8f8f8;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                padding: 10px;
+            }
+        """
+        FRAME_EXTRACTOR_GROUPBOX = """
+            QGroupBox {
+                font-weight: bold;
+                border: 2px solid #cccccc;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+            }
+        """
+        MAIN_TOOLBAR = """
+            QToolBar {
+                background-color: #f5f5f5;
+                border-bottom: 1px solid #ddd;
+                padding: 5px;
+                spacing: 5px;
+            }
+            QToolButton {
+                background-color: white;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                padding: 5px;
+                margin: 2px;
+            }
+            QToolButton:hover {
+                background-color: #e8e8e8;
+                border-color: #bbb;
+            }
+            QToolButton:pressed {
+                background-color: #ddd;
+            }
+        """
+
+        # Label styles
+        INFO_LABEL = "color: #666; font-size: 10pt;"
+        HELP_LABEL = "color: #888; font-style: italic; padding: 10px;"
+        SPEED_LABEL = "font-weight: bold;"
+        ZOOM_DISPLAY = """
+            QLabel {
+                background-color: white;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                padding: 5px;
+                font-weight: bold;
+            }
+        """
+        PRESET_LABEL = "font-weight: normal; margin-bottom: 5px;"
+        CUSTOM_LABEL = "font-weight: normal; margin-top: 10px;"
+        OFFSET_LABEL = "font-weight: normal; margin-top: 10px;"
+        GRID_CHECKBOX = "margin-top: 10px;"
+
+        # Navigation buttons (uses outer class values - initialized below)
+        NAVIGATION_BUTTONS: str = ""
+
+    # ==========================================================================
+    # SLIDER (formerly SliderConfig)
+    # ==========================================================================
+
+    class Slider:
+        """Slider and control widget settings."""
+
+        # Zoom slider
+        ZOOM_SLIDER_MIN = 10    # 0.1x zoom (10%)
+        ZOOM_SLIDER_MAX = 1000  # 10x zoom (1000%)
+        ZOOM_SLIDER_DEFAULT = 100  # 1x zoom (100%)
+
+        # FPS slider
+        FPS_SLIDER_TICK_INTERVAL = 10
+
+        # Frame slider
+        FRAME_SLIDER_MIN = 0
+
+        # FPS value label (compacted)
+        FPS_VALUE_MIN_WIDTH = 35  # Reduced from 50
+
+    # ==========================================================================
+    # FONT (formerly FontConfig)
+    # ==========================================================================
+
+    class Font:
+        """Font and text styling settings."""
+
+        # Frame info overlay font
+        FRAME_INFO_FONT_SIZE = 11
+
+    # ==========================================================================
+    # DRAWING (formerly DrawingConfig)
+    # ==========================================================================
+
+    class Drawing:
+        """Drawing and rendering settings."""
+
+        # Checkerboard background
+        CHECKERBOARD_TILE_SIZE = 16
+        CHECKERBOARD_LIGHT_COLOR = QColor(255, 255, 255)
+        CHECKERBOARD_DARK_COLOR = QColor(192, 192, 192)
+
+        # Frame info overlay
+        FRAME_INFO_WIDTH = 140
+        FRAME_INFO_HEIGHT = 30
+        FRAME_INFO_MARGIN_RIGHT = 150
+        FRAME_INFO_MARGIN_TOP = 10
+        FRAME_INFO_BG_ALPHA = 180  # Semi-transparent background
+        FRAME_INFO_TEXT_COLOR = QColor(255, 255, 255)
+
+        # Grid overlay
+        GRID_PEN_WIDTH = 1
+        GRID_COLOR = QColor(255, 0, 0, 128)  # Semi-transparent red
 
 
-class FileConfig:
-    """File handling and I/O settings."""
-
-    # Supported image formats
-    SUPPORTED_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.bmp', '.gif')
-
-    # File dialog filter
-    IMAGE_FILTER = "Image Files (*.png *.jpg *.jpeg *.bmp *.gif);;All Files (*)"
-
-    @staticmethod
-    def get_default_export_directory():
-        """Get default export directory."""
-        import os
-        from pathlib import Path
-
-        # Try Desktop first
-        desktop = Path.home() / "Desktop"
-        if desktop.exists() and os.access(desktop, os.W_OK):
-            return desktop / "sprite_exports"
-
-        # Fallback to Documents
-        documents = Path.home() / "Documents"
-        if documents.exists() and os.access(documents, os.W_OK):
-            return documents / "sprite_exports"
-
-        # Last resort: current directory
-        return Path.cwd() / "sprite_exports"
-
-
-class SliderConfig:
-    """Slider and control widget settings."""
-
-    # Zoom slider
-    ZOOM_SLIDER_MIN = 10    # 0.1x zoom (10%)
-    ZOOM_SLIDER_MAX = 1000  # 10x zoom (1000%)
-    ZOOM_SLIDER_DEFAULT = 100  # 1x zoom (100%)
-
-    # FPS slider
-    FPS_SLIDER_TICK_INTERVAL = 10
-
-    # Frame slider
-    FRAME_SLIDER_MIN = 0
-
-    # FPS value label (compacted)
-    FPS_VALUE_MIN_WIDTH = 35  # Reduced from 50
-
-
-class FontConfig:
-    """Font and text styling settings."""
-
-    # Frame info overlay font
-    FRAME_INFO_FONT_SIZE = 11
+# Initialize NAVIGATION_BUTTONS style after class is defined
+UIConfig.Styles.NAVIGATION_BUTTONS = f"""
+    QPushButton {{
+        font-size: 12pt;
+        min-width: {UIConfig.NAV_BUTTON_WIDTH_PX};
+        min-height: {UIConfig.NAV_BUTTON_HEIGHT_PX};
+        background-color: #e0e0e0;
+        border: 1px solid #bbb;
+        border-radius: 4px;
+    }}
+    QPushButton:hover:enabled {{
+        background-color: #d0d0d0;
+    }}
+    QPushButton:pressed {{
+        background-color: #c0c0c0;
+    }}
+    QPushButton:disabled {{
+        color: #999;
+        background-color: #f0f0f0;
+    }}
+"""
 
 
 class AppConfig:
-    """Application-wide settings."""
+    """
+    Application-wide settings - consolidated from AppConfig, FileConfig,
+    and SettingsConfig.
+    """
 
-    # Application metadata
+    # ==========================================================================
+    # APPLICATION METADATA (formerly AppConfig)
+    # ==========================================================================
+
     APP_NAME = "Python Sprite Viewer"
     APP_VERSION = "2.0"
-
-    # Window title
     WINDOW_TITLE = "Python Sprite Viewer"
 
     # Status messages
     WELCOME_MESSAGE = "Welcome! Drag & drop sprite sheets or click Open to get started"
     READY_MESSAGE = "Ready. Drag & drop sprite sheets or use File > Open"
 
+    # ==========================================================================
+    # FILE HANDLING (formerly FileConfig)
+    # ==========================================================================
 
-class SettingsConfig:
-    """Settings persistence and application preferences."""
+    class File:
+        """File handling and I/O settings."""
 
-    # QSettings configuration
-    ORGANIZATION_NAME = "PythonSpriteViewer"
-    APPLICATION_NAME = "SpriteViewer"
+        # Supported image formats
+        SUPPORTED_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.bmp', '.gif')
 
-    # Recent files
-    MAX_RECENT_FILES = 10
+        # File dialog filter
+        IMAGE_FILTER = "Image Files (*.png *.jpg *.jpeg *.bmp *.gif);;All Files (*)"
 
-    # Auto-save settings
-    AUTOSAVE_DELAY_MS = 1000  # Debounce delay before saving
+        @staticmethod
+        def get_default_export_directory():
+            """Get default export directory."""
+            import os
+            from pathlib import Path
 
-    # Default values for settings that don't exist
-    DEFAULTS = {
-        # Window geometry (will be set by application)
-        'window/geometry': None,
-        'window/state': None,
-        'window/splitter_state': None,
+            # Try Desktop first
+            desktop = Path.home() / "Desktop"
+            if desktop.exists() and os.access(desktop, os.W_OK):
+                return desktop / "sprite_exports"
 
-        # Frame extraction defaults
-        'extraction/last_width': 32,
-        'extraction/last_height': 32,
-        'extraction/last_offset_x': 0,
-        'extraction/last_offset_y': 0,
-        'extraction/last_spacing_x': 0,
-        'extraction/last_spacing_y': 0,
-        'extraction/last_mode': 'grid',
+            # Fallback to Documents
+            documents = Path.home() / "Documents"
+            if documents.exists() and os.access(documents, os.W_OK):
+                return documents / "sprite_exports"
 
-        # Display preferences
-        'display/grid_visible': False,
-        'display/last_zoom': 1.0,
-        'display/zoom_fit_tiny': True,
+            # Last resort: current directory
+            return Path.cwd() / "sprite_exports"
 
-        # Animation preferences
-        'animation/last_fps': 10,
-        'animation/loop_mode': True,
+    # ==========================================================================
+    # SETTINGS PERSISTENCE (formerly SettingsConfig)
+    # ==========================================================================
+
+    class Settings:
+        """Settings persistence and application preferences."""
+
+        # QSettings configuration
+        ORGANIZATION_NAME = "PythonSpriteViewer"
+        APPLICATION_NAME = "SpriteViewer"
 
         # Recent files
-        'recent/files': [],
-        'recent/max_count': 10,
-    }
+        MAX_RECENT_FILES = 10
 
+        # Auto-save settings
+        AUTOSAVE_DELAY_MS = 1000  # Debounce delay before saving
 
-class StylesConfig:
-    """CSS stylesheet constants for UI components."""
+        # Default values for settings that don't exist
+        DEFAULTS = {
+            # Window geometry (will be set by application)
+            'window/geometry': None,
+            'window/state': None,
+            'window/splitter_state': None,
 
-    # Canvas styles
-    CANVAS_NORMAL = """
-        QLabel {
-            border: 2px solid #ccc;
-            border-radius: 4px;
-            background-color: #f5f5f5;
-        }
-    """
-    CANVAS_DRAG_HOVER = """
-        QLabel {
-            border: 4px dashed #4CAF50;
-            border-radius: 8px;
-            background-color: #e8f5e9;
-        }
-    """
+            # Frame extraction defaults
+            'extraction/last_width': 32,
+            'extraction/last_height': 32,
+            'extraction/last_offset_x': 0,
+            'extraction/last_offset_y': 0,
+            'extraction/last_spacing_x': 0,
+            'extraction/last_spacing_y': 0,
+            'extraction/last_mode': 'grid',
 
-    # Button styles
-    PLAY_BUTTON_STOPPED = """
-        QPushButton {
-            font-size: 14pt;
-            font-weight: bold;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-        }
-        QPushButton:hover {
-            background-color: #45a049;
-        }
-        QPushButton:pressed {
-            background-color: #3d8b40;
-        }
-        QPushButton:disabled {
-            background-color: #cccccc;
-            color: #666666;
-        }
-    """
-    PLAY_BUTTON_PLAYING = """
-        QPushButton {
-            font-size: 14pt;
-            font-weight: bold;
-            background-color: #ff9800;
-            color: white;
-            border: none;
-            border-radius: 4px;
-        }
-        QPushButton:hover {
-            background-color: #e68900;
-        }
-        QPushButton:pressed {
-            background-color: #cc7a00;
-        }
-    """
-    NAVIGATION_BUTTONS = f"""
-        QPushButton {{
-            font-size: 12pt;
-            min-width: {UIConfig.NAV_BUTTON_WIDTH_PX};
-            min-height: {UIConfig.NAV_BUTTON_HEIGHT_PX};
-            background-color: #e0e0e0;
-            border: 1px solid #bbb;
-            border-radius: 4px;
-        }}
-        QPushButton:hover:enabled {{
-            background-color: #d0d0d0;
-        }}
-        QPushButton:pressed {{
-            background-color: #c0c0c0;
-        }}
-        QPushButton:disabled {{
-            color: #999;
-            background-color: #f0f0f0;
-        }}
-    """
+            # Display preferences
+            'display/grid_visible': False,
+            'display/last_zoom': 1.0,
+            'display/zoom_fit_tiny': True,
 
-    # Container styles
-    PLAYBACK_CONTROLS_FRAME = """
-        QFrame {
-            background-color: #f8f8f8;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            padding: 10px;
-        }
-    """
-    FRAME_EXTRACTOR_GROUPBOX = """
-        QGroupBox {
-            font-weight: bold;
-            border: 2px solid #cccccc;
-            border-radius: 5px;
-            margin-top: 10px;
-            padding-top: 10px;
-        }
-        QGroupBox::title {
-            subcontrol-origin: margin;
-            left: 10px;
-            padding: 0 5px 0 5px;
-        }
-    """
-    MAIN_TOOLBAR = """
-        QToolBar {
-            background-color: #f5f5f5;
-            border-bottom: 1px solid #ddd;
-            padding: 5px;
-            spacing: 5px;
-        }
-        QToolButton {
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 5px;
-            margin: 2px;
-        }
-        QToolButton:hover {
-            background-color: #e8e8e8;
-            border-color: #bbb;
-        }
-        QToolButton:pressed {
-            background-color: #ddd;
-        }
-    """
+            # Animation preferences
+            'animation/last_fps': 10,
+            'animation/loop_mode': True,
 
-    # Label styles
-    INFO_LABEL = "color: #666; font-size: 10pt;"
-    HELP_LABEL = "color: #888; font-style: italic; padding: 10px;"
-    SPEED_LABEL = "font-weight: bold;"
-    ZOOM_DISPLAY = """
-        QLabel {
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 5px;
-            font-weight: bold;
+            # Recent files
+            'recent/files': [],
+            'recent/max_count': 10,
         }
-    """
-    PRESET_LABEL = "font-weight: normal; margin-bottom: 5px;"
-    CUSTOM_LABEL = "font-weight: normal; margin-top: 10px;"
-    OFFSET_LABEL = "font-weight: normal; margin-top: 10px;"
-    GRID_CHECKBOX = "margin-top: 10px;"
 
 
 class ExportConfig:
@@ -553,23 +599,30 @@ class ExportConfig:
     ENABLE_ANTIALIASING = True      # Enable antialiasing for scaled sprites
 
 
-# Convenience access to all configs
+# =============================================================================
+# MAIN CONFIG CLASS - Provides unified access with backward compatibility
+# =============================================================================
+
 class Config:
     """Main configuration class providing access to all settings."""
 
+    # Primary config groups (6 logical groups)
     Canvas = CanvasConfig
     Animation = AnimationConfig
     FrameExtraction = FrameExtractionConfig
     UI = UIConfig
-    Drawing = DrawingConfig
-    File = FileConfig
-    Slider = SliderConfig
-    Font = FontConfig
     App = AppConfig
-    Settings = SettingsConfig
     Export = ExportConfig
-    Styles = StylesConfig
-    Colors = ColorsConfig
+
+    # Backward compatibility aliases for nested configs
+    # These allow existing code using Config.Colors.X to continue working
+    Colors = UIConfig.Colors
+    Styles = UIConfig.Styles
+    Slider = UIConfig.Slider
+    Font = UIConfig.Font
+    Drawing = UIConfig.Drawing
+    File = AppConfig.File
+    Settings = AppConfig.Settings
 
 
 # Export for easy importing
@@ -577,15 +630,8 @@ __all__ = [
     'AnimationConfig',
     'AppConfig',
     'CanvasConfig',
-    'ColorsConfig',
     'Config',
-    'DrawingConfig',
     'ExportConfig',
-    'FileConfig',
-    'FontConfig',
     'FrameExtractionConfig',
-    'SettingsConfig',
-    'SliderConfig',
-    'StylesConfig',
     'UIConfig',
 ]
