@@ -660,11 +660,18 @@ class SpriteViewer(QMainWindow):
         # Save settings
         self._settings_manager.save_window_geometry(self)
 
+        # Clean up controllers (must be before coordinators)
+        self._animation_controller.shutdown()
+        self._segment_controller.cleanup()
+
         # Clean up coordinators
         self._event_coordinator.cleanup()
         self._animation_coordinator.cleanup()
         self._export_coordinator.cleanup()
         self._ui_helper.cleanup()
+
+        # Force settings sync to ensure all pending changes are saved
+        self._settings_manager.sync()
 
         # Accept close
         event.accept()

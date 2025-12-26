@@ -225,6 +225,26 @@ class ExportWorker(QThread):
         """Cancel the export operation."""
         self._cancelled = True
 
+    def _validate_segment_info(self) -> tuple[bool, str]:
+        """Validate segment_info structure for segments_per_row mode.
+
+        Returns:
+            Tuple of (is_valid, error_message)
+        """
+        if not self.task.segment_info:
+            return False, "No segment data for segments_per_row mode"
+
+        required_keys = {'start_frame', 'end_frame', 'name'}
+        for i, seg in enumerate(self.task.segment_info):
+            missing = required_keys - seg.keys()
+            if missing:
+                return False, f"Segment {i} missing required keys: {missing}"
+            if not isinstance(seg['start_frame'], int) or not isinstance(seg['end_frame'], int):
+                return False, f"Segment {i} has invalid frame indices"
+            if seg['end_frame'] < seg['start_frame']:
+                return False, f"Segment {i} has end_frame < start_frame"
+        return True, ""
+
     def _export_individual_frames(self) -> None:
         """Export frames as individual files."""
         total_frames = len(self.task.frames)
@@ -284,6 +304,13 @@ class ExportWorker(QThread):
         # Get layout configuration
         layout = self.task.sprite_sheet_layout
         frame_count = len(self.task.frames)
+
+        # Validate segment_info for segments_per_row mode
+        if layout.mode == 'segments_per_row':
+            is_valid, error_msg = self._validate_segment_info()
+            if not is_valid:
+                self.finished.emit(False, error_msg)
+                return
 
         # Get original frame dimensions
         original_frame_width = self.task.frames[0].width()

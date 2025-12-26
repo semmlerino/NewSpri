@@ -108,7 +108,12 @@ class SettingsManager(QObject):
             self._pending_changes.clear()
 
     def sync(self) -> None:
-        """Force immediate synchronization of settings to disk."""
+        """Force immediate synchronization of settings to disk.
+
+        Stops the autosave timer and flushes all pending changes.
+        Should be called during application shutdown.
+        """
+        self._autosave_timer.stop()
         self._settings.sync()
         self._pending_changes.clear()
 

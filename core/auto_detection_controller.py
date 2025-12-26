@@ -5,11 +5,15 @@ Manages auto-detection workflows and UI feedback for sprite sheet analysis.
 Extracted from sprite_viewer.py to reduce complexity and improve maintainability.
 """
 
+import logging
+
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox
 
 from config import Config
 from utils.ui_common import extract_confidence_from_message, parse_detection_tuple
+
+logger = logging.getLogger(__name__)
 
 
 class AutoDetectionController(QObject):
@@ -127,6 +131,7 @@ class AutoDetectionController(QObject):
             return success
 
         except Exception:
+            logger.exception("Auto-detection failed with unexpected error")
             self._set_workflow_state("failed")
             return False
 

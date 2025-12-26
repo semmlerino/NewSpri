@@ -127,8 +127,10 @@ class AnimationSegmentManager(QObject):
             # Temporarily disable auto-save to prevent saving empty segments to old file
             was_auto_save_enabled = self._auto_save_enabled
             self._auto_save_enabled = False
-            self.clear_segments()
-            self._auto_save_enabled = was_auto_save_enabled
+            try:
+                self.clear_segments()
+            finally:
+                self._auto_save_enabled = was_auto_save_enabled
 
         self._sprite_sheet_path = sprite_sheet_path
         self._max_frames = frame_count
@@ -508,8 +510,10 @@ class AnimationSegmentManager(QObject):
             # Temporarily disable auto-save to prevent overwriting the file we're loading
             was_auto_save_enabled = self._auto_save_enabled
             self._auto_save_enabled = False
-            self.clear_segments()
-            self._auto_save_enabled = was_auto_save_enabled
+            try:
+                self.clear_segments()
+            finally:
+                self._auto_save_enabled = was_auto_save_enabled
 
             # Load segments and track any that are skipped
             loaded_count = 0

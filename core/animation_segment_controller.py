@@ -72,6 +72,16 @@ class AnimationSegmentController(QObject):
 
     def set_grid_view(self, grid_view) -> None:
         """Set the animation grid view dependency."""
+        # Disconnect old grid_view signals if exists
+        if self._grid_view is not None and hasattr(self._grid_view, 'exportRequested'):
+            with contextlib.suppress(RuntimeError, TypeError):
+                self._grid_view.exportRequested.disconnect(self._on_export_requested)
+            # Remove from tracked connections
+            self._signal_connections = [
+                (sig, slot) for sig, slot in self._signal_connections
+                if not (sig is self._grid_view.exportRequested and slot is self._on_export_requested)
+            ]
+
         self._grid_view = grid_view
 
         # Connect grid view signals - track for cleanup
@@ -94,6 +104,24 @@ class AnimationSegmentController(QObject):
 
     def set_segment_preview(self, preview_widget) -> None:
         """Set the animation segment preview widget dependency."""
+        # Disconnect old preview widget signals if exists
+        if self._segment_preview is not None:
+            old_connections = [
+                (self._segment_preview.segmentRemoved, self.delete_segment),
+                (self._segment_preview.playbackStateChanged, self._on_preview_playback_changed),
+                (self._segment_preview.segmentBounceChanged, self._on_segment_bounce_changed),
+                (self._segment_preview.segmentFrameHoldsChanged, self._on_segment_frame_holds_changed),
+            ]
+            for signal, slot in old_connections:
+                with contextlib.suppress(RuntimeError, TypeError, AttributeError):
+                    signal.disconnect(slot)
+            # Remove from tracked connections
+            old_signals = {s for s, _ in old_connections}
+            self._signal_connections = [
+                (sig, slot) for sig, slot in self._signal_connections
+                if sig not in old_signals
+            ]
+
         self._segment_preview = preview_widget
         if self._segment_preview:
             # Connect preview widget signals - track for cleanup
@@ -241,9 +269,12 @@ class AnimationSegmentController(QObject):
         if hasattr(self._grid_view, 'rename_segment'):
             self._grid_view.rename_segment(old_name, new_name)
         elif hasattr(self._grid_view, 'has_segment') and self._grid_view.has_segment(old_name):
-            # Fallback for backward compatibility
+            # Fallback for backward compatibility: get updated segment from manager
             self._grid_view.delete_segment(old_name)
-            self._grid_view.add_segment(segment)
+            if self._segment_manager:
+                updated_segment = self._segment_manager.get_segment(new_name)
+                if updated_segment:
+                    self._grid_view.add_segment(updated_segment)
 
     def _remove_from_grid_view(self, segment_name: str) -> None:
         """Remove failed segment from grid view."""

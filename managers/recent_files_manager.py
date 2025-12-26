@@ -122,6 +122,11 @@ class RecentFilesManager(QObject):
         if not self._recent_menu:
             return
 
+        # Disconnect signals from existing actions before clearing
+        for action in self._file_actions:
+            with contextlib.suppress(RuntimeError, TypeError):
+                action.triggered.disconnect()
+
         # Clear existing actions
         self._recent_menu.clear()
         self._file_actions.clear()

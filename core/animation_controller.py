@@ -53,7 +53,6 @@ class AnimationController(QObject):
         # ============================================================================
 
         self._animation_timer: QTimer = QTimer()
-        self._animation_timer.timeout.connect(self._on_timer_timeout)
         self._animation_timer.setSingleShot(False)  # Repeating timer
 
         # ============================================================================
@@ -75,8 +74,12 @@ class AnimationController(QObject):
         # Timer precision tracking (for get_actual_fps)
         self._timer_precision: float = 0.0
 
-        # Signal connection tracking for cleanup
-        self._signal_connections: list[tuple[Signal, object]] = []
+        # Signal connection tracking for cleanup (Signal | SignalInstance, slot)
+        self._signal_connections: list[tuple[object, object]] = []
+
+        # Connect timer and track the connection
+        self._animation_timer.timeout.connect(self._on_timer_timeout)
+        self._signal_connections.append((self._animation_timer.timeout, self._on_timer_timeout))
 
     # ============================================================================
     # CONTROLLER LIFECYCLE
@@ -117,15 +120,11 @@ class AnimationController(QObject):
 
         self._animation_timer.stop()
 
-        # Disconnect all tracked signal connections
+        # Disconnect all tracked signal connections (includes timer)
         for signal, slot in self._signal_connections:
             with contextlib.suppress(RuntimeError, TypeError):
                 signal.disconnect(slot)  # type: ignore[union-attr] - Signal has disconnect at runtime
         self._signal_connections.clear()
-
-        # Disconnect timer signal
-        with contextlib.suppress(RuntimeError, TypeError):
-            self._animation_timer.timeout.disconnect(self._on_timer_timeout)
 
         self._is_active = False
         self.statusChanged.emit("Animation controller shutdown")
