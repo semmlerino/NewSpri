@@ -390,7 +390,7 @@ class TestAdvancedKeyboardShortcuts:
         assert 'animation_restart' in viewer._shortcut_manager._registered_shortcuts
         
         # Test direct method call first
-        viewer._animation_coordinator.restart_animation()
+        viewer._restart_animation()
         assert viewer._sprite_model.current_frame == 0  # Should reset to 0
         
         # Reset to frame 5 for keyboard test

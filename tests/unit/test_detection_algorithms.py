@@ -18,9 +18,23 @@ from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtCore import Qt
 from PySide6.QtTest import QSignalSpy
 
-from sprite_model.detection.frame_detector import FrameDetector
-from sprite_model.detection.margin_detector import MarginDetector
-from sprite_model.detection.spacing_detector import SpacingDetector
+from sprite_model.sprite_detection import (
+    detect_content_based,
+    detect_frame_size,
+    detect_margins,
+    detect_rectangular_frames,
+    detect_spacing,
+)
+# Import private functions for testing
+from sprite_model.sprite_detection import (
+    _calculate_common_dimensions,
+    _detect_horizontal_spacing,
+    _detect_raw_margins,
+    _detect_vertical_spacing,
+    _has_content_in_region,
+    _score_frame_candidate,
+    _validate_margins,
+)
 from core.auto_detection_controller import AutoDetectionController
 from config import Config
 
@@ -29,9 +43,9 @@ class TestFrameDetector:
     """Test frame size detection algorithms."""
     
     def test_frame_detector_initialization(self):
-        """Test FrameDetector can be created."""
-        detector = FrameDetector()
-        assert detector is not None
+        """Test detect_frame_size function exists."""
+        # Functions don't need initialization - just verify they're callable
+        assert callable(detect_frame_size)
     
     @pytest.mark.parametrize("width,height,min_expected_size", [
         (256, 256, 32),  # Should find reasonable size
@@ -41,11 +55,10 @@ class TestFrameDetector:
     ])
     def test_detect_frame_size_common_sizes(self, qapp, width, height, min_expected_size):
         """Test frame detection with common sprite sheet dimensions."""
-        detector = FrameDetector()
         pixmap = QPixmap(width, height)
         pixmap.fill(Qt.red)
-        
-        success, frame_width, frame_height, message = detector.detect_frame_size(pixmap)
+
+        success, frame_width, frame_height, message = detect_frame_size(pixmap)
         
         assert success
         assert frame_width >= min_expected_size
@@ -62,12 +75,11 @@ class TestFrameDetector:
     
     def test_detect_frame_size_gcd_fallback(self, qapp):
         """Test GCD fallback for non-standard dimensions."""
-        detector = FrameDetector()
         # Create 48x48 pixmap (GCD should be 48, but might fall back to smaller)
         pixmap = QPixmap(48, 48)
         pixmap.fill(Qt.blue)
-        
-        success, frame_width, frame_height, message = detector.detect_frame_size(pixmap)
+
+        success, frame_width, frame_height, message = detect_frame_size(pixmap)
         
         # Should succeed with some reasonable size
         assert success
@@ -77,27 +89,27 @@ class TestFrameDetector:
     
     def test_detect_frame_size_invalid_input(self, qapp):
         """Test frame detection with invalid input."""
-        detector = FrameDetector()
+        # Removed - using function-based API
         
         # Test with None
-        success, width, height, message = detector.detect_frame_size(None)
+        success, width, height, message = detect_frame_size(None)
         assert not success
         assert "No sprite sheet provided" in message
         
         # Test with null pixmap
         null_pixmap = QPixmap()
-        success, width, height, message = detector.detect_frame_size(null_pixmap)
+        success, width, height, message = detect_frame_size(null_pixmap)
         assert not success
         assert "No sprite sheet provided" in message
     
     def test_detect_rectangular_frames_success(self, qapp):
         """Test rectangular frame detection."""
-        detector = FrameDetector()
+        # Removed - using function-based API
         # Create sprite sheet that should work with 32x48 frames
         pixmap = QPixmap(128, 96)  # 4x2 grid of 32x48 frames
         pixmap.fill(Qt.green)
         
-        success, frame_width, frame_height, message = detector.detect_rectangular_frames(pixmap)
+        success, frame_width, frame_height, message = detect_rectangular_frames(pixmap)
         
         assert success
         assert frame_width > 0
@@ -106,12 +118,12 @@ class TestFrameDetector:
     
     def test_detect_rectangular_frames_scoring(self, qapp):
         """Test that scoring works correctly for candidates."""
-        detector = FrameDetector()
+        # Removed - using function-based API
         
         # Test scoring function directly
-        score1 = detector._score_frame_candidate(32, 32, 4, 4, 16)  # Good square case
-        score2 = detector._score_frame_candidate(16, 16, 8, 8, 64)  # Too many frames
-        score3 = detector._score_frame_candidate(128, 128, 2, 2, 4)  # Good large frames
+        score1 = _score_frame_candidate(32, 32, 4, 4, 16)  # Good square case
+        score2 = _score_frame_candidate(16, 16, 8, 8, 64)  # Too many frames
+        score3 = _score_frame_candidate(128, 128, 2, 2, 4)  # Good large frames
         
         assert score1 > 0
         assert score2 >= 0
@@ -121,19 +133,18 @@ class TestFrameDetector:
     
     def test_content_based_detection_mock(self, qapp):
         """Test content-based detection with mocked content analysis."""
-        detector = FrameDetector()
         pixmap = QPixmap(128, 128)
         pixmap.fill(Qt.yellow)
-        
+
         # Mock the content analysis methods
-        with patch.object(detector, '_analyze_content_boundaries') as mock_analyze:
-            with patch.object(detector, '_calculate_common_dimensions') as mock_calc:
+        with patch('sprite_model.sprite_detection._analyze_content_boundaries') as mock_analyze:
+            with patch('sprite_model.sprite_detection._calculate_common_dimensions') as mock_calc:
                 # Setup mocks to return successful results
                 mock_analyze.return_value = [(0, 0, 32, 32), (32, 0, 32, 32), (0, 32, 32, 32)]
                 mock_calc.return_value = [(32, 32, 3)]
-                
-                success, width, height, message = detector.detect_content_based(pixmap)
-                
+
+                success, width, height, message = detect_content_based(pixmap)
+
                 assert success
                 assert width == 32
                 assert height == 32
@@ -142,21 +153,20 @@ class TestFrameDetector:
     
     def test_content_based_detection_no_content(self, qapp):
         """Test content-based detection when no content is found."""
-        detector = FrameDetector()
         pixmap = QPixmap(64, 64)
         pixmap.fill(Qt.white)
-        
-        with patch.object(detector, '_analyze_content_boundaries') as mock_analyze:
+
+        with patch('sprite_model.sprite_detection._analyze_content_boundaries') as mock_analyze:
             mock_analyze.return_value = []  # No content found
-            
-            success, width, height, message = detector.detect_content_based(pixmap)
-            
+
+            success, width, height, message = detect_content_based(pixmap)
+
             assert not success
             assert "No content boundaries detected" in message
     
     def test_has_content_in_region(self, qapp):
         """Test content detection in image regions."""
-        detector = FrameDetector()
+        # Removed - using function-based API
         
         # Create image with transparent and opaque areas
         image = QImage(100, 100, QImage.Format_ARGB32)
@@ -168,16 +178,16 @@ class TestFrameDetector:
                 image.setPixel(x, y, 0xFF000000)  # Opaque black
         
         # Test region with content
-        has_content = detector._has_content_in_region(image, 5, 5, 20, 20, 128)
+        has_content = _has_content_in_region(image, 5, 5, 20, 20, 128)
         assert has_content
         
         # Test region without content
-        no_content = detector._has_content_in_region(image, 50, 50, 20, 20, 128)
+        no_content = _has_content_in_region(image, 50, 50, 20, 20, 128)
         assert not no_content
     
     def test_calculate_common_dimensions(self, qapp):
         """Test calculation of common dimensions from content bounds."""
-        detector = FrameDetector()
+        # Removed - using function-based API
         
         # Test with multiple same-size sprites
         content_bounds = [
@@ -188,7 +198,7 @@ class TestFrameDetector:
             (80, 0, 32, 32),   # Same as majority
         ]
         
-        result = detector._calculate_common_dimensions(content_bounds)
+        result = _calculate_common_dimensions(content_bounds)
         
         assert len(result) > 0
         # Most common should be 32x32 (appears 4 times)
@@ -199,20 +209,20 @@ class TestFrameDetector:
     
     def test_all_detection_methods(self, qapp):
         """Test all detection methods work correctly."""
-        detector = FrameDetector()
+        # Removed - using function-based API
         pixmap = QPixmap(64, 64)
         pixmap.fill(Qt.red)
 
         # Test basic detection
-        success, width, height, message = detector.detect_frame_size(pixmap)
+        success, width, height, message = detect_frame_size(pixmap)
         assert success or not success  # Should not crash
 
         # Test rectangular detection
-        success, width, height, message = detector.detect_rectangular_frames(pixmap)
+        success, width, height, message = detect_rectangular_frames(pixmap)
         assert success or not success  # Should not crash
 
         # Test content-based detection
-        success, width, height, message = detector.detect_content_based(pixmap)
+        success, width, height, message = detect_content_based(pixmap)
         assert success or not success  # Should not crash
 
 
@@ -221,18 +231,18 @@ class TestMarginDetector:
     
     def test_margin_detector_initialization(self):
         """Test MarginDetector can be created."""
-        detector = MarginDetector()
-        assert detector is not None
+        # Removed - using function-based API
+        assert callable(detect_frame_size) or callable(detect_margins) or callable(detect_spacing)
     
     def test_detect_margins_basic(self, qapp):
         """Test basic margin detection."""
-        detector = MarginDetector()
+        # Removed - using function-based API
         
         # Create pixmap with transparent margins
         pixmap = QPixmap(100, 100)
         pixmap.fill(Qt.transparent)
         
-        success, offset_x, offset_y, message = detector.detect_margins(pixmap)
+        success, offset_x, offset_y, message = detect_margins(pixmap)
         
         # Should succeed even with all-transparent image
         assert success
@@ -240,7 +250,7 @@ class TestMarginDetector:
     
     def test_detect_margins_with_content(self, qapp):
         """Test margin detection with actual content."""
-        detector = MarginDetector()
+        # Removed - using function-based API
         
         # Create image with margins and content
         image = QImage(100, 100, QImage.Format_ARGB32)
@@ -252,7 +262,7 @@ class TestMarginDetector:
                 image.setPixel(x, y, 0xFF000000)  # Opaque black
         
         pixmap = QPixmap.fromImage(image)
-        success, offset_x, offset_y, message = detector.detect_margins(pixmap)
+        success, offset_x, offset_y, message = detect_margins(pixmap)
         
         assert success
         # Should detect the 10px margins
@@ -263,13 +273,13 @@ class TestMarginDetector:
     
     def test_detect_margins_validation(self, qapp):
         """Test margin validation logic."""
-        detector = MarginDetector()
+        # Removed - using function-based API
         
         # Test validation with excessive margins
         left, right, top, bottom = 50, 5, 40, 5  # Large margins
         width, height = 100, 100
         
-        validated_left, validated_top, msg = detector._validate_margins(
+        validated_left, validated_top, msg = _validate_margins(
             left, right, top, bottom, width, height)
         
         # Should reduce excessive margins
@@ -279,14 +289,14 @@ class TestMarginDetector:
     
     def test_detect_margins_frame_size_validation(self, qapp):
         """Test margin validation with frame size context."""
-        detector = MarginDetector()
+        # Removed - using function-based API
         
         # Test with frame size that doesn't divide cleanly
         left, right, top, bottom = 5, 5, 5, 5
         width, height = 100, 100
         frame_width, frame_height = 32, 32
         
-        validated_left, validated_top, msg = detector._validate_margins(
+        validated_left, validated_top, msg = _validate_margins(
             left, right, top, bottom, width, height, frame_width, frame_height)
         
         # Should adjust margins for clean frame division
@@ -299,13 +309,13 @@ class TestMarginDetector:
     
     def test_detect_margins_horizontal_strip(self, qapp):
         """Test margin detection for horizontal strips."""
-        detector = MarginDetector()
+        # Removed - using function-based API
         
         # Test horizontal strip (wide aspect ratio)
         left, right, top, bottom = 10, 10, 10, 10
         width, height = 400, 100  # 4:1 aspect ratio
         
-        validated_left, validated_top, msg = detector._validate_margins(
+        validated_left, validated_top, msg = _validate_margins(
             left, right, top, bottom, width, height)
         
         # Should minimize margins for horizontal strips
@@ -315,12 +325,12 @@ class TestMarginDetector:
     
     def test_detect_margins_small_margin_removal(self, qapp):
         """Test that very small margins are set to zero."""
-        detector = MarginDetector()
+        # Removed - using function-based API
         
         left, right, top, bottom = 2, 5, 1, 5
         width, height = 100, 100
         
-        validated_left, validated_top, msg = detector._validate_margins(
+        validated_left, validated_top, msg = _validate_margins(
             left, right, top, bottom, width, height)
         
         # Small margins should be zeroed
@@ -329,22 +339,22 @@ class TestMarginDetector:
     
     def test_detect_margins_invalid_input(self, qapp):
         """Test margin detection with invalid input."""
-        detector = MarginDetector()
+        # Removed - using function-based API
         
         # Test with None
-        success, offset_x, offset_y, message = detector.detect_margins(None)
+        success, offset_x, offset_y, message = detect_margins(None)
         assert not success
         assert "No sprite sheet provided" in message
         
         # Test with null pixmap
         null_pixmap = QPixmap()
-        success, offset_x, offset_y, message = detector.detect_margins(null_pixmap)
+        success, offset_x, offset_y, message = detect_margins(null_pixmap)
         assert not success
         assert "No sprite sheet provided" in message
     
     def test_detect_raw_margins_all_edges(self, qapp):
         """Test raw margin detection from all four edges."""
-        detector = MarginDetector()
+        # Removed - using function-based API
         
         # Create image with different margins on each edge
         image = QImage(100, 80, QImage.Format_ARGB32)
@@ -355,7 +365,7 @@ class TestMarginDetector:
             for y in range(8, 68):  # Top margin=8, bottom margin=12
                 image.setPixel(x, y, 0xFF000000)
         
-        left, right, top, bottom = detector._detect_raw_margins(image)
+        left, right, top, bottom = _detect_raw_margins(image)
         
         assert left == 5
         assert right == 10
@@ -364,11 +374,11 @@ class TestMarginDetector:
     
     def test_detect_margins_with_frame_hints(self, qapp):
         """Test margin detection with frame size hints."""
-        detector = MarginDetector()
+        # Removed - using function-based API
         pixmap = QPixmap(64, 64)
         pixmap.fill(Qt.red)
 
-        success, offset_x, offset_y, message = detector.detect_margins(pixmap, 32, 32)
+        success, offset_x, offset_y, message = detect_margins(pixmap, 32, 32)
         assert success or not success  # Should not crash
 
 
@@ -377,16 +387,16 @@ class TestSpacingDetector:
     
     def test_spacing_detector_initialization(self):
         """Test SpacingDetector can be created."""
-        detector = SpacingDetector()
-        assert detector is not None
+        # Removed - using function-based API
+        assert callable(detect_frame_size) or callable(detect_margins) or callable(detect_spacing)
     
     def test_detect_spacing_basic(self, qapp):
         """Test basic spacing detection."""
-        detector = SpacingDetector()
+        # Removed - using function-based API
         pixmap = QPixmap(100, 100)
         pixmap.fill(Qt.red)
         
-        success, spacing_x, spacing_y, message = detector.detect_spacing(pixmap, 32, 32)
+        success, spacing_x, spacing_y, message = detect_spacing(pixmap, 32, 32)
         
         assert success
         assert spacing_x >= 0
@@ -396,7 +406,7 @@ class TestSpacingDetector:
     
     def test_detect_spacing_with_gaps(self, qapp):
         """Test spacing detection with actual gaps between frames."""
-        detector = SpacingDetector()
+        # Removed - using function-based API
         
         # Create image with frames and gaps
         image = QImage(100, 100, QImage.Format_ARGB32)
@@ -418,7 +428,7 @@ class TestSpacingDetector:
                             image.setPixel(x, y, 0xFF000000)
         
         pixmap = QPixmap.fromImage(image)
-        success, detected_x, detected_y, message = detector.detect_spacing(pixmap, frame_size, frame_size)
+        success, detected_x, detected_y, message = detect_spacing(pixmap, frame_size, frame_size)
         
         assert success
         # Should detect the 2px spacing (or close to it)
@@ -427,7 +437,7 @@ class TestSpacingDetector:
     
     def test_detect_horizontal_spacing(self, qapp):
         """Test horizontal spacing detection specifically."""
-        detector = SpacingDetector()
+        # Removed - using function-based API
         
         # Create simple test image with clear spacing pattern
         image = QImage(100, 50, QImage.Format_ARGB32)
@@ -454,7 +464,7 @@ class TestSpacingDetector:
                 if x < 100:  # Stay within bounds
                     image.setPixel(x, y, 0xFF000000)
         
-        detected_spacing, score = detector._detect_horizontal_spacing(image, frame_width, 30, 0, 0, 100)
+        detected_spacing, score = _detect_horizontal_spacing(image, frame_width, 30, 0, 0, 100)
         
         # Should detect some spacing (algorithm might not get exact value)
         assert detected_spacing >= 0
@@ -462,7 +472,7 @@ class TestSpacingDetector:
     
     def test_detect_vertical_spacing(self, qapp):
         """Test vertical spacing detection specifically."""
-        detector = SpacingDetector()
+        # Removed - using function-based API
         
         # Create simple test image with clear vertical spacing pattern
         image = QImage(50, 100, QImage.Format_ARGB32)
@@ -488,7 +498,7 @@ class TestSpacingDetector:
                 if y < 100:  # Stay within bounds
                     image.setPixel(x, y, 0xFF000000)
         
-        detected_spacing, score = detector._detect_vertical_spacing(image, 30, frame_height, 0, 0, 100)
+        detected_spacing, score = _detect_vertical_spacing(image, 30, frame_height, 0, 0, 100)
         
         # Should detect some spacing (algorithm might not get exact value)
         assert detected_spacing >= 0
@@ -496,32 +506,32 @@ class TestSpacingDetector:
     
     def test_detect_spacing_invalid_input(self, qapp):
         """Test spacing detection with invalid input."""
-        detector = SpacingDetector()
+        # Removed - using function-based API
         
         # Test with None
-        success, spacing_x, spacing_y, message = detector.detect_spacing(None, 32, 32)
+        success, spacing_x, spacing_y, message = detect_spacing(None, 32, 32)
         assert not success
         assert "No sprite sheet provided" in message
         
         # Test with null pixmap
         null_pixmap = QPixmap()
-        success, spacing_x, spacing_y, message = detector.detect_spacing(null_pixmap, 32, 32)
+        success, spacing_x, spacing_y, message = detect_spacing(null_pixmap, 32, 32)
         assert not success
         assert "No sprite sheet provided" in message
         
         # Test with zero frame size
         pixmap = QPixmap(100, 100)
-        success, spacing_x, spacing_y, message = detector.detect_spacing(pixmap, 0, 32)
+        success, spacing_x, spacing_y, message = detect_spacing(pixmap, 0, 32)
         assert not success
         assert "Frame size must be greater than 0" in message
     
     def test_spacing_confidence_calculation(self, qapp):
         """Test confidence calculation based on consistency scores."""
-        detector = SpacingDetector()
+        # Removed - using function-based API
         pixmap = QPixmap(64, 64)
         pixmap.fill(Qt.blue)
         
-        success, spacing_x, spacing_y, message = detector.detect_spacing(pixmap, 16, 16)
+        success, spacing_x, spacing_y, message = detect_spacing(pixmap, 16, 16)
         
         assert success
         # Should include confidence in message
@@ -750,13 +760,13 @@ class TestAutoDetectionController:
 ])
 def test_detection_parametrized_sizes(qapp, sheet_size, frame_size, expected_frames):
     """Test detection algorithms with various sheet and frame size combinations."""
-    detector = FrameDetector()
+    # Removed - using function-based API
     pixmap = QPixmap(sheet_size[0], sheet_size[1])
     pixmap.fill(Qt.red)
     
     # The detection might not find the exact expected frame size,
     # but it should not crash and should return reasonable results
-    success, width, height, message = detector.detect_frame_size(pixmap)
+    success, width, height, message = detect_frame_size(pixmap)
     
     # Should succeed with reasonable results
     if success:
@@ -775,13 +785,13 @@ def test_detection_performance_large_sprite_sheet(qapp):
     """Test detection performance with large sprite sheets."""
     import time
     
-    detector = FrameDetector()
+    # Removed - using function-based API
     # Create large sprite sheet
     large_pixmap = QPixmap(1024, 1024)
     large_pixmap.fill(Qt.blue)
     
     start_time = time.time()
-    success, width, height, message = detector.detect_frame_size(large_pixmap)
+    success, width, height, message = detect_frame_size(large_pixmap)
     end_time = time.time()
     
     # Should complete within reasonable time (under 1 second)
@@ -799,47 +809,40 @@ class TestDetectionIntegration:
     
     def test_frame_then_margin_detection(self, qapp):
         """Test frame detection followed by margin detection."""
-        frame_detector = FrameDetector()
-        margin_detector = MarginDetector()
-        
         pixmap = QPixmap(128, 128)
         pixmap.fill(Qt.red)
-        
+
         # First detect frame size
-        frame_success, frame_width, frame_height, frame_msg = frame_detector.detect_frame_size(pixmap)
-        
+        frame_success, frame_width, frame_height, frame_msg = detect_frame_size(pixmap)
+
         if frame_success:
             # Then detect margins using frame size context
-            margin_success, offset_x, offset_y, margin_msg = margin_detector.detect_margins(
+            margin_success, offset_x, offset_y, margin_msg = detect_margins(
                 pixmap, frame_width, frame_height)
-            
+
             assert margin_success
             assert offset_x >= 0
             assert offset_y >= 0
     
     def test_full_detection_workflow(self, qapp):
         """Test complete detection workflow: frame -> margins -> spacing."""
-        frame_detector = FrameDetector()
-        margin_detector = MarginDetector()
-        spacing_detector = SpacingDetector()
-        
         pixmap = QPixmap(96, 96)
         pixmap.fill(Qt.green)
-        
+
         # Step 1: Frame detection
-        frame_success, frame_width, frame_height, _ = frame_detector.detect_frame_size(pixmap)
+        frame_success, frame_width, frame_height, _ = detect_frame_size(pixmap)
         assert frame_success
-        
+
         # Step 2: Margin detection with frame context
-        margin_success, offset_x, offset_y, _ = margin_detector.detect_margins(
+        margin_success, offset_x, offset_y, _ = detect_margins(
             pixmap, frame_width, frame_height)
         assert margin_success
-        
+
         # Step 3: Spacing detection with frame and margin context
-        spacing_success, spacing_x, spacing_y, _ = spacing_detector.detect_spacing(
+        spacing_success, spacing_x, spacing_y, _ = detect_spacing(
             pixmap, frame_width, frame_height, offset_x, offset_y)
         assert spacing_success
-        
+
         # All should produce valid results
         assert frame_width > 0 and frame_height > 0
         assert offset_x >= 0 and offset_y >= 0

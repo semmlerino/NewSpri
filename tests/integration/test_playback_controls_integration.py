@@ -4,18 +4,16 @@ Integration tests for playback controls, including navigation buttons.
 Tests the complete integration of playback controls with sprite viewer.
 """
 
-import pytest
-import tempfile
 import os
+import tempfile
+
+import pytest
 from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtTest import QSignalSpy
-from PySide6.QtGui import QPixmap, QColor, QPainter
 from PySide6.QtWidgets import QApplication
 
 from sprite_viewer import SpriteViewer
-from sprite_model.core import SpriteModel
-from ui.playback_controls import PlaybackControls
-from coordinators.animation_coordinator import AnimationCoordinator
 
 
 class TestPlaybackControlsIntegration:
@@ -42,7 +40,7 @@ class TestPlaybackControlsIntegration:
             sprite_sheet.save(tmp.name)
             tmp_path = tmp.name
 
-        success, _ = viewer._sprite_model.load_sprite_sheet(tmp_path)
+        _success, _ = viewer._sprite_model.load_sprite_sheet(tmp_path)
 
         # Extract frames if CCL didn't auto-detect
         if len(viewer._sprite_model.sprite_frames) == 0:
@@ -257,8 +255,8 @@ class TestPlaybackControlsIntegration:
 
     def _create_key_event(self, key, modifiers):
         """Helper to create keyboard events."""
-        from PySide6.QtGui import QKeyEvent
         from PySide6.QtCore import QEvent
+        from PySide6.QtGui import QKeyEvent
         return QKeyEvent(QEvent.KeyPress, key, modifiers)
 
 

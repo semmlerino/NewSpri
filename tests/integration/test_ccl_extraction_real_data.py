@@ -12,7 +12,7 @@ from pathlib import Path
 from PySide6.QtGui import QPixmap, QImage
 
 from sprite_model import SpriteModel
-from sprite_model.extraction.ccl_extractor import CCLExtractor
+from sprite_model.sprite_extraction import CCLExtractor
 
 
 class TestCCLExtractionWithRealData:

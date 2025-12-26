@@ -19,9 +19,7 @@ from unittest.mock import Mock, patch, MagicMock
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 
-from sprite_model.file_operations.file_loader import FileLoader
-from sprite_model.file_operations.file_validator import FileValidator, validate_file_path
-from sprite_model.file_operations.metadata_extractor import MetadataExtractor
+from sprite_model.sprite_file_ops import FileLoader, FileValidator, validate_file_path, MetadataExtractor
 
 
 class TestFileValidator:
@@ -123,7 +121,7 @@ class TestFileValidator:
         large_file.write_bytes(b"fake image data")
         
         # Mock the entire Path object and its stat method
-        with patch('sprite_model.file_operations.file_validator.Path') as mock_path_class:
+        with patch('sprite_model.sprite_file_ops.Path') as mock_path_class:
             mock_path = Mock()
             mock_path.exists.return_value = True
             mock_path.is_file.return_value = True
@@ -194,7 +192,7 @@ class TestFileValidator:
         validator = FileValidator()
         
         # Create a mock path that raises an exception during stat()
-        with patch('sprite_model.file_operations.file_validator.Path') as mock_path_class:
+        with patch('sprite_model.sprite_file_ops.Path') as mock_path_class:
             mock_path = Mock()
             mock_path.exists.return_value = True
             mock_path.is_file.return_value = True
@@ -398,7 +396,7 @@ class TestFileLoader:
         test_file = temp_dir / "test.png"
         test_file.write_bytes(b"fake PNG content")
         
-        with patch('sprite_model.file_operations.file_loader.QPixmap') as mock_pixmap_class:
+        with patch('sprite_model.sprite_file_ops.QPixmap') as mock_pixmap_class:
             # Mock QPixmap constructor to return null pixmap
             mock_pixmap = Mock()
             mock_pixmap.isNull.return_value = True
@@ -420,7 +418,7 @@ class TestFileLoader:
         test_file.write_bytes(b"fake PNG content")
         
         # Mock successful pixmap loading
-        with patch('sprite_model.file_operations.file_loader.QPixmap') as mock_pixmap_class:
+        with patch('sprite_model.sprite_file_ops.QPixmap') as mock_pixmap_class:
             mock_pixmap = Mock()
             mock_pixmap.isNull.return_value = False
             mock_pixmap.width.return_value = 128
@@ -489,7 +487,7 @@ class TestFileOperationsIntegration:
         test_file.write_bytes(b"PNG file content" * 100)  # Make it a reasonable size
         
         # Use real components (but mock QPixmap loading)
-        with patch('sprite_model.file_operations.file_loader.QPixmap') as mock_pixmap_class:
+        with patch('sprite_model.sprite_file_ops.QPixmap') as mock_pixmap_class:
             mock_pixmap = Mock()
             mock_pixmap.isNull.return_value = False
             mock_pixmap.width.return_value = 256
@@ -642,7 +640,7 @@ def test_file_operations_performance(qapp, temp_dir):
     
     # Process all files
     for test_file in test_files:
-        with patch('sprite_model.file_operations.file_loader.QPixmap') as mock_pixmap_class:
+        with patch('sprite_model.sprite_file_ops.QPixmap') as mock_pixmap_class:
             mock_pixmap = Mock()
             mock_pixmap.isNull.return_value = False
             mock_pixmap.width.return_value = 64

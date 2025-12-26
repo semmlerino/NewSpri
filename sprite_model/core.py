@@ -8,18 +8,26 @@ Part of Legacy Integration Phase 1: Create integrated SpriteModel structure.
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QPixmap
 
-from sprite_model.animation import AnimationStateManager
-from sprite_model.ccl import CCLOperations
-from sprite_model.detection import (
-    DetectionCoordinator,
-    FrameDetector,
-    MarginDetector,
-    SpacingDetector,
+from sprite_model.sprite_animation import AnimationStateManager
+from sprite_model.sprite_ccl import CCLOperations
+from sprite_model.sprite_detection import (
+    comprehensive_auto_detect,
+    detect_content_based,
+    detect_frame_size,
+    detect_margins,
+    detect_rectangular_frames,
+    detect_spacing,
 )
-from sprite_model.extraction import GridConfig, GridExtractor
+from sprite_model.sprite_extraction import (
+    GridConfig,
+    extract_grid_frames,
+)
+from sprite_model.sprite_extraction import (
+    validate_frame_settings as validate_grid_frame_settings,
+)
 
 # Import all refactored modules
-from sprite_model.file_operations import FileLoader, FileValidator, MetadataExtractor
+from sprite_model.sprite_file_ops import FileLoader, FileValidator, MetadataExtractor
 
 
 class SpriteModel(QObject):
@@ -46,12 +54,7 @@ class SpriteModel(QObject):
         self._file_loader = FileLoader()
         self._file_validator = FileValidator()
         self._metadata_extractor = MetadataExtractor()
-        self._grid_extractor = GridExtractor()
         self._animation_state = AnimationStateManager()
-        self._frame_detector = FrameDetector()
-        self._margin_detector = MarginDetector()
-        self._spacing_detector = SpacingDetector()
-        self._detection_coordinator = DetectionCoordinator()
         self._ccl_operations = CCLOperations()
 
         # Primary state variables (maintaining compatibility)
@@ -213,7 +216,7 @@ class SpriteModel(QObject):
             if self._original_sprite_sheet is None:
                 return False, "No sprite sheet loaded", 0
 
-            success, message, frames = self._grid_extractor.extract_frames(
+            success, message, frames = extract_grid_frames(
                 self._original_sprite_sheet, config
             )
 
@@ -267,7 +270,7 @@ class SpriteModel(QObject):
             spacing_y=spacing_y
         )
 
-        return self._grid_extractor.validate_frame_settings(self._original_sprite_sheet, config)
+        return validate_grid_frame_settings(self._original_sprite_sheet, config)
 
     def extract_ccl_frames(self) -> tuple[bool, str, int]:
         """Extract frames using Connected Component Labeling."""
@@ -277,12 +280,12 @@ class SpriteModel(QObject):
 
         def detect_sprites_callback(sprite_sheet_path):
             # Import the actual CCL detection function to return dictionary format
-            from sprite_model.extraction.ccl_extractor import detect_sprites_ccl_enhanced
+            from sprite_model.sprite_extraction import detect_sprites_ccl_enhanced
             return detect_sprites_ccl_enhanced(sprite_sheet_path)
 
         def detect_background_callback(sprite_sheet_path):
             # Import the actual background detection function
-            from sprite_model.extraction.background_detector import detect_background_color
+            from sprite_model.sprite_extraction import detect_background_color
             return detect_background_color(sprite_sheet_path)
 
         # Call CCLOperations with callbacks
@@ -315,12 +318,12 @@ class SpriteModel(QObject):
 
         def detect_sprites_callback(sprite_sheet_path):
             # Import the actual CCL detection function
-            from sprite_model.extraction.ccl_extractor import detect_sprites_ccl_enhanced
+            from sprite_model.sprite_extraction import detect_sprites_ccl_enhanced
             return detect_sprites_ccl_enhanced(sprite_sheet_path)
 
         def detect_background_callback(sprite_sheet_path):
             # Import the actual background detection function
-            from sprite_model.extraction.background_detector import detect_background_color
+            from sprite_model.sprite_extraction import detect_background_color
             return detect_background_color(sprite_sheet_path)
 
         success = self._ccl_operations.set_extraction_mode(
@@ -378,11 +381,11 @@ class SpriteModel(QObject):
                 self._original_sprite_sheet.height() > 100)
 
     def auto_detect_frame_size(self) -> tuple[bool, int, int, str]:
-        """Auto-detect frame size using FrameDetector."""
+        """Auto-detect frame size using detect_frame_size function."""
         if not self._original_sprite_sheet:
             return False, 0, 0, "No sprite sheet loaded"
 
-        success, width, height, message = self._frame_detector.detect_frame_size(self._original_sprite_sheet)
+        success, width, height, message = detect_frame_size(self._original_sprite_sheet)
 
         if success:
             # Update internal state
@@ -395,11 +398,11 @@ class SpriteModel(QObject):
             return False, 0, 0, message
 
     def auto_detect_rectangular_frames(self) -> tuple[bool, int, int, str]:
-        """Auto-detect rectangular frames using FrameDetector."""
+        """Auto-detect rectangular frames using detect_rectangular_frames function."""
         if not self._original_sprite_sheet:
             return False, 0, 0, "No sprite sheet loaded"
 
-        success, width, height, message = self._frame_detector.detect_rectangular_frames(self._original_sprite_sheet)
+        success, width, height, message = detect_rectangular_frames(self._original_sprite_sheet)
 
         if success:
             # Update internal state
@@ -412,11 +415,11 @@ class SpriteModel(QObject):
             return False, 0, 0, message
 
     def auto_detect_content_based(self) -> tuple[bool, int, int, str]:
-        """Auto-detect content-based frames using FrameDetector."""
+        """Auto-detect content-based frames using detect_content_based function."""
         if not self._original_sprite_sheet:
             return False, 0, 0, "No sprite sheet loaded"
 
-        success, width, height, message = self._frame_detector.detect_content_based(self._original_sprite_sheet)
+        success, width, height, message = detect_content_based(self._original_sprite_sheet)
 
         if success:
             # Update internal state
@@ -429,11 +432,11 @@ class SpriteModel(QObject):
             return False, 0, 0, message
 
     def auto_detect_margins(self) -> tuple[bool, int, int, str]:
-        """Auto-detect margins using MarginDetector."""
+        """Auto-detect margins using detect_margins function."""
         if not self._original_sprite_sheet:
             return False, 0, 0, "No sprite sheet loaded"
 
-        success, offset_x, offset_y, message = self._margin_detector.detect_margins(
+        success, offset_x, offset_y, message = detect_margins(
             self._original_sprite_sheet,
             self._frame_width,
             self._frame_height
@@ -450,11 +453,11 @@ class SpriteModel(QObject):
             return False, 0, 0, message
 
     def auto_detect_spacing_enhanced(self) -> tuple[bool, int, int, str]:
-        """Auto-detect spacing using SpacingDetector."""
+        """Auto-detect spacing using detect_spacing function."""
         if not self._original_sprite_sheet:
             return False, 0, 0, "No sprite sheet loaded"
 
-        success, spacing_x, spacing_y, message = self._spacing_detector.detect_spacing(
+        success, spacing_x, spacing_y, message = detect_spacing(
             self._original_sprite_sheet,
             self._frame_width,
             self._frame_height,
@@ -481,7 +484,7 @@ class SpriteModel(QObject):
         if not self._original_sprite_sheet:
             return False, "No sprite sheet loaded"
 
-        success, message, result = self._detection_coordinator.comprehensive_auto_detect(
+        success, message, result = comprehensive_auto_detect(
             self._original_sprite_sheet,
             self._sprite_sheet_path
         )

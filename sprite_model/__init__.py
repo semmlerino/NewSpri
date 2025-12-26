@@ -16,12 +16,20 @@ Public API maintained for backwards compatibility.
 # Import main public interface for backwards compatibility
 from .core import SpriteModel
 
+# Import detection functions
+from .sprite_detection import (
+    DetectionResult,
+    comprehensive_auto_detect,
+    detect_frame_size,
+    detect_margins,
+    detect_spacing,
+)
+
 # Import standalone functions that external code expects
-from .extraction.background_detector import detect_background_color
-from .extraction.ccl_extractor import detect_sprites_ccl_enhanced
+from .sprite_extraction import detect_background_color, detect_sprites_ccl_enhanced
 
 # Import file operations
-from .file_operations import FileLoader, load_sprite_sheet, validate_file_path
+from .sprite_file_ops import FileLoader, load_sprite_sheet, validate_file_path
 
 # Backwards compatibility aliases
 FileOperations = FileLoader
@@ -33,10 +41,15 @@ __author__ = "Python Sprite Viewer Team"
 
 # Public API
 __all__ = [
+    'DetectionResult',
     'FileOperations',
     'SpriteModel',
+    'comprehensive_auto_detect',
     'detect_background_color',
+    'detect_frame_size',
+    'detect_margins',
+    'detect_spacing',
     'detect_sprites_ccl_enhanced',
     'load_sprite_sheet',
-    'validate_image_file'
+    'validate_image_file',
 ]

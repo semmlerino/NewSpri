@@ -5,7 +5,7 @@ Tests the export coordinator that handles export dialog and operations.
 
 import pytest
 from unittest.mock import Mock, MagicMock, patch
-from coordinators import ExportCoordinator
+from export import ExportCoordinator
 
 
 class TestExportCoordinator:
@@ -52,8 +52,8 @@ class TestExportCoordinator:
         # Should not raise any errors
         coordinator.cleanup()
     
-    @patch('coordinators.export_coordinator.ExportDialog')
-    @patch('coordinators.export_coordinator.QMessageBox')
+    @patch('export.export_coordinator.ExportDialog')
+    @patch('export.export_coordinator.QMessageBox')
     def test_export_frames(self, mock_messagebox, mock_dialog_class, mock_main_window,
                           mock_sprite_model, mock_segment_manager):
         """Test export_frames method."""
@@ -91,7 +91,7 @@ class TestExportCoordinator:
         # Verify no warning was shown
         mock_messagebox.warning.assert_not_called()
     
-    @patch('coordinators.export_coordinator.QMessageBox')
+    @patch('export.export_coordinator.QMessageBox')
     def test_export_frames_no_frames(self, mock_messagebox, mock_main_window):
         """Test export_frames when no frames are available."""
         coordinator = ExportCoordinator(mock_main_window)
@@ -111,7 +111,7 @@ class TestExportCoordinator:
             "No frames to export."
         )
     
-    @patch('coordinators.export_coordinator.ExportDialog')
+    @patch('export.export_coordinator.ExportDialog')
     def test_export_current_frame(self, mock_dialog_class, mock_main_window,
                                  mock_sprite_model, mock_segment_manager):
         """Test export_current_frame method."""
@@ -177,21 +177,21 @@ class TestExportCoordinator:
     def test_validate_export_no_model(self, mock_main_window):
         """Test _validate_export returns False when no sprite model."""
         coordinator = ExportCoordinator(mock_main_window)
-        
-        with patch('coordinators.export_coordinator.QMessageBox') as mock_messagebox:
+
+        with patch('export.export_coordinator.QMessageBox') as mock_messagebox:
             assert coordinator._validate_export() is False
             mock_messagebox.warning.assert_called_once()
     
     def test_validate_export_no_frames(self, mock_main_window):
         """Test _validate_export returns False when no frames."""
         coordinator = ExportCoordinator(mock_main_window)
-        
+
         # Set up sprite model with no frames
         mock_sprite_model = Mock()
         mock_sprite_model.sprite_frames = []
         coordinator.sprite_model = mock_sprite_model
-        
-        with patch('coordinators.export_coordinator.QMessageBox') as mock_messagebox:
+
+        with patch('export.export_coordinator.QMessageBox') as mock_messagebox:
             assert coordinator._validate_export() is False
             mock_messagebox.warning.assert_called_once()
     
@@ -253,9 +253,9 @@ class TestExportCoordinatorIntegration:
     
     def test_export_coordinator_import(self):
         """Test that ExportCoordinator can be imported correctly."""
-        from coordinators import ExportCoordinator as Coordinator
-        from coordinators.export_coordinator import ExportCoordinator
-        
+        from export import ExportCoordinator as Coordinator
+        from export.export_coordinator import ExportCoordinator
+
         # Verify they're the same class
         assert Coordinator is ExportCoordinator
     

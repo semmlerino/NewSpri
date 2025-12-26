@@ -9,8 +9,8 @@ from typing import Any
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox
 
-from export import ExportDialog
-from export.core.frame_exporter import get_frame_exporter
+from .dialogs.export_wizard import ExportDialog
+from .core.frame_exporter import get_frame_exporter
 
 
 class ExportCoordinator(QObject):

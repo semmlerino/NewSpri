@@ -191,20 +191,10 @@ class TestSpriteModelIntegration:
         assert hasattr(sprite_model, '_file_loader')
         assert sprite_model._file_loader is not None
     
-    def test_grid_extractor_integration(self, sprite_model):
-        """Test integration with grid extractor component."""
-        assert hasattr(sprite_model, '_grid_extractor')
-        assert sprite_model._grid_extractor is not None
-    
     def test_animation_state_integration(self, sprite_model):
         """Test integration with animation state manager."""
         assert hasattr(sprite_model, '_animation_state')
         assert sprite_model._animation_state is not None
-    
-    def test_detection_coordinator_integration(self, sprite_model):
-        """Test integration with detection coordinator."""
-        assert hasattr(sprite_model, '_detection_coordinator')
-        assert sprite_model._detection_coordinator is not None
 
 
 @pytest.mark.parametrize("frame_count", [1, 4, 8, 16])
