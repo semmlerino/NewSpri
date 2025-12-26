@@ -4,9 +4,10 @@ Provides structured action definitions and state management.
 Part of Phase 5: Architecture refactoring for better maintainability.
 """
 
-from typing import Dict, List, Optional, Callable, Any
+from collections.abc import Callable
 from dataclasses import dataclass
 from enum import Enum
+from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QAction
@@ -30,13 +31,13 @@ class ActionDefinition:
     action_id: str              # Unique identifier
     text: str                   # Display text
     category: ActionCategory    # Category for organization
-    shortcut_id: Optional[str] = None  # Associated shortcut ID
+    shortcut_id: str | None = None  # Associated shortcut ID
     tooltip: str = ""           # Tooltip text
     icon: str = ""             # Icon text/emoji
-    callback: Optional[Callable] = None  # Function to call
+    callback: Callable | None = None  # Function to call
     enabled_by_default: bool = True     # Initial enabled state
-    enabled_context: Optional[str] = None  # Context requirement for enabling
-    
+    enabled_context: str | None = None  # Context requirement for enabling
+
     def __post_init__(self):
         """Validate action definition."""
         if not self.action_id or not self.text:
@@ -46,7 +47,7 @@ class ActionDefinition:
 class ActionManager(QObject):
     """
     Centralized QAction creation and management system.
-    
+
     Features:
     - Structured action definitions
     - State management (enabled/disabled)
@@ -54,10 +55,10 @@ class ActionManager(QObject):
     - Action lookup and grouping
     - Context-sensitive enabling
     """
-    
+
     # Signal emitted when action states need updating
     actionStateChanged = Signal(str, bool)  # action_id, enabled
-    
+
     # Structured action definitions
     ACTION_DEFINITIONS = {
         # File actions
@@ -86,7 +87,7 @@ class ActionManager(QObject):
             enabled_by_default=False,
             enabled_context="has_frames"
         ),
-        
+
         # View actions
         'view_zoom_in': ActionDefinition(
             "view_zoom_in", "Zoom In", ActionCategory.VIEW,
@@ -117,7 +118,7 @@ class ActionManager(QObject):
             shortcut_id="view_toggle_grid",
             tooltip="Toggle grid overlay"
         ),
-        
+
         # Animation actions
         'animation_toggle': ActionDefinition(
             "animation_toggle", "Play/Pause", ActionCategory.ANIMATION,
@@ -175,7 +176,7 @@ class ActionManager(QObject):
             enabled_by_default=False,
             enabled_context="has_frames"
         ),
-        
+
         # Toolbar actions (special variants)
         'toolbar_export': ActionDefinition(
             "toolbar_export", "Export", ActionCategory.TOOLBAR,
@@ -185,7 +186,7 @@ class ActionManager(QObject):
             enabled_by_default=False,
             enabled_context="has_frames"
         ),
-        
+
         # Help actions
         'help_shortcuts': ActionDefinition(
             "help_shortcuts", "Keyboard Shortcuts", ActionCategory.HELP,
@@ -196,60 +197,60 @@ class ActionManager(QObject):
             tooltip="About Sprite Viewer"
         ),
     }
-    
+
     def __init__(self, parent: QWidget = None):
         """
         Initialize action manager.
-        
+
         Args:
             parent: Parent widget for actions
         """
         super().__init__(parent)
         self._parent_widget = parent
-        self._actions: Dict[str, QAction] = {}
-        self._action_definitions: Dict[str, ActionDefinition] = {}
-        self._context_state: Dict[str, Any] = {}
-        
+        self._actions: dict[str, QAction] = {}
+        self._action_definitions: dict[str, ActionDefinition] = {}
+        self._context_state: dict[str, Any] = {}
+
         # Get shortcut manager
         self._shortcut_manager = get_shortcut_manager(parent)
-        
+
         # Load default actions
         self._load_default_actions()
-    
+
     def _load_default_actions(self):
         """Load default action definitions."""
         for action_id, definition in self.ACTION_DEFINITIONS.items():
             self._action_definitions[action_id] = definition
-    
+
     def create_action(self, action_id: str) -> QAction:
         """
         Create a QAction from definition.
-        
+
         Args:
             action_id: Action identifier
-            
+
         Returns:
             Created QAction
-            
+
         Raises:
             ValueError: If action ID not found
         """
         if action_id not in self._action_definitions:
             raise ValueError(f"Unknown action ID: {action_id}")
-        
+
         # Return existing action if already created
         if action_id in self._actions:
             return self._actions[action_id]
-        
+
         definition = self._action_definitions[action_id]
-        
+
         # Create action
         display_text = definition.text
         if definition.icon:
             display_text = f"{definition.icon} {definition.text}"
-        
+
         action = QAction(display_text, self._parent_widget)
-        
+
         # Set tooltip
         if definition.tooltip:
             full_tooltip = definition.tooltip
@@ -259,67 +260,67 @@ class ActionManager(QObject):
                 if shortcut_def:
                     full_tooltip += f" ({shortcut_def.key})"
             action.setToolTip(full_tooltip)
-        
+
         # Associate with shortcut manager
         if definition.shortcut_id:
             self._shortcut_manager.set_shortcut_action(definition.shortcut_id, action)
-            
+
             # Set callback to trigger action
             if definition.callback:
                 self._shortcut_manager.set_shortcut_callback(
-                    definition.shortcut_id, 
+                    definition.shortcut_id,
                     lambda: action.triggered.emit()
                 )
-        
+
         # Set initial enabled state
         enabled = self._should_action_be_enabled(definition)
         action.setEnabled(enabled)
-        
+
         # Store action
         self._actions[action_id] = action
-        
+
         return action
-    
-    def get_action(self, action_id: str) -> Optional[QAction]:
+
+    def get_action(self, action_id: str) -> QAction | None:
         """
         Get existing action by ID.
-        
+
         Args:
             action_id: Action identifier
-            
+
         Returns:
             QAction if found, None otherwise
         """
         return self._actions.get(action_id)
-    
+
     def set_action_callback(self, action_id: str, callback: Callable):
         """
         Set callback for an action.
-        
+
         Args:
             action_id: Action identifier
             callback: Function to call when action is triggered
         """
         if action_id in self._action_definitions:
             self._action_definitions[action_id].callback = callback
-            
+
             # Connect to existing action if created
             if action_id in self._actions:
                 action = self._actions[action_id]
                 action.triggered.connect(callback)
-            
+
             # Update shortcut callback
             definition = self._action_definitions[action_id]
             if definition.shortcut_id:
                 self._shortcut_manager.set_shortcut_callback(definition.shortcut_id, callback)
-    
-    def get_actions_by_category(self, category: ActionCategory) -> List[QAction]:
+
+    def get_actions_by_category(self, category: ActionCategory) -> list[QAction]:
         """
         Get all actions in a specific category.
-        
+
         Args:
             category: Action category
-            
+
         Returns:
             List of QActions in the category
         """
@@ -330,24 +331,24 @@ class ActionManager(QObject):
                 if action_id not in self._actions:
                     self.create_action(action_id)
                 actions.append(self._actions[action_id])
-        
+
         return actions
-    
+
     def update_context(self, **context_state):
         """
         Update context state and refresh action enabled states.
-        
+
         Args:
             **context_state: Context state variables (e.g., has_frames=True)
         """
         self._context_state.update(context_state)
-        
+
         # Update shortcut manager context
         self._shortcut_manager.update_context(**context_state)
-        
+
         # Update action states
         self._update_action_states()
-    
+
     def _update_action_states(self):
         """Update enabled states of all actions based on current context."""
         for action_id, action in self._actions.items():
@@ -355,85 +356,85 @@ class ActionManager(QObject):
             enabled = self._should_action_be_enabled(definition)
             action.setEnabled(enabled)
             self.actionStateChanged.emit(action_id, enabled)
-    
+
     def _should_action_be_enabled(self, definition: ActionDefinition) -> bool:
         """
         Check if an action should be enabled based on current context.
-        
+
         Args:
             definition: Action definition to check
-            
+
         Returns:
             True if action should be enabled
         """
         if not definition.enabled_by_default and not definition.enabled_context:
             return False
-        
+
         if definition.enabled_context:
             return self._context_state.get(definition.enabled_context, False)
-        
+
         return definition.enabled_by_default
-    
-    def create_all_actions(self) -> Dict[str, QAction]:
+
+    def create_all_actions(self) -> dict[str, QAction]:
         """
         Create all defined actions.
-        
+
         Returns:
             Dictionary mapping action IDs to QActions
         """
         for action_id in self._action_definitions:
             if action_id not in self._actions:
                 self.create_action(action_id)
-        
+
         return self._actions.copy()
-    
-    def get_action_definition(self, action_id: str) -> Optional[ActionDefinition]:
+
+    def get_action_definition(self, action_id: str) -> ActionDefinition | None:
         """
         Get action definition by ID.
-        
+
         Args:
             action_id: Action identifier
-            
+
         Returns:
             ActionDefinition if found, None otherwise
         """
         return self._action_definitions.get(action_id)
-    
+
     def register_action(self, action_id: str, definition: ActionDefinition) -> bool:
         """
         Register a new action definition.
-        
+
         Args:
             action_id: Unique action identifier
             definition: Action definition
-            
+
         Returns:
             True if successful, False if ID already exists
         """
         if action_id in self._action_definitions:
             print(f"Warning: Action ID '{action_id}' already exists")
             return False
-        
+
         definition.action_id = action_id
         self._action_definitions[action_id] = definition
         return True
-    
-    def get_all_action_ids(self) -> List[str]:
+
+    def get_all_action_ids(self) -> list[str]:
         """
         Get all registered action IDs.
-        
+
         Returns:
             List of action identifiers
         """
         return list(self._action_definitions.keys())
-    
-    def get_actions_requiring_context(self, context: str) -> List[str]:
+
+    def get_actions_requiring_context(self, context: str) -> list[str]:
         """
         Get action IDs that require a specific context.
-        
+
         Args:
             context: Context requirement (e.g., "has_frames")
-            
+
         Returns:
             List of action IDs requiring the context
         """

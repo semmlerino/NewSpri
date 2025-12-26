@@ -4,18 +4,18 @@ Simplified two-step wizard with live preview functionality.
 """
 
 import logging
-from typing import List, Dict, Any
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QMessageBox
-)
+from typing import Any
+
 from PySide6.QtCore import Signal
 from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QDialog, QMessageBox, QVBoxLayout
 
-from .base.wizard_base import WizardWidget
-from ..steps.type_selection import ExportTypeStepSimple as ExportTypeStep
-from ..steps.modern_settings_preview import ModernExportSettings
-from ..core.frame_exporter import get_frame_exporter, SpriteSheetLayout
 from config import Config
+
+from ..core.frame_exporter import SpriteSheetLayout, get_frame_exporter
+from ..steps.modern_settings_preview import ModernExportSettings
+from ..steps.type_selection import ExportTypeStepSimple as ExportTypeStep
+from .base.wizard_base import WizardWidget
 
 logger = logging.getLogger(__name__)
 
@@ -25,46 +25,46 @@ class ExportDialog(QDialog):
     Integrated export dialog with live preview.
     Two steps: Type selection -> Settings with live preview.
     """
-    
+
     # Signals
     exportCompleted = Signal(str)  # Emitted with output path when export completes
     exportRequested = Signal(dict)  # Emitted when export is requested (for compatibility)
-    
-    def __init__(self, parent=None, frame_count: int = 0, current_frame: int = 0, 
-                 sprites: List[QPixmap] = None, segment_manager=None):
+
+    def __init__(self, parent=None, frame_count: int = 0, current_frame: int = 0,
+                 sprites: list[QPixmap] = None, segment_manager=None):
         super().__init__(parent)
-        
+
         self.frame_count = frame_count
         self.current_frame = current_frame
         self.sprites = sprites or []
         self.segment_manager = segment_manager  # Store for compatibility
-        
+
         # Dialog settings
         self.setWindowTitle("Export Sprites")
         self.setModal(True)
         self.resize(900, 650)  # Optimized for modern compact layout
-        
+
         # Initialize wizard
         self._setup_ui()
         self._setup_wizard()
-        
+
         # Center on screen
         self._center_on_screen()
-    
+
     def _setup_ui(self):
         """Set up the dialog UI."""
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
-        
+
         # Create wizard widget
         self.wizard = WizardWidget()
         layout.addWidget(self.wizard)
-        
+
         # Connect wizard signals
         self.wizard.wizardFinished.connect(self._on_wizard_finished)
         self.wizard.wizardCancelled.connect(self.reject)
-    
+
     def _setup_wizard(self):
         """Set up wizard steps."""
         # Step 1: Export type selection
@@ -73,7 +73,7 @@ class ExportDialog(QDialog):
             segment_manager=self.segment_manager
         )
         self.wizard.add_step(self.type_step)
-        
+
         # Step 2: Settings with live preview
         self.settings_preview_step = ModernExportSettings(
             frame_count=self.frame_count,
@@ -82,10 +82,10 @@ class ExportDialog(QDialog):
             segment_manager=self.segment_manager
         )
         self.wizard.add_step(self.settings_preview_step)
-        
+
         # Connect export button directly
         self.settings_preview_step.export_btn.clicked.connect(self._on_export_clicked)
-    
+
     def _on_export_clicked(self):
         """Handle export button click."""
         logger.debug("Export button clicked")
@@ -99,8 +99,8 @@ class ExportDialog(QDialog):
         # Trigger wizard finish to collect all data
         logger.debug("Triggering wizard finish to collect data")
         self.wizard._on_finish()
-    
-    def _on_wizard_finished(self, data: Dict[str, Any]):
+
+    def _on_wizard_finished(self, data: dict[str, Any]):
         """Handle wizard completion - perform export."""
         logger.debug("_on_wizard_finished called")
         logger.debug("Wizard data keys: %s", list(data.keys()))
@@ -122,10 +122,10 @@ class ExportDialog(QDialog):
         export_config = self._prepare_export_config(preset, settings)
         logger.debug("Export config keys: %s", list(export_config.keys()))
         logger.debug("Export config mode: %s", export_config.get('mode', 'None'))
-        
+
         # Emit exportRequested for compatibility with sprite_viewer
         self.exportRequested.emit(export_config)
-        
+
         # Create progress dialog
         from ..widgets.settings_widgets import ExportProgressDialog
         progress_dialog = ExportProgressDialog(
@@ -133,15 +133,15 @@ class ExportDialog(QDialog):
             total_frames=len(self.sprites),
             parent=self
         )
-        
+
         # Get exporter
         exporter = get_frame_exporter()
-        
+
         # Connect progress signals
         exporter.exportProgress.connect(progress_dialog.update_progress)
         exporter.exportFinished.connect(lambda success, msg: self._on_export_finished(success, msg, progress_dialog))
         exporter.exportError.connect(lambda error: self._on_export_failed(error, progress_dialog))
-        
+
         # Start export based on type
         logger.debug("Starting export for mode: %s", preset.mode)
         if preset.mode == "sheet":
@@ -157,11 +157,11 @@ class ExportDialog(QDialog):
         else:  # individual
             logger.debug("Calling _export_individual_frames")
             self._export_individual_frames(exporter, export_config)
-        
+
         # Show progress dialog
         progress_dialog.show()
-    
-    def _prepare_export_config(self, preset, settings) -> Dict[str, Any]:
+
+    def _prepare_export_config(self, preset, settings) -> dict[str, Any]:
         """Prepare export configuration from settings."""
         config = {
             'output_dir': settings.get('output_dir', ''),
@@ -174,7 +174,7 @@ class ExportDialog(QDialog):
             'background_color': settings.get('background_color', (255, 255, 255, 255)),
             'mode': preset.mode  # Add mode for export handler
         }
-        
+
         # Add base_name for all export types
         if preset.mode == "sheet" or preset.mode == "segments_sheet":
             # For sprite sheets, use single_filename as base_name
@@ -193,9 +193,9 @@ class ExportDialog(QDialog):
         else:
             # For individual/selected frames
             config['base_name'] = settings.get('base_name', 'frame')
-        
+
         return config
-    
+
     def _export_individual_frames(self, exporter, config):
         """Export individual frames."""
         # Start export
@@ -208,7 +208,7 @@ class ExportDialog(QDialog):
             scale_factor=config['scale'],
             pattern=config['pattern']
         )
-    
+
     def _export_sprite_sheet(self, exporter, config):
         """Export as sprite sheet."""
         # Create layout
@@ -223,10 +223,10 @@ class ExportDialog(QDialog):
             background_mode=config.get('background_mode', 'transparent'),
             background_color=config.get('background_color', (255, 255, 255, 255))
         )
-        
+
         # Construct full filename path
         filename = config.get('single_filename', 'spritesheet')
-        
+
         # Start export - using the unified export_frames method
         exporter.export_frames(
             frames=self.sprites,
@@ -237,13 +237,13 @@ class ExportDialog(QDialog):
             scale_factor=config['scale'],
             sprite_sheet_layout=layout
         )
-    
+
     def _export_selected_frames(self, exporter, config, selected_indices):
         """Export selected frames."""
         if not selected_indices:
             QMessageBox.warning(self, "Export Error", "No frames selected.")
             return
-        
+
         # Start export
         exporter.export_frames(
             frames=self.sprites,
@@ -255,7 +255,7 @@ class ExportDialog(QDialog):
             pattern=config['pattern'],
             selected_indices=selected_indices
         )
-    
+
     def _export_segments_per_row(self, exporter, config):
         """Export sprite sheet with segments per row."""
         logger.debug("_export_segments_per_row called")
@@ -293,7 +293,7 @@ class ExportDialog(QDialog):
         # Sort segments by start frame
         segment_info.sort(key=lambda s: s['start_frame'])
         logger.debug("Sorted segment info: %s", segment_info)
-        
+
         # Create layout with segments_per_row mode
         from ..core.frame_exporter import SpriteSheetLayout
         layout = SpriteSheetLayout(
@@ -303,7 +303,7 @@ class ExportDialog(QDialog):
             background_mode=config.get('background_mode', 'transparent'),
             background_color=config.get('background_color', (255, 255, 255, 255))
         )
-        
+
         # Make sure the layout is included in the config
         config['sprite_sheet_layout'] = layout
 
@@ -312,7 +312,7 @@ class ExportDialog(QDialog):
         logger.debug("Export config: output_dir=%s, base_name=%s", config['output_dir'], config['base_name'])
         logger.debug("Format=%s, scale=%s", config['format'], config['scale'])
         logger.debug("Layout mode: %s", layout.mode)
-        
+
         exporter.export_frames(
             frames=self.sprites,
             output_dir=config['output_dir'],
@@ -323,11 +323,11 @@ class ExportDialog(QDialog):
             sprite_sheet_layout=layout,
             segment_info=segment_info
         )
-    
+
     def _on_export_finished(self, success: bool, message: str, progress_dialog):
         """Handle export completion."""
         progress_dialog.close()
-        
+
         if success:
             # Show success message
             QMessageBox.information(
@@ -335,7 +335,7 @@ class ExportDialog(QDialog):
                 "Export Complete",
                 f"Export completed successfully!\n\n{message}"
             )
-            
+
             # Emit signal and close
             self.exportCompleted.emit(message)
             self.accept()
@@ -346,18 +346,18 @@ class ExportDialog(QDialog):
                 "Export Failed",
                 f"Export failed:\n\n{message}"
             )
-    
+
     def _on_export_failed(self, error_message: str, progress_dialog):
         """Handle export failure."""
         progress_dialog.close()
-        
+
         # Show error message
         QMessageBox.critical(
             self,
             "Export Failed",
             f"Export failed:\n\n{error_message}"
         )
-    
+
     def _center_on_screen(self):
         """Center the dialog on screen."""
         from PySide6.QtWidgets import QApplication
@@ -368,14 +368,14 @@ class ExportDialog(QDialog):
             center_point = screen_rect.center()
             dialog_rect.moveCenter(center_point)
             self.move(dialog_rect.topLeft())
-    
+
     def showEvent(self, event):
         """Handle dialog show event."""
         super().showEvent(event)
         # Ensure wizard starts at first step
         self.wizard.set_current_step(0)
-    
-    def set_sprites(self, sprites: List[QPixmap]):
+
+    def set_sprites(self, sprites: list[QPixmap]):
         """Set sprite frames for export. Compatible with legacy API."""
         self.sprites = sprites or []
         # Update the settings step if it exists

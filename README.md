@@ -64,7 +64,7 @@ The application features a **complete component-based MVC architecture** after c
 ## 📋 Installation
 
 ### **Requirements**
-- Python 3.8+
+- Python 3.11+
 - PySide6
 - Modern Qt-compatible system
 

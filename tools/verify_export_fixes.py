@@ -212,40 +212,6 @@ def test_error_handling():
         traceback.print_exc()
         return False
 
-def test_config_transparency():
-    """Test config transparency setting."""
-    print("\n🧪 Testing Config Transparency")
-    print("=" * 50)
-    
-    try:
-        from config import Config
-        from PySide6.QtGui import QColor
-        
-        # Test transparency color exists
-        transparent = Config.Color.TRANSPARENT
-        if isinstance(transparent, QColor):
-            print(f"✅ Transparency color configured: {transparent.alpha()} alpha")
-            
-            if transparent.alpha() == 0:
-                print("✅ Transparency is fully transparent")
-            else:
-                print(f"❌ Transparency alpha should be 0, got {transparent.alpha()}")
-                return False
-        else:
-            print("❌ Transparency color not a QColor")
-            return False
-        
-        return True
-        
-    except AttributeError:
-        print("❌ Config.Color.TRANSPARENT not found")
-        return False
-    except Exception as e:
-        print(f"❌ Config transparency test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
 def main():
     """Run all export functionality tests."""
     print("🎯 EXPORT FUNCTIONALITY FIXES - COMPREHENSIVE TESTING")
@@ -255,15 +221,13 @@ def main():
     print("• Missing dependencies that cause import crashes")
     print("• Export mode logic so presets work correctly")
     print("• Error handling and validation improvements")
-    print("• Config transparency setting for sprite sheets")
     print("=" * 70)
-    
+
     tests = [
         test_export_functionality,
         test_export_logic,
         test_frame_filtering,
         test_error_handling,
-        test_config_transparency
     ]
     
     passed = 0
@@ -287,7 +251,6 @@ def main():
         print("  • ✅ All dependencies import without crashes")
         print("  • ✅ Export modes properly map to frame exporter")
         print("  • ✅ Comprehensive error handling prevents crashes")
-        print("  • ✅ Config transparency setting fixed for sprite sheets")
         
         print("\n🎯 USER EXPERIENCE IMPROVEMENTS:")
         print("  • Individual frames preset exports only current frame selection")

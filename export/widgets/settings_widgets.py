@@ -2,10 +2,8 @@
 Custom widget components for export operations.
 """
 
-from PySide6.QtWidgets import (
-    QDialog, QVBoxLayout, QLabel, QPushButton, QProgressBar
-)
 from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QDialog, QLabel, QProgressBar, QPushButton, QVBoxLayout
 
 
 class ExportProgressDialog(QDialog):

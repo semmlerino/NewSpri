@@ -27,7 +27,7 @@ class TestSpriteViewerInitialization:
             assert viewer._status_manager is not None
             
             # Verify that status bar was created and is the right type
-            from enhanced_status_bar import EnhancedStatusBar
+            from ui.enhanced_status_bar import EnhancedStatusBar
             assert hasattr(viewer, '_status_manager')
             assert viewer._status_manager is not None
             assert isinstance(viewer.statusBar(), EnhancedStatusBar)
@@ -39,10 +39,10 @@ class TestSpriteViewerInitialization:
             assert hasattr(viewer, '_animation_controller')
             
             # Test the objects are actually the right types
-            from settings_manager import SettingsManager
-            from recent_files_manager import RecentFilesManager
+            from managers.settings_manager import SettingsManager
+            from managers.recent_files_manager import RecentFilesManager
             from sprite_model import SpriteModel
-            from animation_controller import AnimationController
+            from core.animation_controller import AnimationController
             
             assert isinstance(viewer._settings_manager, SettingsManager)
             assert isinstance(viewer._recent_files, RecentFilesManager)

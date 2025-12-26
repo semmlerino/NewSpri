@@ -7,8 +7,7 @@ Modern pytest-based testing infrastructure with comprehensive coverage, performa
 ```
 tests/
 ├── conftest.py                 # Global fixtures and configuration
-├── pytest.ini                 # Pytest configuration 
-├── requirements-test.txt       # Test dependencies
+│   (Note: pytest config is in pyproject.toml, not pytest.ini)
 ├── fixtures/                   # Test data and utilities
 │   ├── sprite_sheets.py        # Generated test sprite sheets
 │   └── mock_data.py           # Mock data generators
@@ -28,7 +27,7 @@ tests/
 
 ### Install Test Dependencies
 ```bash
-pip install -r tests/requirements-test.txt
+uv sync --all-extras
 ```
 
 ### Run Tests

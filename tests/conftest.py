@@ -1249,11 +1249,11 @@ def signal_test_helper():
         
         def assert_signal_emitted(self, spy, expected_count=1):
             """Assert that a signal was emitted the expected number of times."""
-            assert len(spy) == expected_count, f"Expected {expected_count} emissions, got {len(spy)}"
-        
+            assert spy.count() == expected_count, f"Expected {expected_count} emissions, got {spy.count()}"
+
         def assert_signal_not_emitted(self, spy):
             """Assert that a signal was not emitted."""
-            assert len(spy) == 0, f"Expected no emissions, got {len(spy)}"
+            assert spy.count() == 0, f"Expected no emissions, got {spy.count()}"
         
         def cleanup(self):
             """Cleanup signal spies."""

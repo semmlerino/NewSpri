@@ -6,20 +6,22 @@ Grid-Based Frame Extraction Module
 Independent grid-based frame extraction functionality for sprite sheets.
 Handles regular grids with support for margins, spacing, and validation.
 
-This module is completely independent and can be used standalone or 
+This module is completely independent and can be used standalone or
 integrated into larger sprite processing systems.
 """
 
-from typing import List, Optional, Tuple, NamedTuple
+from typing import NamedTuple
+
 from PySide6.QtCore import QRect
 from PySide6.QtGui import QPixmap
+
 from config import Config
 
 
 class GridConfig(NamedTuple):
     """Configuration for grid-based frame extraction."""
     width: int
-    height: int 
+    height: int
     offset_x: int = 0
     offset_y: int = 0
     spacing_x: int = 0
@@ -38,73 +40,73 @@ class GridLayout(NamedTuple):
 class GridExtractor:
     """
     Standalone grid-based frame extraction engine.
-    
-    Provides methods for extracting frames from sprite sheets arranged in 
+
+    Provides methods for extracting frames from sprite sheets arranged in
     regular grids, with support for margins, spacing, and comprehensive validation.
     """
-    
+
     def __init__(self):
         """Initialize the grid extractor."""
         pass
-    
-    def extract_frames(self, sprite_sheet: QPixmap, config: GridConfig) -> Tuple[bool, str, List[QPixmap]]:
+
+    def extract_frames(self, sprite_sheet: QPixmap, config: GridConfig) -> tuple[bool, str, list[QPixmap]]:
         """
         Extract frames from sprite sheet using grid-based extraction.
-        
+
         Args:
             sprite_sheet: Source sprite sheet pixmap
             config: Grid configuration (frame size, offsets, spacing)
-            
+
         Returns:
             Tuple of (success, error_message, frame_list)
         """
         if not sprite_sheet or sprite_sheet.isNull():
             return False, "No sprite sheet provided", []
-        
+
         # Validate frame settings
         valid, error_msg = self.validate_frame_settings(sprite_sheet, config)
         if not valid:
             return False, error_msg, []
-        
+
         try:
             sheet_width = sprite_sheet.width()
             sheet_height = sprite_sheet.height()
-            
+
             # Calculate available area after margins
             available_width = sheet_width - config.offset_x
             available_height = sheet_height - config.offset_y
-            
+
             # Calculate grid layout
             layout = self._calculate_grid_layout(available_width, available_height, config)
-            
+
             # Extract individual frames with spacing
             frames = []
             for row in range(layout.frames_per_col):
                 for col in range(layout.frames_per_row):
                     x = config.offset_x + (col * (config.width + config.spacing_x))
                     y = config.offset_y + (row * (config.height + config.spacing_y))
-                    
+
                     # Ensure we don't exceed sheet boundaries
                     if x + config.width <= sheet_width and y + config.height <= sheet_height:
                         frame_rect = QRect(x, y, config.width, config.height)
                         frame = sprite_sheet.copy(frame_rect)
-                        
+
                         if not frame.isNull():
                             frames.append(frame)
-            
+
             return True, "", frames
-            
+
         except Exception as e:
-            return False, f"Error extracting frames: {str(e)}", []
-    
-    def validate_frame_settings(self, sprite_sheet: QPixmap, config: GridConfig) -> Tuple[bool, str]:
+            return False, f"Error extracting frames: {e!s}", []
+
+    def validate_frame_settings(self, sprite_sheet: QPixmap, config: GridConfig) -> tuple[bool, str]:
         """
         Validate frame extraction parameters including offsets and spacing.
-        
+
         Args:
             sprite_sheet: Source sprite sheet for size validation
             config: Grid configuration to validate
-            
+
         Returns:
             Tuple of (is_valid, error_message)
         """
@@ -117,7 +119,7 @@ class GridExtractor:
             return False, f"Frame width cannot exceed {Config.FrameExtraction.MAX_FRAME_SIZE}"
         if config.height > Config.FrameExtraction.MAX_FRAME_SIZE:
             return False, f"Frame height cannot exceed {Config.FrameExtraction.MAX_FRAME_SIZE}"
-        
+
         # Validate offsets
         if config.offset_x < 0:
             return False, "X offset cannot be negative"
@@ -127,7 +129,7 @@ class GridExtractor:
             return False, f"X offset cannot exceed {Config.FrameExtraction.MAX_OFFSET}"
         if config.offset_y > Config.FrameExtraction.MAX_OFFSET:
             return False, f"Y offset cannot exceed {Config.FrameExtraction.MAX_OFFSET}"
-            
+
         # Validate spacing
         if config.spacing_x < 0:
             return False, "X spacing cannot be negative"
@@ -137,53 +139,53 @@ class GridExtractor:
             return False, f"X spacing cannot exceed {Config.FrameExtraction.MAX_SPACING}"
         if config.spacing_y > Config.FrameExtraction.MAX_SPACING:
             return False, f"Y spacing cannot exceed {Config.FrameExtraction.MAX_SPACING}"
-        
+
         # Check if frame size is reasonable for the sprite sheet
         if sprite_sheet and not sprite_sheet.isNull():
             sheet_width = sprite_sheet.width()
             sheet_height = sprite_sheet.height()
-            
+
             # At minimum, one frame must fit after applying offset
             if config.offset_x + config.width > sheet_width:
                 return False, f"Frame width + X offset ({config.offset_x + config.width}) exceeds sheet width ({sheet_width})"
             if config.offset_y + config.height > sheet_height:
                 return False, f"Frame height + Y offset ({config.offset_y + config.height}) exceeds sheet height ({sheet_height})"
-        
+
         return True, ""
-    
-    def calculate_grid_layout(self, sprite_sheet: QPixmap, config: GridConfig) -> Optional[GridLayout]:
+
+    def calculate_grid_layout(self, sprite_sheet: QPixmap, config: GridConfig) -> GridLayout | None:
         """
         Calculate the grid layout for the given sprite sheet and configuration.
-        
+
         Args:
             sprite_sheet: Source sprite sheet
             config: Grid configuration
-            
+
         Returns:
             GridLayout object with layout information, or None if invalid
         """
         if not sprite_sheet or sprite_sheet.isNull():
             return None
-            
+
         # Validate settings first
         valid, _ = self.validate_frame_settings(sprite_sheet, config)
         if not valid:
             return None
-            
+
         available_width = sprite_sheet.width() - config.offset_x
         available_height = sprite_sheet.height() - config.offset_y
-        
+
         return self._calculate_grid_layout(available_width, available_height, config)
-    
+
     def _calculate_grid_layout(self, available_width: int, available_height: int, config: GridConfig) -> GridLayout:
         """
         Calculate grid layout from available dimensions and configuration.
-        
+
         Args:
             available_width: Width available for frames after margins
-            available_height: Height available for frames after margins  
+            available_height: Height available for frames after margins
             config: Grid configuration
-            
+
         Returns:
             GridLayout with calculated dimensions
         """
@@ -193,14 +195,14 @@ class GridExtractor:
             frames_per_row = (available_width + config.spacing_x) // (config.width + config.spacing_x)
         else:
             frames_per_row = available_width // config.width if config.width > 0 else 0
-            
+
         if config.spacing_y > 0:
             frames_per_col = (available_height + config.spacing_y) // (config.height + config.spacing_y)
         else:
             frames_per_col = available_height // config.height if config.height > 0 else 0
-        
+
         total_frames = frames_per_row * frames_per_col
-        
+
         return GridLayout(
             frames_per_row=frames_per_row,
             frames_per_col=frames_per_col,
@@ -208,15 +210,15 @@ class GridExtractor:
             available_width=available_width,
             available_height=available_height
         )
-    
+
     def create_frame_info_string(self, layout: GridLayout, config: GridConfig) -> str:
         """
         Create a formatted info string describing the grid extraction.
-        
+
         Args:
             layout: Grid layout information
             config: Grid configuration used
-            
+
         Returns:
             Formatted string with frame extraction details
         """
@@ -228,27 +230,3 @@ class GridExtractor:
             )
         else:
             return "<br><b>Frames:</b> 0"
-
-
-# Convenience function for direct usage
-def extract_grid_frames(sprite_sheet: QPixmap, width: int, height: int, 
-                       offset_x: int = 0, offset_y: int = 0, 
-                       spacing_x: int = 0, spacing_y: int = 0) -> Tuple[bool, str, List[QPixmap]]:
-    """
-    Convenience function for direct grid-based frame extraction.
-    
-    Args:
-        sprite_sheet: Source sprite sheet pixmap
-        width: Frame width in pixels
-        height: Frame height in pixels
-        offset_x: X offset from left edge
-        offset_y: Y offset from top edge
-        spacing_x: Horizontal spacing between frames
-        spacing_y: Vertical spacing between frames
-        
-    Returns:
-        Tuple of (success, error_message, frame_list)
-    """
-    config = GridConfig(width, height, offset_x, offset_y, spacing_x, spacing_y)
-    extractor = GridExtractor()
-    return extractor.extract_frames(sprite_sheet, config)

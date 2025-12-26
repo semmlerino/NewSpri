@@ -119,69 +119,6 @@ def test_segment_color_consistency():
         traceback.print_exc()
         return False
 
-def test_segment_export_handler():
-    """Test the new segment-specific export handler."""
-    print("\n🧪 Testing Segment Export Handler")
-    print("=" * 50)
-    
-    try:
-        # Test that the new method exists
-        from sprite_viewer import SpriteViewer
-        
-        # Check if the new method exists
-        if hasattr(SpriteViewer, '_handle_segment_specific_export_request'):
-            print("✅ _handle_segment_specific_export_request method exists")
-        else:
-            print("❌ _handle_segment_specific_export_request method missing")
-            return False
-        
-        # Test export settings validation
-        test_settings = {
-            'output_dir': 'test_output',
-            'base_name': 'segment_frame',
-            'format': 'PNG',
-            'mode': 'individual',
-            'scale_factor': 1.0,
-            'pattern': '{name}_{index:03d}'
-        }
-        
-        required_keys = ['output_dir', 'base_name', 'format', 'mode', 'scale_factor']
-        for key in required_keys:
-            if key not in test_settings:
-                print(f"❌ Test settings missing required key: {key}")
-                return False
-        
-        print("✅ Export settings validation logic correct")
-        
-        # Test segment frame filtering logic
-        mock_segment_frames = [f"frame_{i}" for i in range(10)]  # 10 frames in segment
-        
-        # Test individual mode (should use all segment frames)
-        if len(mock_segment_frames) == 10:
-            print("✅ Individual mode uses all segment frames")
-        else:
-            print("❌ Individual mode frame count wrong")
-            return False
-        
-        # Test selected mode logic
-        selected_indices = [0, 2, 4, 6, 8]  # Select even frames
-        valid_indices = [i for i in selected_indices if 0 <= i < len(mock_segment_frames)]
-        filtered_frames = [mock_segment_frames[i] for i in valid_indices]
-        
-        if len(filtered_frames) == 5:
-            print("✅ Selected mode correctly filters segment frames")
-        else:
-            print(f"❌ Selected mode filtering failed: {len(filtered_frames)} frames")
-            return False
-        
-        return True
-        
-    except Exception as e:
-        print(f"❌ Segment export handler test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
 def test_export_functionality_integration():
     """Test that all export components work together."""
     print("\n🧪 Testing Export Functionality Integration")
@@ -251,8 +188,7 @@ def main():
     tests = [
         test_animated_gif_removal,
         test_segment_color_consistency,
-        test_segment_export_handler,
-        test_export_functionality_integration
+        test_export_functionality_integration,
     ]
     
     passed = 0

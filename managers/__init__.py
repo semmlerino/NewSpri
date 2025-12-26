@@ -11,18 +11,23 @@ Contains all singleton manager classes that coordinate application behavior:
 """
 
 # Import commonly used managers for easy access
-from .action_manager import get_actionmanager, ActionManager
-from .menu_manager import get_menu_manager, MenuManager
-from .shortcut_manager import get_shortcut_manager, ShortcutManager
-from .settings_manager import get_settings_manager, SettingsManager
-from .recent_files_manager import get_recent_files_manager, RecentFilesManager
+from .action_manager import ActionManager, get_actionmanager
 from .animation_segment_manager import AnimationSegmentManager
+from .menu_manager import MenuManager, get_menu_manager
+from .recent_files_manager import RecentFilesManager, get_recent_files_manager
+from .settings_manager import SettingsManager, get_settings_manager
+from .shortcut_manager import ShortcutManager, get_shortcut_manager
 
 __all__ = [
-    'get_actionmanager', 'ActionManager',
-    'get_menu_manager', 'MenuManager', 
-    'get_shortcut_manager', 'ShortcutManager',
-    'get_settings_manager', 'SettingsManager',
-    'get_recent_files_manager', 'RecentFilesManager',
-    'AnimationSegmentManager'
+    'ActionManager',
+    'AnimationSegmentManager',
+    'MenuManager',
+    'RecentFilesManager',
+    'SettingsManager',
+    'ShortcutManager',
+    'get_actionmanager',
+    'get_menu_manager',
+    'get_recent_files_manager',
+    'get_settings_manager',
+    'get_shortcut_manager'
 ]

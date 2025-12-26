@@ -35,14 +35,14 @@ class TestFrameExtractorInitialization:
     def test_default_state(self, qapp):
         """Test widget initializes to expected default state."""
         widget = FrameExtractor()
-        
-        # Grid mode should be default
-        assert widget.grid_mode_btn.isChecked()
-        assert not widget.ccl_mode_btn.isChecked()
-        assert widget.get_extraction_mode() == "grid"
-        
-        # CCL mode should start disabled
-        assert not widget.ccl_mode_btn.isEnabled()
+
+        # CCL mode is now the default (changed from grid)
+        assert widget.ccl_mode_btn.isChecked()
+        assert not widget.grid_mode_btn.isChecked()
+        assert widget.get_extraction_mode() == "ccl"
+
+        # CCL mode should start enabled (since it's the default)
+        assert widget.ccl_mode_btn.isEnabled()
         
         # Default frame size
         expected_width = Config.FrameExtraction.DEFAULT_FRAME_WIDTH
@@ -143,15 +143,15 @@ class TestFrameExtractorModeHandling:
     def test_ccl_availability(self, qapp):
         """Test CCL availability setting."""
         widget = FrameExtractor()
-        
-        # Initially disabled
-        assert not widget.ccl_mode_btn.isEnabled()
-        
-        # Enable CCL
+
+        # CCL is now enabled by default (changed from disabled)
+        assert widget.ccl_mode_btn.isEnabled()
+
+        # Update CCL info with sprite count
         widget.set_ccl_available(True, sprite_count=5)
         assert widget.ccl_mode_btn.isEnabled()
         assert "5 sprites" in widget.ccl_mode_btn.toolTip()
-        
+
         # Disable CCL
         widget.set_ccl_available(False)
         assert not widget.ccl_mode_btn.isEnabled()
@@ -177,16 +177,20 @@ class TestFrameExtractorPresetHandling:
     def test_preset_selection_signals(self, qapp):
         """Test preset selection emits correct signals."""
         widget = FrameExtractor()
+
+        # Switch to grid mode first (CCL is now default and presets are disabled in CCL)
+        widget.set_extraction_mode("grid")
+
         spy = QSignalSpy(widget.presetSelected)
-        
+
         # Get first square preset
         first_preset = Config.FrameExtraction.SQUARE_PRESETS[0]
         _, width, height, _ = first_preset
-        
+
         # Simulate clicking the first preset button
         button = widget.preset_group.button(0)
         button.click()
-        
+
         assert spy.count() == 1
         assert spy.at(0)[0] == width
         assert spy.at(0)[1] == height
@@ -450,10 +454,17 @@ class TestFrameExtractorErrorHandling:
         assert widget.get_extraction_mode() == "grid"
     
     def test_ccl_mode_when_unavailable(self, qapp):
-        """Test CCL mode when not available."""
+        """Test CCL mode when explicitly disabled."""
         widget = FrameExtractor()
-        
-        # CCL should not be selectable when unavailable
+
+        # CCL is enabled by default; first switch to grid mode
+        widget.set_extraction_mode("grid")
+        assert widget.get_extraction_mode() == "grid"
+
+        # Disable CCL availability
+        widget.set_ccl_available(False)
+
+        # Now trying to set CCL should keep us in grid mode
         widget.set_extraction_mode("ccl")
         assert widget.get_extraction_mode() == "grid"
     

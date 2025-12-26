@@ -8,16 +8,15 @@ Handles different methods of extracting frames from sprite sheets:
 - Background detection: Color key detection for transparency
 """
 
-from .background_detector import detect_background_color, BackgroundDetector
-from .ccl_extractor import detect_sprites_ccl_enhanced, CCLExtractor
-from .grid_extractor import GridExtractor, GridConfig, GridLayout
+from .background_detector import detect_background_color
+from .ccl_extractor import CCLExtractor, detect_sprites_ccl_enhanced
+from .grid_extractor import GridConfig, GridExtractor, GridLayout
 
 __all__ = [
-    'detect_background_color',
-    'BackgroundDetector',
-    'detect_sprites_ccl_enhanced',
     'CCLExtractor',
+    'GridConfig',
     'GridExtractor',
-    'GridConfig', 
-    'GridLayout'
+    'GridLayout',
+    'detect_background_color',
+    'detect_sprites_ccl_enhanced',
 ]

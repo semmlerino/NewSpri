@@ -180,9 +180,11 @@ class TestConcurrentOperations:
         # Access segment manager through controller
         segment_manager = viewer._segment_manager
 
-        # Set sprite context for segment manager
+        # Set sprite context for segment manager (use unique name to avoid pollution)
+        import uuid
+        unique_sprite_name = f"test_sprite_{uuid.uuid4().hex[:8]}.png"
         segment_manager.set_sprite_context(
-            "test_sprite.png",
+            unique_sprite_name,
             len(viewer._sprite_model.sprite_frames)
         )
 

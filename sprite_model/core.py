@@ -17,10 +17,10 @@ Architecture:
 # Direct import of the integrated modular implementation
 try:
     from sprite_model.core_integrated import SpriteModel
-    
+
 except ImportError as e:
     # Critical error - the modular implementation should always be available
-    
+
     error_msg = f"""
 ❌ CRITICAL ERROR: Could not import modular SpriteModel implementation.
 
@@ -29,15 +29,15 @@ Error: {e}
 This indicates a serious issue with the modular architecture.
 Please check that all required modules are properly installed:
 - sprite_model.file_operations
-- sprite_model.extraction  
+- sprite_model.extraction
 - sprite_model.animation
 - sprite_model.detection
 - sprite_model.ccl
 
 The legacy fallback has been removed as part of the refactoring completion.
 """
-    
+
     print(error_msg)
-    
+
     # Re-raise the import error with additional context
     raise ImportError(f"Modular SpriteModel implementation not available: {e}") from e

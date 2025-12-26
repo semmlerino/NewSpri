@@ -6,8 +6,8 @@ Handles export dialog creation, validation, and direct export execution.
 from pathlib import Path
 from typing import Any
 
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox
-from PySide6.QtCore import Signal, QObject
 
 from export import ExportDialog
 from export.core.frame_exporter import get_frame_exporter
@@ -48,21 +48,21 @@ class ExportCoordinator(QObject):
         self.segment_manager = dependencies['segment_manager']
 
         self._initialized = True
-    
+
     def cleanup(self):
         """Clean up resources."""
         # No specific cleanup needed for export coordinator
         pass
-    
+
     # ============================================================================
     # EXPORT OPERATIONS
     # ============================================================================
-    
+
     def export_frames(self):
         """Show enhanced export dialog for exporting frames and animation segments."""
         if not self._validate_export():
             return
-        
+
         # Emit signal to notify export has been requested
         self.exportRequested.emit({'mode': 'all_frames'})
 
@@ -73,15 +73,15 @@ class ExportCoordinator(QObject):
 
         # Set sprites for visual preview (Phase 4 enhancement)
         dialog.set_sprites(self.sprite_model.sprite_frames)
-        
+
         dialog.exportRequested.connect(self._handle_export_request)
         dialog.exec()
-    
+
     def export_current_frame(self):
         """Export only the current frame."""
         if not self._validate_export():
             return
-        
+
         # Emit signal to notify export has been requested
         self.exportRequested.emit({'mode': 'current_frame'})
 
@@ -92,31 +92,31 @@ class ExportCoordinator(QObject):
 
         # Set sprites for visual preview (Phase 4 enhancement)
         dialog.set_sprites(self.sprite_model.sprite_frames)
-        
+
         # The new dialog will automatically handle single frame export via presets
         dialog.exportRequested.connect(self._handle_export_request)
         dialog.exec()
-    
+
     # ============================================================================
     # HELPER METHODS
     # ============================================================================
-    
+
     def _validate_export(self) -> bool:
         """
         Validate that export can proceed.
-        
+
         Returns:
             bool: True if export can proceed, False otherwise
         """
         if not self.sprite_model or not self.sprite_model.sprite_frames:
             QMessageBox.warning(
-                self.main_window, 
-                "No Frames", 
+                self.main_window,
+                "No Frames",
                 "No frames to export."
             )
             return False
         return True
-    
+
     def _create_export_dialog(self) -> ExportDialog:
         """
         Create and configure export dialog.
@@ -132,7 +132,7 @@ class ExportCoordinator(QObject):
             current_frame=self.sprite_model.current_frame,
             segment_manager=self.segment_manager
         )
-    
+
     def _handle_export_request(self, settings: dict[str, Any]):
         """
         Handle unified export request from dialog.
@@ -309,21 +309,21 @@ class ExportCoordinator(QObject):
     def _show_info(self, message: str):
         """Show information message box."""
         QMessageBox.information(self.main_window, "Export Info", message)
-    
+
     # ============================================================================
     # STATE QUERIES
     # ============================================================================
-    
+
     def has_frames(self) -> bool:
         """Check if there are frames available for export."""
         return bool(self.sprite_model and self.sprite_model.sprite_frames)
-    
+
     def get_frame_count(self) -> int:
         """Get the total number of frames."""
         if self.sprite_model and self.sprite_model.sprite_frames:
             return len(self.sprite_model.sprite_frames)
         return 0
-    
+
     def get_current_frame_index(self) -> int:
         """Get the current frame index."""
         if self.sprite_model:

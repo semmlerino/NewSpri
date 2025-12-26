@@ -9,17 +9,22 @@ Contains utility modules and helper functions:
 """
 
 # Import utility modules that we know exist
-from .styles import StyleManager
-from .ui_common import DetectionResult, AutoButtonManager, parse_detection_tuple, extract_confidence_from_message
 from .extraction_modes import ExtractionMode
+from .styles import StyleManager
+from .ui_common import (
+    AutoButtonManager,
+    DetectionResult,
+    extract_confidence_from_message,
+    parse_detection_tuple,
+)
 
 # Note: scoring_system functions will be imported directly when needed
 
 __all__ = [
-    'StyleManager',
-    'DetectionResult',
     'AutoButtonManager',
-    'parse_detection_tuple',
+    'DetectionResult',
+    'ExtractionMode',
+    'StyleManager',
     'extract_confidence_from_message',
-    'ExtractionMode'
+    'parse_detection_tuple'
 ]

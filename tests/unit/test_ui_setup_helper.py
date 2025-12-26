@@ -75,9 +75,13 @@ class TestUISetupHelper:
     @patch('coordinators.ui_setup_helper.QWidget')
     @patch('coordinators.ui_setup_helper.QLabel')
     @patch('coordinators.ui_setup_helper.QTabWidget')
+    @patch('coordinators.ui_setup_helper.QVBoxLayout')
+    @patch('coordinators.ui_setup_helper.QHBoxLayout')
+    @patch('coordinators.ui_setup_helper.QSplitter')
     @patch('coordinators.ui_setup_helper.StyleManager')
-    def test_setup_ui_creates_components(self, mock_style, mock_tab, mock_label, 
-                                       mock_widget, mock_main_window, mock_dependencies):
+    def test_setup_ui_creates_components(self, mock_style, mock_splitter, mock_hbox, mock_vbox,
+                                       mock_tab, mock_label, mock_widget,
+                                       mock_main_window, mock_dependencies):
         """Test that setup_ui creates all necessary components."""
         # Setup mocks
         helper = UISetupHelper(mock_main_window)
