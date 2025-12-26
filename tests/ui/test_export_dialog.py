@@ -12,7 +12,7 @@ from PySide6.QtWidgets import QApplication, QDialogButtonBox
 from PySide6.QtCore import Qt
 
 from export import ExportDialog
-from export.core.export_presets import ExportPreset, ExportPresetType
+from export.core.export_presets import ExportPreset
 from config import Config
 
 

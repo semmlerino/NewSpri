@@ -31,7 +31,7 @@ from PySide6.QtGui import QPixmap, QColor
 # Project imports
 from export import ExportDialog
 from export.core.frame_exporter import SpriteSheetLayout
-from export.core.export_presets import ExportPresetType, get_preset_manager
+from export.core.export_presets import get_preset_manager
 
 
 # NOTE: qapp fixture is inherited from tests/conftest.py
@@ -107,7 +107,7 @@ class TestExportDialogEnhancements:
         """Test sprite sheet layout creation from UI."""
         # Select a sprite sheet preset first
         preset_manager = get_preset_manager()
-        sprite_sheet_preset = preset_manager.get_preset(ExportPresetType.SPRITE_SHEET)
+        sprite_sheet_preset = preset_manager.get_preset("sprite_sheet")
         
         if sprite_sheet_preset:
             export_dialog._on_preset_selected(sprite_sheet_preset)
@@ -121,7 +121,7 @@ class TestExportDialogEnhancements:
         """Test that layout controls exist and are connected."""
         # Select sprite sheet preset to make controls visible
         preset_manager = get_preset_manager()
-        sprite_sheet_preset = preset_manager.get_preset(ExportPresetType.SPRITE_SHEET)
+        sprite_sheet_preset = preset_manager.get_preset("sprite_sheet")
         
         if sprite_sheet_preset:
             export_dialog._on_preset_selected(sprite_sheet_preset)
@@ -142,7 +142,7 @@ class TestExportDialogEnhancements:
         """Test that preset layouts are applied to UI controls."""
         # Get a preset with specific layout
         preset_manager = get_preset_manager()
-        web_game_preset = preset_manager.get_preset(ExportPresetType.WEB_GAME_ATLAS)
+        web_game_preset = preset_manager.get_preset("web_game_atlas")
         
         if web_game_preset and web_game_preset.sprite_sheet_layout:
             # Apply preset
@@ -164,7 +164,7 @@ class TestLayoutModeVisibility:
     def test_individual_frames_hides_layout_section(self, export_dialog):
         """Test that individual frames preset hides layout section."""
         preset_manager = get_preset_manager()
-        individual_preset = preset_manager.get_preset(ExportPresetType.INDIVIDUAL_FRAMES)
+        individual_preset = preset_manager.get_preset("individual_frames")
         
         if individual_preset:
             # Show the dialog so visibility checks work properly
@@ -179,7 +179,7 @@ class TestLayoutModeVisibility:
     def test_sprite_sheet_shows_layout_section(self, export_dialog):
         """Test that sprite sheet preset shows layout section."""
         preset_manager = get_preset_manager()
-        sprite_sheet_preset = preset_manager.get_preset(ExportPresetType.SPRITE_SHEET)
+        sprite_sheet_preset = preset_manager.get_preset("sprite_sheet")
         
         if sprite_sheet_preset:
             # Show the dialog so visibility checks work properly
@@ -199,7 +199,7 @@ class TestLayoutModeVisibility:
     def test_layout_mode_controls_visibility(self, export_dialog):
         """Test that layout mode controls show/hide correctly."""
         preset_manager = get_preset_manager()
-        sprite_sheet_preset = preset_manager.get_preset(ExportPresetType.SPRITE_SHEET)
+        sprite_sheet_preset = preset_manager.get_preset("sprite_sheet")
         
         if sprite_sheet_preset:
             # Show the dialog so visibility checks work properly
@@ -243,7 +243,7 @@ class TestSignalConnections:
     def test_layout_controls_connected(self, export_dialog):
         """Test that layout controls are connected to update methods."""
         preset_manager = get_preset_manager()
-        sprite_sheet_preset = preset_manager.get_preset(ExportPresetType.SPRITE_SHEET)
+        sprite_sheet_preset = preset_manager.get_preset("sprite_sheet")
         
         if sprite_sheet_preset:
             export_dialog._on_preset_selected(sprite_sheet_preset)
@@ -277,7 +277,7 @@ class TestExportIntegration:
     def test_gather_settings_includes_layout(self, export_dialog):
         """Test that _gather_settings includes sprite sheet layout."""
         preset_manager = get_preset_manager()
-        sprite_sheet_preset = preset_manager.get_preset(ExportPresetType.SPRITE_SHEET)
+        sprite_sheet_preset = preset_manager.get_preset("sprite_sheet")
         
         if sprite_sheet_preset:
             export_dialog._on_preset_selected(sprite_sheet_preset)
@@ -293,7 +293,7 @@ class TestExportIntegration:
     def test_export_settings_validation(self, export_dialog):
         """Test that export settings are properly validated."""
         preset_manager = get_preset_manager()
-        sprite_sheet_preset = preset_manager.get_preset(ExportPresetType.SPRITE_SHEET)
+        sprite_sheet_preset = preset_manager.get_preset("sprite_sheet")
         
         if sprite_sheet_preset:
             export_dialog._on_preset_selected(sprite_sheet_preset)
@@ -318,7 +318,7 @@ class TestPreviewAccuracy:
     def test_preview_layout_matches_export_layout(self, export_dialog, sample_sprites):
         """Test that preview layout calculations match export calculations."""
         preset_manager = get_preset_manager()
-        sprite_sheet_preset = preset_manager.get_preset(ExportPresetType.SPRITE_SHEET)
+        sprite_sheet_preset = preset_manager.get_preset("sprite_sheet")
         
         if sprite_sheet_preset:
             export_dialog._on_preset_selected(sprite_sheet_preset)
