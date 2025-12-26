@@ -23,19 +23,6 @@ class TestExportDialog:
         assert dialog.frame_count == 10
         assert dialog.current_frame == 5
 
-    @pytest.mark.skip(reason="Tests non-existent API: get_default_export_directory doesn't exist on ExportDialog")
-    def test_default_export_directory(self, qtbot):
-        """Test default export directory returns valid path."""
-        dialog = ExportDialog()
-        qtbot.addWidget(dialog)
-
-        default_dir = dialog.get_default_export_directory()
-
-        # Should return a Path object with expected structure
-        assert isinstance(default_dir, Path)
-        assert default_dir.name == "sprite_exports"
-        assert default_dir.parent.exists()
-
     def test_export_requested_signal_exists(self, qtbot):
         """Test that exportRequested signal can be connected."""
         dialog = ExportDialog(frame_count=1)

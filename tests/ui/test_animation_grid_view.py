@@ -423,30 +423,7 @@ class TestAnimationGridView:
             assert segment.start_frame == 2
             assert segment.end_frame == 5
             assert segment.frame_count == 4
-    
-    @pytest.mark.skip(reason="Tests non-existent API: _export_btn, _segment_list don't exist on AnimationGridView")
-    def test_export_button_state_management(self, qtbot):
-        """Test export button shows segment names (recent fix)."""
-        grid_view = AnimationGridView()
-        qtbot.addWidget(grid_view)
 
-        # Initially export button should be disabled
-        assert not grid_view._export_btn.isEnabled()
-        assert grid_view._export_btn.text() == "Export Selected"
-        
-        # Add a segment
-        segment = AnimationSegment("Attack", 0, 3)
-        grid_view.add_segment(segment)
-        
-        # Simulate selecting the segment in the list
-        grid_view._segment_list.addItem("Attack")
-        grid_view._segment_list.setCurrentRow(0)
-        grid_view._on_segment_list_selection_changed()
-        
-        # Export button should now be enabled and show segment name
-        assert grid_view._export_btn.isEnabled()
-        assert "Attack" in grid_view._export_btn.text()
-    
     def test_contiguous_vs_noncontiguous_selection(self, qtbot):
         """Test handling of contiguous vs non-contiguous selections."""
         grid_view = AnimationGridView()

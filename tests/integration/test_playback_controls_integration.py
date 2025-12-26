@@ -208,13 +208,6 @@ class TestPlaybackControlsIntegration:
         assert loop_spy.count() == 1
 
     @pytest.mark.integration
-    @pytest.mark.skip(reason="Keyboard shortcuts are handled by ShortcutManager which needs separate testing")
-    def test_keyboard_shortcuts_vs_buttons(self, qtbot, sprite_viewer_with_frames):
-        """Test that keyboard shortcuts work alongside button navigation."""
-        # Skipped - keyboard shortcuts need ShortcutManager testing
-        pass
-
-    @pytest.mark.integration
     def test_navigation_with_no_frames(self, qtbot):
         """Test that navigation handles empty sprite list gracefully."""
         viewer = SpriteViewer()

@@ -133,52 +133,7 @@ class TestAnimationSplittingWorkflow:
         
         # Verify tab hasn't changed during segment creation
         assert tab_widget.currentIndex() == animation_tab_index
-    
-    @pytest.mark.skip(reason="Qt object reuse issue when running with other tests")
-    def test_export_workflow_tab_behavior(self, qtbot, qapp):
-        """Test the fixed export workflow tab switching behavior."""
-        # Ensure we have a clean state
-        qapp.processEvents()
-        
-        viewer = SpriteViewer()
-        qtbot.addWidget(viewer)
-        
-        tab_widget = viewer.findChild(QTabWidget)
-        animation_grid = viewer._grid_view
-        
-        # Add test segment
-        segment = AnimationSegment("Test_Segment", 0, 3)
-        animation_grid.add_segment(segment)
-        
-        # Find animation splitting tab
-        animation_tab_index = -1
-        frame_view_tab_index = -1
-        for i in range(tab_widget.count()):
-            tab_text = tab_widget.tabText(i)
-            if "Animation Splitting" in tab_text:
-                animation_tab_index = i
-            elif "Frame View" in tab_text:
-                frame_view_tab_index = i
-        
-        # Switch to animation splitting tab
-        tab_widget.setCurrentIndex(animation_tab_index)
-        
-        # Test single-click behavior (should NOT switch tabs)
-        current_tab = tab_widget.currentIndex()
-        animation_grid._on_segment_selected("Test_Segment")
-        
-        assert tab_widget.currentIndex() == current_tab  # Should stay in Animation Splitting
-        
-        # Test double-click behavior (should switch to Frame View for preview)
-        preview_signals = []
-        animation_grid.segmentPreviewRequested.connect(lambda seg: preview_signals.append(seg))
-        
-        animation_grid._on_segment_double_clicked("Test_Segment")
-        
-        assert len(preview_signals) == 1
-        assert preview_signals[0].name == "Test_Segment"
-        # Note: Actual tab switching would be handled by the main viewer
-    
+
     def test_segment_creation_and_management(self, qtbot):
         """Test segment creation and management in the grid view."""
         viewer = SpriteViewer()

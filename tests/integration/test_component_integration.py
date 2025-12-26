@@ -43,7 +43,7 @@ class TestModelViewControllerIntegration:
         model.frameChanged.connect(lambda idx, count: canvas.update())
         # Connect to playback controls - use set_current_frame
         model.frameChanged.connect(lambda idx, count: playback.set_current_frame(idx))
-        model.dataLoaded.connect(canvas.update)
+        model.dataLoaded.connect(lambda _path: canvas.update())
         
         # Create a sprite sheet with 10 frames (5x2 grid)
         # Add gaps between sprites for CCL compatibility

@@ -187,32 +187,6 @@ class TestSignalErrorHandling:
         
         if hasattr(dialog, 'exportCompleted'):
             dialog.exportCompleted.emit("test_path")  # Should not crash
-    
-    @pytest.mark.skip(reason="pytest-qt correctly catches exceptions in event loop - this tests Qt internals, not our code")
-    def test_signal_handler_exception_isolation(self, qapp):
-        """Test that exceptions in signal handlers don't crash the application."""
-        model = SpriteModel()
-        
-        def failing_handler(frame, total):
-            raise ValueError("Test exception in signal handler")
-        
-        # Connect failing handler
-        if hasattr(model, 'frameChanged'):
-            model.frameChanged.connect(failing_handler)
-            
-            # Also connect a working handler
-            working_calls = []
-            def working_handler(frame, total):
-                working_calls.append((frame, total))
-            
-            model.frameChanged.connect(working_handler)
-            
-            # Emit signal - failing handler shouldn't prevent working handler
-            model.frameChanged.emit(1, 10)
-            
-            # The working handler should still be called
-            # (Qt typically prints exceptions but continues)
-            assert len(working_calls) > 0, "Working handler not called after exception"
 
 
 def test_signal_documentation():
