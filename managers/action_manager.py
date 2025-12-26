@@ -13,7 +13,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QWidget
 
-from managers.shortcut_manager import get_shortcut_manager
+from managers.shortcut_manager import ShortcutManager
 
 
 class ActionCategory(Enum):
@@ -198,21 +198,24 @@ class ActionManager(QObject):
         ),
     }
 
-    def __init__(self, parent: QWidget | None = None):
+    def __init__(
+        self,
+        parent: QWidget | None = None,
+        shortcut_manager: ShortcutManager | None = None,
+    ):
         """
         Initialize action manager.
 
         Args:
             parent: Parent widget for actions
+            shortcut_manager: ShortcutManager instance for keyboard shortcuts
         """
         super().__init__(parent)
         self._parent_widget = parent
         self._actions: dict[str, QAction] = {}
         self._action_definitions: dict[str, ActionDefinition] = {}
         self._context_state: dict[str, Any] = {}
-
-        # Get shortcut manager
-        self._shortcut_manager = get_shortcut_manager(parent)
+        self._shortcut_manager = shortcut_manager
 
         # Load default actions
         self._load_default_actions()
@@ -254,7 +257,7 @@ class ActionManager(QObject):
         # Set tooltip
         if definition.tooltip:
             full_tooltip = definition.tooltip
-            if definition.shortcut_id:
+            if definition.shortcut_id and self._shortcut_manager is not None:
                 # Add shortcut to tooltip
                 shortcut_def = self._shortcut_manager.get_shortcut_definition(definition.shortcut_id)
                 if shortcut_def:
@@ -262,7 +265,7 @@ class ActionManager(QObject):
             action.setToolTip(full_tooltip)
 
         # Associate with shortcut manager
-        if definition.shortcut_id:
+        if definition.shortcut_id and self._shortcut_manager is not None:
             self._shortcut_manager.set_shortcut_action(definition.shortcut_id, action)
 
             # Set callback to trigger action
@@ -311,7 +314,7 @@ class ActionManager(QObject):
 
             # Update shortcut callback
             definition = self._action_definitions[action_id]
-            if definition.shortcut_id:
+            if definition.shortcut_id and self._shortcut_manager is not None:
                 self._shortcut_manager.set_shortcut_callback(definition.shortcut_id, callback)
 
     def get_actions_by_category(self, category: ActionCategory) -> list[QAction]:
@@ -344,7 +347,8 @@ class ActionManager(QObject):
         self._context_state.update(context_state)
 
         # Update shortcut manager context
-        self._shortcut_manager.update_context(**context_state)
+        if self._shortcut_manager is not None:
+            self._shortcut_manager.update_context(**context_state)
 
         # Update action states
         self._update_action_states()
@@ -444,17 +448,3 @@ class ActionManager(QObject):
         ]
 
 
-# Singleton implementation (simplified from base manager pattern)
-_action_manager_instance = None
-
-def get_actionmanager(parent: QWidget | None = None) -> ActionManager:
-    """Get the global action manager instance."""
-    global _action_manager_instance
-    if _action_manager_instance is None:
-        _action_manager_instance = ActionManager(parent)
-    return _action_manager_instance
-
-def reset_actionmanager():
-    """Reset the global action manager instance (for testing)."""
-    global _action_manager_instance
-    _action_manager_instance = None

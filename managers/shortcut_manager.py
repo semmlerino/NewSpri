@@ -385,17 +385,3 @@ class ShortcutManager(QObject):
         return self._registered_shortcuts.copy()
 
 
-# Singleton implementation (consolidated pattern)
-_shortcut_manager_instance: ShortcutManager | None = None
-
-def get_shortcut_manager(parent: QWidget | None = None) -> ShortcutManager:
-    """Get the global shortcut manager instance."""
-    global _shortcut_manager_instance
-    if _shortcut_manager_instance is None:
-        _shortcut_manager_instance = ShortcutManager(parent)
-    return _shortcut_manager_instance
-
-def reset_shortcut_manager():
-    """Reset the global shortcut manager instance (for testing)."""
-    global _shortcut_manager_instance
-    _shortcut_manager_instance = None

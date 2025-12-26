@@ -8,7 +8,6 @@ from unittest.mock import MagicMock
 
 from managers.shortcut_manager import (
     ShortcutManager, ShortcutDefinition, ShortcutContext,
-    get_shortcut_manager, reset_shortcut_manager
 )
 
 
@@ -50,10 +49,9 @@ class TestShortcutDefinition:
 
 class TestShortcutManager:
     """Test ShortcutManager class."""
-    
+
     def setup_method(self):
         """Set up test fixtures."""
-        reset_shortcut_manager()
         self.manager = ShortcutManager()
     
     def test_manager_initialization(self):
@@ -184,18 +182,6 @@ class TestShortcutManager:
         assert "Animation" in help_html
         assert "View" in help_html
     
-    def test_singleton_instance(self):
-        """Test singleton instance functionality."""
-        manager1 = get_shortcut_manager()
-        manager2 = get_shortcut_manager()
-        
-        assert manager1 is manager2  # Should be same instance
-        
-        # Reset and test again
-        reset_shortcut_manager()
-        manager3 = get_shortcut_manager()
-        
-        assert manager3 is not manager1  # Should be new instance after reset
 
 
 class TestShortcutContext:
@@ -211,10 +197,9 @@ class TestShortcutContext:
 
 class TestShortcutIntegration:
     """Test integration scenarios."""
-    
+
     def setup_method(self):
         """Set up test fixtures."""
-        reset_shortcut_manager()
         self.manager = ShortcutManager()
     
     def test_complete_workflow(self):

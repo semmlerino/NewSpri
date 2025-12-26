@@ -6,11 +6,8 @@ Tests the centralized QAction creation and management system.
 import pytest
 from unittest.mock import MagicMock
 
-from managers import ActionManager, get_actionmanager
+from managers import ActionManager
 from managers.action_manager import ActionDefinition, ActionCategory
-
-# Import the real reset function for proper test isolation
-from managers.action_manager import reset_actionmanager
 
 
 class TestActionDefinition:
@@ -62,11 +59,12 @@ class TestActionDefinition:
 
 class TestActionManager:
     """Test ActionManager class."""
-    
+
     def setup_method(self):
         """Set up test fixtures."""
-        reset_actionmanager()
-        self.manager = ActionManager()
+        from managers.shortcut_manager import ShortcutManager
+        self.shortcut_manager = ShortcutManager()
+        self.manager = ActionManager(shortcut_manager=self.shortcut_manager)
     
     def test_manager_initialization(self):
         """Test action manager initialization."""
@@ -174,15 +172,6 @@ class TestActionManager:
         definition = self.manager.get_action_definition("file_open")
         assert definition.callback == test_callback
     
-    def test_singleton_instance(self):
-        """Test singleton instance functionality."""
-        manager1 = get_actionmanager()
-        manager2 = get_actionmanager()
-        
-        assert manager1 is manager2  # Should be same instance
-        
-        # Note: No reset functionality exists in current implementation
-        # so we can't test instance reset behavior
 
 
 class TestActionCategories:
@@ -199,11 +188,12 @@ class TestActionCategories:
 
 class TestActionIntegration:
     """Test integration scenarios."""
-    
+
     def setup_method(self):
         """Set up test fixtures."""
-        reset_actionmanager()
-        self.manager = ActionManager()
+        from managers.shortcut_manager import ShortcutManager
+        self.shortcut_manager = ShortcutManager()
+        self.manager = ActionManager(shortcut_manager=self.shortcut_manager)
     
     def test_action_definition_completeness(self):
         """Test that all action definitions are complete."""

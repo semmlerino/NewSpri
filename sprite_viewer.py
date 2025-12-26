@@ -39,9 +39,9 @@ from managers import (
     ActionManager,
     AnimationSegmentManager,
     MenuManager,
-    RecentFilesManager,
-    SettingsManager,
     ShortcutManager,
+    get_recent_files_manager,
+    get_settings_manager,
 )
 
 # Core MVC Components
@@ -183,13 +183,14 @@ class SpriteViewer(QMainWindow):
 
     def _init_managers(self):
         """Initialize all centralized managers."""
-        # Settings must be first (used by other managers)
-        self._settings_manager = SettingsManager()
-        self._recent_files = RecentFilesManager()
-        # Shortcut manager must be before ActionManager (used internally)
+        # Utility managers (keep using factories - used by dialogs etc.)
+        self._settings_manager = get_settings_manager()
+        self._recent_files = get_recent_files_manager()
+
+        # Core managers (DI chain - explicit dependencies)
         self._shortcut_manager = ShortcutManager(self)
-        self._action_manager = ActionManager(self)
-        self._menu_manager = MenuManager(self)
+        self._action_manager = ActionManager(self, shortcut_manager=self._shortcut_manager)
+        self._menu_manager = MenuManager(self, action_manager=self._action_manager)
 
     def _init_core_components(self):
         """Initialize core MVC components."""

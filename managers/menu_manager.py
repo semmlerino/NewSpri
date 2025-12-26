@@ -12,7 +12,7 @@ from typing import Any
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMainWindow, QMenu, QMenuBar, QToolBar
 
-from managers.action_manager import get_actionmanager
+from managers.action_manager import ActionManager
 
 
 class MenuItemType(Enum):
@@ -144,16 +144,21 @@ class MenuManager(QObject):
         ),
     }
 
-    def __init__(self, parent: QMainWindow | None = None):
+    def __init__(
+        self,
+        parent: QMainWindow | None = None,
+        action_manager: ActionManager | None = None,
+    ):
         """
         Initialize menu manager.
 
         Args:
             parent: Parent main window
+            action_manager: ActionManager instance for menu actions
         """
         super().__init__(parent)
         self._parent_window = parent
-        self._action_manager = get_actionmanager(parent)
+        self._action_manager = action_manager
         self._menus: dict[str, QMenu] = {}
         self._toolbars: dict[str, QToolBar] = {}
         self._menu_definitions: dict[str, MenuDefinition] = {}
@@ -165,7 +170,8 @@ class MenuManager(QObject):
         self._load_default_definitions()
 
         # Connect to action manager updates
-        self._action_manager.actionStateChanged.connect(self._on_action_state_changed)
+        if self._action_manager is not None:
+            self._action_manager.actionStateChanged.connect(self._on_action_state_changed)
 
     def _load_default_definitions(self):
         """Load default menu and toolbar definitions."""
@@ -267,6 +273,9 @@ class MenuManager(QObject):
             menu: QMenu to add to
             action_id: Action identifier
         """
+        if self._action_manager is None:
+            return
+
         action = self._action_manager.get_action(action_id)
         if not action:
             # Create action if it doesn't exist
@@ -363,6 +372,9 @@ class MenuManager(QObject):
             toolbar: QToolBar to add to
             action_id: Action identifier
         """
+        if self._action_manager is None:
+            return
+
         action = self._action_manager.get_action(action_id)
         if not action:
             # Create action if it doesn't exist
@@ -491,17 +503,3 @@ class MenuManager(QObject):
         return list(self._toolbar_definitions.keys())
 
 
-# Singleton implementation (consolidated pattern)
-_menu_manager_instance: MenuManager | None = None
-
-def get_menu_manager(parent: QMainWindow | None = None) -> MenuManager:
-    """Get the global menu manager instance."""
-    global _menu_manager_instance
-    if _menu_manager_instance is None:
-        _menu_manager_instance = MenuManager(parent)
-    return _menu_manager_instance
-
-def reset_menu_manager():
-    """Reset the global menu manager instance (for testing)."""
-    global _menu_manager_instance
-    _menu_manager_instance = None

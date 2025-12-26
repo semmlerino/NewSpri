@@ -7,9 +7,8 @@ import pytest
 from unittest.mock import MagicMock
 
 from managers.menu_manager import (
-    MenuManager, MenuDefinition, ToolbarDefinition, 
+    MenuManager, MenuDefinition, ToolbarDefinition,
     MenuItemDefinition, MenuItemType,
-    get_menu_manager, reset_menu_manager
 )
 
 
@@ -113,11 +112,14 @@ class TestToolbarDefinition:
 
 class TestMenuManager:
     """Test MenuManager class."""
-    
+
     def setup_method(self):
         """Set up test fixtures."""
-        reset_menu_manager()
-        self.manager = MenuManager()
+        from managers.shortcut_manager import ShortcutManager
+        from managers.action_manager import ActionManager
+        self.shortcut_manager = ShortcutManager()
+        self.action_manager = ActionManager(shortcut_manager=self.shortcut_manager)
+        self.manager = MenuManager(action_manager=self.action_manager)
     
     def test_manager_initialization(self):
         """Test menu manager initialization."""
@@ -234,18 +236,6 @@ class TestMenuManager:
                     assert item.action_id is not None
                     assert item.action_id != ""
     
-    def test_singleton_instance(self):
-        """Test singleton instance functionality."""
-        manager1 = get_menu_manager()
-        manager2 = get_menu_manager()
-        
-        assert manager1 is manager2  # Should be same instance
-        
-        # Reset and test again
-        reset_menu_manager()
-        manager3 = get_menu_manager()
-        
-        assert manager3 is not manager1  # Should be new instance after reset
 
 
 class TestMenuItemTypes:
@@ -262,11 +252,14 @@ class TestMenuItemTypes:
 
 class TestMenuIntegration:
     """Test integration scenarios."""
-    
+
     def setup_method(self):
         """Set up test fixtures."""
-        reset_menu_manager()
-        self.manager = MenuManager()
+        from managers.shortcut_manager import ShortcutManager
+        from managers.action_manager import ActionManager
+        self.shortcut_manager = ShortcutManager()
+        self.action_manager = ActionManager(shortcut_manager=self.shortcut_manager)
+        self.manager = MenuManager(action_manager=self.action_manager)
     
     def test_file_menu_structure(self):
         """Test file menu structure completeness."""

@@ -13,7 +13,7 @@ from sprite_viewer import SpriteViewer
 from export import ExportDialog
 from sprite_model import SpriteModel
 from core import AnimationController
-from managers import get_menu_manager, get_actionmanager, AnimationSegmentManager
+from managers import AnimationSegmentManager
 
 
 @pytest.mark.integration
