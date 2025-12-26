@@ -5,9 +5,9 @@ Tests the frame export system including various export modes and formats.
 
 import pytest
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, patch, ANY
 
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QPixmap, QImage
 from PySide6.QtCore import Qt
 
 from export.core.frame_exporter import (
@@ -140,16 +140,22 @@ class TestFrameExporter:
         # Mock the worker to avoid actual thread creation
         mock_worker = MagicMock()
         mock_worker_class.return_value = mock_worker
-        
+
         exporter = FrameExporter()
-        
-        frames = [MagicMock(spec=QPixmap)]
+
+        # Create mock QPixmap that returns a valid QImage when toImage() is called
+        mock_pixmap = MagicMock(spec=QPixmap)
+        mock_image = MagicMock(spec=QImage)
+        mock_image.isNull.return_value = False
+        mock_pixmap.toImage.return_value = mock_image
+
+        frames = [mock_pixmap]
         success = exporter.export_frames(
             frames=frames,
             output_dir="/tmp/test_export",
             base_name="test"
         )
-        
+
         mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
         mock_worker.start.assert_called_once()
     
@@ -165,13 +171,13 @@ class TestFrameExporter:
 
 class TestExportWorker:
     """Test ExportWorker functionality."""
-    
+
     @pytest.fixture
     def mock_frames(self):
-        """Create mock frames for testing."""
+        """Create mock QImage frames for testing (ExportTask now uses QImage)."""
         frames = []
         for i in range(3):
-            frame = MagicMock(spec=QPixmap)
+            frame = MagicMock(spec=QImage)
             frame.width.return_value = 64
             frame.height.return_value = 64
             frame.save.return_value = True
@@ -200,13 +206,10 @@ class TestExportWorker:
         # Run the export (directly call the method for testing)
         worker._export_individual_frames()
         
-        # Check that save was called for each frame
+        # Check that save was called for each frame (Qt infers format from extension)
         for i, frame in enumerate(mock_frames):
             expected_filename = f"frame_{i:03d}.png"
-            frame.save.assert_called_with(
-                str(tmp_path / expected_filename),
-                "PNG"
-            )
+            frame.save.assert_called_with(str(tmp_path / expected_filename))
         
         # Check progress signals
         assert len(progress_calls) == len(mock_frames)
@@ -225,11 +228,11 @@ class TestExportWorker:
 
         worker = ExportWorker(task)
 
-        # Mock QPixmap creation for sprite sheet
-        with patch('export.core.frame_exporter.QPixmap') as mock_pixmap_class:
+        # Mock QImage creation for sprite sheet (now uses thread-safe QImage)
+        with patch('export.core.frame_exporter.QImage') as mock_image_class:
             mock_sheet = MagicMock()
             mock_sheet.save.return_value = True
-            mock_pixmap_class.return_value = mock_sheet
+            mock_image_class.return_value = mock_sheet
 
             # Mock QPainter
             with patch('export.core.frame_exporter.QPainter'):
@@ -237,14 +240,13 @@ class TestExportWorker:
 
                 # Verify sprite sheet was created with correct size
                 # 3 frames in 1x3 grid = 64x192 pixels (auto layout chooses 1x3 for 3 frames)
-                mock_pixmap_class.assert_called_with(64, 192)
+                # QImage constructor takes (width, height, format)
+                # Use ANY for format since patching QImage also patches Format enum
+                mock_image_class.assert_called_with(64, 192, ANY)
 
-                # Verify save was called
+                # Verify save was called (Qt infers format from extension)
                 expected_filename = "sprites_sheet.png"
-                mock_sheet.save.assert_called_with(
-                    str(tmp_path / expected_filename),
-                    "PNG"
-                )
+                mock_sheet.save.assert_called_with(str(tmp_path / expected_filename))
 
     def test_scale_factor_application(self, mock_frames, tmp_path):
         """Test that scale factor is applied correctly."""
@@ -269,11 +271,13 @@ class TestExportWorker:
         worker._export_individual_frames()
         
         # Check that scaling was called with correct parameters
+        # Use Qt enum values instead of integers
+        from PySide6.QtCore import Qt
         for frame in mock_frames:
             frame.scaled.assert_called_once_with(
                 128, 128,  # 64 * 2.0
-                aspectMode=1,  # KeepAspectRatio
-                mode=1  # SmoothTransformation
+                aspectMode=Qt.AspectRatioMode.KeepAspectRatio,
+                mode=Qt.TransformationMode.SmoothTransformation
             )
     
     def test_export_cancellation(self, mock_frames, tmp_path):
@@ -317,8 +321,12 @@ class TestExportIntegration:
         exporter.exportFinished.connect(lambda s, m: finished.append((s, m)))
         exporter.exportError.connect(lambda e: errors.append(e))
         
-        # Start export
-        frames = [MagicMock(spec=QPixmap)]
+        # Start export - mock QPixmap with working toImage()
+        mock_pixmap = MagicMock(spec=QPixmap)
+        mock_image = MagicMock(spec=QImage)
+        mock_image.isNull.return_value = False
+        mock_pixmap.toImage.return_value = mock_image
+        frames = [mock_pixmap]
         success = exporter.export_frames(
             frames=frames,
             output_dir="/tmp/test",

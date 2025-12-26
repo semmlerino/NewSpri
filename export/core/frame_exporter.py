@@ -10,8 +10,8 @@ from typing import List, Optional, Tuple, Dict, Any
 from enum import Enum
 from dataclasses import dataclass
 
-from PySide6.QtCore import QObject, Signal, QThread
-from PySide6.QtGui import QPixmap, QPainter, QColor
+from PySide6.QtCore import QObject, Signal, QThread, Qt
+from PySide6.QtGui import QPixmap, QPainter, QColor, QImage
 
 from config import Config
 
@@ -97,6 +97,9 @@ class SpriteSheetLayout:
         import math
         
         if self.mode == 'custom':
+            # custom_columns and custom_rows validated in __post_init__
+            assert self.custom_columns is not None
+            assert self.custom_rows is not None
             cols = self.custom_columns
             rows = self.custom_rows
         elif self.mode == 'rows':
@@ -144,8 +147,8 @@ class ExportMode(Enum):
 class ExportTask:
     """Represents a single export task."""
     
-    def __init__(self, 
-                 frames: List[QPixmap],
+    def __init__(self,
+                 frames: List[QImage],
                  output_dir: Path,
                  base_name: str,
                  format: ExportFormat,
@@ -157,9 +160,9 @@ class ExportTask:
                  segment_info: Optional[List[Dict[str, Any]]] = None):
         """
         Initialize export task.
-        
+
         Args:
-            frames: List of QPixmap frames to export
+            frames: List of QImage frames to export (thread-safe)
             output_dir: Output directory path
             base_name: Base name for exported files
             format: Export format
@@ -224,40 +227,52 @@ class ExportWorker(QThread):
         """Cancel the export operation."""
         self._cancelled = True
     
-    def _export_individual_frames(self):
+    def _export_individual_frames(self) -> None:
         """Export frames as individual files."""
         total_frames = len(self.task.frames)
         exported_count = 0
-        
+        failed_frames: list[str] = []
+
         for i, frame in enumerate(self.task.frames):
             if self._cancelled:
                 self.finished.emit(False, "Export cancelled")
                 return
-            
+
             # Generate filename
             filename = self.task.pattern.format(
                 name=self.task.base_name,
                 index=i,
                 frame=i + 1
             ) + self.task.format.extension
-            
+
             filepath = self.task.output_dir / filename
-            
-            # Scale if needed
+
+            # Scale if needed (frame is QImage, thread-safe)
             if self.task.scale_factor != 1.0:
-                frame = self._scale_pixmap(frame, self.task.scale_factor)
-            
-            # Save frame
-            if frame.save(str(filepath), self.task.format.value):
+                frame = self._scale_image(frame, self.task.scale_factor)
+
+            # Save frame - Qt infers format from file extension
+            if frame.save(str(filepath)):
                 exported_count += 1
                 self.progress.emit(i + 1, total_frames, f"Exported {filename}")
             else:
+                failed_frames.append(filename)
                 self.error.emit(f"Failed to export {filename}")
-        
-        self.finished.emit(
-            True, 
-            f"Successfully exported {exported_count} frames"
-        )
+
+        # Report failure if any frames failed to export
+        if failed_frames:
+            failed_summary = ", ".join(failed_frames[:3])
+            if len(failed_frames) > 3:
+                failed_summary += f" (and {len(failed_frames) - 3} more)"
+            self.finished.emit(
+                False,
+                f"Export failed: {len(failed_frames)} of {total_frames} frames failed ({failed_summary})"
+            )
+        else:
+            self.finished.emit(
+                True,
+                f"Successfully exported {exported_count} frames"
+            )
     
     
     def _export_sprite_sheet(self):
@@ -320,7 +335,7 @@ class ExportWorker(QThread):
         filename = f"{self.task.base_name}_sheet{self.task.format.extension}"
         filepath = self.task.output_dir / filename
         
-        if sprite_sheet.save(str(filepath), self.task.format.value):
+        if sprite_sheet.save(str(filepath)):
             self.progress.emit(3, 3, f"Saved {filename}")
             self.finished.emit(
                 True, 
@@ -334,7 +349,9 @@ class ExportWorker(QThread):
         import math
         
         if layout.mode == 'custom':
-            # Use exact user-specified dimensions
+            # Use exact user-specified dimensions (validated in __post_init__)
+            assert layout.custom_columns is not None
+            assert layout.custom_rows is not None
             cols = layout.custom_columns
             rows = layout.custom_rows
             
@@ -452,28 +469,29 @@ class ExportWorker(QThread):
         
         return sheet_width, sheet_height
     
-    def _create_background_sheet(self, width: int, height: int, 
-                               layout: SpriteSheetLayout) -> QPixmap:
-        """Create sprite sheet with the specified background."""
-        sprite_sheet = QPixmap(width, height)
-        
+    def _create_background_sheet(self, width: int, height: int,
+                               layout: SpriteSheetLayout) -> QImage:
+        """Create sprite sheet with the specified background (thread-safe QImage)."""
+        # Use QImage instead of QPixmap for thread-safety
+        sprite_sheet = QImage(width, height, QImage.Format.Format_ARGB32)
+
         if layout.background_mode == 'transparent':
             sprite_sheet.fill(QColor(0, 0, 0, 0))  # Fully transparent
-            
+
         elif layout.background_mode == 'solid':
             r, g, b, a = layout.background_color
             sprite_sheet.fill(QColor(r, g, b, a))
-            
+
         elif layout.background_mode == 'checkerboard':
             # Create checkerboard pattern
             sprite_sheet.fill(QColor(0, 0, 0, 0))  # Start transparent
-            
+
             painter = QPainter(sprite_sheet)
-            
+
             tile_size = Config.Export.CHECKERBOARD_TILE_SIZE
             light_color = QColor(*Config.Export.CHECKERBOARD_LIGHT_COLOR)
             dark_color = QColor(*Config.Export.CHECKERBOARD_DARK_COLOR)
-            
+
             # Draw checkerboard pattern
             for y in range(0, height, tile_size):
                 for x in range(0, width, tile_size):
@@ -481,17 +499,17 @@ class ExportWorker(QThread):
                     tile_x = x // tile_size
                     tile_y = y // tile_size
                     is_light = (tile_x + tile_y) % 2 == 0
-                    
+
                     color = light_color if is_light else dark_color
                     painter.fillRect(x, y, tile_size, tile_size, color)
-            
+
             painter.end()
-        
+
         return sprite_sheet
     
-    def _draw_sprites_with_layout(self, sprite_sheet: QPixmap, cols: int, rows: int,
+    def _draw_sprites_with_layout(self, sprite_sheet: QImage, cols: int, rows: int,
                                 frame_width: int, frame_height: int,
-                                layout: SpriteSheetLayout):
+                                layout: SpriteSheetLayout) -> None:
         """Draw all frames onto the sprite sheet with proper spacing and layout."""
         painter = QPainter(sprite_sheet)
 
@@ -505,22 +523,22 @@ class ExportWorker(QThread):
                 painter.end()
                 self.finished.emit(False, "Export cancelled")
                 return
-            
+
             # Calculate grid position
             row = i // cols
             col = i % cols
-            
+
             # Calculate pixel position with spacing and padding
             x = layout.padding + (col * (frame_width + layout.spacing))
             y = layout.padding + (row * (frame_height + layout.spacing))
-            
+
             # Scale and draw frame
             if self.task.scale_factor != 1.0:
-                scaled_frame = self._scale_pixmap(frame, self.task.scale_factor)
-                painter.drawPixmap(x, y, scaled_frame)
+                scaled_frame = self._scale_image(frame, self.task.scale_factor)
+                painter.drawImage(x, y, scaled_frame)
             else:
-                painter.drawPixmap(x, y, frame)
-        
+                painter.drawImage(x, y, frame)
+
         painter.end()
     
     def _calculate_segments_per_row_layout(self) -> Tuple[int, int]:
@@ -548,13 +566,13 @@ class ExportWorker(QThread):
         
         return cols, rows
     
-    def _draw_sprites_segments_per_row(self, sprite_sheet: QPixmap, cols: int, rows: int,
+    def _draw_sprites_segments_per_row(self, sprite_sheet: QImage, cols: int, rows: int,
                                      frame_width: int, frame_height: int,
-                                     layout: SpriteSheetLayout):
+                                     layout: SpriteSheetLayout) -> None:
         """Draw sprites with each segment on its own row."""
-        
+
         painter = QPainter(sprite_sheet)
-        
+
         # Enable high-quality rendering if configured
         if Config.Export.ENABLE_ANTIALIASING:
             painter.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -564,46 +582,46 @@ class ExportWorker(QThread):
         for row_idx, segment in enumerate(self.task.segment_info):
             start = segment['start_frame']
             end = segment['end_frame']
-            
-            
+
+
             frames_drawn = 0
             # Draw frames for this segment
             for col_idx, frame_idx in enumerate(range(start, end + 1)):
                 if frame_idx >= len(self.task.frames):
                     break
-                    
+
                 if self._cancelled:
                     painter.end()
                     self.finished.emit(False, "Export cancelled")
                     return
-                
+
                 frame = self.task.frames[frame_idx]
-                
+
                 # Calculate pixel position with spacing and padding
                 x = layout.padding + (col_idx * (frame_width + layout.spacing))
                 y = layout.padding + (row_idx * (frame_height + layout.spacing))
-                
-                
+
+
                 # Scale and draw frame
                 if self.task.scale_factor != 1.0:
-                    scaled_frame = self._scale_pixmap(frame, self.task.scale_factor)
-                    painter.drawPixmap(x, y, scaled_frame)
+                    scaled_frame = self._scale_image(frame, self.task.scale_factor)
+                    painter.drawImage(x, y, scaled_frame)
                 else:
-                    painter.drawPixmap(x, y, frame)
-                
+                    painter.drawImage(x, y, frame)
+
                 frames_drawn += 1
 
             logger.debug("Drew %d frames for segment '%s'", frames_drawn, segment['name'])
-        
+
         painter.end()
     
-    def _scale_pixmap(self, pixmap: QPixmap, scale_factor: float) -> QPixmap:
-        """Scale a pixmap by the given factor."""
-        new_width = int(pixmap.width() * scale_factor)
-        new_height = int(pixmap.height() * scale_factor)
-        return pixmap.scaled(
-            new_width, 
-            new_height, 
+    def _scale_image(self, image: QImage, scale_factor: float) -> QImage:
+        """Scale an image by the given factor (thread-safe)."""
+        new_width = int(image.width() * scale_factor)
+        new_height = int(image.height() * scale_factor)
+        return image.scaled(
+            new_width,
+            new_height,
             aspectMode=Qt.AspectRatioMode.KeepAspectRatio,
             mode=Qt.TransformationMode.SmoothTransformation
         )
@@ -639,6 +657,9 @@ class FrameExporter(QObject):
                      segment_info: Optional[List[Dict[str, Any]]] = None) -> bool:
         """
         Export frames with the specified settings.
+
+        Note: If a previous export is still running, this method will wait for it
+        to complete before starting the new export. This prevents thread crashes.
         
         Args:
             frames: List of frames to export
@@ -663,6 +684,12 @@ class FrameExporter(QObject):
             logger.debug("Segment count: %d", len(segment_info))
             for i, seg in enumerate(segment_info):
                 logger.debug("  Segment %d: %s", i, seg)
+
+        # Wait for any existing worker to complete before starting a new export
+        if self._worker is not None and self._worker.isRunning():
+            logger.debug("Waiting for previous export worker to complete")
+            self._worker.wait()
+            logger.debug("Previous export worker completed")
 
         # Validate inputs
         if not frames:
@@ -697,11 +724,22 @@ class FrameExporter(QObject):
         # Use default pattern if not provided
         if pattern is None:
             pattern = Config.Export.DEFAULT_PATTERN
-        
+
+        # Convert QPixmap frames to QImage for thread-safe processing
+        # QPixmap is NOT thread-safe and must only be used from the main GUI thread
+        # QImage IS thread-safe and can be safely used in worker threads
+        image_frames: List[QImage] = []
+        for i, frame in enumerate(frames):
+            image = frame.toImage()
+            if image.isNull():
+                self.exportError.emit(f"Failed to convert frame {i} to image")
+                return False
+            image_frames.append(image)
+
         # Create export task
         try:
             self._current_task = ExportTask(
-                frames=frames,
+                frames=image_frames,
                 output_dir=output_path,
                 base_name=base_name,
                 format=export_format,
@@ -771,3 +809,17 @@ def get_frame_exporter() -> FrameExporter:
     if _exporter_instance is None:
         _exporter_instance = FrameExporter()
     return _exporter_instance
+
+
+def reset_frame_exporter() -> None:
+    """Reset the global frame exporter instance (for testing).
+
+    Properly waits for any running export thread to complete before resetting.
+    """
+    global _exporter_instance
+    if _exporter_instance is not None:
+        # Wait for any running export thread to complete
+        if _exporter_instance._worker is not None and _exporter_instance._worker.isRunning():
+            _exporter_instance._worker.quit()
+            _exporter_instance._worker.wait()
+    _exporter_instance = None
