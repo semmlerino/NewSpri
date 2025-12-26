@@ -27,9 +27,6 @@ from managers import (
 
 # UI Components
 
-# Export System
-from export import ExportHandler
-
 
 class SpriteViewer(QMainWindow):
     """
@@ -44,7 +41,59 @@ class SpriteViewer(QMainWindow):
     """
 
     def __init__(self):
-        """Initialize sprite viewer with manager-based architecture."""
+        """
+        Initialize sprite viewer with manager-based architecture.
+
+        INITIALIZATION ORDER CONTRACT
+        =============================
+        The initialization follows a strict 7-phase order. Changing this order
+        will cause silent failures or runtime errors.
+
+        Phase 1: Managers (singletons, no dependencies)
+            - ShortcutManager, ActionManager, MenuManager, SettingsManager, RecentFilesManager
+            - These are singletons retrieved via factory functions
+
+        Phase 2: Core Components (model, controllers - partial init)
+            - SpriteModel: data layer, no dependencies
+            - AnimationController: initialized with model + viewer reference
+            - FileController: signal connections for file operations
+            - AutoDetectionController: created but NOT initialized yet (needs UI)
+            - AnimationSegmentController: created, will receive dependencies via setters
+            - AnimationSegmentManager: segment persistence
+
+        Phase 3: UI Setup (creates all widgets)
+            - UISetupHelper creates: canvas, playback_controls, frame_extractor,
+              grid_view, segment_preview, tab_widget, toolbars, status_manager
+            - Returns dict of UI components for distribution
+
+        Phase 4: Coordinator Initialization (requires UI components)
+            - ViewCoordinator: canvas, zoom controls
+            - ExportCoordinator: sprite_model, segment_manager
+            - AnimationCoordinator: model, controller, playback_controls, status
+            - EventCoordinator: shortcuts, file_controller, view_coordinator
+
+        Phase 5: Manager Setup (injects remaining dependencies)
+            - AnimationSegmentController receives: segment_manager, grid_view,
+              sprite_model, tab_widget, segment_preview via setter methods
+            - Action callbacks configured
+
+        Phase 6: Signal Connections (requires all coordinators ready)
+            - Model signals -> UI handlers
+            - Controller signals -> status display
+            - UI signals -> coordinator methods
+            - Grid view signals -> segment controller
+
+        Phase 7: Final Initialization
+            - AutoDetectionController.initialize() - MUST be after signal connections
+            - Apply saved settings
+            - Show welcome message
+
+        CRITICAL DEPENDENCIES:
+        - AutoDetectionController.initialize() must be LAST because it may emit
+          signals that require all other connections to be in place
+        - AnimationSegmentController requires all 5 setters to be called before use
+        - Signal connections require coordinators to be initialized first
+        """
         super().__init__()
         
         # Initialize coordinator registry (Phase 1 refactoring)
@@ -111,7 +160,6 @@ class SpriteViewer(QMainWindow):
         export_dependencies = {
             'sprite_model': self._sprite_model,
             'segment_manager': self._segment_manager,
-            'export_handler': self._export_handler
         }
         self._export_coordinator.initialize(export_dependencies)
         
@@ -191,11 +239,8 @@ class SpriteViewer(QMainWindow):
         
         # Status management will be initialized after status bar is created
         self._status_manager = None
-        
-        # Export handler for centralized export logic
-        self._export_handler = ExportHandler(self)
-    
-    
+
+
     def _setup_managers(self):
         """Configure managers with application-specific settings."""
         # Configure action manager with callbacks
@@ -203,7 +248,6 @@ class SpriteViewer(QMainWindow):
         
         # Configure segment controller dependencies
         self._segment_controller.set_segment_manager(self._segment_manager)
-        self._segment_controller.set_export_handler(self._export_handler)
         self._segment_controller.set_grid_view(self._grid_view)
         self._segment_controller.set_sprite_model(self._sprite_model)
         self._segment_controller.set_tab_widget(self._tab_widget)

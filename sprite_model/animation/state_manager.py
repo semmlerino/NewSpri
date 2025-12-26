@@ -252,8 +252,14 @@ class AnimationStateManager(QObject):
     
     @property
     def total_frames(self) -> int:
-        """Get total frame count."""
-        return self._total_frames
+        """
+        Get total frame count from the actual frame source.
+        
+        This computes the value dynamically to ensure consistency
+        with the actual sprite frames, avoiding dual-tracking issues.
+        """
+        frames = self._get_frames()
+        return len(frames)
     
     @property
     def is_playing(self) -> bool:

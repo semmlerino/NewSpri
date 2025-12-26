@@ -625,7 +625,12 @@ class SpriteModel(QObject):
     
     @property
     def total_frames(self) -> int:
-        """Get total number of frames."""
+        """
+        Get total number of frames.
+        
+        Returns the count from the animation state manager, which computes
+        it dynamically from the actual sprite frames list.
+        """
         return self._animation_state.total_frames
     
     @property
