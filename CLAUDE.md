@@ -40,21 +40,42 @@ PySide6 sprite sheet animation viewer/editor with MVC architecture. Features: an
 ```
 Root Directory:
   sprite_viewer.py          - Main application window
+  config.py                 - Centralized configuration
+
+ui/                         - UI components
   sprite_canvas.py          - Zoom/pan display widget
   playback_controls.py      - Animation control panel
   frame_extractor.py        - Configuration interface
   animation_grid_view.py    - Animation splitting interface
   animation_segment_preview.py - Segment preview panel
+  animation_segment_widget.py - Segment list widget
+  collapsible_section.py    - Collapsible UI sections
+  enhanced_status_bar.py    - Status bar with enhanced info
+  validation_widgets.py     - Input validation widgets
+
+core/                       - Controllers
   animation_controller.py   - Animation timing control
   animation_segment_controller.py - Segment management
   auto_detection_controller.py - Frame detection logic
+  file_controller.py        - File loading orchestration
+
+managers/                   - Manager classes
   animation_segment_manager.py - Segment persistence
   menu_manager.py           - Menu system
-  config.py                 - Centralized configuration
-  styles.py                 - Centralized styling
+  action_manager.py         - Action registry
+  recent_files_manager.py   - Recent files tracking
+  settings_manager.py       - Application settings
+  shortcut_manager.py       - Keyboard shortcuts
 
-sprite_model/               - Data layer & algorithms
+utils/                      - Utilities
+  styles.py                 - Centralized styling (StyleManager)
+  sprite_rendering.py       - Sprite rendering helpers
+  extraction_modes.py       - Extraction mode definitions
+  scoring_system.py         - Frame scoring algorithms
+  ui_common.py              - Common UI utilities
+
 coordinators/               - Component coordination
+sprite_model/               - Data layer & algorithms
 export/                     - Export system (core/, dialogs/, widgets/)
 tests/                      - Test suite (unit/, integration/, ui/, performance/)
 archive/                    - Historical documentation (ignore for development)
@@ -123,11 +144,13 @@ When loading sprites: `set_sprite_context()` must be called to trigger segment l
 
 ```
 export/
-  core/frame_exporter.py    - Main export engine
-  core/export_settings.py   - Export configuration
-  dialogs/export_wizard.py  - Main export wizard dialog
-  widgets/sprite_preview_widget.py - Sprite sheet preview
-  widgets/settings_widgets.py - Settings controls
+  core/frame_exporter.py        - Main export engine
+  core/export_presets.py        - Export presets management
+  dialogs/export_wizard.py      - Main export wizard dialog
+  dialogs/base/wizard_base.py   - Wizard base class
+  dialogs/modern_settings_preview.py - Settings preview step
+  dialogs/type_selection.py     - Export type selection
+  widgets/settings_widgets.py   - Settings controls
 ```
 
 Formats: PNG, JPG, BMP, GIF. Scale factors: 0.5x-4.0x. Shortcuts: Ctrl+E (all), Ctrl+Shift+E (current).
@@ -190,9 +213,9 @@ uv run ruff check . && uv run ruff format . && uv run basedpyright && uv run pyt
 5. Run canonical check sequence before committing
 
 ### Modifying UI
-1. Locate component file
+1. Locate component file in `ui/` directory
 2. Maintain signal interface contracts
-3. Update styling through `styles.py`
+3. Update styling through `utils/styles.py` (StyleManager)
 4. Test independently before integration
 
 ### Small Diffs Principle

@@ -9,29 +9,33 @@ The application features a **complete component-based MVC architecture** after c
 ### **Component Structure**
 ```
 📁 Python Sprite Viewer - Professional Architecture
-├── 🎨 UI Components
-│   ├── sprite_viewer.py               - Main application window
-│   ├── sprite_canvas.py               - Zoom/pan display widget  
+├── 🎨 UI Components (ui/)
+│   ├── sprite_canvas.py               - Zoom/pan display widget
 │   ├── playback_controls.py           - Animation control panel
 │   ├── frame_extractor.py             - Configuration interface
 │   ├── animation_grid_view.py         - Animation splitting interface
-│   └── animation_segment_preview.py   - Segment preview panel
-├── 🧠 Core Architecture  
-│   ├── sprite_model/                  - Data layer & algorithms
+│   ├── animation_segment_preview.py   - Segment preview panel
+│   └── validation_widgets.py          - Input validation widgets
+├── 🧠 Core Controllers (core/)
 │   ├── animation_controller.py        - Animation timing control
 │   ├── animation_segment_controller.py - Segment management
-│   └── auto_detection_controller.py   - Frame detection logic
-├── 📦 Managers
+│   ├── auto_detection_controller.py   - Frame detection logic
+│   └── file_controller.py             - File loading orchestration
+├── 📦 Managers (managers/)
 │   ├── animation_segment_manager.py   - Segment persistence
 │   ├── menu_manager.py                - Menu system
-│   └── recent_files_manager.py       - Recent files tracking
+│   ├── recent_files_manager.py        - Recent files tracking
+│   └── settings_manager.py            - Application settings
 ├── ⚙️ Foundation
+│   ├── sprite_viewer.py               - Main application window
 │   ├── config.py                      - Centralized configuration
-│   └── styles.py                      - Centralized styling
-└── 📚 Export System
-    ├── export/core/                   - Export engine
-    ├── export/dialogs/                - Export dialogs
-    └── export/widgets/                - Export UI components
+│   └── utils/styles.py                - Centralized styling
+├── 🔧 Data Layer
+│   └── sprite_model/                  - Data layer & algorithms
+└── 📚 Export System (export/)
+    ├── core/                          - Export engine & presets
+    ├── dialogs/                       - Export wizard dialogs
+    └── widgets/                       - Export UI components
 ```
 
 ### **Key Architectural Benefits**
@@ -189,7 +193,7 @@ The application excels at intelligent sprite sheet processing:
 - **README.md** - This file - main project documentation
 - **CLAUDE.md** - Instructions for Claude AI assistant when working with this codebase
 - **requirements.txt** - Python package dependencies
-- **pytest.ini** - Test configuration and markers
+- **pyproject.toml** - Project configuration including test markers
 
 ## 🔧 Development
 
