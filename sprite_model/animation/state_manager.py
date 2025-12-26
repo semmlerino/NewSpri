@@ -67,7 +67,7 @@ class AnimationStateManager(QObject):
         """
         self._total_frames = total_frames
         if self._current_frame >= total_frames:
-            self._current_frame = 0 if total_frames > 0 else 0
+            self._current_frame = 0
             self.frameChanged.emit(self._current_frame, self._total_frames)
 
     # ============================================================================

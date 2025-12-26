@@ -198,7 +198,7 @@ class ActionManager(QObject):
         ),
     }
 
-    def __init__(self, parent: QWidget = None):
+    def __init__(self, parent: QWidget | None = None):
         """
         Initialize action manager.
 
@@ -447,7 +447,7 @@ class ActionManager(QObject):
 # Singleton implementation (simplified from base manager pattern)
 _action_manager_instance = None
 
-def get_actionmanager(parent=None):
+def get_actionmanager(parent: QWidget | None = None) -> ActionManager:
     """Get the global action manager instance."""
     global _action_manager_instance
     if _action_manager_instance is None:

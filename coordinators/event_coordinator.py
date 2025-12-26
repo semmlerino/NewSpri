@@ -92,7 +92,8 @@ class EventCoordinator(CoordinatorBase):
         key_sequence_str = q_key_sequence.toString()
 
         # For special keys not handled well by QKeySequence, use our mapping
-        if key in self.KEY_MAPPING:
+        qt_key = Qt.Key(key)
+        if qt_key in self.KEY_MAPPING:
             # Build custom sequence for special keys
             parts = []
             if modifiers & Qt.KeyboardModifier.ControlModifier:
@@ -101,7 +102,7 @@ class EventCoordinator(CoordinatorBase):
                 parts.append("Shift")
             if modifiers & Qt.KeyboardModifier.AltModifier:
                 parts.append("Alt")
-            parts.append(self.KEY_MAPPING[key])
+            parts.append(self.KEY_MAPPING[qt_key])
             key_sequence_str = "+".join(parts)
         elif Qt.Key.Key_A <= key <= Qt.Key.Key_Z:
             # Handle single letter keys specially - QKeySequence may not format them correctly

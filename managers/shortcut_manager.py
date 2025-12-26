@@ -41,7 +41,7 @@ class ShortcutDefinition:
         try:
             QKeySequence(self.key)
         except Exception as e:
-            raise ValueError(f"Invalid key sequence '{self.key}': {e}")
+            raise ValueError(f"Invalid key sequence '{self.key}': {e}") from e
 
 
 class ShortcutManager(QObject):
@@ -116,7 +116,7 @@ class ShortcutManager(QObject):
         ),
     }
 
-    def __init__(self, parent: QWidget = None):
+    def __init__(self, parent: QWidget | None = None):
         """
         Initialize shortcut manager.
 
@@ -293,10 +293,10 @@ class ShortcutManager(QObject):
         Returns:
             List of category names
         """
-        categories = set(
+        categories = {
             definition.category
             for definition in self._registered_shortcuts.values()
-        )
+        }
         return sorted(categories)
 
     def generate_help_html(self) -> str:
@@ -388,7 +388,7 @@ class ShortcutManager(QObject):
 # Singleton implementation (consolidated pattern)
 _shortcut_manager_instance: ShortcutManager | None = None
 
-def get_shortcut_manager(parent: QWidget = None) -> ShortcutManager:
+def get_shortcut_manager(parent: QWidget | None = None) -> ShortcutManager:
     """Get the global shortcut manager instance."""
     global _shortcut_manager_instance
     if _shortcut_manager_instance is None:

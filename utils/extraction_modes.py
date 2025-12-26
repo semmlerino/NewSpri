@@ -4,11 +4,17 @@ Manages extraction mode transitions and behaviors.
 Part of Phase 3 refactoring: Complex Logic Simplification.
 """
 
+from __future__ import annotations
+
 from abc import ABC, abstractmethod
-from collections.abc import Callable
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QLabel
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from PySide6.QtWidgets import QLabel
 
 
 class ExtractionMode(ABC):
@@ -242,6 +248,8 @@ class ExtractionModeStateMachine(QObject):
 
     def get_current_mode(self) -> ExtractionMode:
         """Get current extraction mode."""
+        if self._current_mode is None:
+            raise RuntimeError("No extraction mode is currently active")
         return self._current_mode
 
     def get_current_mode_name(self) -> str:
@@ -293,8 +301,7 @@ class AdvancedCCLMode(ExtractionMode):
         if 'sprite_loaded' not in context or not context['sprite_loaded']:
             return False, "No sprite sheet loaded"
 
-        if 'min_cluster_size' in context:
-            if context['min_cluster_size'] < 1:
-                return False, "Invalid minimum cluster size"
+        if 'min_cluster_size' in context and context['min_cluster_size'] < 1:
+            return False, "Invalid minimum cluster size"
 
         return True, "Advanced CCL settings valid"

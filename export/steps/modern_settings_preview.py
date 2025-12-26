@@ -1218,7 +1218,7 @@ class ModernExportSettings(WizardStep):
 
         # Get selected frames if in selected mode
         selected_indices = []
-        if self._current_preset.mode == "selected" and 'frame_list' in self._settings_widgets:
+        if self._current_preset and self._current_preset.mode == "selected" and 'frame_list' in self._settings_widgets:
             for item in self._settings_widgets['frame_list'].selectedItems():
                 selected_indices.append(item.data(Qt.ItemDataRole.UserRole))
         else:
@@ -1241,7 +1241,7 @@ class ModernExportSettings(WizardStep):
         painter.end()
 
         # Update info
-        if self._current_preset.mode == "selected":
+        if self._current_preset and self._current_preset.mode == "selected":
             info = f"Selected: {len(selected_indices)} frames"
         else:
             info = f"Individual: {len(self._sprites)} frames"
@@ -1300,8 +1300,13 @@ class ModernExportSettings(WizardStep):
         while wizard and not hasattr(wizard, 'get_wizard_data'):
             wizard = wizard.parent()
 
-        if wizard:
-            wizard_data = wizard.get_wizard_data()
+        if wizard and hasattr(wizard, 'get_wizard_data'):
+            # Use getattr to safely access the method
+            get_wizard_data = getattr(wizard, 'get_wizard_data', None)
+            if get_wizard_data is None:
+                logger.debug("get_wizard_data method not found")
+                return
+            wizard_data = get_wizard_data()
             logger.debug("Wizard data keys: %s", list(wizard_data.keys()))
 
             step_0_data = wizard_data.get('step_0', {})

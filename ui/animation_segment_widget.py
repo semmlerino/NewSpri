@@ -4,7 +4,7 @@ Modern animation segment selection and export interface.
 Part of Phase 1: Export Dialog Redesign - Animation Segments Support.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont
@@ -23,15 +23,18 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
 )
 
-try:
+if TYPE_CHECKING:
     from managers.animation_segment_manager import AnimationSegmentManager
-except ImportError:
-    # Fallback if animation segment manager is not available
-    class AnimationSegmentManager:
-        def get_all_segments(self):
-            return []
-        def get_segment(self, name):
-            return None
+else:
+    try:
+        from managers.animation_segment_manager import AnimationSegmentManager
+    except ImportError:
+        # Fallback if animation segment manager is not available
+        class AnimationSegmentManager:  # type: ignore[no-redef]
+            def get_all_segments(self) -> list[Any]:
+                return []
+            def get_segment(self, name: str) -> Any:
+                return None
 
 
 class AnimationSegmentSelector(QGroupBox):
@@ -246,10 +249,12 @@ class AnimationSegmentSelector(QGroupBox):
 
         if self.segment_manager:
             # Connect to segment manager signals if available
+            # pyright: ignore[reportAttributeAccessIssue] - Dynamic signal checking
             if hasattr(self.segment_manager, 'segmentAdded'):
-                self.segment_manager.segmentAdded.connect(self._update_segment_list)
+                self.segment_manager.segmentAdded.connect(self._update_segment_list)  # type: ignore[attr-defined]
+            # pyright: ignore[reportAttributeAccessIssue] - Dynamic signal checking
             if hasattr(self.segment_manager, 'segmentRemoved'):
-                self.segment_manager.segmentRemoved.connect(self._update_segment_list)
+                self.segment_manager.segmentRemoved.connect(self._update_segment_list)  # type: ignore[attr-defined]
 
     def _update_segment_list(self):
         """Update the segment list display."""
@@ -284,7 +289,7 @@ class AnimationSegmentSelector(QGroupBox):
         # Update info display
         if selected_items and self.segment_manager:
             info_parts = []
-            total_frames = 0
+            total_frames: int = 0
 
             for item in selected_items:
                 segment_name = item.data(Qt.ItemDataRole.UserRole)
@@ -296,7 +301,7 @@ class AnimationSegmentSelector(QGroupBox):
                         f"• {segment.name}: {frame_count} frames "
                         f"({segment.start_frame}-{segment.end_frame})"
                     )
-                    total_frames += frame_count
+                    total_frames += int(frame_count)
 
             info_parts.append(f"\nTotal: {total_frames} frames")
             self.segment_info.setText("\n".join(info_parts))

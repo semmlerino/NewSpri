@@ -154,10 +154,10 @@ class SpriteCanvas(QLabel):
         """Get current zoom factor."""
         return self._zoom_factor
 
-    def set_background_mode(self, checkerboard: bool, color: QColor = None):
+    def set_background_mode(self, checkerboard: bool, color: QColor | None = None):
         """Set background display mode."""
         self._show_checkerboard = checkerboard
-        if color:
+        if color is not None:
             self._bg_color = color
         self.update()
 
@@ -270,13 +270,13 @@ class SpriteCanvas(QLabel):
         # Vertical lines
         x = sprite_rect.left()
         while x <= sprite_rect.right():
-            painter.drawLine(x, sprite_rect.top(), x, sprite_rect.bottom())
+            painter.drawLine(int(x), sprite_rect.top(), int(x), sprite_rect.bottom())
             x += grid_size
 
         # Horizontal lines
         y = sprite_rect.top()
         while y <= sprite_rect.bottom():
-            painter.drawLine(sprite_rect.left(), y, sprite_rect.right(), y)
+            painter.drawLine(sprite_rect.left(), int(y), sprite_rect.right(), int(y))
             y += grid_size
 
     def mousePressEvent(self, event):
@@ -350,7 +350,7 @@ class SpriteCanvas(QLabel):
         sprite_y = (widget_rect.height() - scaled_height) // 2 + self._pan_offset[1]
 
         # Check if mouse is within sprite bounds
-        sprite_rect = QRect(sprite_x, sprite_y, int(scaled_width), int(scaled_height))
+        sprite_rect = QRect(int(sprite_x), int(sprite_y), int(scaled_width), int(scaled_height))
         if not sprite_rect.contains(screen_pos):
             return None
 

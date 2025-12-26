@@ -29,9 +29,9 @@ class AnimationSegment:
     name: str
     start_frame: int
     end_frame: int
-    color: QColor = None
+    color: QColor | None = None
     bounce_mode: bool = False
-    frame_holds: dict[int, int] = None
+    frame_holds: dict[int, int] | None = None
 
     # Class variable to track color index for unique colors
     _color_index = 0
@@ -186,7 +186,7 @@ class FrameThumbnail(QLabel):
         self._highlighted = highlighted
         self._update_style()
 
-    def set_segment_markers(self, is_start: bool = False, is_end: bool = False, color: QColor = None):
+    def set_segment_markers(self, is_start: bool = False, is_end: bool = False, color: QColor | None = None):
         """Set segment start/end markers."""
         self._is_segment_start = is_start
         self._is_segment_end = is_end
@@ -233,15 +233,13 @@ class FrameThumbnail(QLabel):
         if event.button() == Qt.MouseButton.LeftButton:
             self._mouse_press_pos = event.position()
             # Convert modifiers to integer safely
+            modifiers = event.modifiers()
             try:
                 # Try the newer PySide6 approach first
-                modifiers_value = event.modifiers().value
+                modifiers_value = modifiers.value  # type: ignore[attr-defined]
             except AttributeError:
-                # Fallback for older versions
-                modifiers_value = int(event.modifiers())
-            except TypeError:
-                # If all else fails, use 0 (no modifiers)
-                modifiers_value = 0
+                # Fallback: cast the enum directly to int
+                modifiers_value = int(modifiers.value) if hasattr(modifiers, 'value') else 0
 
             self.clicked.emit(self.frame_index, modifiers_value)
         elif event.button() == Qt.MouseButton.RightButton:
@@ -406,8 +404,9 @@ class AnimationGridView(QWidget):
         # Clear layout
         while self._grid_layout.count():
             item = self._grid_layout.takeAt(0)
-            if item.widget():
-                item.widget().deleteLater()
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
 
     def _populate_grid(self):
         """Populate the grid with frame thumbnails."""
@@ -442,18 +441,16 @@ class AnimationGridView(QWidget):
         """Handle frame thumbnail click with keyboard modifiers."""
         from PySide6.QtCore import Qt
 
-        # Convert integer back to Qt.KeyboardModifiers for comparison
-        try:
-            mod_flags = Qt.KeyboardModifiers(modifiers)
-        except (TypeError, ValueError):
-            # If conversion fails, assume no modifiers
-            mod_flags = Qt.KeyboardModifiers()
+        # Check modifiers using bitwise operations directly on the integer value
+        ctrl_pressed = bool(modifiers & int(Qt.KeyboardModifier.ControlModifier.value))
+        alt_pressed = bool(modifiers & int(Qt.KeyboardModifier.AltModifier.value))
+        shift_pressed = bool(modifiers & int(Qt.KeyboardModifier.ShiftModifier.value))
 
-        if mod_flags & Qt.KeyboardModifier.ControlModifier or mod_flags & Qt.KeyboardModifier.AltModifier:
+        if ctrl_pressed or alt_pressed:
             # Ctrl/Alt+Click: Toggle individual frame selection
             print(f"DEBUG: Toggle selecting frame {frame_index}")
             self._toggle_frame_selection(frame_index)
-        elif mod_flags & Qt.KeyboardModifier.ShiftModifier and self._last_clicked_frame is not None:
+        elif shift_pressed and self._last_clicked_frame is not None:
             # Shift+Click: Range selection from last clicked frame
             print(f"DEBUG: Range selecting from {self._last_clicked_frame} to {frame_index}")
             self._select_frame_range(self._last_clicked_frame, frame_index)
@@ -673,9 +670,9 @@ class AnimationGridView(QWidget):
                 f"This will create a segment from frame {start} to {end} "
                 f"(including unselected frames in between).\n\n"
                 f"Continue?",
-                QMessageBox.Yes | QMessageBox.No
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )
-            if reply != QMessageBox.Yes:
+            if reply != QMessageBox.StandardButton.Yes:
                 return
 
         # Generate unique default name

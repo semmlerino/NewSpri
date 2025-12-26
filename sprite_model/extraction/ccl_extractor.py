@@ -82,10 +82,9 @@ class CCLExtractor:
 
             finally:
                 # Clean up temporary file
-                try:
+                import contextlib
+                with contextlib.suppress(Exception):
                     os.unlink(temp_path)
-                except:
-                    pass
 
         except Exception as e:
             return [], f"CCL extraction error: {e!s}"
@@ -148,7 +147,7 @@ def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
             debug_log.append(f"Solid image detected ({alpha_transparency_ratio:.1f}% opaque)")
             color_key_result = _detect_color_key_mask(img_array, debug_log)
             if color_key_result is not None:
-                color_key_mask, background_color, color_tolerance = color_key_result
+                color_key_mask, _background_color, _color_tolerance = color_key_result
                 binary_mask = color_key_mask
                 opaque_pixels = np.sum(binary_mask)
                 debug_log.append(f"Color key boundaries: {opaque_pixels}/{total_pixels} sprite pixels")
@@ -167,7 +166,7 @@ def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
         objects = ndimage.find_objects(labeled_array)
         sprite_bounds = []
 
-        for i, obj in enumerate(objects):
+        for _i, obj in enumerate(objects):
             if obj is None:
                 continue
 

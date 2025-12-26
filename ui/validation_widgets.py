@@ -375,7 +375,7 @@ class SmartDirectorySelector(QWidget):
             self,
             "Select Export Directory",
             current_dir,
-            QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks
+            QFileDialog.Option.ShowDirsOnly | QFileDialog.Option.DontResolveSymlinks
         )
 
         if selected_dir:

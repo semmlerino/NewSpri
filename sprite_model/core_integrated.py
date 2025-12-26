@@ -277,7 +277,7 @@ class SpriteModel(QObject):
             return detect_background_color(sprite_sheet_path)
 
         # Call CCLOperations with callbacks
-        success, message, frame_count, frames, info = self._ccl_operations.extract_ccl_frames(
+        success, message, frame_count, frames, _info = self._ccl_operations.extract_ccl_frames(
             ccl_available=ccl_available_callback,
             detect_sprites_ccl_enhanced=detect_sprites_callback,
             detect_background_color=detect_background_callback
@@ -503,7 +503,7 @@ class SpriteModel(QObject):
             self._ccl_operations.set_extraction_mode("grid")
 
             try:
-                extract_success, extract_msg, count = self.extract_frames(
+                extract_success, extract_msg, _count = self.extract_frames(
                     self._frame_width, self._frame_height,
                     self._offset_x, self._offset_y,
                     self._spacing_x, self._spacing_y

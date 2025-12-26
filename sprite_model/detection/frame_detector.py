@@ -298,7 +298,7 @@ class FrameDetector:
 
         # Count dimension frequencies
         dimension_counts = {}
-        for x, y, width, height in content_bounds:
+        for _x, _y, width, height in content_bounds:
             key = (width, height)
             dimension_counts[key] = dimension_counts.get(key, 0) + 1
 

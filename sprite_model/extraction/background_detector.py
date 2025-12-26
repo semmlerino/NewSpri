@@ -43,7 +43,7 @@ def detect_background_color(image_path: str) -> tuple[tuple[int, int, int], int]
             # Try to detect background color (color key)
             color_key_result = _detect_color_key_mask(img_array, [])
             if color_key_result is not None:
-                color_key_mask, background_color, color_tolerance = color_key_result
+                _color_key_mask, background_color, color_tolerance = color_key_result
                 # Convert numpy types to Python ints
                 rgb_tuple = (int(background_color[0]), int(background_color[1]), int(background_color[2]))
                 return (rgb_tuple, int(color_tolerance))
@@ -67,7 +67,7 @@ def _detect_color_key_mask(img_array: np.ndarray, debug_log: list) -> tuple[np.n
         Tuple of (binary_mask, background_color, tolerance) or None if detection fails
     """
     try:
-        height, width = img_array.shape[:2]
+        _height, _width = img_array.shape[:2]
 
         # Sample corner pixels to find potential background color
         corner_samples = [
@@ -144,7 +144,7 @@ def _test_color_key_background(img_array: np.ndarray, background_color: np.ndarr
 
         # Use connected components to count separate sprites
         from scipy import ndimage
-        labeled_array, num_components = ndimage.label(sprite_mask.astype(np.uint8))
+        _labeled_array, num_components = ndimage.label(sprite_mask.astype(np.uint8))
 
         # Calculate quality score based on background percentage and component count
         # Good background detection should have high background % and reasonable component count

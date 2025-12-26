@@ -46,7 +46,7 @@ class TestRunner:
         print("\n🔧 Checking test dependencies...")
 
         deps = ["pytest", "pytest-qt", "pytest-cov", "pytest-benchmark", "coverage"]
-        cmd = [self.python_cmd, "-m", "pip", "install"] + deps
+        cmd = [self.python_cmd, "-m", "pip", "install", *deps]
 
         returncode, _, _ = self.run_command(cmd)
         if returncode == 0:
@@ -117,7 +117,7 @@ class TestRunner:
 
         # Run the tests
         start_time = time.time()
-        returncode, stdout, stderr = self.run_command(cmd)
+        returncode, _stdout, _stderr = self.run_command(cmd)
         duration = time.time() - start_time
 
         print(f"\n⏱️  Test execution time: {duration:.2f} seconds")

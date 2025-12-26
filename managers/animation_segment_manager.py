@@ -561,7 +561,7 @@ class AnimationSegmentManager(QObject):
                 "end_frame": segment.end_frame,
                 "frame_count": segment.frame_count,
                 "description": segment.description,
-                "tags": segment.tags.copy()
+                "tags": segment.tags.copy() if segment.tags else []
             }
             for segment in self._segments.values()
         ]

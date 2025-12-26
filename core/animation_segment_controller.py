@@ -73,10 +73,9 @@ class AnimationSegmentController(QObject):
         self._grid_view = grid_view
 
         # Connect grid view signals
-        if self._grid_view:
+        if self._grid_view and hasattr(self._grid_view, 'exportRequested'):
             # Connect export signal if it exists
-            if hasattr(self._grid_view, 'exportRequested'):
-                self._grid_view.exportRequested.connect(self._on_export_requested)
+            self._grid_view.exportRequested.connect(self._on_export_requested)
 
         # Connect manager signals to update grid view if manager already set
         if self._segment_manager and self._grid_view:
@@ -191,6 +190,7 @@ class AnimationSegmentController(QObject):
             timestamp = int(time.time() * 1000) % 10000
             new_name = f"{base_name}_{timestamp}"
 
+            assert self._segment_manager is not None
             success, _error = self._segment_manager.add_segment(
                 new_name,
                 segment.start_frame,
@@ -555,7 +555,7 @@ class AnimationSegmentController(QObject):
 
             # Update segment manager context
             sprite_path = self._get_sprite_path()
-            if sprite_path:
+            if sprite_path and self._segment_manager:
                 self._segment_manager.set_sprite_context(sprite_path, len(frames))
         else:
             self._grid_view.set_frames([])  # Clear grid view
@@ -566,6 +566,9 @@ class AnimationSegmentController(QObject):
     def _get_sprite_frames(self) -> list:
         """Get frames from sprite model using various methods."""
         frames = []
+
+        if not self._sprite_model:
+            return frames
 
         # Method 1: Try get_all_frames if available
         if hasattr(self._sprite_model, 'get_all_frames'):
@@ -583,6 +586,8 @@ class AnimationSegmentController(QObject):
 
     def _get_sprite_path(self) -> str:
         """Get sprite sheet path from model."""
+        if not self._sprite_model:
+            return ""
         if hasattr(self._sprite_model, '_file_path'):
             return self._sprite_model._file_path
         elif hasattr(self._sprite_model, '_sprite_sheet_path'):

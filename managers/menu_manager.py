@@ -144,7 +144,7 @@ class MenuManager(QObject):
         ),
     }
 
-    def __init__(self, parent: QMainWindow = None):
+    def __init__(self, parent: QMainWindow | None = None):
         """
         Initialize menu manager.
 
@@ -158,7 +158,7 @@ class MenuManager(QObject):
         self._toolbars: dict[str, QToolBar] = {}
         self._menu_definitions: dict[str, MenuDefinition] = {}
         self._toolbar_definitions: dict[str, ToolbarDefinition] = {}
-        self._recent_files_handler: callable | None = None
+        self._recent_files_handler: Callable[[QMenu], None] | None = None
         self._recent_files_menu: QMenu | None = None
 
         # Load default definitions
@@ -172,7 +172,7 @@ class MenuManager(QObject):
         self._menu_definitions.update(self.MENU_DEFINITIONS)
         self._toolbar_definitions.update(self.TOOLBAR_DEFINITIONS)
 
-    def set_recent_files_handler(self, handler: callable):
+    def set_recent_files_handler(self, handler: Callable[[QMenu], None]):
         """
         Set handler for recent files menu creation.
 
@@ -494,7 +494,7 @@ class MenuManager(QObject):
 # Singleton implementation (consolidated pattern)
 _menu_manager_instance: MenuManager | None = None
 
-def get_menu_manager(parent: QMainWindow = None) -> MenuManager:
+def get_menu_manager(parent: QMainWindow | None = None) -> MenuManager:
     """Get the global menu manager instance."""
     global _menu_manager_instance
     if _menu_manager_instance is None:

@@ -234,7 +234,8 @@ class UISetupHelper(CoordinatorBase):
         if self.segment_controller:
             refresh_btn.clicked.connect(self.segment_controller.update_grid_view_frames)
             # Connect tab widget signal
-            self.tab_widget.currentChanged.connect(self.segment_controller.on_tab_changed)
+            if self.tab_widget:
+                self.tab_widget.currentChanged.connect(self.segment_controller.on_tab_changed)
 
         grid_layout.addWidget(refresh_btn)
         grid_layout.addWidget(self.grid_view)

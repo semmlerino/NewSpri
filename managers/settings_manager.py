@@ -288,11 +288,11 @@ class SettingsManager(QObject):
         try:
             # Gather all settings
             settings_dict = {}
-            for key in Config.Settings.DEFAULTS.keys():
+            for key in Config.Settings.DEFAULTS:
                 value = self.get_value(key)
                 # Convert QByteArray to base64 string for JSON serialization
                 if isinstance(value, QByteArray):
-                    value = value.toBase64().data().decode('utf-8')
+                    value = bytes(value.toBase64().data()).decode('ascii')
                 settings_dict[key] = value
 
             # Save to JSON file
@@ -321,9 +321,8 @@ class SettingsManager(QObject):
             # Apply imported settings
             for key, value in settings_dict.items():
                 # Convert base64 strings back to QByteArray for geometry settings
-                if key.endswith('/geometry') or key.endswith('/state'):
-                    if isinstance(value, str):
-                        value = QByteArray.fromBase64(value.encode('utf-8'))
+                if (key.endswith('/geometry') or key.endswith('/state')) and isinstance(value, str):
+                    value = QByteArray.fromBase64(value.encode('utf-8'))
 
                 self.set_value(key, value, auto_save=False)
 
