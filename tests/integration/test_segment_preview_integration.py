@@ -25,20 +25,22 @@ class TestSegmentPreviewIntegration:
         # Create components
         sprite_model = SpriteModel()
         segment_manager = AnimationSegmentManager()
-        segment_controller = AnimationSegmentController()
         grid_view = AnimationGridView()
         segment_preview = AnimationSegmentPreview()
-        
+
         # Add widgets to qtbot
         qtbot.addWidget(grid_view)
         qtbot.addWidget(segment_preview)
-        
-        # Wire up dependencies
-        segment_controller.set_segment_manager(segment_manager)
-        segment_controller.set_sprite_model(sprite_model)
-        segment_controller.set_grid_view(grid_view)
-        segment_controller.set_segment_preview(segment_preview)
-        
+
+        # Create controller with all dependencies (constructor DI)
+        segment_controller = AnimationSegmentController(
+            segment_manager=segment_manager,
+            grid_view=grid_view,
+            sprite_model=sprite_model,
+            tab_widget=None,  # Not needed for tests
+            segment_preview=segment_preview,
+        )
+
         # Connect signals
         grid_view.segmentCreated.connect(segment_controller.create_segment)
         grid_view.segmentDeleted.connect(segment_controller.delete_segment)

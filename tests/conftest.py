@@ -237,8 +237,9 @@ def auto_detection_controller() -> AutoDetectionController:
 @pytest.fixture
 def configured_sprite_model(sprite_model, mock_sprite_frames) -> SpriteModel:
     """SpriteModel pre-configured with test data."""
-    # Mock the sprite frames
-    sprite_model._sprite_frames = mock_sprite_frames
+    # Modify frames in-place to preserve AnimationStateManager reference
+    sprite_model._sprite_frames.clear()
+    sprite_model._sprite_frames.extend(mock_sprite_frames)
     sprite_model._frame_width = 64
     sprite_model._frame_height = 64
     sprite_model._offset_x = 0

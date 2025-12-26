@@ -4,12 +4,14 @@ Modern sprite sheet animation viewer with improved usability.
 Refactored to use centralized managers for better maintainability.
 """
 
+import os
 import sys
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QMimeData, Qt
 from PySide6.QtGui import QDragEnterEvent, QDropEvent, QKeySequence
 from PySide6.QtWidgets import (
     QApplication,
+    QFileDialog,
     QHBoxLayout,
     QLabel,
     QMainWindow,
@@ -28,8 +30,87 @@ from core import (
     AnimationController,
     AnimationSegmentController,
     AutoDetectionController,
-    FileController,
 )
+
+
+def _validate_sprite_file(file_path: str) -> tuple[bool, str]:
+    """
+    Validate a file for loading as a sprite sheet.
+
+    Args:
+        file_path: Path to validate
+
+    Returns:
+        Tuple of (is_valid, error_message)
+    """
+    if not file_path:
+        return False, "No file path provided"
+
+    if not os.path.exists(file_path):
+        return False, f"File not found: {file_path}"
+
+    if not os.path.isfile(file_path):
+        return False, f"Not a file: {file_path}"
+
+    # Check if file has a supported extension
+    _, ext = os.path.splitext(file_path)
+    if ext.lower() not in Config.File.SUPPORTED_EXTENSIONS:
+        return False, f"Unsupported file format: {ext}"
+
+    # Check file size (100MB max)
+    file_size = os.path.getsize(file_path)
+    max_size = 100 * 1024 * 1024
+    if file_size > max_size:
+        return False, f"File too large: {file_size / (1024 * 1024):.1f}MB (max {max_size / (1024 * 1024)}MB)"
+
+    return True, ""
+
+
+def _is_valid_sprite_drop(mime_data: QMimeData) -> bool:
+    """
+    Check if mime data contains a valid sprite file URL.
+
+    Args:
+        mime_data: QMimeData from drag event
+
+    Returns:
+        True if valid sprite file drop
+    """
+    if not mime_data.hasUrls():
+        return False
+
+    urls = mime_data.urls()
+    if not urls:
+        return False
+
+    first_url = urls[0]
+    if not first_url.isLocalFile():
+        return False
+
+    file_path = first_url.toLocalFile()
+    is_valid, _ = _validate_sprite_file(file_path)
+    return is_valid
+
+
+def _extract_file_from_drop(event: QDropEvent) -> str | None:
+    """
+    Extract file path from drop event.
+
+    Args:
+        event: QDropEvent from drop operation
+
+    Returns:
+        File path or None if invalid
+    """
+    mime_data = event.mimeData()
+    if not _is_valid_sprite_drop(mime_data):
+        return None
+
+    urls = mime_data.urls()
+    if urls:
+        return urls[0].toLocalFile()
+
+    return None
 
 # Export system
 from export import ExportCoordinator
@@ -57,7 +138,6 @@ from ui import (
     StatusBarManager,
 )
 from ui.animation_segment_preview import AnimationSegmentPreview
-from utils import StyleManager
 
 
 class SpriteViewer(QMainWindow):
@@ -87,52 +167,13 @@ class SpriteViewer(QMainWindow):
         """
         Initialize sprite viewer with manager-based architecture.
 
-        INITIALIZATION ORDER CONTRACT
-        =============================
-        The initialization follows a strict 7-phase order. Changing this order
-        will cause silent failures or runtime errors.
-
-        Phase 1: Managers (singletons, no dependencies)
-            - ShortcutManager, ActionManager, MenuManager, SettingsManager, RecentFilesManager
-            - These are singletons retrieved via factory functions
-
-        Phase 2: Core Components (model, controllers - partial init)
-            - SpriteModel: data layer, no dependencies
-            - AnimationController: initialized with model + viewer reference
-            - FileController: signal connections for file operations
-            - AutoDetectionController: created but NOT initialized yet (needs UI)
-            - AnimationSegmentController: created, will receive dependencies via setters
-            - AnimationSegmentManager: segment persistence
-
-        Phase 3: UI Setup (creates all widgets)
-            - _setup_window(), _setup_menu_bar(), _setup_toolbar(), _setup_status_bar()
-            - _setup_main_content() creates: canvas, playback_controls, frame_extractor,
-              grid_view, segment_preview, tab_widget via private helper methods
-
-        Phase 4: Coordinator Initialization (requires UI components)
-            - ExportCoordinator: sprite_model, segment_manager
-
-        Phase 5: Manager Setup (injects remaining dependencies)
-            - AnimationSegmentController receives: segment_manager, grid_view,
-              sprite_model, tab_widget, segment_preview via setter methods
-            - Action callbacks configured
-
-        Phase 6: Signal Connections (requires all coordinators ready)
-            - Model signals -> UI handlers
-            - Controller signals -> status display
-            - UI signals -> coordinator methods
-            - Grid view signals -> segment controller
-
-        Phase 7: Final Initialization
-            - AutoDetectionController.initialize() - MUST be after signal connections
-            - Apply saved settings
-            - Show welcome message
-
-        CRITICAL DEPENDENCIES:
-        - AutoDetectionController.initialize() must be LAST because it may emit
-          signals that require all other connections to be in place
-        - AnimationSegmentController requires all 5 setters to be called before use
-        - Signal connections require coordinators to be initialized first
+        Initialization order:
+        1. Managers (singletons)
+        2. Core components (model, controllers)
+        3. UI setup (all widgets)
+        4. Controller/coordinator initialization (with constructor DI)
+        5. Signal connections
+        6. Final setup (settings, welcome message)
         """
         super().__init__()
 
@@ -157,6 +198,20 @@ class SpriteViewer(QMainWindow):
         # Set up canvas zoom label connection and grid state
         self._grid_enabled = False
         self._canvas.zoomChanged.connect(self._on_zoom_changed)
+
+        # Initialize segment controller with all dependencies (must be after UI setup)
+        self._segment_controller = AnimationSegmentController(
+            segment_manager=self._segment_manager,
+            grid_view=self._grid_view,
+            sprite_model=self._sprite_model,
+            tab_widget=self._tab_widget,
+            segment_preview=self._segment_preview,
+            parent=self,
+        )
+
+        # Connect UI signals to segment controller (deferred from _create_grid_tab)
+        self._refresh_grid_btn.clicked.connect(self._segment_controller.update_grid_view_frames)
+        self._tab_widget.currentChanged.connect(self._segment_controller.on_tab_changed)
 
         # Initialize Export Coordinator
         self._export_coordinator = ExportCoordinator(self)
@@ -206,15 +261,16 @@ class SpriteViewer(QMainWindow):
         self._animation_controller = AnimationController()
         self._animation_controller.initialize(self._sprite_model, self)
 
-        # File operations controller
-        self._file_controller = FileController()
-        self._file_controller.file_loaded.connect(self._on_file_loaded)
-        self._file_controller.file_load_failed.connect(self._on_file_load_failed)
-
         self._auto_detection_controller = AutoDetectionController()
 
-        # Animation segment controller
-        self._segment_controller = AnimationSegmentController(self)
+        # Recent files manager setup - handle clicks on recent file menu items
+        self._recent_files = get_recent_files_manager()
+        if hasattr(self._recent_files, 'set_file_open_callback'):
+
+            def _on_recent_file(path: str) -> None:
+                self._load_sprite_file(path)
+
+            self._recent_files.set_file_open_callback(_on_recent_file)
 
         # Animation splitting components
         self._segment_manager = AnimationSegmentManager()
@@ -241,14 +297,14 @@ class SpriteViewer(QMainWindow):
 
         # Apply styling
         if self._main_toolbar:
-            self._main_toolbar.setStyleSheet(StyleManager.get_main_toolbar())
+            self._main_toolbar.setStyleSheet(Config.Styles.MAIN_TOOLBAR)
 
             # Add zoom display widget
             self._main_toolbar.addSeparator()
             self._zoom_label = QLabel("100%")
             self._zoom_label.setMinimumWidth(Config.UI.ZOOM_LABEL_MIN_WIDTH)
             self._zoom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-            self._zoom_label.setStyleSheet(StyleManager.get_zoom_display())
+            self._zoom_label.setStyleSheet(Config.Styles.ZOOM_DISPLAY)
             self._main_toolbar.addWidget(self._zoom_label)
 
     def _setup_status_bar(self):
@@ -283,7 +339,7 @@ class SpriteViewer(QMainWindow):
         # Info label at bottom
         self._info_label = QLabel("Ready - Drag and drop a sprite sheet or use File > Open")
         self._info_label.setWordWrap(True)
-        self._info_label.setStyleSheet(StyleManager.get_info_label())
+        self._info_label.setStyleSheet(Config.Styles.INFO_LABEL)
         main_layout.addWidget(self._info_label)
 
     def _create_canvas_tab(self):
@@ -335,15 +391,9 @@ class SpriteViewer(QMainWindow):
         # Synchronize grid view with existing segments
         self._grid_view.sync_segments_with_manager(self._segment_manager)
 
-        # Add refresh button for debugging
-        refresh_btn = QPushButton("🔄 Refresh Grid View")
-
-        # Connect refresh button to segment controller
-        refresh_btn.clicked.connect(self._segment_controller.update_grid_view_frames)
-        # Connect tab widget signal
-        self._tab_widget.currentChanged.connect(self._segment_controller.on_tab_changed)
-
-        grid_layout.addWidget(refresh_btn)
+        # Add refresh button for debugging (signal connected after controller init)
+        self._refresh_grid_btn = QPushButton("🔄 Refresh Grid View")
+        grid_layout.addWidget(self._refresh_grid_btn)
         grid_layout.addWidget(self._grid_view)
 
         splitter.addWidget(grid_container)
@@ -388,18 +438,6 @@ class SpriteViewer(QMainWindow):
         """Configure managers with application-specific settings."""
         # Configure action manager with callbacks
         self._setup_action_callbacks()
-
-        # Configure segment controller dependencies
-        self._segment_controller.set_segment_manager(self._segment_manager)
-        self._segment_controller.set_grid_view(self._grid_view)
-        self._segment_controller.set_sprite_model(self._sprite_model)
-        self._segment_controller.set_tab_widget(self._tab_widget)
-        self._segment_controller.set_segment_preview(self._segment_preview)
-
-        # Validate segment controller initialization is complete
-        assert self._segment_controller.is_ready, (
-            "AnimationSegmentController not fully initialized - check setter calls above"
-        )
 
         # Connect segment controller status messages
         if self._status_manager is not None:
@@ -529,45 +567,73 @@ class SpriteViewer(QMainWindow):
     # ============================================================================
 
     def _load_sprites(self):
-        """Load sprite files or sprite sheet."""
-        file_path = self._file_controller.open_file_dialog(self)
+        """Show file dialog and load selected sprite sheet."""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Sprite Sheet",
+            "",
+            Config.File.IMAGE_FILTER
+        )
         if file_path:
-            self._file_controller.load_file(file_path)
+            self._load_sprite_file(file_path)
 
-    def _on_file_loaded(self, file_path: str):
-        """Handle successful file load from FileController."""
+    def _load_sprite_file(self, file_path: str) -> bool:
+        """
+        Load a sprite file with validation.
+
+        This is the main entry point for loading sprites, called from:
+        - File dialog selection
+        - Recent files menu
+        - Drag and drop
+
+        Args:
+            file_path: Path to the sprite sheet file
+
+        Returns:
+            True if loading succeeded
+        """
+        # Validate file first
+        is_valid, error_msg = _validate_sprite_file(file_path)
+        if not is_valid:
+            QMessageBox.critical(self, "Load Error", error_msg)
+            return False
+
+        # Try to load via sprite model
         success, error_message = self._sprite_model.load_sprite_sheet(file_path)
 
-        if success:
-            # Update context for managers
-            self._update_manager_context()
-
-            # Update display first (fast) - Phase 3 refactoring
-            self._canvas.update()
-            self._info_label.setText(self._sprite_model.sprite_info)
-
-            # Trigger appropriate detection based on current extraction mode
-            current_mode = self._frame_extractor.get_extraction_mode()
-            if current_mode == "ccl":
-                # For CCL mode, try direct CCL extraction without grid auto-detection
-                if self._status_manager is not None:
-                    self._status_manager.show_message("Running CCL extraction...")
-                self._update_frame_slicing()  # This will trigger CCL extraction
-            else:
-                # For grid mode, run comprehensive grid auto-detection
-                # Use wait cursor to indicate processing
-                QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-                QApplication.processEvents()
-                try:
-                    self._auto_detection_controller.run_comprehensive_detection_with_dialog()
-                finally:
-                    QApplication.restoreOverrideCursor()
-        else:
+        if not success:
             QMessageBox.critical(self, "Load Error", error_message)
+            return False
 
-    def _on_file_load_failed(self, error_message: str):
-        """Handle file load failure from FileController."""
-        QMessageBox.critical(self, "Load Error", error_message)
+        # Add to recent files on successful load
+        if hasattr(self._recent_files, 'add_file_to_recent'):
+            self._recent_files.add_file_to_recent(file_path)
+
+        # Update context for managers
+        self._update_manager_context()
+
+        # Update display first (fast)
+        self._canvas.update()
+        self._info_label.setText(self._sprite_model.sprite_info)
+
+        # Trigger appropriate detection based on current extraction mode
+        current_mode = self._frame_extractor.get_extraction_mode()
+        if current_mode == "ccl":
+            # For CCL mode, try direct CCL extraction without grid auto-detection
+            if self._status_manager is not None:
+                self._status_manager.show_message("Running CCL extraction...")
+            self._update_frame_slicing()  # This will trigger CCL extraction
+        else:
+            # For grid mode, run comprehensive grid auto-detection
+            # Use wait cursor to indicate processing
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            QApplication.processEvents()
+            try:
+                self._auto_detection_controller.run_comprehensive_detection_with_dialog()
+            finally:
+                QApplication.restoreOverrideCursor()
+
+        return True
 
     # ============================================================================
     # VIEW OPERATIONS
@@ -817,21 +883,21 @@ class SpriteViewer(QMainWindow):
 
     def dragEnterEvent(self, event: QDragEnterEvent):
         """Handle drag enter event."""
-        if self._file_controller.is_valid_drop(event.mimeData()):
+        if _is_valid_sprite_drop(event.mimeData()):
             event.acceptProposedAction()
-            self._canvas.setStyleSheet(StyleManager.get_canvas_drag_hover())
+            self._canvas.setStyleSheet(Config.Styles.CANVAS_DRAG_HOVER)
 
     def dragLeaveEvent(self, event):
         """Handle drag leave event."""
-        self._canvas.setStyleSheet(StyleManager.get_canvas_normal())
+        self._canvas.setStyleSheet(Config.Styles.CANVAS_NORMAL)
         self._show_welcome_message()
 
     def dropEvent(self, event: QDropEvent):
         """Handle drop event."""
-        self._canvas.setStyleSheet(StyleManager.get_canvas_normal())
-        file_path = self._file_controller.extract_file_from_drop(event)
+        self._canvas.setStyleSheet(Config.Styles.CANVAS_NORMAL)
+        file_path = _extract_file_from_drop(event)
         if file_path:
-            self._file_controller.load_file(file_path)
+            self._load_sprite_file(file_path)
             event.acceptProposedAction()
 
     # Animation Grid View Signal Handlers
@@ -926,9 +992,8 @@ class SpriteViewer(QMainWindow):
         # Save settings
         self._settings_manager.save_window_geometry(self)
 
-        # Clean up controllers (must be before coordinators)
+        # Clean up controllers
         self._animation_controller.shutdown()
-        self._segment_controller.cleanup()
 
         # Clean up coordinators
         self._export_coordinator.cleanup()

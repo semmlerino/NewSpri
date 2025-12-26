@@ -169,10 +169,6 @@ class MenuManager(QObject):
         # Load default definitions
         self._load_default_definitions()
 
-        # Connect to action manager updates
-        if self._action_manager is not None:
-            self._action_manager.actionStateChanged.connect(self._on_action_state_changed)
-
     def _load_default_definitions(self):
         """Load default menu and toolbar definitions."""
         self._menu_definitions.update(self.MENU_DEFINITIONS)
@@ -411,18 +407,6 @@ class MenuManager(QObject):
         """Update menu item states based on current context."""
         # Action states are automatically updated by ActionManager
         self.menuUpdateRequested.emit()
-
-    def _on_action_state_changed(self, action_id: str, enabled: bool):
-        """
-        Handle action state changes.
-
-        Args:
-            action_id: Action identifier
-            enabled: New enabled state
-        """
-        # Actions automatically update their enabled state
-        # We could add additional logic here if needed
-        pass
 
     def register_menu_definition(self, menu_id: str, definition: MenuDefinition) -> bool:
         """

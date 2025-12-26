@@ -240,11 +240,27 @@ class AnimationSegmentManager(QObject):
         if new_name and new_name != name and new_name in self._segments:
             return False, f"Segment '{new_name}' already exists"
 
-        # Update fields
-        if start_frame is not None:
-            segment.start_frame = start_frame
-        if end_frame is not None:
-            segment.end_frame = end_frame
+        # Save original values for rollback
+        original_start = segment.start_frame
+        original_end = segment.end_frame
+        original_name = segment.name
+        original_color = segment.color_rgb
+        original_description = segment.description
+
+        # Compute effective new values for overlap check
+        effective_start = start_frame if start_frame is not None else original_start
+        effective_end = end_frame if end_frame is not None else original_end
+
+        # Check overlaps BEFORE mutation (excluding self)
+        for other in self._segments.values():
+            if other.name == name:
+                continue
+            if effective_start <= other.end_frame and other.start_frame <= effective_end:
+                return False, f"Frames {effective_start}-{effective_end} overlap with segment '{other.name}'"
+
+        # Now mutate
+        segment.start_frame = effective_start
+        segment.end_frame = effective_end
         if new_name is not None:
             segment.name = new_name
         if color is not None:
@@ -255,6 +271,12 @@ class AnimationSegmentManager(QObject):
         # Validate updated segment
         is_valid, error = segment.validate(self._max_frames)
         if not is_valid:
+            # Rollback on validation failure
+            segment.start_frame = original_start
+            segment.end_frame = original_end
+            segment.name = original_name
+            segment.color_rgb = original_color
+            segment.description = original_description
             return False, error
 
         # Handle name change

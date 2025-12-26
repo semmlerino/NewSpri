@@ -23,7 +23,6 @@ from PySide6.QtWidgets import (
 )
 
 from config import Config
-from utils.styles import StyleManager
 from utils.ui_common import AutoButtonManager
 
 
@@ -36,7 +35,7 @@ class FrameExtractor(QGroupBox):
 
     def __init__(self):
         super().__init__("Frame Extraction")
-        self.setStyleSheet(StyleManager.get_frame_extractor_groupbox())
+        self.setStyleSheet(Config.Styles.FRAME_EXTRACTOR_GROUPBOX)
 
         # Initialize button manager
         self._button_manager = AutoButtonManager()
@@ -67,7 +66,7 @@ class FrameExtractor(QGroupBox):
 
         # Extraction Mode Toggle
         mode_label = QLabel("Extraction Mode:")
-        mode_label.setStyleSheet(StyleManager.get_preset_label())
+        mode_label.setStyleSheet(Config.Styles.PRESET_LABEL)
         layout.addWidget(mode_label)
 
         mode_layout = QHBoxLayout()
@@ -102,7 +101,7 @@ class FrameExtractor(QGroupBox):
 
         # Enhanced presets with categories (collapsible)
         preset_label = QLabel("Quick Presets:")
-        preset_label.setStyleSheet(StyleManager.get_preset_label())
+        preset_label.setStyleSheet(Config.Styles.PRESET_LABEL)
         layout.addWidget(preset_label)
 
         self.preset_group = QButtonGroup()
@@ -153,7 +152,7 @@ class FrameExtractor(QGroupBox):
 
         # Custom size controls
         custom_label = QLabel("Custom Size:")
-        custom_label.setStyleSheet(StyleManager.get_custom_label())
+        custom_label.setStyleSheet(Config.Styles.CUSTOM_LABEL)
         layout.addWidget(custom_label)
 
         size_layout = QHBoxLayout()
@@ -186,7 +185,7 @@ class FrameExtractor(QGroupBox):
 
         # Advanced Settings (consolidated offset and spacing)
         advanced_label = QLabel("Advanced Settings:")
-        advanced_label.setStyleSheet(StyleManager.get_offset_label())
+        advanced_label.setStyleSheet(Config.Styles.OFFSET_LABEL)
         layout.addWidget(advanced_label)
 
         # Create compact 2-row layout for offset and spacing
@@ -247,7 +246,7 @@ class FrameExtractor(QGroupBox):
 
         # Grid overlay checkbox
         self.grid_checkbox = QCheckBox("Show grid overlay")
-        self.grid_checkbox.setStyleSheet(StyleManager.get_grid_checkbox())
+        self.grid_checkbox.setStyleSheet(Config.Styles.GRID_CHECKBOX)
         layout.addWidget(self.grid_checkbox)
 
         # Connect mode change signals

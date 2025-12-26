@@ -17,7 +17,6 @@ from PySide6.QtWidgets import (
 )
 
 from config import Config
-from utils.styles import StyleManager
 
 
 class PlaybackControls(QFrame):
@@ -33,7 +32,7 @@ class PlaybackControls(QFrame):
     def __init__(self):
         super().__init__()
         self.setFrameStyle(QFrame.Shape.StyledPanel)
-        self.setStyleSheet(StyleManager.get_playback_controls_frame())
+        self.setStyleSheet(Config.Styles.PLAYBACK_CONTROLS_FRAME)
 
         layout = QVBoxLayout(self)
         layout.setSpacing(Config.UI.MAIN_LAYOUT_SPACING)
@@ -41,7 +40,7 @@ class PlaybackControls(QFrame):
         # Play/pause button (compacted)
         self.play_button = QPushButton("Play")
         self.play_button.setMinimumHeight(Config.UI.PLAYBACK_BUTTON_MIN_HEIGHT)
-        self.play_button.setStyleSheet(StyleManager.get_play_button_stopped())
+        self.play_button.setStyleSheet(Config.Styles.PLAY_BUTTON_STOPPED)
         self.play_button.clicked.connect(self.playPauseClicked)
         layout.addWidget(self.play_button)
 
@@ -50,7 +49,7 @@ class PlaybackControls(QFrame):
         nav_layout.setSpacing(Config.UI.NAV_BUTTON_SPACING)
 
         # Navigation buttons (simplified - removed first/last)
-        button_style = StyleManager.get_navigation_buttons()
+        button_style = Config.Styles.NAVIGATION_BUTTONS
 
         self.prev_btn = QPushButton("Prev")
         self.prev_btn.setStyleSheet(button_style)
@@ -76,7 +75,7 @@ class PlaybackControls(QFrame):
         # FPS control (optimized layout)
         fps_layout = QHBoxLayout()
         fps_label = QLabel("FPS:")
-        fps_label.setStyleSheet(StyleManager.get_speed_label())
+        fps_label.setStyleSheet(Config.Styles.SPEED_LABEL)
         fps_layout.addWidget(fps_label)
 
         self.fps_slider = QSlider(Qt.Orientation.Horizontal)
@@ -108,10 +107,10 @@ class PlaybackControls(QFrame):
         """Update play button state."""
         if playing:
             self.play_button.setText("Pause")
-            self.play_button.setStyleSheet(StyleManager.get_play_button_playing())
+            self.play_button.setStyleSheet(Config.Styles.PLAY_BUTTON_PLAYING)
         else:
             self.play_button.setText("Play")
-            self.play_button.setStyleSheet(StyleManager.get_play_button_stopped())
+            self.play_button.setStyleSheet(Config.Styles.PLAY_BUTTON_STOPPED)
 
     def set_frame_range(self, max_frame: int):
         """Set the frame slider range."""

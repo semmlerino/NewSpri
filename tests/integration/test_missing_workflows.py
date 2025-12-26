@@ -172,7 +172,7 @@ class TestRecentFilesWorkflow:
             success, _ = viewer._sprite_model.load_sprite_sheet(str(sprite_path))
             assert success
             # Since we're loading directly through sprite model, add to recent files manually
-            viewer._file_controller.add_to_recent_files(str(sprite_path))
+            viewer._recent_files.add_file_to_recent(str(sprite_path))
         
         # Check recent files through the correct attribute
         recent_manager = viewer._recent_files

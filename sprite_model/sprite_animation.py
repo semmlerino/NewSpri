@@ -7,8 +7,6 @@ Manages animation state, frame navigation, and playback control for sprite viewe
 Extracted from monolithic SpriteModel for better separation of concerns and testability.
 """
 
-from collections.abc import Callable
-
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QPixmap
 
@@ -29,34 +27,27 @@ class AnimationStateManager(QObject):
     frameChanged = Signal(int, int)          # (current_frame, total_frames)
     playbackStateChanged = Signal(bool)      # is_playing
 
-    def __init__(self):
-        """Initialize animation state manager with default values."""
+    def __init__(self, sprite_frames: list[QPixmap]):
+        """
+        Initialize animation state manager.
+
+        Args:
+            sprite_frames: Reference to the sprite frames list (mutable, updated by parent)
+        """
         super().__init__()
+
+        # Store reference to sprite frames (managed by parent SpriteModel)
+        self._sprite_frames = sprite_frames
 
         # Animation state
         self._current_frame: int = 0
-        self._total_frames: int = 0
         self._is_playing: bool = False
         self._loop_enabled: bool = True
         self._fps: int = Config.Animation.DEFAULT_FPS
 
-        # Sprite frame data (managed externally, accessed via getter)
-        self._get_sprite_frames: Callable[[], list[QPixmap]] | None = None
-
-    def set_sprite_frames_getter(self, getter: Callable[[], list[QPixmap]]) -> None:
-        """
-        Set the function to get current sprite frames.
-
-        Args:
-            getter: Function that returns the current list of sprite frames
-        """
-        self._get_sprite_frames = getter
-
     def _get_frames(self) -> list[QPixmap]:
-        """Get current sprite frames via getter function."""
-        if self._get_sprite_frames:
-            return self._get_sprite_frames()
-        return []
+        """Get current sprite frames."""
+        return self._sprite_frames
 
     def update_frame_count(self, total_frames: int) -> None:
         """
@@ -291,9 +282,8 @@ class AnimationStateManager(QObject):
     # ============================================================================
 
     def reset_state(self) -> None:
-        """Reset animation state to defaults."""
+        """Reset animation state to defaults (frames are managed by parent)."""
         self._current_frame = 0
-        self._total_frames = 0
         self._is_playing = False
         self._loop_enabled = True
         self._fps = Config.Animation.DEFAULT_FPS

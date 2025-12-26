@@ -10,7 +10,6 @@ from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
 from PySide6.QtWidgets import QLabel
 
 from config import Config
-from utils.styles import StyleManager
 
 
 class SpriteCanvas(QLabel):
@@ -23,7 +22,7 @@ class SpriteCanvas(QLabel):
     def __init__(self):
         super().__init__()
         self.setMinimumSize(Config.Canvas.MIN_WIDTH, Config.Canvas.MIN_HEIGHT)
-        self.setStyleSheet(StyleManager.get_canvas_normal())
+        self.setStyleSheet(Config.Styles.CANVAS_NORMAL)
         self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.setCursor(Qt.CursorShape.OpenHandCursor)
         self.setContentsMargins(0, 0, 0, 0)

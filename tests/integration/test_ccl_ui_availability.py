@@ -91,17 +91,16 @@ class TestCCLUIAvailability:
         # Mock sprite loading success
         with patch.object(viewer._sprite_model, 'load_sprite_sheet') as mock_load:
             mock_load.return_value = (True, None)  # Success, no error
-            
-            # Simulate loading through file controller
-            with patch.object(viewer._file_controller, 'load_file') as mock_file_load:
-                viewer._file_controller.file_loaded.emit(test_sprite_path)
 
-                # Process pending events
-                QApplication.processEvents()
+            # Simulate loading directly through the viewer's load method
+            viewer._load_sprite_file(test_sprite_path)
 
-                # CCL should still be enabled
-                assert ccl_button.isEnabled(), "CCL button should remain enabled after sprite load"
-                print("✅ CCL button remains enabled after sprite loading")
+            # Process pending events
+            QApplication.processEvents()
+
+            # CCL should still be enabled
+            assert ccl_button.isEnabled(), "CCL button should remain enabled after sprite load"
+            print("✅ CCL button remains enabled after sprite loading")
     
     def test_ccl_independent_of_auto_detection(self, qtbot):
         """Test that CCL availability is always enabled (new design)."""
@@ -120,13 +119,13 @@ class TestCCLUIAvailability:
         # Mock auto-detection failure
         with patch.object(viewer._auto_detection_controller, 'run_comprehensive_detection_with_dialog') as mock_detection:
             mock_detection.side_effect = Exception("Auto-detection failed")
-            
+
             # Mock sprite model methods
             with patch.object(viewer._sprite_model, 'load_sprite_sheet') as mock_load:
                 mock_load.return_value = (True, None)
-                
-                # Simulate file loading through controller
-                viewer._file_controller.file_loaded.emit("/fake/test.png")
+
+                # Simulate file loading directly through viewer
+                viewer._load_sprite_file("/fake/test.png")
                 QApplication.processEvents()
 
                 # CCL should still be enabled despite auto-detection issues

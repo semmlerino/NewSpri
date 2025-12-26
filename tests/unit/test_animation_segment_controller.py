@@ -22,11 +22,9 @@ class TestAnimationSegmentController(unittest.TestCase):
     
     def setUp(self):
         """Set up test fixtures."""
-        self.controller = AnimationSegmentController()
-        
         # Use real AnimationSegmentManager instead of mock
         self.segment_manager = AnimationSegmentManager()
-        
+
         # Create mock dependencies for UI components
         self.mock_grid_view = Mock()
         self.mock_grid_view._segments = {}  # Initialize as empty dict
@@ -34,11 +32,14 @@ class TestAnimationSegmentController(unittest.TestCase):
         self.mock_sprite_model = Mock()
         self.mock_tab_widget = Mock()
 
-        # Set dependencies
-        self.controller.set_segment_manager(self.segment_manager)
-        self.controller.set_grid_view(self.mock_grid_view)
-        self.controller.set_sprite_model(self.mock_sprite_model)
-        self.controller.set_tab_widget(self.mock_tab_widget)
+        # Create controller with all dependencies (constructor DI)
+        self.controller = AnimationSegmentController(
+            segment_manager=self.segment_manager,
+            grid_view=self.mock_grid_view,
+            sprite_model=self.mock_sprite_model,
+            tab_widget=self.mock_tab_widget,
+            segment_preview=None,  # Not needed for most tests
+        )
     
     # ============================================================================
     # SEGMENT CREATION TESTS
@@ -72,18 +73,21 @@ class TestAnimationSegmentController(unittest.TestCase):
             self.assertEqual(len(segments), 1)
             self.assertEqual(segments[0].name, "TestSegment")
     
-    def test_create_segment_no_manager(self):
-        """Test segment creation without manager."""
-        # Arrange
-        self.controller._segment_manager = None
+    def test_create_segment_with_manager_failure(self):
+        """Test segment creation with manager returning error."""
+        # Arrange - use mock manager that returns error
+        mock_manager = Mock()
+        mock_manager.add_segment.return_value = (False, "Database error")
+        self.controller._segment_manager = mock_manager
+
         segment = AnimationSegmentData("TestSegment", 0, 9)
-        
+
         # Act
         success, message = self.controller.create_segment(segment)
-        
+
         # Assert
         self.assertFalse(success)
-        self.assertEqual(message, "Segment manager not initialized")
+        self.assertIn("Database error", message)
     
     def test_create_segment_name_conflict_resolution(self):
         """Test automatic name conflict resolution."""

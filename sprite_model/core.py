@@ -50,18 +50,18 @@ class SpriteModel(QObject):
         """Initialize SpriteModel with all refactored modules."""
         super().__init__()
 
-        # Initialize all refactored modules
-        self._file_loader = FileLoader()
-        self._file_validator = FileValidator()
-        self._metadata_extractor = MetadataExtractor()
-        self._animation_state = AnimationStateManager()
-        self._ccl_operations = CCLOperations()
-
         # Primary state variables (maintaining compatibility)
         self._original_sprite_sheet: QPixmap | None = None
         self._sprite_frames: list[QPixmap] = []
         self._file_path: str = ""
         self._sprite_sheet_path: str = ""
+
+        # Initialize refactored modules (pass dependencies directly)
+        self._file_loader = FileLoader()
+        self._file_validator = FileValidator()
+        self._metadata_extractor = MetadataExtractor()
+        self._animation_state = AnimationStateManager(self._sprite_frames)  # Pass frames reference
+        self._ccl_operations = CCLOperations()
 
         # Frame extraction settings (for backward compatibility)
         self._frame_width: int = 0
@@ -76,15 +76,11 @@ class SpriteModel(QObject):
 
     def _setup_module_connections(self):
         """Connect modules with required callbacks and signal forwarding."""
-
-        # Setup AnimationStateManager with frame getter callback
-        self._animation_state.set_sprite_frames_getter(lambda: self._sprite_frames)
-
         # Forward animation signals to maintain compatibility
         self._animation_state.frameChanged.connect(self.frameChanged.emit)
         self._animation_state.playbackStateChanged.connect(self.playbackStateChanged.emit)
 
-        # Setup CCLOperations callbacks for state access
+        # Setup CCLOperations callbacks for state access (TODO: refactor to direct params)
         def get_sprite_sheet_callback() -> QPixmap:
             """Get original sprite sheet with None check."""
             if self._original_sprite_sheet is None:
@@ -221,7 +217,9 @@ class SpriteModel(QObject):
             )
 
             if success:
-                self._sprite_frames = frames
+                # Modify list in-place to preserve AnimationStateManager reference
+                self._sprite_frames.clear()
+                self._sprite_frames.extend(frames)
                 self._animation_state.update_frame_count(len(frames))
                 self.extractionCompleted.emit(len(frames))
                 return True, f"Extracted {len(frames)} frames", len(frames)
@@ -296,7 +294,9 @@ class SpriteModel(QObject):
         )
 
         if success:
-            self._sprite_frames = frames
+            # Modify list in-place to preserve AnimationStateManager reference
+            self._sprite_frames.clear()
+            self._sprite_frames.extend(frames)
             self._animation_state.update_frame_count(frame_count)
             # extractionCompleted already emitted by CCLOperations callback
 
@@ -341,7 +341,9 @@ class SpriteModel(QObject):
 
             if ccl_frames:
                 # Update main model state with CCL results
-                self._sprite_frames = ccl_frames
+                # Modify list in-place to preserve AnimationStateManager reference
+                self._sprite_frames.clear()
+                self._sprite_frames.extend(ccl_frames)
                 # CRITICAL FIX: Update animation state so total_frames property reflects CCL frame count
                 self._animation_state.update_frame_count(len(ccl_frames))
 

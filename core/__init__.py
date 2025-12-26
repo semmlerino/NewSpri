@@ -11,11 +11,9 @@ Contains the core Model-View-Controller components:
 from .animation_controller import AnimationController
 from .animation_segment_controller import AnimationSegmentController
 from .auto_detection_controller import AutoDetectionController
-from .file_controller import FileController
 
 __all__ = [
     'AnimationController',
     'AnimationSegmentController',
     'AutoDetectionController',
-    'FileController'
 ]

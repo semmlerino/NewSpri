@@ -16,37 +16,32 @@ from managers import AnimationSegmentManager
 
 
 class TestAnimationSegmentControllerInitialization:
-    """Test AnimationSegmentController initialization contract."""
+    """Test AnimationSegmentController initialization contract (constructor DI)."""
 
-    def test_is_ready_false_before_setters(self):
-        """Controller should report not ready before any setters called."""
-        controller = AnimationSegmentController()
-        assert not controller.is_ready
+    def test_constructor_requires_all_dependencies(self):
+        """Controller constructor requires all dependencies."""
+        # Should work with all required arguments
+        controller = AnimationSegmentController(
+            segment_manager=Mock(),
+            grid_view=Mock(),
+            sprite_model=Mock(),
+            tab_widget=Mock(),
+            segment_preview=Mock(),
+        )
+        assert controller is not None
+        assert controller._segment_manager is not None
+        assert controller._grid_view is not None
 
-    def test_is_ready_false_with_partial_setters(self):
-        """Controller should report not ready with only some setters called."""
-        controller = AnimationSegmentController()
-        controller.set_segment_manager(Mock())
-        controller.set_grid_view(Mock())
-        # Missing: set_sprite_model, set_tab_widget, set_segment_preview
-        assert not controller.is_ready
-
-    def test_is_ready_true_after_all_setters(self):
-        """Controller should report ready after all setters called."""
-        controller = AnimationSegmentController()
-        controller.set_segment_manager(Mock())
-        controller.set_grid_view(Mock())
-        controller.set_sprite_model(Mock())
-        controller.set_tab_widget(Mock())
-        controller.set_segment_preview(Mock())
-        assert controller.is_ready
-
-    def test_required_deps_lists_all_dependencies(self):
-        """_REQUIRED_DEPS should list all 5 required dependencies."""
-        assert len(AnimationSegmentController._REQUIRED_DEPS) == 5
-        expected = {'_segment_manager', '_grid_view', '_sprite_model',
-                    '_tab_widget', '_segment_preview'}
-        assert set(AnimationSegmentController._REQUIRED_DEPS) == expected
+    def test_constructor_accepts_none_for_optional_widgets(self):
+        """Controller can accept None for widgets used only in some operations."""
+        controller = AnimationSegmentController(
+            segment_manager=Mock(),
+            grid_view=Mock(),
+            sprite_model=Mock(),
+            tab_widget=None,  # Some operations don't need this
+            segment_preview=None,  # Some operations don't need this
+        )
+        assert controller is not None
 
 
 class TestAnimationControllerInitialization:

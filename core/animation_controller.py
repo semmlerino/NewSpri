@@ -5,7 +5,6 @@ Manages animation timing, state coordination, and UI/Model synchronization.
 Complete MVC Controller implementation for sprite animation.
 """
 
-import contextlib
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, QTimer, Signal
@@ -74,12 +73,8 @@ class AnimationController(QObject):
         # Timer precision tracking (for get_actual_fps)
         self._timer_precision: float = 0.0
 
-        # Signal connection tracking for cleanup (Signal | SignalInstance, slot)
-        self._signal_connections: list[tuple[object, object]] = []
-
-        # Connect timer and track the connection
+        # Connect timer
         self._animation_timer.timeout.connect(self._on_timer_timeout)
-        self._signal_connections.append((self._animation_timer.timeout, self._on_timer_timeout))
 
         # Initialization tracking
         self._initialized: bool = False
@@ -128,13 +123,7 @@ class AnimationController(QObject):
             self.stop_animation()
 
         self._animation_timer.stop()
-
-        # Disconnect all tracked signal connections (includes timer)
-        for signal, slot in self._signal_connections:
-            with contextlib.suppress(RuntimeError, TypeError):
-                signal.disconnect(slot)  # type: ignore[union-attr] - Signal has disconnect at runtime
-        self._signal_connections.clear()
-
+        # Qt automatically disconnects signals when QObjects are destroyed
         self._is_active = False
         self.statusChanged.emit("Animation controller shutdown")
 
@@ -343,16 +332,11 @@ class AnimationController(QObject):
         if not self._sprite_model:
             return
 
-        # Model state changes that affect animation - track for cleanup
-        connections = [
-            (self._sprite_model.dataLoaded, self._on_model_data_loaded),
-            (self._sprite_model.extractionCompleted, self._on_model_extraction_completed),
-            (self._sprite_model.frameChanged, self._on_model_frame_changed),
-            (self._sprite_model.errorOccurred, self._on_model_error),
-        ]
-        for signal, slot in connections:
-            signal.connect(slot)
-            self._signal_connections.append((signal, slot))
+        # Model state changes that affect animation
+        self._sprite_model.dataLoaded.connect(self._on_model_data_loaded)
+        self._sprite_model.extractionCompleted.connect(self._on_model_extraction_completed)
+        self._sprite_model.frameChanged.connect(self._on_model_frame_changed)
+        self._sprite_model.errorOccurred.connect(self._on_model_error)
 
     def _connect_view_signals(self) -> None:
         """
@@ -366,17 +350,13 @@ class AnimationController(QObject):
         # Note: Some signals like playPauseClicked are already connected directly
         # to controller methods in SpriteViewer._connect_signals()
 
-        # Connect to view lifecycle signals if they exist - track for cleanup
+        # Connect to view lifecycle signals if they exist
         if hasattr(self._sprite_viewer, 'aboutToClose'):
-            signal = self._sprite_viewer.aboutToClose  # type: ignore[union-attr]
-            signal.connect(self._on_view_closing)
-            self._signal_connections.append((signal, self._on_view_closing))
+            self._sprite_viewer.aboutToClose.connect(self._on_view_closing)  # type: ignore[union-attr]
 
         # Connect to canvas frame change signals for UI synchronization
         if hasattr(self._sprite_viewer, '_canvas') and hasattr(self._sprite_viewer._canvas, 'frameChanged'):
-            signal = self._sprite_viewer._canvas.frameChanged
-            signal.connect(self._on_view_frame_display_changed)
-            self._signal_connections.append((signal, self._on_view_frame_display_changed))
+            self._sprite_viewer._canvas.frameChanged.connect(self._on_view_frame_display_changed)
 
         self.statusChanged.emit("View ↔ Controller signal communication established")
 
