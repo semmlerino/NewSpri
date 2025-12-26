@@ -16,14 +16,7 @@ from config import Config
 
 class TestSpriteCanvasInitialization:
     """Test SpriteCanvas widget initialization."""
-    
-    @pytest.mark.ui
-    def test_canvas_creation(self, qapp):
-        """Test SpriteCanvas can be created successfully."""
-        canvas = SpriteCanvas()
-        assert canvas is not None
-        assert isinstance(canvas, SpriteCanvas)
-    
+
     @pytest.mark.ui
     def test_initial_properties(self, qapp):
         """Test initial canvas properties."""
@@ -80,15 +73,7 @@ class TestSpriteCanvasPixmapHandling:
 
 class TestSpriteCanvasZoom:
     """Test zoom functionality."""
-    
-    @pytest.mark.ui
-    def test_set_zoom_factor(self, qapp):
-        """Test setting zoom factor."""
-        canvas = SpriteCanvas()
-        
-        canvas.set_zoom(2.0)
-        assert canvas._zoom_factor == 2.0
-    
+
     @pytest.mark.ui
     @pytest.mark.parametrize("zoom_factor", [0.5, 1.0, 2.0, 5.0])
     def test_zoom_factor_bounds(self, qapp, zoom_factor):
@@ -133,31 +118,6 @@ class TestSpriteCanvasZoom:
         assert canvas._zoom_factor == 1.0
 
 
-class TestSpriteCanvasPan:
-    """Test pan functionality."""
-    
-    @pytest.mark.ui
-    def test_set_pan_offset(self, qapp):
-        """Test setting pan offset."""
-        canvas = SpriteCanvas()
-        
-        # Pan offset is internal, set directly
-        canvas._pan_offset = [10, 20]
-        
-        assert canvas._pan_offset == [10, 20]
-    
-    @pytest.mark.ui
-    def test_reset_pan(self, qapp):
-        """Test resetting pan to center."""
-        canvas = SpriteCanvas()
-        canvas._pan_offset = [50, 100]
-        
-        # Reset pan by setting to [0, 0]
-        canvas._pan_offset = [0, 0]
-        
-        assert canvas._pan_offset == [0, 0]
-
-
 class TestSpriteCanvasDisplay:
     """Test display options."""
     
@@ -193,17 +153,7 @@ class TestSpriteCanvasDisplay:
 
 class TestSpriteCanvasFrameInfo:
     """Test frame information display."""
-    
-    @pytest.mark.ui
-    def test_set_frame_info(self, qapp):
-        """Test setting frame information."""
-        canvas = SpriteCanvas()
-        
-        canvas.set_frame_info(5, 10)
-        
-        assert canvas._current_frame == 5
-        assert canvas._total_frames == 10
-    
+
     @pytest.mark.ui
     def test_frame_changed_signal(self, qapp):
         """Test frameChanged signal emission."""

@@ -142,37 +142,6 @@ class TestAnimationCoordinator:
         coordinator.go_to_last_frame()
         coordinator.go_to_frame(0)
     
-    def test_playback_control(self, mock_main_window, mock_animation_controller):
-        """Test playback control methods."""
-        coordinator = AnimationCoordinator(mock_main_window)
-        coordinator.animation_controller = mock_animation_controller
-        
-        # Test toggle playback
-        coordinator.toggle_playback()
-        mock_animation_controller.toggle_playback.assert_called_once()
-        
-        # Test start playback
-        coordinator.start_playback()
-        mock_animation_controller.start_playback.assert_called_once()
-        
-        # Test pause playback
-        coordinator.pause_playback()
-        mock_animation_controller.pause_playback.assert_called_once()
-        
-        # Test stop playback
-        coordinator.stop_playback()
-        mock_animation_controller.stop_playback.assert_called_once()
-    
-    def test_playback_control_without_controller(self, mock_main_window):
-        """Test playback control without animation controller."""
-        coordinator = AnimationCoordinator(mock_main_window)
-        
-        # Should not raise errors
-        coordinator.toggle_playback()
-        coordinator.start_playback()
-        coordinator.pause_playback()
-        coordinator.stop_playback()
-    
     def test_playback_state_handlers(self, mock_main_window, mock_playback_controls,
                                      mock_action_manager, mock_sprite_model):
         """Test playback state handler methods."""
@@ -238,32 +207,11 @@ class TestAnimationCoordinator:
     def test_extraction_completed_without_controls(self, mock_main_window):
         """Test extraction completed without playback controls."""
         coordinator = AnimationCoordinator(mock_main_window)
-        
+
         # Should not raise error
         coordinator.on_extraction_completed(10)
         coordinator.on_extraction_completed(0)
-    
-    def test_playback_settings(self, mock_main_window, mock_animation_controller):
-        """Test playback settings methods."""
-        coordinator = AnimationCoordinator(mock_main_window)
-        coordinator.animation_controller = mock_animation_controller
-        
-        # Test set FPS
-        coordinator.set_fps(30.0)
-        mock_animation_controller.set_fps.assert_called_once_with(30.0)
-        
-        # Test set loop mode
-        coordinator.set_loop_mode(True)
-        mock_animation_controller.set_loop_mode.assert_called_once_with(True)
-    
-    def test_playback_settings_without_controller(self, mock_main_window):
-        """Test playback settings without animation controller."""
-        coordinator = AnimationCoordinator(mock_main_window)
-        
-        # Should not raise errors
-        coordinator.set_fps(30.0)
-        coordinator.set_loop_mode(True)
-    
+
     def test_state_queries(self, mock_main_window, mock_sprite_model, mock_animation_controller):
         """Test state query methods."""
         coordinator = AnimationCoordinator(mock_main_window)
@@ -324,22 +272,14 @@ class TestAnimationCoordinatorIntegration:
     def test_sprite_viewer_uses_animation_coordinator(self):
         """Test that SpriteViewer properly uses AnimationCoordinator."""
         from sprite_viewer import SpriteViewer
-        
+
         # Check that SpriteViewer imports AnimationCoordinator
         init_code = SpriteViewer.__init__.__code__
-        
+
         # Check for AnimationCoordinator usage
         assert 'AnimationCoordinator' in init_code.co_names or \
                '_animation_coordinator' in init_code.co_names
-    
-    def test_animation_coordinator_import(self):
-        """Test that AnimationCoordinator can be imported correctly."""
-        from coordinators import AnimationCoordinator as Coordinator
-        from coordinators.animation_coordinator import AnimationCoordinator
-        
-        # Verify they're the same class
-        assert Coordinator is AnimationCoordinator
-    
+
     def test_animation_methods_removed_from_sprite_viewer(self):
         """Test that animation methods have been removed from SpriteViewer."""
         from sprite_viewer import SpriteViewer

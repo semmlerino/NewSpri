@@ -205,6 +205,32 @@ class TestSegmentPersistence:
         painter.end()
         return sheet
 
+    @pytest.mark.integration
+    def test_corrupted_segment_json_recovery(self, tmp_path):
+        """Verify graceful handling of malformed .sprite_segments/ files."""
+        sprite_path = tmp_path / "test_sprite.png"
+        sprite_path.write_bytes(b"PNG\x89\x50\x4E\x47\x0D\x0A\x1A\x0A")  # Minimal PNG header
+
+        # Create segments directory and write corrupted JSON
+        segments_dir = sprite_path.parent / ".sprite_segments"
+        segments_dir.mkdir(exist_ok=True)
+
+        segments_file = segments_dir / f"{sprite_path.stem}_segments.json"
+        with open(segments_file, 'w') as f:
+            f.write("{ invalid json content }")
+
+        # Create manager and set context (should not crash)
+        manager = AnimationSegmentManager()
+
+        # This should not raise an exception
+        try:
+            manager.set_sprite_context(str(sprite_path), frame_count=8)
+        except json.JSONDecodeError:
+            pytest.fail("Manager should handle corrupted JSON gracefully")
+
+        # Manager should have no segments (corrupted file ignored)
+        assert len(manager.get_all_segments()) == 0
+
 
 if __name__ == '__main__':
     pytest.main([__file__, '-v'])
