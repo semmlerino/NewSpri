@@ -56,7 +56,7 @@ core/                       - Controllers
   animation_controller.py   - Animation timing control
   animation_segment_controller.py - Segment management
   auto_detection_controller.py - Frame detection logic
-  file_controller.py        - File loading orchestration
+  export_coordinator.py     - Export workflow coordination
 
 managers/                   - Manager classes
   animation_segment_manager.py - Segment persistence
@@ -73,6 +73,7 @@ utils/                      - Utilities
   ui_common.py              - Common UI utilities
 
 coordinators/               - Component coordination
+  signal_coordinator.py     - Centralized signal wiring
 sprite_model/               - Data layer & algorithms
 export/                     - Export system (core/, dialogs/, widgets/)
 tests/                      - Test suite (unit/, integration/, ui/, performance/)
