@@ -100,3 +100,6 @@ yarn-error.log*
 
 # Tool caches
 .serena/
+
+# Archive folder
+archive/
