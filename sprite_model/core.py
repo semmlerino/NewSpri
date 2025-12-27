@@ -201,17 +201,27 @@ class SpriteModel(QObject):
             if self._original_sprite_sheet is None:
                 return False, "No sprite sheet loaded", 0
 
-            success, message, frames = extract_grid_frames(
+            success, message, frames, skipped = extract_grid_frames(
                 self._original_sprite_sheet, config
             )
 
             if success:
+                # Check for zero frames - this indicates settings don't match sprite sheet
+                if len(frames) == 0:
+                    return False, "No frames could be extracted with current settings. Check frame size and offsets.", 0
+
                 # Modify list in-place to preserve AnimationStateManager reference
                 self._sprite_frames.clear()
                 self._sprite_frames.extend(frames)
                 self._animation_state.update_frame_count(len(frames))
                 self.extractionCompleted.emit(len(frames))
-                return True, f"Extracted {len(frames)} frames", len(frames)
+
+                # Build result message including skipped frame warning if any
+                if skipped > 0:
+                    result_msg = f"Extracted {len(frames)} frames ({skipped} skipped - exceeded sheet boundaries)"
+                else:
+                    result_msg = f"Extracted {len(frames)} frames"
+                return True, result_msg, len(frames)
             else:
                 return False, message, 0
         else:

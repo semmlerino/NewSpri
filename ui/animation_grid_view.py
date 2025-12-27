@@ -568,11 +568,15 @@ class AnimationGridView(QWidget):
             description = f"{len(sorted_frames)} selected frames"
 
             # Show warning for non-contiguous selection
+            total_frames = end - start + 1
+            unselected_count = total_frames - len(sorted_frames)
             reply = QMessageBox.question(
                 self, "Non-contiguous Selection",
-                f"You've selected {len(sorted_frames)} non-contiguous frames.\n"
-                f"This will create a segment from frame {start} to {end} "
-                f"(including unselected frames in between).\n\n"
+                f"Your selection has gaps between frames.\n\n"
+                f"Selected: frames {', '.join(str(f) for f in sorted_frames[:5])}"
+                f"{'...' if len(sorted_frames) > 5 else ''}\n"
+                f"Segment will span: frames {start} to {end} ({total_frames} total)\n"
+                f"Includes {unselected_count} unselected frame(s) in between.\n\n"
                 f"Continue?",
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
             )

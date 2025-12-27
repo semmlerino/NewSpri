@@ -712,6 +712,19 @@ class SpriteViewer(QMainWindow):
             QMessageBox.critical(self, "Load Error", error_msg)
             return False
 
+        # Check if loading a new sprite would clear existing segments
+        current_path = self._sprite_model.file_path
+        if current_path and current_path != file_path:
+            existing_segments = self._segment_manager.get_all_segments()
+            if existing_segments:
+                reply = QMessageBox.question(
+                    self, "Clear Segments?",
+                    f"Loading a new sprite will clear {len(existing_segments)} existing segment(s).\n\nContinue?",
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                )
+                if reply != QMessageBox.StandardButton.Yes:
+                    return False
+
         # Try to load via sprite model
         success, error_message = self._sprite_model.load_sprite_sheet(file_path)
 

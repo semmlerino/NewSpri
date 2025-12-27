@@ -72,21 +72,27 @@ class FrameExtractor(QGroupBox):
         mode_layout = QHBoxLayout()
         self.mode_group = QButtonGroup()
 
-        self.grid_mode_btn = QRadioButton("Grid Extraction")
-        self.grid_mode_btn.setToolTip("Traditional grid-based extraction for regular animation frames")
+        self.grid_mode_btn = QRadioButton("Grid Mode")
+        self.grid_mode_btn.setToolTip(
+            "Extract frames using a regular grid pattern.\n"
+            "Best for sprite sheets with evenly-spaced frames."
+        )
         self.grid_mode_btn.setChecked(False)  # No longer default
         self.mode_group.addButton(self.grid_mode_btn, 0)
         mode_layout.addWidget(self.grid_mode_btn)
 
-        self.ccl_mode_btn = QRadioButton("CCL Extraction")
-        self.ccl_mode_btn.setToolTip("Connected-Component Labeling for irregular sprite collections")
+        self.ccl_mode_btn = QRadioButton("Auto-Detect")
+        self.ccl_mode_btn.setToolTip(
+            "Automatically finds each sprite's boundaries.\n"
+            "Best for sprites with transparent backgrounds or irregular layouts."
+        )
         self.ccl_mode_btn.setChecked(True)  # Now the default mode
         self.ccl_mode_btn.setEnabled(True)  # Enable by default
         self.mode_group.addButton(self.ccl_mode_btn, 1)
         mode_layout.addWidget(self.ccl_mode_btn)
 
         # Mode status indicator
-        self.mode_status = QLabel("🎯 CCL mode active")
+        self.mode_status = QLabel("🎯 Auto-detect active")
         self.mode_status.setStyleSheet("""
             QLabel {
                 color: #d32f2f;
@@ -252,7 +258,7 @@ class FrameExtractor(QGroupBox):
         # Connect mode change signals
         self.mode_group.buttonClicked.connect(self._on_mode_changed)
 
-        # Set initial state for CCL default mode (disable grid controls)
+        # Set initial state for auto-detect default mode (disable grid controls)
         self._set_grid_controls_enabled(False)
 
     def _on_mode_changed(self, button):
@@ -263,11 +269,11 @@ class FrameExtractor(QGroupBox):
             color = Config.Colors.MODE_GRID
             # Enable grid controls
             self._set_grid_controls_enabled(True)
-        else:  # CCL mode
+        else:  # Auto-detect mode
             mode = "ccl"
-            self.mode_status.setText("🎯 CCL mode active")
+            self.mode_status.setText("🎯 Auto-detect active (size controls not needed)")
             color = Config.Colors.MODE_CCL
-            # Disable grid controls since CCL uses exact boundaries
+            # Disable grid controls since auto-detect finds exact boundaries
             self._set_grid_controls_enabled(False)
 
         self.mode_status.setStyleSheet(f"""
@@ -281,14 +287,14 @@ class FrameExtractor(QGroupBox):
 
     def _set_grid_controls_enabled(self, enabled: bool):
         """Enable/disable grid-specific controls."""
-        # Disable presets and custom size controls in CCL mode
+        # Disable presets and custom size controls in auto-detect mode
         for button in self.preset_group.buttons():
             button.setEnabled(enabled)
         self.width_spin.setEnabled(enabled)
         self.height_spin.setEnabled(enabled)
         self.auto_btn.setEnabled(enabled)
 
-        # Disable offset and spacing controls in CCL mode (CCL uses exact bounds)
+        # Disable offset and spacing controls in auto-detect mode (finds exact bounds)
         self.offset_x.setEnabled(enabled)
         self.offset_y.setEnabled(enabled)
         self.spacing_x.setEnabled(enabled)
@@ -297,15 +303,18 @@ class FrameExtractor(QGroupBox):
         self.auto_spacing_btn.setEnabled(enabled)
 
     def set_ccl_available(self, available: bool, sprite_count: int = 0):
-        """Enable/disable CCL mode based on availability."""
+        """Enable/disable auto-detect mode based on availability."""
         self.ccl_mode_btn.setEnabled(available)
         if available:
             if sprite_count > 0:
-                self.ccl_mode_btn.setToolTip(f"CCL Extraction: Ready (auto-detection found {sprite_count} sprites)")
+                self.ccl_mode_btn.setToolTip(f"Auto-Detect: Ready ({sprite_count} sprites found)")
             else:
-                self.ccl_mode_btn.setToolTip("CCL Extraction: Ready for irregular sprite collections")
+                self.ccl_mode_btn.setToolTip(
+                    "Automatically finds each sprite's boundaries.\n"
+                    "Best for sprites with transparent backgrounds."
+                )
         else:
-            self.ccl_mode_btn.setToolTip("CCL Extraction: Load a sprite sheet first")
+            self.ccl_mode_btn.setToolTip("Auto-Detect: Load a sprite sheet first")
 
     def get_extraction_mode(self) -> str:
         """Get current extraction mode."""

@@ -952,6 +952,19 @@ class ModernExportSettings(WizardStep):
         self.format_combo.currentTextChanged.connect(self._on_format_changed)
         format_layout.addWidget(self.format_combo)
 
+        # Transparency warning for JPG format
+        self._transparency_warning = QLabel("⚠ JPG does not support transparency")
+        self._transparency_warning.setStyleSheet("""
+            QLabel {
+                color: #ff9800;
+                font-weight: bold;
+                font-size: 11px;
+                padding: 2px 6px;
+            }
+        """)
+        self._transparency_warning.hide()  # Hidden by default
+        format_layout.addWidget(self._transparency_warning)
+
         format_layout.addStretch()
 
         # Scale selection (inline buttons)
@@ -1164,8 +1177,29 @@ class ModernExportSettings(WizardStep):
         except Exception as e:
             print(f"Warning: Error updating pattern displays on format change: {e}")
 
+        # Show/hide transparency warning for JPG format
+        self._update_transparency_warning(format)
+
         # Show quality slider for JPG
         self._on_setting_changed()
+
+    def _update_transparency_warning(self, format: str):
+        """Show warning when exporting transparent sprites to JPG."""
+        if not hasattr(self, '_transparency_warning'):
+            return
+
+        show_warning = False
+        if format.upper() == "JPG" and self._sprites:
+            # Check if any sprite has transparency
+            for sprite in self._sprites:
+                if sprite and not sprite.isNull() and sprite.hasAlphaChannel():
+                    show_warning = True
+                    break
+
+        if show_warning:
+            self._transparency_warning.show()
+        else:
+            self._transparency_warning.hide()
 
     def _on_scale_changed(self, button):
         """Handle scale change."""

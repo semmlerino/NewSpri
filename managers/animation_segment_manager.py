@@ -8,6 +8,7 @@ import contextlib
 import json
 import logging
 import os
+import re
 import tempfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -81,6 +82,19 @@ class AnimationSegmentData:
         """
         if not self.name.strip():
             return False, "Segment name cannot be empty"
+
+        # Validate filename-safe characters (used in exports)
+        unsafe_chars = r'[<>:"/\\|?*\x00-\x1f]'
+        if re.search(unsafe_chars, self.name):
+            return False, "Segment name contains characters not allowed in filenames: < > : \" / \\ | ? *"
+
+        # Check for Windows reserved names
+        reserved_names = {'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4',
+                          'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2',
+                          'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'}
+        name_without_ext = self.name.split('.')[0].upper()
+        if name_without_ext in reserved_names:
+            return False, f"'{self.name}' is a reserved system name and cannot be used"
 
         if self.start_frame < 0:
             return False, "Start frame cannot be negative"

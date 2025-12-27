@@ -51,7 +51,7 @@ class GridLayout(NamedTuple):
 # Grid Extraction Functions
 # ============================================================================
 
-def extract_grid_frames(sprite_sheet: QPixmap, config: GridConfig) -> tuple[bool, str, list[QPixmap]]:
+def extract_grid_frames(sprite_sheet: QPixmap, config: GridConfig) -> tuple[bool, str, list[QPixmap], int]:
     """
     Extract frames from sprite sheet using grid-based extraction.
 
@@ -60,15 +60,16 @@ def extract_grid_frames(sprite_sheet: QPixmap, config: GridConfig) -> tuple[bool
         config: Grid configuration (frame size, offsets, spacing)
 
     Returns:
-        Tuple of (success, error_message, frame_list)
+        Tuple of (success, error_message, frame_list, skipped_count)
+        skipped_count indicates frames that couldn't fit within sheet boundaries
     """
     if not sprite_sheet or sprite_sheet.isNull():
-        return False, "No sprite sheet provided", []
+        return False, "No sprite sheet provided", [], 0
 
     # Validate frame settings
     valid, error_msg = validate_frame_settings(sprite_sheet, config)
     if not valid:
-        return False, error_msg, []
+        return False, error_msg, [], 0
 
     try:
         sheet_width = sprite_sheet.width()
@@ -81,8 +82,9 @@ def extract_grid_frames(sprite_sheet: QPixmap, config: GridConfig) -> tuple[bool
         # Calculate grid layout
         layout = _calculate_grid_layout(available_width, available_height, config)
 
-        # Extract individual frames with spacing
+        # Extract individual frames with spacing, tracking skipped frames
         frames = []
+        skipped_count = 0
         for row in range(layout.frames_per_col):
             for col in range(layout.frames_per_row):
                 x = config.offset_x + (col * (config.width + config.spacing_x))
@@ -95,11 +97,15 @@ def extract_grid_frames(sprite_sheet: QPixmap, config: GridConfig) -> tuple[bool
 
                     if not frame.isNull():
                         frames.append(frame)
+                    else:
+                        skipped_count += 1
+                else:
+                    skipped_count += 1
 
-        return True, "", frames
+        return True, "", frames, skipped_count
 
     except Exception as e:
-        return False, f"Error extracting frames: {e!s}", []
+        return False, f"Error extracting frames: {e!s}", [], 0
 
 
 def validate_frame_settings(sprite_sheet: QPixmap, config: GridConfig) -> tuple[bool, str]:
