@@ -31,7 +31,32 @@ from core import (
     AnimationController,
     AnimationSegmentController,
     AutoDetectionController,
+    ExportCoordinator,
 )
+
+# Export dialog
+from export.dialogs.export_wizard import ExportDialog
+
+# Managers
+from managers import (
+    AnimationSegmentManager,
+    get_recent_files_manager,
+    get_settings_manager,
+)
+
+# Core MVC Components
+from sprite_model import SpriteModel
+
+# UI Components
+from ui import (
+    AnimationGridView,
+    EnhancedStatusBar,
+    FrameExtractor,
+    PlaybackControls,
+    SpriteCanvas,
+    StatusBarManager,
+)
+from ui.animation_segment_preview import AnimationSegmentPreview
 
 
 def _validate_sprite_file(file_path: str) -> tuple[bool, str]:
@@ -113,34 +138,6 @@ def _extract_file_from_drop(event: QDropEvent) -> str | None:
 
     return None
 
-# Export system
-from pathlib import Path
-from typing import Any
-
-from export.core.frame_exporter import SpriteSheetLayout, get_frame_exporter
-from export.dialogs.export_wizard import ExportDialog
-from export.dialogs.progress_dialog import ExportProgressDialog
-
-# Managers
-from managers import (
-    AnimationSegmentManager,
-    get_recent_files_manager,
-    get_settings_manager,
-)
-
-# Core MVC Components
-from sprite_model import SpriteModel
-
-# UI Components
-from ui import (
-    AnimationGridView,
-    EnhancedStatusBar,
-    FrameExtractor,
-    PlaybackControls,
-    SpriteCanvas,
-    StatusBarManager,
-)
-from ui.animation_segment_preview import AnimationSegmentPreview
 
 # ============================================================================
 # KEYBOARD SHORTCUTS
@@ -256,9 +253,12 @@ class SpriteViewer(QMainWindow):
         self._refresh_grid_btn.clicked.connect(self._segment_controller.update_grid_view_frames)
         self._tab_widget.currentChanged.connect(self._segment_controller.on_tab_changed)
 
-        # Initialize export components (direct, no coordinator)
-        self._exporter = get_frame_exporter()
-        self._progress_dialog: ExportProgressDialog | None = None
+        # Initialize export coordinator
+        self._export_coordinator = ExportCoordinator(
+            sprite_model=self._sprite_model,
+            segment_manager=self._segment_manager,
+            parent=self,
+        )
 
         # Connect action callbacks now that all components exist
         self._connect_action_callbacks()
@@ -1177,320 +1177,38 @@ class SpriteViewer(QMainWindow):
 
 
     # ============================================================================
-    # EXPORT OPERATIONS (Direct, no coordinator)
+    # EXPORT OPERATIONS
     # ============================================================================
 
-    def _validate_export(self) -> bool:
-        """
-        Validate that export can proceed.
-
-        Returns:
-            bool: True if export can proceed, False otherwise
-        """
-        if not self._sprite_model or not self._sprite_model.sprite_frames:
-            QMessageBox.warning(self, "No Frames", "No frames to export.")
-            return False
-        return True
-
-    def _on_export_frames_requested(self):
-        """Show enhanced export dialog for exporting frames and animation segments."""
-        if not self._validate_export():
+    def _on_export_frames_requested(self) -> None:
+        """Show export dialog for exporting frames and animation segments."""
+        if not self._export_coordinator.validate_export():
             return
 
         dialog = ExportDialog(
             self,
             frame_count=len(self._sprite_model.sprite_frames),
             current_frame=self._sprite_model.current_frame,
-            segment_manager=self._segment_manager
+            segment_manager=self._segment_manager,
         )
         dialog.set_sprites(self._sprite_model.sprite_frames)
-        dialog.exportRequested.connect(self._handle_export_request)
+        dialog.exportRequested.connect(self._export_coordinator.handle_export_request)
         dialog.exec()
 
-    def _on_export_current_frame_requested(self):
+    def _on_export_current_frame_requested(self) -> None:
         """Export only the current frame."""
-        if not self._validate_export():
+        if not self._export_coordinator.validate_export():
             return
 
         dialog = ExportDialog(
             self,
             frame_count=len(self._sprite_model.sprite_frames),
             current_frame=self._sprite_model.current_frame,
-            segment_manager=self._segment_manager
+            segment_manager=self._segment_manager,
         )
         dialog.set_sprites(self._sprite_model.sprite_frames)
-        dialog.exportRequested.connect(self._handle_export_request)
+        dialog.exportRequested.connect(self._export_coordinator.handle_export_request)
         dialog.exec()
-
-    def _handle_export_request(self, settings: dict[str, Any]):
-        """
-        Handle unified export request from dialog.
-
-        Args:
-            settings: Export settings dictionary
-        """
-        mode = settings.get('mode', '')
-
-        # Determine export type name for progress dialog
-        export_type_names = {
-            'individual': 'Individual Frames',
-            'selected': 'Selected Frames',
-            'sheet': 'Sprite Sheet',
-            'segments': 'Animation Segments',
-            'segments_sheet': 'Segments Per Row Sheet',
-        }
-        export_type = export_type_names.get(mode, 'Frames')
-
-        # Get frame count for progress dialog
-        frame_count = len(self._sprite_model.sprite_frames) if self._sprite_model.sprite_frames else 0
-
-        # Create and configure progress dialog
-        self._progress_dialog = ExportProgressDialog(
-            export_type=export_type,
-            total_frames=frame_count,
-            parent=self
-        )
-
-        # Connect exporter signals
-        self._exporter.exportProgress.connect(self._progress_dialog.update_progress)
-        self._exporter.exportFinished.connect(self._on_export_finished)
-        self._exporter.exportError.connect(self._on_export_error)
-        self._progress_dialog.cancelled.connect(self._exporter.cancel_export)
-
-        # Show progress dialog
-        self._progress_dialog.show()
-
-        # Route to appropriate export handler
-        if mode == 'segments' and 'selected_segments' in settings:
-            self._export_segments(settings)
-        elif mode == 'segments_sheet':
-            self._export_segments_per_row(settings)
-        else:
-            self._export_frames(settings)
-
-    def _export_frames(self, settings: dict[str, Any]):
-        """Handle standard frame export."""
-        required_keys = ['output_dir', 'base_name', 'format', 'mode', 'scale_factor']
-        for key in required_keys:
-            if key not in settings:
-                self._show_export_error(f"Missing required setting: {key}")
-                return
-
-        if not self._sprite_model.sprite_frames:
-            self._show_export_warning("No frames available to export.")
-            return
-
-        all_frames = self._sprite_model.sprite_frames
-        frames_to_export = all_frames
-        export_mode = settings['mode']
-        selected_indices = settings.get('selected_indices', [])
-
-        if selected_indices:
-            valid_indices = [i for i in selected_indices if 0 <= i < len(all_frames)]
-            if not valid_indices:
-                self._show_export_warning("No valid frames selected for export.")
-                return
-
-            frames_to_export = [all_frames[i] for i in valid_indices]
-            export_mode = 'individual'
-
-            if len(valid_indices) != len(selected_indices):
-                invalid_count = len(selected_indices) - len(valid_indices)
-                self._show_export_info(
-                    f"Exported {len(valid_indices)} frames. "
-                    f"{invalid_count} invalid selection(s) skipped."
-                )
-
-        # Create sprite sheet layout if mode is 'sheet' and layout not provided
-        sprite_sheet_layout = settings.get('sprite_sheet_layout')
-        if export_mode == 'sheet' and sprite_sheet_layout is None:
-            layout_mode = settings.get('layout_mode', 'auto')
-            sprite_sheet_layout = SpriteSheetLayout(
-                mode=layout_mode,
-                spacing=settings.get('spacing', 0),
-                padding=settings.get('padding', 0),
-                max_columns=settings.get('columns', 8) if layout_mode == 'rows' else None,
-                max_rows=settings.get('rows', 8) if layout_mode == 'columns' else None,
-                custom_columns=settings.get('columns', 8) if layout_mode == 'custom' else None,
-                custom_rows=settings.get('rows', 8) if layout_mode == 'custom' else None,
-                background_mode=settings.get('background_mode', 'transparent'),
-                background_color=settings.get('background_color', (255, 255, 255, 255))
-            )
-
-        success = self._exporter.export_frames(
-            frames=frames_to_export,
-            output_dir=settings['output_dir'],
-            base_name=settings['base_name'],
-            format=settings['format'],
-            mode=export_mode,
-            scale_factor=settings['scale_factor'],
-            pattern=settings.get('pattern'),
-            selected_indices=selected_indices if selected_indices else None,
-            sprite_sheet_layout=sprite_sheet_layout,
-        )
-
-        if not success:
-            self._show_export_error("Failed to start export.")
-
-    def _export_segments_per_row(self, settings: dict[str, Any]):
-        """Handle segments per row sprite sheet export."""
-        if not self._sprite_model.sprite_frames:
-            self._show_export_warning("No frames available to export.")
-            return
-
-        if not self._segment_manager:
-            self._show_export_error("Segment manager not available.")
-            return
-
-        segments = self._segment_manager.get_all_segments()
-        if not segments:
-            self._show_export_warning("No animation segments defined.")
-            return
-
-        segment_info = sorted(
-            [{'name': s.name, 'start_frame': s.start_frame, 'end_frame': s.end_frame}
-             for s in segments],
-            key=lambda x: x['start_frame']
-        )
-
-        success = self._exporter.export_frames(
-            frames=self._sprite_model.sprite_frames,
-            output_dir=settings['output_dir'],
-            base_name=settings['base_name'],
-            format=settings['format'],
-            mode='segments_sheet',
-            scale_factor=settings['scale_factor'],
-            sprite_sheet_layout=settings.get('sprite_sheet_layout'),
-            segment_info=segment_info,
-        )
-
-        if not success:
-            self._show_export_error("Failed to start segments per row export.")
-
-    def _export_segments(self, settings: dict[str, Any]):
-        """Handle animation segment export."""
-        selected_segments = settings.get('selected_segments', [])
-
-        if not selected_segments:
-            self._show_export_warning("No animation segments selected for export.")
-            return
-
-        if not self._sprite_model.sprite_frames:
-            self._show_export_warning("No frames available to export.")
-            return
-
-        if not self._segment_manager:
-            self._show_export_error("Segment manager not available.")
-            return
-
-        all_frames = self._sprite_model.sprite_frames
-
-        for segment_name in selected_segments:
-            segment = self._segment_manager.get_segment(segment_name)
-            if not segment:
-                continue
-
-            segment_frames = self._segment_manager.extract_frames_for_segment(
-                segment_name, all_frames
-            )
-            if not segment_frames:
-                continue
-
-            base_output_dir = settings['output_dir']
-            segment_output_dir = Path(base_output_dir) / segment_name
-            segment_output_dir.mkdir(parents=True, exist_ok=True)
-
-            mode_index = settings.get('mode_index', 0)
-
-            if mode_index == 0:  # Individual segments (separate folders)
-                success = self._exporter.export_frames(
-                    frames=segment_frames,
-                    output_dir=str(segment_output_dir),
-                    base_name=settings.get('base_name', segment_name),
-                    format=settings['format'],
-                    mode='individual',
-                    scale_factor=settings['scale_factor'],
-                )
-            elif mode_index == 1:  # Combined sprite sheet
-                success = self._exporter.export_frames(
-                    frames=segment_frames,
-                    output_dir=str(segment_output_dir),
-                    base_name=f"{segment_name}_sheet",
-                    format=settings['format'],
-                    mode='sheet',
-                    scale_factor=settings['scale_factor'],
-                )
-            else:  # All frames (with segment prefixes)
-                success = self._exporter.export_frames(
-                    frames=segment_frames,
-                    output_dir=str(base_output_dir),
-                    base_name=f"{settings.get('base_name', 'frame')}_{segment_name}",
-                    format=settings['format'],
-                    mode='individual',
-                    scale_factor=settings['scale_factor'],
-                )
-
-            if not success:
-                self._show_export_error(f"Failed to export segment '{segment_name}'.")
-
-    def _on_export_finished(self, success: bool, message: str):
-        """Handle export completion."""
-        # Disconnect signals and close progress dialog
-        if self._progress_dialog:
-            try:
-                self._exporter.exportProgress.disconnect(self._progress_dialog.update_progress)
-                self._exporter.exportFinished.disconnect(self._on_export_finished)
-                self._exporter.exportError.disconnect(self._on_export_error)
-            except RuntimeError:
-                pass  # Signals may already be disconnected
-            self._progress_dialog.close()
-            self._progress_dialog = None
-
-        # Show result message
-        if success:
-            QMessageBox.information(
-                self,
-                "Export Complete",
-                f"Export completed successfully!\n\n{message}"
-            )
-        else:
-            QMessageBox.warning(
-                self,
-                "Export Failed",
-                f"Export failed:\n\n{message}"
-            )
-
-    def _on_export_error(self, error_message: str):
-        """Handle export error."""
-        # Disconnect signals and close progress dialog
-        if self._progress_dialog:
-            try:
-                self._exporter.exportProgress.disconnect(self._progress_dialog.update_progress)
-                self._exporter.exportFinished.disconnect(self._on_export_finished)
-                self._exporter.exportError.disconnect(self._on_export_error)
-            except RuntimeError:
-                pass  # Signals may already be disconnected
-            self._progress_dialog.close()
-            self._progress_dialog = None
-
-        # Show error message
-        QMessageBox.critical(
-            self,
-            "Export Error",
-            f"Export failed:\n\n{error_message}"
-        )
-
-    def _show_export_error(self, message: str):
-        """Show export error message box."""
-        QMessageBox.critical(self, "Export Error", message)
-
-    def _show_export_warning(self, message: str):
-        """Show export warning message box."""
-        QMessageBox.warning(self, "Export Warning", message)
-
-    def _show_export_info(self, message: str):
-        """Show export information message box."""
-        QMessageBox.information(self, "Export Info", message)
 
     def closeEvent(self, event):
         """Handle close event."""

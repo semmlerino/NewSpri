@@ -11,9 +11,11 @@ Contains the core Model-View-Controller components:
 from .animation_controller import AnimationController
 from .animation_segment_controller import AnimationSegmentController
 from .auto_detection_controller import AutoDetectionController
+from .export_coordinator import ExportCoordinator
 
 __all__ = [
     'AnimationController',
     'AnimationSegmentController',
     'AutoDetectionController',
+    'ExportCoordinator',
 ]
