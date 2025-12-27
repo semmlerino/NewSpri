@@ -26,7 +26,7 @@ class WizardStep(QWidget):
 
     # Signals
     stepValidated = Signal(bool)  # Emitted when validation state changes
-    dataChanged = Signal(dict)    # Emitted when step data changes
+    dataChanged = Signal(dict)  # Emitted when step data changes
 
     def __init__(self, title: str, subtitle: str = "", parent=None):
         super().__init__(parent)
@@ -67,7 +67,7 @@ class WizardWidget(QWidget):
 
     # Signals
     wizardFinished = Signal(dict)  # Emitted when wizard completes with all data
-    wizardCancelled = Signal()     # Emitted when wizard is cancelled
+    wizardCancelled = Signal()  # Emitted when wizard is cancelled
     currentStepChanged = Signal(int)  # Emitted when step changes
 
     def __init__(self, parent=None):

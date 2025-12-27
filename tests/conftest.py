@@ -223,15 +223,22 @@ def sprite_model() -> SpriteModel:
 
 
 @pytest.fixture
-def animation_controller() -> AnimationController:
-    """Fresh AnimationController instance for testing."""
-    return AnimationController()
+def animation_controller(sprite_model) -> AnimationController:
+    """Fresh AnimationController instance for testing with mock dependencies."""
+    from unittest.mock import MagicMock
+
+    mock_viewer = MagicMock()
+    mock_viewer.aboutToClose = MagicMock()  # Signal mock
+    return AnimationController(sprite_model=sprite_model, sprite_viewer=mock_viewer)
 
 
 @pytest.fixture
-def auto_detection_controller() -> AutoDetectionController:
-    """Fresh AutoDetectionController instance for testing."""
-    return AutoDetectionController()
+def auto_detection_controller(sprite_model) -> AutoDetectionController:
+    """Fresh AutoDetectionController instance for testing with mock dependencies."""
+    from unittest.mock import MagicMock
+
+    mock_frame_extractor = MagicMock()
+    return AutoDetectionController(sprite_model=sprite_model, frame_extractor=mock_frame_extractor)
 
 
 @pytest.fixture
@@ -804,10 +811,10 @@ def real_sprite_system(qapp):
     
     class RealSpriteSystem:
         """Integrated real sprite system for authentic component testing."""
-        
+
         def __init__(self):
             self.sprite_model = SpriteModel()
-            self.animation_controller = AnimationController()
+            self.animation_controller = None  # Created during initialize_system
             self.test_frames = []
             self._initialized = False
         
@@ -859,18 +866,18 @@ def real_sprite_system(qapp):
             """Initialize complete real system with sprite model and animation controller."""
             # Setup sprite model with real data
             self.setup_sprite_model(frame_count, frame_size)
-            
+
             # Create minimal mock viewer (heavy UI component)
             mock_viewer = Mock()
-            
-            # Initialize real controller with real sprite model
-            success = self.animation_controller.initialize(
-                self.sprite_model, 
-                mock_viewer
+
+            # Create real controller with real sprite model (single-step init)
+            self.animation_controller = AnimationController(
+                sprite_model=self.sprite_model,
+                sprite_viewer=mock_viewer,
             )
-            
-            self._initialized = success
-            return success
+
+            self._initialized = True
+            return True
         
         def get_real_signal_connections(self):
             """Get dictionary of real signals for testing."""

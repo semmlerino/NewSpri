@@ -16,6 +16,7 @@ if TYPE_CHECKING:
 
 try:
     from PySide6.QtGui import QPixmap as _QPixmapRuntime
+
     PYSIDE6_AVAILABLE = True
     if not TYPE_CHECKING:
         QPixmap = _QPixmapRuntime  # type: ignore[misc]
@@ -26,10 +27,13 @@ except ImportError:
         class QPixmap:  # type: ignore[no-redef]
             def __init__(self, *args):
                 self._null = True
+
             def isNull(self):
                 return self._null
+
             def width(self):
                 return 0
+
             def height(self):
                 return 0
 
@@ -42,7 +46,7 @@ class FileValidator:
     """
 
     # Supported image formats (must match Config.File.SUPPORTED_EXTENSIONS)
-    SUPPORTED_FORMATS = {'.png', '.jpg', '.jpeg', '.bmp', '.gif'}
+    SUPPORTED_FORMATS = {".png", ".jpg", ".jpeg", ".bmp", ".gif"}
 
     def __init__(self):
         """Initialize file validator."""
@@ -78,7 +82,7 @@ class FileValidator:
 
             # Check file format
             if not self._is_supported_format(path_obj):
-                supported = ', '.join(sorted(self.SUPPORTED_FORMATS))
+                supported = ", ".join(sorted(self.SUPPORTED_FORMATS))
                 return False, f"Unsupported file format. Supported: {supported}"
 
             # Check file accessibility
@@ -158,14 +162,14 @@ class MetadataExtractor:
         """
         if not PYSIDE6_AVAILABLE:
             return {
-                'file_path': file_path,
-                'file_name': Path(file_path).name if file_path else "Unknown",
-                'sheet_width': 0,
-                'sheet_height': 0,
-                'file_format': "UNKNOWN",
-                'file_size': 0,
-                'last_modified': 0.0,
-                'sprite_sheet_info': "PySide6 not available - metadata extraction limited"
+                "file_path": file_path,
+                "file_name": Path(file_path).name if file_path else "Unknown",
+                "sheet_width": 0,
+                "sheet_height": 0,
+                "file_format": "UNKNOWN",
+                "file_size": 0,
+                "last_modified": 0.0,
+                "sprite_sheet_info": "PySide6 not available - metadata extraction limited",
             }
 
         try:
@@ -188,31 +192,32 @@ class MetadataExtractor:
             )
 
             return {
-                'file_path': file_path,
-                'file_name': file_name,
-                'sheet_width': sheet_width,
-                'sheet_height': sheet_height,
-                'file_format': file_format,
-                'file_size': file_size,
-                'last_modified': last_modified,
-                'sprite_sheet_info': sprite_sheet_info
+                "file_path": file_path,
+                "file_name": file_name,
+                "sheet_width": sheet_width,
+                "sheet_height": sheet_height,
+                "file_format": file_format,
+                "file_size": file_size,
+                "last_modified": last_modified,
+                "sprite_sheet_info": sprite_sheet_info,
             }
 
         except Exception as e:
             # Return minimal metadata on error
             return {
-                'file_path': file_path,
-                'file_name': Path(file_path).name if file_path else "Unknown",
-                'sheet_width': pixmap.width() if pixmap else 0,
-                'sheet_height': pixmap.height() if pixmap else 0,
-                'file_format': "UNKNOWN",
-                'file_size': 0,
-                'last_modified': 0.0,
-                'sprite_sheet_info': f"Error extracting metadata: {e!s}"
+                "file_path": file_path,
+                "file_name": Path(file_path).name if file_path else "Unknown",
+                "sheet_width": pixmap.width() if pixmap else 0,
+                "sheet_height": pixmap.height() if pixmap else 0,
+                "file_format": "UNKNOWN",
+                "file_size": 0,
+                "last_modified": 0.0,
+                "sprite_sheet_info": f"Error extracting metadata: {e!s}",
             }
 
-    def format_sprite_info(self, file_name: str, width: int, height: int,
-                          file_format: str, file_size: int = 0) -> str:
+    def format_sprite_info(
+        self, file_name: str, width: int, height: int, file_format: str, file_size: int = 0
+    ) -> str:
         """
         Format sprite sheet information for display.
 
@@ -229,7 +234,7 @@ class MetadataExtractor:
         info_parts = [
             f"<b>File:</b> {file_name}",
             f"<b>Size:</b> {width} × {height} px",
-            f"<b>Format:</b> {file_format}"
+            f"<b>Format:</b> {file_format}",
         ]
 
         # Add file size if provided
@@ -244,8 +249,9 @@ class MetadataExtractor:
 
         return "<br>".join(info_parts)
 
-    def update_sprite_info_with_frames(self, current_info: str, frame_count: int,
-                                     frames_per_row: int = 0, frames_per_col: int = 0) -> str:
+    def update_sprite_info_with_frames(
+        self, current_info: str, frame_count: int, frames_per_row: int = 0, frames_per_col: int = 0
+    ) -> str:
         """
         Update sprite info string with frame information.
 
@@ -259,7 +265,7 @@ class MetadataExtractor:
             Updated info string with frame information
         """
         # Remove any existing frame information
-        base_info = current_info.split('<br><b>Frames:</b>')[0]
+        base_info = current_info.split("<br><b>Frames:</b>")[0]
 
         if frame_count > 0:
             if frames_per_row > 0 and frames_per_col > 0:

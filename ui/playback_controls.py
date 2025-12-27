@@ -130,4 +130,4 @@ class PlaybackControls(QFrame):
 
 
 # Export for easy importing
-__all__ = ['PlaybackControls']
+__all__ = ["PlaybackControls"]

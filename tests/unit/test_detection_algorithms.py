@@ -540,61 +540,75 @@ class TestSpacingDetector:
     
 class TestAutoDetectionController:
     """Test auto-detection controller workflow management."""
-    
+
     def test_controller_initialization(self, qapp):
-        """Test AutoDetectionController can be created."""
-        controller = AutoDetectionController()
+        """Test AutoDetectionController can be created with dependencies."""
+        mock_model = Mock()
+        mock_extractor = Mock()
+        controller = AutoDetectionController(
+            sprite_model=mock_model,
+            frame_extractor=mock_extractor,
+        )
         assert controller is not None
         assert controller.workflow_state == "idle"
         assert not controller.is_working
-    
+
     def test_controller_signals_exist(self, qapp):
         """Test all required signals are defined."""
-        controller = AutoDetectionController()
-        
+        controller = AutoDetectionController(
+            sprite_model=Mock(),
+            frame_extractor=Mock(),
+        )
+
         # Check workflow signals
         assert hasattr(controller, 'detectionStarted')
         assert hasattr(controller, 'detectionCompleted')
         assert hasattr(controller, 'detectionFailed')
-        
+
         # Check UI update signals
         assert hasattr(controller, 'frameSettingsDetected')
         assert hasattr(controller, 'marginSettingsDetected')
         assert hasattr(controller, 'spacingSettingsDetected')
         assert hasattr(controller, 'buttonConfidenceUpdate')
         assert hasattr(controller, 'statusUpdate')
-        
+
         # Check state signals
         assert hasattr(controller, 'workflowStateChanged')
-    
-    def test_controller_initialization_with_components(self, qapp):
-        """Test controller initialization with sprite model and frame extractor."""
-        controller = AutoDetectionController()
+
+    def test_controller_stores_dependencies(self, qapp):
+        """Test controller properly stores dependencies at construction."""
         mock_sprite_model = Mock()
         mock_frame_extractor = Mock()
-        
-        controller.initialize(mock_sprite_model, mock_frame_extractor)
-        
+
+        controller = AutoDetectionController(
+            sprite_model=mock_sprite_model,
+            frame_extractor=mock_frame_extractor,
+        )
+
         assert controller._sprite_model == mock_sprite_model
         assert controller._frame_extractor == mock_frame_extractor
-    
-    def test_handle_new_sprite_sheet_no_model(self, qapp):
-        """Test new sprite sheet handling without sprite model."""
-        controller = AutoDetectionController()
-        
+
+    def test_handle_new_sprite_sheet_no_original(self, qapp):
+        """Test new sprite sheet handling when model has no original sprite sheet."""
+        mock_model = Mock()
+        mock_model.original_sprite_sheet = None
+
+        controller = AutoDetectionController(
+            sprite_model=mock_model,
+            frame_extractor=Mock(),
+        )
+
         result = controller.handle_new_sprite_sheet_loaded()
-        
-        assert not result  # Should return False when no model
-    
+
+        assert not result  # Should return False when no original sprite sheet
+
     def test_handle_new_sprite_sheet_success(self, qapp):
         """Test successful new sprite sheet handling."""
-        controller = AutoDetectionController()
-        
         # Create mock sprite model with required attributes
         mock_sprite_model = Mock()
         mock_sprite_model.original_sprite_sheet = QPixmap(100, 100)
         mock_sprite_model.comprehensive_auto_detect.return_value = (True, "Test report")
-        
+
         # Mock attributes that get set
         mock_sprite_model.frame_width = 32
         mock_sprite_model.frame_height = 32
@@ -603,40 +617,50 @@ class TestAutoDetectionController:
         mock_sprite_model.spacing_x = 0
         mock_sprite_model.spacing_y = 0
 
-        controller.initialize(mock_sprite_model, Mock())
-        
+        controller = AutoDetectionController(
+            sprite_model=mock_sprite_model,
+            frame_extractor=Mock(),
+        )
+
         # Test signals
         status_spy = QSignalSpy(controller.statusUpdate)
         frame_spy = QSignalSpy(controller.frameSettingsDetected)
         button_spy = QSignalSpy(controller.buttonConfidenceUpdate)
-        
+
         result = controller.handle_new_sprite_sheet_loaded()
-        
+
         assert result
         assert status_spy.count() > 0
         assert frame_spy.count() > 0
         assert button_spy.count() > 0
-    
-    def test_run_frame_detection_no_model(self, qapp):
-        """Test frame detection without sprite model."""
-        controller = AutoDetectionController()
+
+    def test_run_frame_detection_no_original(self, qapp):
+        """Test frame detection without original sprite sheet."""
+        mock_model = Mock()
+        mock_model.original_sprite_sheet = None
+
+        controller = AutoDetectionController(
+            sprite_model=mock_model,
+            frame_extractor=Mock(),
+        )
         status_spy = QSignalSpy(controller.statusUpdate)
-        
+
         controller.run_frame_detection()
-        
+
         assert status_spy.count() == 1
         assert "No sprite sheet loaded" in status_spy.at(0)[0]
-    
+
     def test_run_frame_detection_success(self, qapp):
         """Test successful frame detection."""
-        controller = AutoDetectionController()
-        
         # Create mock sprite model
         mock_sprite_model = Mock()
         mock_sprite_model.original_sprite_sheet = QPixmap(100, 100)
         mock_sprite_model.auto_detect_rectangular_frames.return_value = (True, 32, 32, "Test success")
-        
-        controller.initialize(mock_sprite_model, Mock())
+
+        controller = AutoDetectionController(
+            sprite_model=mock_sprite_model,
+            frame_extractor=Mock(),
+        )
         
         # Test signals
         started_spy = QSignalSpy(controller.detectionStarted)
@@ -654,36 +678,38 @@ class TestAutoDetectionController:
     
     def test_run_margin_detection_success(self, qapp):
         """Test successful margin detection."""
-        controller = AutoDetectionController()
-        
         # Create mock sprite model
         mock_sprite_model = Mock()
         mock_sprite_model.original_sprite_sheet = QPixmap(100, 100)
         mock_sprite_model.auto_detect_margins.return_value = (True, 5, 5, "Test margins")
-        
-        controller.initialize(mock_sprite_model, Mock())
-        
+
+        controller = AutoDetectionController(
+            sprite_model=mock_sprite_model,
+            frame_extractor=Mock(),
+        )
+
         # Test signals
         margin_spy = QSignalSpy(controller.marginSettingsDetected)
         button_spy = QSignalSpy(controller.buttonConfidenceUpdate)
-        
+
         controller.run_margin_detection()
-        
+
         assert margin_spy.count() == 1
         assert margin_spy.at(0)[0] == 5  # offset_x
         assert margin_spy.at(0)[1] == 5  # offset_y
         assert button_spy.count() >= 1
-    
+
     def test_run_spacing_detection_success(self, qapp):
         """Test successful spacing detection."""
-        controller = AutoDetectionController()
-        
         # Create mock sprite model
         mock_sprite_model = Mock()
         mock_sprite_model.original_sprite_sheet = QPixmap(100, 100)
         mock_sprite_model.auto_detect_spacing_enhanced.return_value = (True, 2, 2, "Test spacing (high confidence)")
-        
-        controller.initialize(mock_sprite_model, Mock())
+
+        controller = AutoDetectionController(
+            sprite_model=mock_sprite_model,
+            frame_extractor=Mock(),
+        )
         
         # Test signals
         spacing_spy = QSignalSpy(controller.spacingSettingsDetected)
@@ -698,26 +724,27 @@ class TestAutoDetectionController:
     
     def test_workflow_state_management(self, qapp):
         """Test workflow state transitions."""
-        controller = AutoDetectionController()
+        controller = AutoDetectionController(
+            sprite_model=Mock(),
+            frame_extractor=Mock(),
+        )
         state_spy = QSignalSpy(controller.workflowStateChanged)
-        
+
         # Test state transitions
         controller._set_workflow_state("working")
         assert controller.workflow_state == "working"
         assert controller.is_working
         assert state_spy.count() == 1
         assert state_spy.at(0)[0] == "working"
-        
+
         controller._set_workflow_state("completed")
         assert controller.workflow_state == "completed"
         assert not controller.is_working
         assert state_spy.count() == 2
         assert state_spy.at(1)[0] == "completed"
-    
+
     def test_detection_summary_creation(self, qapp):
         """Test creation of detection summary."""
-        controller = AutoDetectionController()
-        
         # Mock sprite model with detected values
         mock_sprite_model = Mock()
         mock_sprite_model.frame_width = 64
@@ -727,17 +754,23 @@ class TestAutoDetectionController:
         mock_sprite_model.spacing_x = 2
         mock_sprite_model.spacing_y = 2
 
-        controller._sprite_model = mock_sprite_model
-        
+        controller = AutoDetectionController(
+            sprite_model=mock_sprite_model,
+            frame_extractor=Mock(),
+        )
+
         summary = controller._create_detection_summary()
-        
+
         assert "64×48" in summary
         assert "margins (4,4)" in summary
         assert "spacing (2,2)" in summary
-    
+
     def test_button_confidence_update_from_report(self, qapp):
         """Test button confidence updates from detection report."""
-        controller = AutoDetectionController()
+        controller = AutoDetectionController(
+            sprite_model=Mock(),
+            frame_extractor=Mock(),
+        )
         button_spy = QSignalSpy(controller.buttonConfidenceUpdate)
         
         report = """

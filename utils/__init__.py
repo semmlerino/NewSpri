@@ -15,9 +15,9 @@ from .ui_common import (
 )
 
 __all__ = [
-    'AutoButtonManager',
-    'DetectionResult',
-    'create_padded_pixmap',
-    'extract_confidence_from_message',
-    'parse_detection_tuple',
+    "AutoButtonManager",
+    "DetectionResult",
+    "create_padded_pixmap",
+    "extract_confidence_from_message",
+    "parse_detection_tuple",
 ]

@@ -42,14 +42,20 @@ class SegmentPreviewItem(QFrame):
 
     # Signals
     playToggled = Signal(str, bool)  # segment_name, is_playing
-    removeRequested = Signal(str)    # segment_name
-    exportRequested = Signal(str)    # segment_name
+    removeRequested = Signal(str)  # segment_name
+    exportRequested = Signal(str)  # segment_name
     bounceChanged = Signal(str, bool)  # segment_name, bounce_mode
     frameHoldsChanged = Signal(str, dict)  # segment_name, frame_holds
 
-    def __init__(self, segment_name: str, color: QColor, frames: list[QPixmap],
-                 bounce_mode: bool = False, frame_holds: dict[int, int] | None = None,
-                 zoom_factor: float = 1.0):
+    def __init__(
+        self,
+        segment_name: str,
+        color: QColor,
+        frames: list[QPixmap],
+        bounce_mode: bool = False,
+        frame_holds: dict[int, int] | None = None,
+        zoom_factor: float = 1.0,
+    ):
         super().__init__()
         self.segment_name = segment_name
         self.segment_color = color
@@ -193,9 +199,10 @@ class SegmentPreviewItem(QFrame):
             # Scale to fit preview area
             scaled_size = int(Config.UI.PREVIEW_SCALED * self._zoom_factor)
             scaled = padded.scaled(
-                scaled_size, scaled_size,
+                scaled_size,
+                scaled_size,
                 Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation
+                Qt.TransformationMode.SmoothTransformation,
             )
             self.preview_label.setPixmap(scaled)
             self.frame_counter.setText(f"{index + 1} / {len(self._frames)}")
@@ -287,22 +294,16 @@ class SegmentPreviewItem(QFrame):
         export_menu = menu.addMenu("Export Segment")
 
         export_frames_action = export_menu.addAction("Export as Individual Frames...")
-        export_frames_action.triggered.connect(
-            lambda: self.exportRequested.emit(self.segment_name)
-        )
+        export_frames_action.triggered.connect(lambda: self.exportRequested.emit(self.segment_name))
 
         export_sheet_action = export_menu.addAction("Export as Sprite Sheet...")
-        export_sheet_action.triggered.connect(
-            lambda: self.exportRequested.emit(self.segment_name)
-        )
+        export_sheet_action.triggered.connect(lambda: self.exportRequested.emit(self.segment_name))
 
         menu.addSeparator()
 
         # Remove action
         remove_action = menu.addAction("Remove Segment")
-        remove_action.triggered.connect(
-            lambda: self.removeRequested.emit(self.segment_name)
-        )
+        remove_action.triggered.connect(lambda: self.removeRequested.emit(self.segment_name))
 
         menu.exec_(self.mapToGlobal(pos))
 
@@ -349,10 +350,12 @@ class SegmentPreviewItem(QFrame):
 
         # Get frame index
         frame_idx, ok = QInputDialog.getInt(
-            self, "Add Frame Hold",
+            self,
+            "Add Frame Hold",
             f"Frame number (1-{len(self._frames)}):",
             value=self._current_frame + 1,
-            minValue=1, maxValue=len(self._frames)
+            minValue=1,
+            maxValue=len(self._frames),
         )
 
         if ok:
@@ -360,10 +363,12 @@ class SegmentPreviewItem(QFrame):
 
             # Get hold duration
             duration, ok = QInputDialog.getInt(
-                self, "Add Frame Hold",
+                self,
+                "Add Frame Hold",
                 f"Hold duration for frame {frame_idx + 1} (in frames):",
                 value=self._frame_holds.get(frame_idx, 5),
-                minValue=1, maxValue=60
+                minValue=1,
+                maxValue=60,
             )
 
             if ok:
@@ -377,10 +382,12 @@ class SegmentPreviewItem(QFrame):
         current_duration = self._frame_holds.get(frame_idx, 5)
 
         duration, ok = QInputDialog.getInt(
-            self, "Edit Frame Hold",
+            self,
+            "Edit Frame Hold",
             f"Hold duration for frame {frame_idx + 1} (in frames):",
             value=current_duration,
-            minValue=0, maxValue=60
+            minValue=0,
+            maxValue=60,
         )
 
         if ok:
@@ -408,10 +415,12 @@ class SegmentPreviewItem(QFrame):
 
         # Get hold duration
         duration, ok = QInputDialog.getInt(
-            self, "Add Hold to All Frames",
+            self,
+            "Add Hold to All Frames",
             "Hold duration for all frames (in frames):",
             value=5,
-            minValue=1, maxValue=60
+            minValue=1,
+            maxValue=60,
         )
 
         if ok:
@@ -501,7 +510,9 @@ class AnimationSegmentPreview(QWidget):
 
         # Zoom level label
         self.zoom_label = QLabel("100%")
-        self.zoom_label.setStyleSheet(f"color: {StyleManager.Colors.TEXT_MUTED}; font-size: 12px; min-width: 40px; text-align: center;")
+        self.zoom_label.setStyleSheet(
+            f"color: {StyleManager.Colors.TEXT_MUTED}; font-size: 12px; min-width: 40px; text-align: center;"
+        )
         self.zoom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         zoom_layout.addWidget(self.zoom_label)
 
@@ -517,6 +528,7 @@ class AnimationSegmentPreview(QWidget):
 
         # Add keyboard shortcuts for zoom
         from PySide6.QtGui import QKeySequence, QShortcut
+
         zoom_in_shortcut = QShortcut(QKeySequence("Ctrl++"), self)
         zoom_in_shortcut.activated.connect(self._zoom_in)
         zoom_in_shortcut2 = QShortcut(QKeySequence("Ctrl+="), self)  # For keyboards without numpad
@@ -540,7 +552,9 @@ class AnimationSegmentPreview(QWidget):
         layout.addWidget(self.scroll_area)
 
         # Empty state
-        self.empty_label = QLabel("No animation segments yet.\nSelect frames and right-click to create.")
+        self.empty_label = QLabel(
+            "No animation segments yet.\nSelect frames and right-click to create."
+        )
         self.empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.empty_label.setStyleSheet(StyleManager.label_empty_state())
         self.container_layout.addWidget(self.empty_label)
@@ -553,14 +567,21 @@ class AnimationSegmentPreview(QWidget):
         """Check if frames have been set for segment preview."""
         return bool(self._all_frames)
 
-    def add_segment(self, name: str, start_frame: int, end_frame: int, color: QColor,
-                   bounce_mode: bool = False, frame_holds: dict[int, int] | None = None):
+    def add_segment(
+        self,
+        name: str,
+        start_frame: int,
+        end_frame: int,
+        color: QColor,
+        bounce_mode: bool = False,
+        frame_holds: dict[int, int] | None = None,
+    ):
         """Add a new segment preview."""
         if not self._all_frames:
             return
 
         # Extract frames for this segment
-        segment_frames = self._all_frames[start_frame:end_frame + 1]
+        segment_frames = self._all_frames[start_frame : end_frame + 1]
         if not segment_frames:
             return
 
@@ -568,7 +589,9 @@ class AnimationSegmentPreview(QWidget):
         self.empty_label.hide()
 
         # Create preview item with animation settings and current zoom
-        preview_item = SegmentPreviewItem(name, color, segment_frames, bounce_mode, frame_holds, self._zoom_factor)
+        preview_item = SegmentPreviewItem(
+            name, color, segment_frames, bounce_mode, frame_holds, self._zoom_factor
+        )
         preview_item.removeRequested.connect(self._on_remove_requested)
         preview_item.playToggled.connect(self._on_play_toggled)
         preview_item.bounceChanged.connect(self._on_bounce_changed)

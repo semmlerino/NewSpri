@@ -85,7 +85,9 @@ class AnimationSegmentController(QObject):
             self._segment_preview.segmentRemoved.connect(self.delete_segment)
             self._segment_preview.playbackStateChanged.connect(self._on_preview_playback_changed)
             self._segment_preview.segmentBounceChanged.connect(self._on_segment_bounce_changed)
-            self._segment_preview.segmentFrameHoldsChanged.connect(self._on_segment_frame_holds_changed)
+            self._segment_preview.segmentFrameHoldsChanged.connect(
+                self._on_segment_frame_holds_changed
+            )
 
     # ============================================================================
     # SEGMENT CREATION
@@ -101,7 +103,7 @@ class AnimationSegmentController(QObject):
             segment.start_frame,
             segment.end_frame,
             segment.color,
-            getattr(segment, 'description', '')
+            getattr(segment, "description", ""),
         )
 
         # Handle name conflicts with automatic resolution
@@ -129,15 +131,19 @@ class AnimationSegmentController(QObject):
 
         # Add to preview panel if available
         self._add_segment_to_preview(
-            segment.name, segment.start_frame, segment.end_frame,
-            segment.color, segment.bounce_mode, segment.frame_holds
+            segment.name,
+            segment.start_frame,
+            segment.end_frame,
+            segment.color,
+            segment.bounce_mode,
+            segment.frame_holds,
         )
 
         return True, message
 
     def _resolve_name_conflict(self, segment, original_name: str) -> tuple[bool, str | None]:
         """Generate unique name variants until one succeeds. Returns (success, final_name)."""
-        base_name = original_name.split('_')[0] if '_' in original_name else original_name
+        base_name = original_name.split("_")[0] if "_" in original_name else original_name
         retry_count = 0
 
         while retry_count < self.MAX_NAME_RETRY_ATTEMPTS:
@@ -152,7 +158,7 @@ class AnimationSegmentController(QObject):
                 segment.start_frame,
                 segment.end_frame,
                 segment.color,
-                getattr(segment, 'description', '')
+                getattr(segment, "description", ""),
             )
 
             if success:
@@ -162,16 +168,25 @@ class AnimationSegmentController(QObject):
 
                 # Add to preview panel with new name
                 self._add_segment_to_preview(
-                    new_name, segment.start_frame, segment.end_frame,
-                    segment.color, segment.bounce_mode, segment.frame_holds
+                    new_name,
+                    segment.start_frame,
+                    segment.end_frame,
+                    segment.color,
+                    segment.bounce_mode,
+                    segment.frame_holds,
                 )
                 return True, new_name
 
         return False, None
 
     def _add_segment_to_preview(
-        self, name: str, start_frame: int, end_frame: int,
-        color, bounce_mode: bool, frame_holds: dict[int, int] | None
+        self,
+        name: str,
+        start_frame: int,
+        end_frame: int,
+        color,
+        bounce_mode: bool,
+        frame_holds: dict[int, int] | None,
     ) -> None:
         """Add segment to preview panel if available and frames exist."""
         if not self._segment_preview or not self._sprite_model:
@@ -203,8 +218,12 @@ class AnimationSegmentController(QObject):
                 segment = self._segment_manager.get_segment(new_name)
                 if segment:
                     self._add_segment_to_preview(
-                        new_name, segment.start_frame, segment.end_frame,
-                        segment.color, segment.bounce_mode, segment.frame_holds
+                        new_name,
+                        segment.start_frame,
+                        segment.end_frame,
+                        segment.color,
+                        segment.bounce_mode,
+                        segment.frame_holds,
                     )
 
             return True, message
@@ -239,8 +258,7 @@ class AnimationSegmentController(QObject):
             self._sprite_model.set_current_frame(segment.start_frame)
 
         message = (
-            f"Segment '{segment.name}' selected "
-            f"(frames {segment.start_frame}-{segment.end_frame})"
+            f"Segment '{segment.name}' selected (frames {segment.start_frame}-{segment.end_frame})"
         )
         self.statusMessage.emit(message)
 
@@ -258,13 +276,17 @@ class AnimationSegmentController(QObject):
         else:
             self.statusMessage.emit(f"Failed to update bounce mode: {error}")
 
-    def _on_segment_frame_holds_changed(self, segment_name: str, frame_holds: dict[int, int]) -> None:
+    def _on_segment_frame_holds_changed(
+        self, segment_name: str, frame_holds: dict[int, int]
+    ) -> None:
         """Handle frame holds change from preview panel."""
         success, error = self._segment_manager.set_frame_holds(segment_name, frame_holds)
         if success:
             if frame_holds:
                 hold_count = len(frame_holds)
-                self.statusMessage.emit(f"Updated {hold_count} frame hold{'s' if hold_count != 1 else ''} for segment '{segment_name}'")
+                self.statusMessage.emit(
+                    f"Updated {hold_count} frame hold{'s' if hold_count != 1 else ''} for segment '{segment_name}'"
+                )
             else:
                 self.statusMessage.emit(f"Cleared frame holds for segment '{segment_name}'")
         else:
@@ -277,8 +299,7 @@ class AnimationSegmentController(QObject):
     def _on_export_requested(self, segment_name: str) -> None:
         """Handle export request from grid view or preview panel."""
         segment = next(
-            (s for s in self._segment_manager.get_all_segments() if s.name == segment_name),
-            None
+            (s for s in self._segment_manager.get_all_segments() if s.name == segment_name), None
         )
         if segment:
             self.export_segment(segment, self._tab_widget or self._grid_view)
@@ -287,22 +308,16 @@ class AnimationSegmentController(QObject):
         """Export a specific animation segment."""
         if not self._sprite_model or not self._segment_manager:
             QMessageBox.warning(
-                parent_widget,
-                "Export Error",
-                "Required components not initialized"
+                parent_widget, "Export Error", "Required components not initialized"
             )
             return
 
         all_frames = self._sprite_model.get_all_frames()
-        segment_frames = self._segment_manager.extract_frames_for_segment(
-            segment.name, all_frames
-        )
+        segment_frames = self._segment_manager.extract_frames_for_segment(segment.name, all_frames)
 
         if not segment_frames:
             QMessageBox.warning(
-                parent_widget,
-                "Export Error",
-                f"No frames available for segment '{segment.name}'"
+                parent_widget, "Export Error", f"No frames available for segment '{segment.name}'"
             )
             return
 
@@ -312,13 +327,11 @@ class AnimationSegmentController(QObject):
             parent_widget,
             frame_count=len(segment_frames),
             current_frame=0,
-            segment_manager=self._segment_manager
+            segment_manager=self._segment_manager,
         )
         dialog.set_sprites(segment_frames)
         dialog.exportRequested.connect(
-            lambda settings: self._handle_segment_export(
-                settings, segment_frames, segment.name
-            )
+            lambda settings: self._handle_segment_export(settings, segment_frames, segment.name)
         )
 
         if dialog.exec() == QDialog.DialogCode.Accepted:
@@ -328,7 +341,7 @@ class AnimationSegmentController(QObject):
         self, settings: dict[str, Any], segment_frames: list, segment_name: str
     ) -> None:
         """Handle segment-specific export request."""
-        required = {'output_dir', 'base_name', 'format', 'mode', 'scale_factor'}
+        required = {"output_dir", "base_name", "format", "mode", "scale_factor"}
         if not segment_frames or not required.issubset(settings):
             return
 
@@ -336,13 +349,13 @@ class AnimationSegmentController(QObject):
 
         get_frame_exporter().export_frames(
             frames=segment_frames,
-            output_dir=settings['output_dir'],
+            output_dir=settings["output_dir"],
             base_name=f"{settings['base_name']}_{segment_name}",
-            format=settings['format'],
-            mode=settings['mode'],
-            scale_factor=settings['scale_factor'],
-            pattern=settings.get('pattern'),
-            sprite_sheet_layout=settings.get('sprite_sheet_layout'),
+            format=settings["format"],
+            mode=settings["mode"],
+            scale_factor=settings["scale_factor"],
+            pattern=settings.get("pattern"),
+            sprite_sheet_layout=settings.get("sprite_sheet_layout"),
         )
 
     # ============================================================================
@@ -365,8 +378,12 @@ class AnimationSegmentController(QObject):
 
                 for seg in self._segment_manager.get_all_segments():
                     self._segment_preview.add_segment(
-                        seg.name, seg.start_frame, seg.end_frame,
-                        seg.color, seg.bounce_mode, seg.frame_holds
+                        seg.name,
+                        seg.start_frame,
+                        seg.end_frame,
+                        seg.color,
+                        seg.bounce_mode,
+                        seg.frame_holds,
                     )
 
             sprite_path = self._sprite_model.file_path

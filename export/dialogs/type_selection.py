@@ -61,7 +61,9 @@ class SimpleExportOption(QFrame):
             uses_text = "Best for: " + ", ".join(self.preset.use_cases[:3])
             uses_label = QLabel(uses_text)
             uses_label.setWordWrap(True)
-            uses_label.setStyleSheet(f"color: {StyleManager.Colors.TEXT_SECONDARY}; font-size: 10px; margin-left: 23px;")
+            uses_label.setStyleSheet(
+                f"color: {StyleManager.Colors.TEXT_SECONDARY}; font-size: 10px; margin-left: 23px;"
+            )
             layout.addWidget(uses_label)
 
         self._update_style()
@@ -97,7 +99,7 @@ class ExportTypeStepSimple(WizardStep):
         super().__init__(
             title="Choose Export Type",
             subtitle="Select how you want to export your sprite frames",
-            parent=parent
+            parent=parent,
         )
         self.frame_count = frame_count
         self.segment_manager = segment_manager
@@ -124,7 +126,9 @@ class ExportTypeStepSimple(WizardStep):
             self._has_segments = len(segments) > 0
             logger.debug("Found %d segments, has_segments = %s", len(segments), self._has_segments)
             for i, seg in enumerate(segments):
-                logger.debug("  Segment %d: '%s' frames %d-%d", i, seg.name, seg.start_frame, seg.end_frame)
+                logger.debug(
+                    "  Segment %d: '%s' frames %d-%d", i, seg.name, seg.start_frame, seg.end_frame
+                )
         else:
             logger.debug("No segment manager available")
             self._has_segments = False
@@ -140,7 +144,9 @@ class ExportTypeStepSimple(WizardStep):
             rec_label.setStyleSheet(f"color: {StyleManager.Colors.PRIMARY}; font-size: 12px;")
             rec_layout.addWidget(rec_label)
 
-            rec_desc = QLabel("We recommend using 'Segments Per Row' to export each animation as a separate row.")
+            rec_desc = QLabel(
+                "We recommend using 'Segments Per Row' to export each animation as a separate row."
+            )
             rec_desc.setWordWrap(True)
             rec_desc.setStyleSheet(f"color: {StyleManager.Colors.TEXT_DARK}; font-size: 11px;")
             rec_layout.addWidget(rec_desc)
@@ -169,7 +175,7 @@ class ExportTypeStepSimple(WizardStep):
                 "segments_per_row",
                 "sprite_sheet",
                 "individual_frames",
-                "selected_frames"
+                "selected_frames",
             ]
         else:
             # Normal order when no segments
@@ -177,7 +183,7 @@ class ExportTypeStepSimple(WizardStep):
                 "individual_frames",
                 "sprite_sheet",
                 "selected_frames",
-                "segments_per_row"
+                "segments_per_row",
             ]
 
         # Create option widgets
@@ -234,14 +240,19 @@ class ExportTypeStepSimple(WizardStep):
     def get_data(self) -> dict[str, Any]:
         """Get the selected preset data."""
         logger.debug("ExportTypeStep.get_data() called")
-        logger.debug("Selected preset: %s", self._selected_preset.name if self._selected_preset else 'None')
-        logger.debug("Selected preset mode: %s", self._selected_preset.mode if self._selected_preset else 'None')
+        logger.debug(
+            "Selected preset: %s", self._selected_preset.name if self._selected_preset else "None"
+        )
+        logger.debug(
+            "Selected preset mode: %s",
+            self._selected_preset.mode if self._selected_preset else "None",
+        )
 
         if self._selected_preset:
             data = {
-                'preset': self._selected_preset,
-                'preset_name': self._selected_preset.name,
-                'export_mode': self._selected_preset.mode
+                "preset": self._selected_preset,
+                "preset_name": self._selected_preset.name,
+                "export_mode": self._selected_preset.mode,
             }
             logger.debug("Returning preset data: %s", data)
             return data
@@ -251,7 +262,7 @@ class ExportTypeStepSimple(WizardStep):
 
     def set_data(self, data: dict[str, Any]):
         """Set data (for going back in wizard)."""
-        preset_name = data.get('preset_name')
+        preset_name = data.get("preset_name")
         if preset_name:
             preset = get_preset(preset_name)
             if preset:

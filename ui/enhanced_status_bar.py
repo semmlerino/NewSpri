@@ -7,7 +7,6 @@ Enhanced status bar with detailed application state information.
 Shows frame info, extraction mode, zoom level, FPS, and mouse coordinates.
 """
 
-
 from PySide6.QtCore import QObject, QTimer
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QStatusBar, QWidget
 
@@ -241,7 +240,9 @@ class EnhancedStatusBar(QStatusBar):
         self.show_permanent_message(Config.App.READY_MESSAGE)
 
     # State management methods
-    def update_sprite_loaded_state(self, width: int, height: int, frame_count: int, mode: str) -> None:
+    def update_sprite_loaded_state(
+        self, width: int, height: int, frame_count: int, mode: str
+    ) -> None:
         """
         Update status bar for loaded sprite state.
 
@@ -286,21 +287,21 @@ class StatusBarManager(QObject):
 
     def connect_to_sprite_model(self, sprite_model) -> None:
         """Connect to sprite model signals for automatic updates."""
-        if hasattr(sprite_model, 'frameChanged'):
+        if hasattr(sprite_model, "frameChanged"):
             sprite_model.frameChanged.connect(self._status_bar.update_frame_info)
 
     def connect_to_animation_controller(self, animation_controller) -> None:
         """Connect to animation controller signals."""
-        if hasattr(animation_controller, 'frameChanged'):
+        if hasattr(animation_controller, "frameChanged"):
             animation_controller.frameChanged.connect(self._status_bar.update_frame_info)
-        if hasattr(animation_controller, 'fpsChanged'):
+        if hasattr(animation_controller, "fpsChanged"):
             animation_controller.fpsChanged.connect(self._status_bar.update_fps)
 
     def connect_to_canvas(self, canvas) -> None:
         """Connect to canvas signals for zoom and mouse tracking."""
-        if hasattr(canvas, 'zoomChanged'):
+        if hasattr(canvas, "zoomChanged"):
             canvas.zoomChanged.connect(self._on_zoom_changed)
-        if hasattr(canvas, 'mouseMoved'):
+        if hasattr(canvas, "mouseMoved"):
             canvas.mouseMoved.connect(self._status_bar.update_mouse_position)
 
     def _on_zoom_changed(self, zoom_factor: float) -> None:

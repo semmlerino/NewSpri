@@ -41,30 +41,23 @@ class AutoDetectionController(QObject):
     # Workflow state signals
     workflowStateChanged = Signal(str)  # state: "idle", "working", "completed", "failed"
 
-    def __init__(self):
+    def __init__(self, sprite_model, frame_extractor):
+        """
+        Initialize controller with required dependencies.
+
+        Args:
+            sprite_model: The sprite data model
+            frame_extractor: The frame extractor UI component
+        """
         super().__init__()
 
         # References to external components
-        self._sprite_model = None
-        self._frame_extractor = None
+        self._sprite_model = sprite_model
+        self._frame_extractor = frame_extractor
 
         # Workflow state
         self._current_workflow = None
         self._workflow_state = "idle"
-
-        # Initialization tracking
-        self._initialized: bool = False
-
-    @property
-    def is_ready(self) -> bool:
-        """Check if controller has been initialized with required dependencies."""
-        return self._initialized
-
-    def initialize(self, sprite_model, frame_extractor):
-        """Initialize with references to sprite model and frame extractor."""
-        self._sprite_model = sprite_model
-        self._frame_extractor = frame_extractor
-        self._initialized = True
 
     # ============================================================================
     # NEW SPRITE SHEET WORKFLOW
@@ -115,13 +108,13 @@ class AutoDetectionController(QObject):
                 offset_x=0,
                 offset_y=0,
                 spacing_x=0,
-                spacing_y=0
+                spacing_y=0,
             )
 
         # Reset button styles
-        self.buttonConfidenceUpdate.emit('frame', 'reset', '')
-        self.buttonConfidenceUpdate.emit('margins', 'reset', '')
-        self.buttonConfidenceUpdate.emit('spacing', 'reset', '')
+        self.buttonConfidenceUpdate.emit("frame", "reset", "")
+        self.buttonConfidenceUpdate.emit("margins", "reset", "")
+        self.buttonConfidenceUpdate.emit("spacing", "reset", "")
 
     def _run_silent_comprehensive_detection(self) -> bool:
         """Run comprehensive auto-detection without user dialogs."""
@@ -175,10 +168,14 @@ class AutoDetectionController(QObject):
             # Update workflow state
             if success:
                 self._set_workflow_state("completed")
-                self.detectionCompleted.emit("comprehensive", True, "Auto-detection completed successfully")
+                self.detectionCompleted.emit(
+                    "comprehensive", True, "Auto-detection completed successfully"
+                )
             else:
                 self._set_workflow_state("failed")
-                self.detectionCompleted.emit("comprehensive", False, "Auto-detection completed with issues")
+                self.detectionCompleted.emit(
+                    "comprehensive", False, "Auto-detection completed with issues"
+                )
 
         except Exception as e:
             self._set_workflow_state("failed")
@@ -198,17 +195,17 @@ class AutoDetectionController(QObject):
             result = parse_detection_tuple(result_tuple)
 
             if result.success:
-                width = result.parameters.get('value1', 0)
-                height = result.parameters.get('value2', 0)
+                width = result.parameters.get("value1", 0)
+                height = result.parameters.get("value2", 0)
                 self.frameSettingsDetected.emit(width, height)
 
                 # Extract confidence and update button
                 result.confidence = extract_confidence_from_message(result.message)
-                self.buttonConfidenceUpdate.emit('frame', result.confidence, result.message)
+                self.buttonConfidenceUpdate.emit("frame", result.confidence, result.message)
                 self.statusUpdate.emit(result.message, 3000)
                 self.detectionCompleted.emit("frame", True, result.message)
             else:
-                self.buttonConfidenceUpdate.emit('frame', 'failed', result.message)
+                self.buttonConfidenceUpdate.emit("frame", "failed", result.message)
                 self.statusUpdate.emit(f"Frame detection failed: {result.message}", 3000)
                 self.detectionFailed.emit("frame", result.message)
 
@@ -228,17 +225,17 @@ class AutoDetectionController(QObject):
             result = parse_detection_tuple(result_tuple)
 
             if result.success:
-                offset_x = result.parameters.get('value1', 0)
-                offset_y = result.parameters.get('value2', 0)
+                offset_x = result.parameters.get("value1", 0)
+                offset_y = result.parameters.get("value2", 0)
                 self.marginSettingsDetected.emit(offset_x, offset_y)
 
                 # Margin detection confidence based on results
                 result.confidence = "high" if offset_x > 0 or offset_y > 0 else "medium"
-                self.buttonConfidenceUpdate.emit('margins', result.confidence, result.message)
+                self.buttonConfidenceUpdate.emit("margins", result.confidence, result.message)
                 self.statusUpdate.emit(result.message, 3000)
                 self.detectionCompleted.emit("margins", True, result.message)
             else:
-                self.buttonConfidenceUpdate.emit('margins', 'failed', result.message)
+                self.buttonConfidenceUpdate.emit("margins", "failed", result.message)
                 self.statusUpdate.emit(f"Margin detection failed: {result.message}", 3000)
                 self.detectionFailed.emit("margins", result.message)
 
@@ -258,17 +255,17 @@ class AutoDetectionController(QObject):
             result = parse_detection_tuple(result_tuple)
 
             if result.success:
-                spacing_x = result.parameters.get('value1', 0)
-                spacing_y = result.parameters.get('value2', 0)
+                spacing_x = result.parameters.get("value1", 0)
+                spacing_y = result.parameters.get("value2", 0)
                 self.spacingSettingsDetected.emit(spacing_x, spacing_y)
 
                 # Extract confidence from message
                 result.confidence = extract_confidence_from_message(result.message)
-                self.buttonConfidenceUpdate.emit('spacing', result.confidence, result.message)
+                self.buttonConfidenceUpdate.emit("spacing", result.confidence, result.message)
                 self.statusUpdate.emit(result.message, 3000)
                 self.detectionCompleted.emit("spacing", True, result.message)
             else:
-                self.buttonConfidenceUpdate.emit('spacing', 'failed', result.message)
+                self.buttonConfidenceUpdate.emit("spacing", "failed", result.message)
                 self.statusUpdate.emit(f"Spacing detection failed: {result.message}", 3000)
                 self.detectionFailed.emit("spacing", result.message)
 
@@ -282,16 +279,24 @@ class AutoDetectionController(QObject):
     def _emit_detected_settings(self):
         """Emit signals with current detected settings."""
         if self._sprite_model:
-            self.frameSettingsDetected.emit(self._sprite_model.frame_width, self._sprite_model.frame_height)
-            self.marginSettingsDetected.emit(self._sprite_model.offset_x, self._sprite_model.offset_y)
-            self.spacingSettingsDetected.emit(self._sprite_model.spacing_x, self._sprite_model.spacing_y)
+            self.frameSettingsDetected.emit(
+                self._sprite_model.frame_width, self._sprite_model.frame_height
+            )
+            self.marginSettingsDetected.emit(
+                self._sprite_model.offset_x, self._sprite_model.offset_y
+            )
+            self.spacingSettingsDetected.emit(
+                self._sprite_model.spacing_x, self._sprite_model.spacing_y
+            )
 
     def _create_detection_summary(self) -> str:
         """Create a brief summary of detected settings."""
         if not self._sprite_model:
             return "No detection results"
 
-        summary = f"Auto-detected: {self._sprite_model.frame_width}×{self._sprite_model.frame_height}"
+        summary = (
+            f"Auto-detected: {self._sprite_model.frame_width}×{self._sprite_model.frame_height}"
+        )
 
         if self._sprite_model.offset_x > 0 or self._sprite_model.offset_y > 0:
             summary += f", margins ({self._sprite_model.offset_x},{self._sprite_model.offset_y})"
@@ -303,23 +308,22 @@ class AutoDetectionController(QObject):
 
     def _update_button_confidence_from_report(self, detailed_report: str):
         """Update button confidence indicators based on detection report."""
-        report_lines = detailed_report.split('\n')
+        report_lines = detailed_report.split("\n")
 
         for line in report_lines:
             if "Auto-detected frame size:" in line or "Format-suggested size confirmed:" in line:
                 confidence = extract_confidence_from_message(line)
-                message = line.split('✓ ')[1] if '✓ ' in line else line
-                self.buttonConfidenceUpdate.emit('frame', confidence, message)
+                message = line.split("✓ ")[1] if "✓ " in line else line
+                self.buttonConfidenceUpdate.emit("frame", confidence, message)
 
             elif "Margins:" in line and "✓" in line:
-                message = line.split('✓ ')[1]
-                self.buttonConfidenceUpdate.emit('margins', 'high', message)
+                message = line.split("✓ ")[1]
+                self.buttonConfidenceUpdate.emit("margins", "high", message)
 
             elif "Auto-detected spacing:" in line:
                 confidence = extract_confidence_from_message(line)
-                message = line.split('✓ ')[1] if '✓ ' in line else line
-                self.buttonConfidenceUpdate.emit('spacing', confidence, message)
-
+                message = line.split("✓ ")[1] if "✓ " in line else line
+                self.buttonConfidenceUpdate.emit("spacing", confidence, message)
 
     def _show_detection_results_dialog(self, success: bool, detailed_report: str):
         """Show detailed detection results in a dialog."""
@@ -341,11 +345,11 @@ class AutoDetectionController(QObject):
 
     def _update_comprehensive_button_success(self):
         """Signal to update comprehensive button for success state."""
-        self.buttonConfidenceUpdate.emit('comprehensive', 'success', 'Auto-detection completed')
+        self.buttonConfidenceUpdate.emit("comprehensive", "success", "Auto-detection completed")
 
     def _update_comprehensive_button_default(self):
         """Signal to update comprehensive button to default state."""
-        self.buttonConfidenceUpdate.emit('comprehensive', 'reset', '')
+        self.buttonConfidenceUpdate.emit("comprehensive", "reset", "")
 
     def _set_workflow_state(self, state: str):
         """Update workflow state and emit signal."""
@@ -368,4 +372,4 @@ class AutoDetectionController(QObject):
 
 
 # Export for easy importing
-__all__ = ['AutoDetectionController']
+__all__ = ["AutoDetectionController"]

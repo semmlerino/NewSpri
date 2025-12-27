@@ -23,13 +23,18 @@ class TestSpriteLoadingWorkflow:
         """Test complete workflow from file loading to animation ready."""
         # Setup components using real sprite system
         sprite_model = SpriteModel()
-        animation_controller = AnimationController()
-        auto_detection_controller = AutoDetectionController()
-        
-        # Initialize controllers with minimal mock viewer (heavy UI component)
+
+        # Initialize controllers with minimal mock viewer (single-step constructor DI)
         mock_viewer = Mock()
-        animation_controller.initialize(sprite_model, mock_viewer)
-        auto_detection_controller.initialize(sprite_model, mock_viewer)
+        mock_frame_extractor = Mock()
+        animation_controller = AnimationController(
+            sprite_model=sprite_model,
+            sprite_viewer=mock_viewer,
+        )
+        auto_detection_controller = AutoDetectionController(
+            sprite_model=sprite_model,
+            frame_extractor=mock_frame_extractor,
+        )
         
         # Signal spies to track workflow
         data_loaded_spy = QSignalSpy(sprite_model.dataLoaded)
@@ -74,11 +79,13 @@ class TestSpriteLoadingWorkflow:
     def test_auto_detection_workflow(self, qapp, sample_sprite_paths):
         """Test auto-detection workflow integration."""
         sprite_model = SpriteModel()
-        auto_detection_controller = AutoDetectionController()
 
-        # Mock frame extractor for auto-detection
+        # Mock frame extractor for auto-detection (single-step constructor DI)
         mock_frame_extractor = Mock()
-        auto_detection_controller.initialize(sprite_model, mock_frame_extractor)
+        auto_detection_controller = AutoDetectionController(
+            sprite_model=sprite_model,
+            frame_extractor=mock_frame_extractor,
+        )
 
         # Load a sprite sheet
         test_path = sample_sprite_paths.get("archer_idle")
@@ -227,10 +234,11 @@ class TestComponentInteraction:
     @pytest.mark.integration
     def test_sprite_model_animation_controller_interaction(self, qapp, configured_sprite_model):
         """Test interaction between sprite model and animation controller."""
-        animation_controller = AnimationController()
-        
-        # Initialize with sprite model
-        animation_controller.initialize(configured_sprite_model, Mock())
+        # Initialize with sprite model (single-step constructor DI)
+        animation_controller = AnimationController(
+            sprite_model=configured_sprite_model,
+            sprite_viewer=Mock(),
+        )
         
         # Signal spies
         frame_advanced_spy = QSignalSpy(animation_controller.frameAdvanced)
@@ -253,11 +261,13 @@ class TestComponentInteraction:
     def test_detection_model_interaction(self, qapp):
         """Test interaction between detection controller and sprite model."""
         sprite_model = SpriteModel()
-        auto_detection_controller = AutoDetectionController()
-        
-        # Mock frame extractor
+
+        # Mock frame extractor (single-step constructor DI)
         mock_frame_extractor = Mock()
-        auto_detection_controller.initialize(sprite_model, mock_frame_extractor)
+        auto_detection_controller = AutoDetectionController(
+            sprite_model=sprite_model,
+            frame_extractor=mock_frame_extractor,
+        )
         
         # Load test sprite
         test_pixmap = QPixmap(256, 256)
@@ -275,15 +285,19 @@ class TestComponentInteraction:
         """Test full component stack working together."""
         # Create all components
         sprite_model = SpriteModel()
-        animation_controller = AnimationController()
-        auto_detection_controller = AutoDetectionController()
-        
+
         # Setup mock frame extractor
         mock_frame_extractor = Mock()
-        
-        # Initialize components
-        animation_controller.initialize(sprite_model, Mock())
-        auto_detection_controller.initialize(sprite_model, mock_frame_extractor)
+
+        # Initialize components (single-step constructor DI)
+        animation_controller = AnimationController(
+            sprite_model=sprite_model,
+            sprite_viewer=Mock(),
+        )
+        auto_detection_controller = AutoDetectionController(
+            sprite_model=sprite_model,
+            frame_extractor=mock_frame_extractor,
+        )
         
         # Load sprite (use grid mode for direct pixmap assignment)
         sprite_model._original_sprite_sheet = mock_pixmap

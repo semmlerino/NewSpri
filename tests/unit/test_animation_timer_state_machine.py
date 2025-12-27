@@ -77,11 +77,11 @@ def mock_sprite_viewer() -> MagicMock:
 
 @pytest.fixture
 def animation_controller(qapp, mock_sprite_model: MagicMock, mock_sprite_viewer: MagicMock) -> AnimationController:
-    """Create an initialized AnimationController with mock model and viewer."""
-    controller = AnimationController()
-    result = controller.initialize(mock_sprite_model, mock_sprite_viewer)
-    assert result is True, "AnimationController initialization should succeed"
-    return controller
+    """Create an AnimationController with mock model and viewer."""
+    return AnimationController(
+        sprite_model=mock_sprite_model,
+        sprite_viewer=mock_sprite_viewer,
+    )
 
 
 # ============================================================================
@@ -395,10 +395,16 @@ class TestEdgeCases:
         mock_model.sprite_frames = []  # No frames
         mock_model.fps = 12
         mock_model.loop_enabled = True
+        mock_model.dataLoaded = MagicMock()
+        mock_model.extractionCompleted = MagicMock()
+        mock_model.frameChanged = MagicMock()
+        mock_model.errorOccurred = MagicMock()
         mock_viewer = MagicMock()
 
-        controller = AnimationController()
-        controller.initialize(mock_model, mock_viewer)
+        controller = AnimationController(
+            sprite_model=mock_model,
+            sprite_viewer=mock_viewer,
+        )
 
         error_spy = []
         controller.errorOccurred.connect(lambda msg: error_spy.append(msg))
@@ -409,9 +415,22 @@ class TestEdgeCases:
         assert len(error_spy) == 1
         assert "No sprite frames" in error_spy[0]
 
-    def test_start_without_initialization_fails(self, qapp) -> None:
-        """Starting animation without initialization should fail."""
-        controller = AnimationController()
+    def test_start_with_empty_frames_fails(self, qapp) -> None:
+        """Starting animation with empty frames list should fail gracefully."""
+        mock_model = MagicMock()
+        mock_model.sprite_frames = []  # Empty frames
+        mock_model.fps = 12
+        mock_model.loop_enabled = True
+        mock_model.dataLoaded = MagicMock()
+        mock_model.extractionCompleted = MagicMock()
+        mock_model.frameChanged = MagicMock()
+        mock_model.errorOccurred = MagicMock()
+        mock_viewer = MagicMock()
+
+        controller = AnimationController(
+            sprite_model=mock_model,
+            sprite_viewer=mock_viewer,
+        )
 
         result = controller.start_animation()
 

@@ -58,18 +58,21 @@ class TestCriticalSignalConnections:
     def test_sprite_model_animation_controller_signals(self, qapp):
         """Test signal connections between SpriteModel and AnimationController."""
         sprite_model = SpriteModel()
-        animation_controller = AnimationController()
-        
+
         # Test that required signals exist
         assert hasattr(sprite_model, 'frameChanged'), "SpriteModel missing frameChanged signal"
-        assert hasattr(animation_controller, 'frameAdvanced'), "AnimationController missing frameAdvanced signal"
-        
+
         # Create signal spy for frame changes
         frame_spy = QSignalSpy(sprite_model.frameChanged)
-        
-        # Initialize controller with model (this should connect signals)
+
+        # Initialize controller with model (single-step constructor DI)
         mock_viewer = Mock()
-        animation_controller.initialize(sprite_model, mock_viewer)
+        animation_controller = AnimationController(
+            sprite_model=sprite_model,
+            sprite_viewer=mock_viewer,
+        )
+
+        assert hasattr(animation_controller, 'frameAdvanced'), "AnimationController missing frameAdvanced signal"
         
         # Trigger frame change by emitting the signal directly
         # since set_current_frame takes only 1 argument (frame index)
@@ -143,25 +146,27 @@ class TestSignalDataFlow:
     def test_animation_control_signal_chain(self, qapp):
         """Test signal chain for animation control."""
         model = SpriteModel()
-        controller = AnimationController()
-        
+
+        # Initialize controller (single-step constructor DI)
+        controller = AnimationController(
+            sprite_model=model,
+            sprite_viewer=Mock(),
+        )
+
         # Track signal emissions
         fps_changes = []
         status_changes = []
-        
+
         def track_fps(fps):
             fps_changes.append(fps)
-        
+
         def track_status(status):
             status_changes.append(status)
-        
+
         if hasattr(controller, 'fpsChanged'):
             controller.fpsChanged.connect(track_fps)
         if hasattr(controller, 'statusChanged'):
             controller.statusChanged.connect(track_status)
-        
-        # Initialize controller
-        controller.initialize(model, Mock())
         
         # Change FPS
         controller.set_fps(15)

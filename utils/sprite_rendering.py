@@ -34,4 +34,4 @@ def create_padded_pixmap(pixmap: QPixmap, padding: int = 1) -> QPixmap:
     return padded
 
 
-__all__ = ['create_padded_pixmap']
+__all__ = ["create_padded_pixmap"]

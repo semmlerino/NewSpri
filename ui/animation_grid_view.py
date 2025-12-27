@@ -63,8 +63,10 @@ class FrameThumbnail(QLabel):
             padding = Config.UI.THUMBNAIL_PADDING
             available_size = self._thumbnail_size - padding
             scaled_pixmap = padded.scaled(
-                available_size, available_size,
-                Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+                available_size,
+                available_size,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
             )
             self.setPixmap(scaled_pixmap)
 
@@ -81,14 +83,16 @@ class FrameThumbnail(QLabel):
             segment_color = self._segment_color.name()
             segment_bg = self._segment_color.lighter(180).name()
 
-        self.setStyleSheet(StyleManager.thumbnail_style(
-            selected=self._selected,
-            highlighted=self._highlighted,
-            segment_color=segment_color,
-            segment_bg=segment_bg,
-            is_segment_start=self._is_segment_start,
-            is_segment_end=self._is_segment_end,
-        ))
+        self.setStyleSheet(
+            StyleManager.thumbnail_style(
+                selected=self._selected,
+                highlighted=self._highlighted,
+                segment_color=segment_color,
+                segment_bg=segment_bg,
+                is_segment_start=self._is_segment_start,
+                is_segment_end=self._is_segment_end,
+            )
+        )
 
     def set_selected(self, selected: bool):
         """Set selection state."""
@@ -100,7 +104,9 @@ class FrameThumbnail(QLabel):
         self._highlighted = highlighted
         self._update_style()
 
-    def set_segment_markers(self, is_start: bool = False, is_end: bool = False, color: QColor | None = None):
+    def set_segment_markers(
+        self, is_start: bool = False, is_end: bool = False, color: QColor | None = None
+    ):
         """Set segment start/end markers."""
         self._is_segment_start = is_start
         self._is_segment_end = is_end
@@ -159,9 +165,11 @@ class FrameThumbnail(QLabel):
 
     def mouseMoveEvent(self, event: QMouseEvent):
         """Handle mouse move for drag detection."""
-        if (event.buttons() & Qt.MouseButton.LeftButton and
-            self._mouse_press_pos and
-            (event.position() - self._mouse_press_pos).manhattanLength() > self._drag_threshold):
+        if (
+            event.buttons() & Qt.MouseButton.LeftButton
+            and self._mouse_press_pos
+            and (event.position() - self._mouse_press_pos).manhattanLength() > self._drag_threshold
+        ):
             self.dragStarted.emit(self.frame_index)
             self._mouse_press_pos = None  # Prevent multiple drag signals
         super().mouseMoveEvent(event)
@@ -170,7 +178,6 @@ class FrameThumbnail(QLabel):
         """Handle mouse release."""
         self._mouse_press_pos = None
         super().mouseReleaseEvent(event)
-
 
 
 class AnimationGridView(QWidget):
@@ -428,28 +435,20 @@ class AnimationGridView(QWidget):
 
             # Export segment options
             export_frames_action = segment_menu.addAction("Export as Individual Frames...")
-            export_frames_action.triggered.connect(
-                lambda: self.exportRequested.emit(segment.name)
-            )
+            export_frames_action.triggered.connect(lambda: self.exportRequested.emit(segment.name))
 
             export_sheet_action = segment_menu.addAction("Export as Sprite Sheet...")
-            export_sheet_action.triggered.connect(
-                lambda: self.exportRequested.emit(segment.name)
-            )
+            export_sheet_action.triggered.connect(lambda: self.exportRequested.emit(segment.name))
 
             segment_menu.addSeparator()
 
             # Rename segment action
             rename_action = segment_menu.addAction("Rename Segment...")
-            rename_action.triggered.connect(
-                lambda: self._prompt_rename_segment(segment.name)
-            )
+            rename_action.triggered.connect(lambda: self._prompt_rename_segment(segment.name))
 
             # Delete segment action
             delete_action = segment_menu.addAction("Delete Segment")
-            delete_action.triggered.connect(
-                lambda: self.delete_segment(segment.name)
-            )
+            delete_action.triggered.connect(lambda: self.delete_segment(segment.name))
 
             menu.addSeparator()
 
@@ -467,7 +466,9 @@ class AnimationGridView(QWidget):
             if count == 1:
                 action_text = f"Add frame {sorted_frames[0]} as animation segment"
             elif self._is_contiguous_selection(sorted_frames):
-                action_text = f"Add frames {sorted_frames[0]}-{sorted_frames[-1]} as animation segment"
+                action_text = (
+                    f"Add frames {sorted_frames[0]}-{sorted_frames[-1]} as animation segment"
+                )
             else:
                 action_text = f"Add {count} frames as animation segment"
 
@@ -505,7 +506,9 @@ class AnimationGridView(QWidget):
                 sorted_frames = sorted(self._selected_frames)
                 if self._is_contiguous_selection(sorted_frames):
                     start, end = sorted_frames[0], sorted_frames[-1]
-                    self._create_segment_btn.setText(f"Create Animation Segment (frames {start}-{end})")
+                    self._create_segment_btn.setText(
+                        f"Create Animation Segment (frames {start}-{end})"
+                    )
                 else:
                     self._create_segment_btn.setText(f"Create Animation Segment ({count} frames)")
         else:
@@ -517,7 +520,7 @@ class AnimationGridView(QWidget):
             return False
 
         for i in range(1, len(sorted_frames)):
-            if sorted_frames[i] != sorted_frames[i-1] + 1:
+            if sorted_frames[i] != sorted_frames[i - 1] + 1:
                 return False
         return True
 
@@ -552,14 +555,15 @@ class AnimationGridView(QWidget):
             total_frames = end - start + 1
             unselected_count = total_frames - len(sorted_frames)
             reply = QMessageBox.question(
-                self, "Non-contiguous Selection",
+                self,
+                "Non-contiguous Selection",
                 f"Your selection has gaps between frames.\n\n"
                 f"Selected: frames {', '.join(str(f) for f in sorted_frames[:5])}"
                 f"{'...' if len(sorted_frames) > 5 else ''}\n"
                 f"Segment will span: frames {start} to {end} ({total_frames} total)\n"
                 f"Includes {unselected_count} unselected frame(s) in between.\n\n"
                 f"Continue?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
             )
             if reply != QMessageBox.StandardButton.Yes:
                 return
@@ -569,9 +573,7 @@ class AnimationGridView(QWidget):
 
         # Get segment name from user
         name, ok = QInputDialog.getText(
-            self, "Create Animation Segment",
-            f"Enter name for {description}:",
-            text=default_name
+            self, "Create Animation Segment", f"Enter name for {description}:", text=default_name
         )
 
         if ok and name.strip():
@@ -602,6 +604,7 @@ class AnimationGridView(QWidget):
             if index > 1000:
                 # Use timestamp as fallback
                 import time
+
                 timestamp = int(time.time() * 1000) % 100000
                 return f"{base_name}_{timestamp}"
 
@@ -655,9 +658,7 @@ class AnimationGridView(QWidget):
         """Prompt user to rename a segment."""
         # Get new name from user
         new_name, ok = QInputDialog.getText(
-            self, "Rename Segment",
-            f"Enter new name for '{old_name}':",
-            text=old_name
+            self, "Rename Segment", f"Enter new name for '{old_name}':", text=old_name
         )
 
         if ok and new_name.strip():
@@ -666,8 +667,9 @@ class AnimationGridView(QWidget):
             # Check if new name already exists
             if new_name in self._segments and new_name != old_name:
                 QMessageBox.warning(
-                    self, "Name Already Exists",
-                    f"A segment named '{new_name}' already exists.\nPlease choose a different name."
+                    self,
+                    "Name Already Exists",
+                    f"A segment named '{new_name}' already exists.\nPlease choose a different name.",
                 )
                 return
 
@@ -720,13 +722,12 @@ class AnimationGridView(QWidget):
         for segment in self._segments.values():
             for i in range(segment.start_frame, segment.end_frame + 1):
                 if i < len(self._thumbnails):
-                    is_start = (i == segment.start_frame)
-                    is_end = (i == segment.end_frame)
+                    is_start = i == segment.start_frame
+                    is_end = i == segment.end_frame
                     self._thumbnails[i].set_segment_markers(is_start, is_end, segment.color)
 
         # Single update call is sufficient - Qt will batch repaints
         self.update()
-
 
     def _preview_selection(self):
         """Preview the currently selected frames as an animation."""

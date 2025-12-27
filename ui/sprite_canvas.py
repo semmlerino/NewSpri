@@ -104,8 +104,10 @@ class SpriteCanvas(QLabel):
         pixmap_size = self._pixmap.size()
 
         # Apply minimum zoom for tiny sprites
-        if (pixmap_size.width() < Config.Canvas.TINY_SPRITE_THRESHOLD or
-            pixmap_size.height() < Config.Canvas.TINY_SPRITE_THRESHOLD):
+        if (
+            pixmap_size.width() < Config.Canvas.TINY_SPRITE_THRESHOLD
+            or pixmap_size.height() < Config.Canvas.TINY_SPRITE_THRESHOLD
+        ):
             min_zoom = Config.Canvas.MIN_DISPLAY_ZOOM
         else:
             min_zoom = Config.Canvas.ZOOM_MIN
@@ -157,7 +159,9 @@ class SpriteCanvas(QLabel):
         painter = QPainter(self)
         # Use antialiasing to prevent edge cutoff
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, False)  # Keep pixel-perfect for sprites
+        painter.setRenderHint(
+            QPainter.RenderHint.SmoothPixmapTransform, False
+        )  # Keep pixel-perfect for sprites
 
         # Get the full widget rect
         rect = self.rect()
@@ -204,7 +208,7 @@ class SpriteCanvas(QLabel):
                     target_rect.x() + int(self._zoom_factor),
                     target_rect.y() + int(self._zoom_factor),
                     int(self._pixmap.width() * self._zoom_factor),
-                    int(self._pixmap.height() * self._zoom_factor)
+                    int(self._pixmap.height() * self._zoom_factor),
                 )
                 self._draw_grid(painter, grid_rect)
 
@@ -221,7 +225,7 @@ class SpriteCanvas(QLabel):
             rect.width() - Config.Drawing.FRAME_INFO_MARGIN_RIGHT,
             Config.Drawing.FRAME_INFO_MARGIN_TOP,
             Config.Drawing.FRAME_INFO_WIDTH,
-            Config.Drawing.FRAME_INFO_HEIGHT
+            Config.Drawing.FRAME_INFO_HEIGHT,
         )
         painter.fillRect(info_rect, QColor(0, 0, 0, Config.Drawing.FRAME_INFO_BG_ALPHA))
 
@@ -231,7 +235,11 @@ class SpriteCanvas(QLabel):
         font.setPointSize(Config.Font.FRAME_INFO_FONT_SIZE)
         font.setBold(True)
         painter.setFont(font)
-        painter.drawText(info_rect, Qt.AlignmentFlag.AlignCenter, f"Frame {self._current_frame + 1}/{self._total_frames}")
+        painter.drawText(
+            info_rect,
+            Qt.AlignmentFlag.AlignCenter,
+            f"Frame {self._current_frame + 1}/{self._total_frames}",
+        )
 
     def _draw_checkerboard(self, painter: QPainter, rect: QRect):
         """Draw checkerboard background pattern using cached pixmap."""
@@ -321,7 +329,9 @@ class SpriteCanvas(QLabel):
         else:
             self._zoom_factor /= Config.Canvas.ZOOM_FACTOR
 
-        self._zoom_factor = max(Config.Canvas.ZOOM_MIN, min(Config.Canvas.ZOOM_MAX, self._zoom_factor))
+        self._zoom_factor = max(
+            Config.Canvas.ZOOM_MIN, min(Config.Canvas.ZOOM_MAX, self._zoom_factor)
+        )
         self.update()
 
         # Emit zoom change signal
@@ -373,4 +383,4 @@ class SpriteCanvas(QLabel):
 
 
 # Export for easy importing
-__all__ = ['SpriteCanvas']
+__all__ = ["SpriteCanvas"]

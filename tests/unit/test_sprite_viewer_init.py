@@ -93,17 +93,16 @@ class TestSpriteViewerInitialization:
         
         # Test that is_playing is a property, not a method (this was failing)
         assert hasattr(controller, 'is_playing')
-        
+
         # Test that accessing is_playing doesn't raise TypeError
         try:
             is_playing = controller.is_playing  # Should not be callable
             assert isinstance(is_playing, bool)
         except TypeError as e:
             pytest.fail(f"is_playing should be a property, not method: {e}")
-        
-        # Test that initialize method exists and can be called
-        assert hasattr(controller, 'initialize')
-        assert callable(controller.initialize)
+
+        # Controller should be active after construction (single-step init)
+        assert controller._is_active is True
     
     def test_canvas_signal_connections(self, qtbot):
         """Test that canvas has the correct signals for connections."""

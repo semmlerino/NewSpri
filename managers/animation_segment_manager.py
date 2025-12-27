@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class AnimationSegment:
     """Data structure for animation segment with serialization support."""
+
     name: str
     start_frame: int
     end_frame: int
@@ -57,17 +58,17 @@ class AnimationSegment:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> 'AnimationSegment':
+    def from_dict(cls, data: dict[str, Any]) -> "AnimationSegment":
         """Create from dictionary."""
         # Handle backward compatibility for segments without new fields
         data = data.copy()
-        if 'bounce_mode' not in data:
-            data['bounce_mode'] = False
-        if 'frame_holds' not in data:
-            data['frame_holds'] = {}
+        if "bounce_mode" not in data:
+            data["bounce_mode"] = False
+        if "frame_holds" not in data:
+            data["frame_holds"] = {}
         # Convert frame_holds keys from strings to ints (JSON serializes dict keys as strings)
-        if isinstance(data.get('frame_holds'), dict):
-            data['frame_holds'] = {int(k): v for k, v in data['frame_holds'].items()}
+        if isinstance(data.get("frame_holds"), dict):
+            data["frame_holds"] = {int(k): v for k, v in data["frame_holds"].items()}
         return cls(**data)
 
     def validate(self, max_frames: int | None = None) -> tuple[bool, str]:
@@ -86,13 +87,37 @@ class AnimationSegment:
         # Validate filename-safe characters (used in exports)
         unsafe_chars = r'[<>:"/\\|?*\x00-\x1f]'
         if re.search(unsafe_chars, self.name):
-            return False, "Segment name contains characters not allowed in filenames: < > : \" / \\ | ? *"
+            return (
+                False,
+                'Segment name contains characters not allowed in filenames: < > : " / \\ | ? *',
+            )
 
         # Check for Windows reserved names
-        reserved_names = {'CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4',
-                          'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2',
-                          'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'}
-        name_without_ext = self.name.split('.')[0].upper()
+        reserved_names = {
+            "CON",
+            "PRN",
+            "AUX",
+            "NUL",
+            "COM1",
+            "COM2",
+            "COM3",
+            "COM4",
+            "COM5",
+            "COM6",
+            "COM7",
+            "COM8",
+            "COM9",
+            "LPT1",
+            "LPT2",
+            "LPT3",
+            "LPT4",
+            "LPT5",
+            "LPT6",
+            "LPT7",
+            "LPT8",
+            "LPT9",
+        }
+        name_without_ext = self.name.split(".")[0].upper()
         if name_without_ext in reserved_names:
             return False, f"'{self.name}' is a reserved system name and cannot be used"
 
@@ -104,7 +129,10 @@ class AnimationSegment:
 
         if max_frames is not None:
             if self.start_frame >= max_frames:
-                return False, f"Start frame {self.start_frame} exceeds available frames ({max_frames})"
+                return (
+                    False,
+                    f"Start frame {self.start_frame} exceeds available frames ({max_frames})",
+                )
 
             if self.end_frame >= max_frames:
                 return False, f"End frame {self.end_frame} exceeds available frames ({max_frames})"
@@ -162,8 +190,14 @@ class AnimationSegmentManager(QObject):
         if sprite_sheet_path:
             self._load_segments_for_sprite()
 
-    def add_segment(self, name: str, start_frame: int, end_frame: int,
-                   color: QColor | None = None, description: str = "") -> tuple[bool, str]:
+    def add_segment(
+        self,
+        name: str,
+        start_frame: int,
+        end_frame: int,
+        color: QColor | None = None,
+        description: str = "",
+    ) -> tuple[bool, str]:
         """
         Add a new animation segment.
 
@@ -194,10 +228,7 @@ class AnimationSegmentManager(QObject):
             color = QColor.fromHsv(hash_val, 180, 200)
 
         segment = AnimationSegment(
-            name=name,
-            start_frame=start_frame,
-            end_frame=end_frame,
-            description=description
+            name=name, start_frame=start_frame, end_frame=end_frame, description=description
         )
         segment.set_color(color)
 
@@ -237,9 +268,15 @@ class AnimationSegmentManager(QObject):
             return True
         return False
 
-    def update_segment(self, name: str, start_frame: int | None = None, end_frame: int | None = None,
-                      new_name: str | None = None, color: QColor | None = None,
-                      description: str | None = None) -> tuple[bool, str]:
+    def update_segment(
+        self,
+        name: str,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        new_name: str | None = None,
+        color: QColor | None = None,
+        description: str | None = None,
+    ) -> tuple[bool, str]:
         """
         Update an existing animation segment.
 
@@ -279,7 +316,10 @@ class AnimationSegmentManager(QObject):
             if other.name == name:
                 continue
             if effective_start <= other.end_frame and other.start_frame <= effective_end:
-                return False, f"Frames {effective_start}-{effective_end} overlap with segment '{other.name}'"
+                return (
+                    False,
+                    f"Frames {effective_start}-{effective_end} overlap with segment '{other.name}'",
+                )
 
         # Now mutate
         segment.start_frame = effective_start
@@ -411,10 +451,9 @@ class AnimationSegmentManager(QObject):
         segments = list(self._segments.values())
 
         for i, seg1 in enumerate(segments):
-            for seg2 in segments[i+1:]:
+            for seg2 in segments[i + 1 :]:
                 # Check if segments overlap
-                if (seg1.start_frame <= seg2.end_frame and
-                    seg2.start_frame <= seg1.end_frame):
+                if seg1.start_frame <= seg2.end_frame and seg2.start_frame <= seg1.end_frame:
                     overlaps.append((seg1.name, seg2.name))
 
         return overlaps
@@ -443,8 +482,9 @@ class AnimationSegmentManager(QObject):
                 return segment
         return None
 
-    def extract_frames_for_segment(self, segment_name: str,
-                                 all_frames: list[QPixmap]) -> list[QPixmap]:
+    def extract_frames_for_segment(
+        self, segment_name: str, all_frames: list[QPixmap]
+    ) -> list[QPixmap]:
         """
         Extract frames for a specific segment.
 
@@ -462,7 +502,7 @@ class AnimationSegmentManager(QObject):
         start = max(0, segment.start_frame)
         end = min(len(all_frames) - 1, segment.end_frame)
 
-        return all_frames[start:end + 1]
+        return all_frames[start : end + 1]
 
     def _get_segments_file_path(self) -> str:
         """Get the file path for saving segments."""
@@ -497,16 +537,13 @@ class AnimationSegmentManager(QObject):
             data = {
                 "sprite_sheet_path": self._sprite_sheet_path,
                 "max_frames": self._max_frames,
-                "segments": [segment.to_dict() for segment in self._segments.values()]
+                "segments": [segment.to_dict() for segment in self._segments.values()],
             }
 
             # Atomic write: write to temp file, then rename
             dir_path = os.path.dirname(file_path)
             with tempfile.NamedTemporaryFile(
-                mode='w',
-                dir=dir_path,
-                delete=False,
-                suffix='.tmp'
+                mode="w", dir=dir_path, delete=False, suffix=".tmp"
             ) as f:
                 json.dump(data, f, indent=2)
                 temp_path = f.name
@@ -571,7 +608,10 @@ class AnimationSegmentManager(QObject):
                 summary = ", ".join(skipped_names)
                 if len(skipped_segments) > 3:
                     summary += f" (and {len(skipped_segments) - 3} more)"
-                return True, f"Loaded {loaded_count} segments. Skipped {len(skipped_segments)}: {summary}"
+                return (
+                    True,
+                    f"Loaded {loaded_count} segments. Skipped {len(skipped_segments)}: {summary}",
+                )
 
             return True, ""
 

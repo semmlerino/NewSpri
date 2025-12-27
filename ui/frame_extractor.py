@@ -5,7 +5,6 @@ Frame extraction settings widget for sprite sheet processing.
 Part of Python Sprite Viewer - Phase 5: UI Component Extraction.
 """
 
-
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -61,7 +60,9 @@ class FrameExtractor(QGroupBox):
                 background-color: #0d47a1;
             }
         """)
-        self.comprehensive_auto_btn.setToolTip("Automatically detect margins, frame size, and spacing in one click")
+        self.comprehensive_auto_btn.setToolTip(
+            "Automatically detect margins, frame size, and spacing in one click"
+        )
         layout.addWidget(self.comprehensive_auto_btn)
 
         # Extraction Mode Toggle
@@ -140,7 +141,9 @@ class FrameExtractor(QGroupBox):
         # Use consistent 3 columns
         rect_cols = 3
         square_count = len(Config.FrameExtraction.SQUARE_PRESETS)
-        for i, (label, width, height, tooltip) in enumerate(Config.FrameExtraction.RECTANGULAR_PRESETS):
+        for i, (label, width, height, tooltip) in enumerate(
+            Config.FrameExtraction.RECTANGULAR_PRESETS
+        ):
             btn = QRadioButton(label)
             btn.setToolTip(tooltip)
             # Use default font size for better readability
@@ -165,7 +168,9 @@ class FrameExtractor(QGroupBox):
         size_layout.setSpacing(Config.UI.SIZE_LAYOUT_SPACING)
 
         self.width_spin = QSpinBox()
-        self.width_spin.setRange(Config.FrameExtraction.MIN_FRAME_SIZE, Config.FrameExtraction.MAX_FRAME_SIZE)
+        self.width_spin.setRange(
+            Config.FrameExtraction.MIN_FRAME_SIZE, Config.FrameExtraction.MAX_FRAME_SIZE
+        )
         self.width_spin.setValue(Config.FrameExtraction.DEFAULT_FRAME_WIDTH)
         self.width_spin.setSuffix(" px")
         self.width_spin.valueChanged.connect(self._on_custom_size_changed)
@@ -174,7 +179,9 @@ class FrameExtractor(QGroupBox):
         size_layout.addWidget(QLabel("×"))
 
         self.height_spin = QSpinBox()
-        self.height_spin.setRange(Config.FrameExtraction.MIN_FRAME_SIZE, Config.FrameExtraction.MAX_FRAME_SIZE)
+        self.height_spin.setRange(
+            Config.FrameExtraction.MIN_FRAME_SIZE, Config.FrameExtraction.MAX_FRAME_SIZE
+        )
         self.height_spin.setValue(Config.FrameExtraction.DEFAULT_FRAME_HEIGHT)
         self.height_spin.setSuffix(" px")
         self.height_spin.valueChanged.connect(self._on_custom_size_changed)
@@ -185,7 +192,7 @@ class FrameExtractor(QGroupBox):
         self.auto_btn.setMaximumWidth(Config.UI.AUTO_BUTTON_MAX_WIDTH)
         self.auto_btn.setToolTip("Auto-detect frame size")
         size_layout.addWidget(self.auto_btn)
-        self._button_manager.register_button('frame', self.auto_btn)
+        self._button_manager.register_button("frame", self.auto_btn)
 
         layout.addLayout(size_layout)
 
@@ -202,7 +209,9 @@ class FrameExtractor(QGroupBox):
         advanced_layout.addWidget(QLabel("Offset:"), 0, 0)
         advanced_layout.addWidget(QLabel("X:"), 0, 1)
         self.offset_x = QSpinBox()
-        self.offset_x.setRange(Config.FrameExtraction.DEFAULT_OFFSET, Config.FrameExtraction.MAX_OFFSET)
+        self.offset_x.setRange(
+            Config.FrameExtraction.DEFAULT_OFFSET, Config.FrameExtraction.MAX_OFFSET
+        )
         self.offset_x.setValue(Config.FrameExtraction.DEFAULT_OFFSET)
         self.offset_x.setSuffix(" px")
         self.offset_x.valueChanged.connect(self.settingsChanged)
@@ -210,7 +219,9 @@ class FrameExtractor(QGroupBox):
 
         advanced_layout.addWidget(QLabel("Y:"), 0, 3)
         self.offset_y = QSpinBox()
-        self.offset_y.setRange(Config.FrameExtraction.DEFAULT_OFFSET, Config.FrameExtraction.MAX_OFFSET)
+        self.offset_y.setRange(
+            Config.FrameExtraction.DEFAULT_OFFSET, Config.FrameExtraction.MAX_OFFSET
+        )
         self.offset_y.setValue(Config.FrameExtraction.DEFAULT_OFFSET)
         self.offset_y.setSuffix(" px")
         self.offset_y.valueChanged.connect(self.settingsChanged)
@@ -220,13 +231,15 @@ class FrameExtractor(QGroupBox):
         self.auto_margins_btn.setMaximumWidth(Config.UI.AUTO_BUTTON_MAX_WIDTH)
         self.auto_margins_btn.setToolTip("Auto-detect margins")
         advanced_layout.addWidget(self.auto_margins_btn, 0, 5)
-        self._button_manager.register_button('margins', self.auto_margins_btn)
+        self._button_manager.register_button("margins", self.auto_margins_btn)
 
         # Row 2: Spacing controls
         advanced_layout.addWidget(QLabel("Spacing:"), 1, 0)
         advanced_layout.addWidget(QLabel("X:"), 1, 1)
         self.spacing_x = QSpinBox()
-        self.spacing_x.setRange(Config.FrameExtraction.DEFAULT_SPACING, Config.FrameExtraction.MAX_SPACING)
+        self.spacing_x.setRange(
+            Config.FrameExtraction.DEFAULT_SPACING, Config.FrameExtraction.MAX_SPACING
+        )
         self.spacing_x.setValue(Config.FrameExtraction.DEFAULT_SPACING)
         self.spacing_x.setSuffix(" px")
         self.spacing_x.setToolTip("Horizontal gap between frames")
@@ -235,7 +248,9 @@ class FrameExtractor(QGroupBox):
 
         advanced_layout.addWidget(QLabel("Y:"), 1, 3)
         self.spacing_y = QSpinBox()
-        self.spacing_y.setRange(Config.FrameExtraction.DEFAULT_SPACING, Config.FrameExtraction.MAX_SPACING)
+        self.spacing_y.setRange(
+            Config.FrameExtraction.DEFAULT_SPACING, Config.FrameExtraction.MAX_SPACING
+        )
         self.spacing_y.setValue(Config.FrameExtraction.DEFAULT_SPACING)
         self.spacing_y.setSuffix(" px")
         self.spacing_y.setToolTip("Vertical gap between frames")
@@ -246,7 +261,7 @@ class FrameExtractor(QGroupBox):
         self.auto_spacing_btn.setMaximumWidth(Config.UI.AUTO_BUTTON_MAX_WIDTH)
         self.auto_spacing_btn.setToolTip("Auto-detect frame spacing")
         advanced_layout.addWidget(self.auto_spacing_btn, 1, 5)
-        self._button_manager.register_button('spacing', self.auto_spacing_btn)
+        self._button_manager.register_button("spacing", self.auto_spacing_btn)
 
         layout.addLayout(advanced_layout)
 
@@ -431,4 +446,4 @@ class FrameExtractor(QGroupBox):
 
 
 # Export for easy importing
-__all__ = ['FrameExtractor']
+__all__ = ["FrameExtractor"]

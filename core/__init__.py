@@ -14,8 +14,8 @@ from .auto_detection_controller import AutoDetectionController
 from .export_coordinator import ExportCoordinator
 
 __all__ = [
-    'AnimationController',
-    'AnimationSegmentController',
-    'AutoDetectionController',
-    'ExportCoordinator',
+    "AnimationController",
+    "AnimationSegmentController",
+    "AutoDetectionController",
+    "ExportCoordinator",
 ]

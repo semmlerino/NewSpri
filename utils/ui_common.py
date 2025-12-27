@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QPushButton
 @dataclass
 class DetectionResult:
     """Unified result type for all detection operations."""
+
     success: bool
     confidence: str = "medium"  # 'high', 'medium', 'low', 'failed'
     message: str = ""
@@ -26,41 +27,41 @@ class AutoButtonManager(QObject):
     buttonStateChanged = Signal(str, str, str)  # button_type, confidence, message
 
     # Button types
-    BUTTON_TYPES = ['frame', 'margins', 'spacing']
+    BUTTON_TYPES = ["frame", "margins", "spacing"]
 
     # Confidence styles
     CONFIDENCE_STYLES = {
-        'high': {
-            'color': '#2e7d32',  # Green
-            'background': '#e8f5e9',
-            'border': '#4caf50',
-            'icon': '✓'
+        "high": {
+            "color": "#2e7d32",  # Green
+            "background": "#e8f5e9",
+            "border": "#4caf50",
+            "icon": "✓",
         },
-        'medium': {
-            'color': '#ef6c00',  # Orange
-            'background': '#fff3e0',
-            'border': '#ff9800',
-            'icon': '⚠'
+        "medium": {
+            "color": "#ef6c00",  # Orange
+            "background": "#fff3e0",
+            "border": "#ff9800",
+            "icon": "⚠",
         },
-        'low': {
-            'color': '#c62828',  # Red
-            'background': '#ffebee',
-            'border': '#f44336',
-            'icon': '!'
+        "low": {
+            "color": "#c62828",  # Red
+            "background": "#ffebee",
+            "border": "#f44336",
+            "icon": "!",
         },
-        'failed': {
-            'color': '#424242',  # Gray
-            'background': '#f5f5f5',
-            'border': '#9e9e9e',
-            'icon': '✗'
-        }
+        "failed": {
+            "color": "#424242",  # Gray
+            "background": "#f5f5f5",
+            "border": "#9e9e9e",
+            "icon": "✗",
+        },
     }
 
     # Default tooltips
     DEFAULT_TOOLTIPS = {
-        'frame': "Auto-detect frame size",
-        'margins': "Auto-detect margins",
-        'spacing': "Auto-detect frame spacing"
+        "frame": "Auto-detect frame size",
+        "margins": "Auto-detect margins",
+        "spacing": "Auto-detect frame spacing",
     }
 
     def __init__(self):
@@ -76,7 +77,7 @@ class AutoButtonManager(QObject):
 
         self._buttons[button_type] = button
         self._base_styles[button_type] = button.styleSheet()
-        self._current_states[button_type] = 'default'
+        self._current_states[button_type] = "default"
 
     def update_confidence(self, button_type: str, confidence: str, message: str = ""):
         """Update button appearance based on confidence level."""
@@ -85,7 +86,7 @@ class AutoButtonManager(QObject):
             return
 
         # Get style info
-        style_info = self.CONFIDENCE_STYLES.get(confidence, self.CONFIDENCE_STYLES['failed'])
+        style_info = self.CONFIDENCE_STYLES.get(confidence, self.CONFIDENCE_STYLES["failed"])
 
         # Update button style
         button.setStyleSheet(self._create_button_style(style_info))
@@ -112,8 +113,8 @@ class AutoButtonManager(QObject):
         button.setToolTip(self.DEFAULT_TOOLTIPS.get(button_type, "Auto-detect"))
 
         # Track state
-        self._current_states[button_type] = 'default'
-        self.buttonStateChanged.emit(button_type, 'default', '')
+        self._current_states[button_type] = "default"
+        self.buttonStateChanged.emit(button_type, "default", "")
 
     def reset_all_buttons(self):
         """Reset all managed buttons to default."""
@@ -122,44 +123,43 @@ class AutoButtonManager(QObject):
 
     def get_button_state(self, button_type: str) -> str:
         """Get current state of a button."""
-        return self._current_states.get(button_type, 'default')
+        return self._current_states.get(button_type, "default")
 
     def update_from_detection_result(self, button_type: str, result: DetectionResult):
         """Update button from a DetectionResult object."""
         if result.success:
             self.update_confidence(button_type, result.confidence, result.message)
         else:
-            self.update_confidence(button_type, 'failed', result.message)
+            self.update_confidence(button_type, "failed", result.message)
 
     @staticmethod
     def _create_button_style(style_info: dict[str, str]) -> str:
         """Create button stylesheet from style info."""
         return f"""
             QPushButton {{
-                background-color: {style_info['background']};
-                border: 2px solid {style_info['border']};
-                color: {style_info['color']};
+                background-color: {style_info["background"]};
+                border: 2px solid {style_info["border"]};
+                color: {style_info["color"]};
                 font-weight: bold;
                 border-radius: 4px;
                 padding: 4px 8px;
             }}
             QPushButton:hover {{
-                background-color: {style_info['border']};
+                background-color: {style_info["border"]};
                 color: white;
             }}
         """
 
-    def _update_tooltip(self, button: QPushButton, button_type: str,
-                       confidence: str, message: str):
+    def _update_tooltip(self, button: QPushButton, button_type: str, confidence: str, message: str):
         """Update button tooltip with confidence information."""
         base_tooltip = self.DEFAULT_TOOLTIPS.get(button_type, "Auto-detect")
 
-        if message and confidence != 'default':
+        if message and confidence != "default":
             confidence_desc = {
-                'high': "High confidence",
-                'medium': "Medium confidence",
-                'low': "Low confidence",
-                'failed': "Detection failed"
+                "high": "High confidence",
+                "medium": "Medium confidence",
+                "low": "Low confidence",
+                "failed": "Detection failed",
             }.get(confidence, "Unknown")
 
             button.setToolTip(f"{base_tooltip}\n{confidence_desc}: {message}")
@@ -173,27 +173,25 @@ def parse_detection_tuple(result_tuple: tuple) -> DetectionResult:
         # Simple success/message format
         success, message = result_tuple
         return DetectionResult(
-            success=success,
-            confidence='medium' if success else 'failed',
-            message=message
+            success=success, confidence="medium" if success else "failed", message=message
         )
     elif len(result_tuple) == 3:
         # Success/value/message format
         success, value, message = result_tuple
         return DetectionResult(
             success=success,
-            confidence='medium' if success else 'failed',
+            confidence="medium" if success else "failed",
             message=message,
-            parameters={'value': value}
+            parameters={"value": value},
         )
     elif len(result_tuple) == 4:
         # Success/value1/value2/message format
         success, value1, value2, message = result_tuple
         return DetectionResult(
             success=success,
-            confidence='medium' if success else 'failed',
+            confidence="medium" if success else "failed",
             message=message,
-            parameters={'value1': value1, 'value2': value2}
+            parameters={"value1": value1, "value2": value2},
         )
     else:
         raise ValueError(f"Unexpected detection result format: {result_tuple}")
@@ -215,7 +213,8 @@ def extract_confidence_from_message(message: str) -> str:
 
     # Check for percentage confidence
     import re
-    percentage_match = re.search(r'(\d+)%', message)
+
+    percentage_match = re.search(r"(\d+)%", message)
     if percentage_match:
         percentage = int(percentage_match.group(1))
         if percentage >= 80:

@@ -41,15 +41,15 @@ __author__ = "Python Sprite Viewer Team"
 
 # Public API
 __all__ = [
-    'DetectionResult',
-    'FileOperations',
-    'SpriteModel',
-    'comprehensive_auto_detect',
-    'detect_background_color',
-    'detect_frame_size',
-    'detect_margins',
-    'detect_spacing',
-    'detect_sprites_ccl_enhanced',
-    'load_sprite_sheet',
-    'validate_image_file',
+    "DetectionResult",
+    "FileOperations",
+    "SpriteModel",
+    "comprehensive_auto_detect",
+    "detect_background_color",
+    "detect_frame_size",
+    "detect_margins",
+    "detect_spacing",
+    "detect_sprites_ccl_enhanced",
+    "load_sprite_sheet",
+    "validate_image_file",
 ]

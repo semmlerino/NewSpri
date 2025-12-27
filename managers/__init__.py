@@ -17,11 +17,11 @@ from .recent_files_manager import RecentFilesManager, get_recent_files_manager
 from .settings_manager import SettingsManager, get_settings_manager
 
 __all__ = [
-    'AnimationSegment',
-    'AnimationSegmentData',  # Backward compat alias
-    'AnimationSegmentManager',
-    'RecentFilesManager',
-    'SettingsManager',
-    'get_recent_files_manager',
-    'get_settings_manager',
+    "AnimationSegment",
+    "AnimationSegmentData",  # Backward compat alias
+    "AnimationSegmentManager",
+    "RecentFilesManager",
+    "SettingsManager",
+    "get_recent_files_manager",
+    "get_settings_manager",
 ]

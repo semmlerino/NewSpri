@@ -172,7 +172,7 @@ class _SheetSettingsBuilder:
 
         layout.addWidget(self._parent.layout_tabs, 1)
 
-        self._parent._settings_widgets['sheet_filename'] = self._parent.sheet_filename
+        self._parent._settings_widgets["sheet_filename"] = self._parent.sheet_filename
 
         return widget
 
@@ -192,7 +192,7 @@ class _SheetSettingsBuilder:
             ("Auto", "auto", "Best fit"),
             ("Fixed Columns", "columns", "Set columns"),
             ("Fixed Rows", "rows", "Set rows"),
-            ("Square", "square", "Force square")
+            ("Square", "square", "Force square"),
         ]
 
         for i, (label, value, tooltip) in enumerate(modes):
@@ -229,15 +229,17 @@ class _SheetSettingsBuilder:
         layout.addWidget(self._parent.manual_controls)
 
         # Connect signals
-        mode_group.buttonClicked.connect(lambda btn: self._parent._on_layout_mode_changed(modes[mode_group.id(btn)][1]))
+        mode_group.buttonClicked.connect(
+            lambda btn: self._parent._on_layout_mode_changed(modes[mode_group.id(btn)][1])
+        )
         self._parent.cols_spin.valueChanged.connect(self._parent._on_setting_changed)
         self._parent.rows_spin.valueChanged.connect(self._parent._on_setting_changed)
 
         layout.addStretch()
 
-        self._parent._settings_widgets['layout_mode'] = mode_group
-        self._parent._settings_widgets['cols_spin'] = self._parent.cols_spin
-        self._parent._settings_widgets['rows_spin'] = self._parent.rows_spin
+        self._parent._settings_widgets["layout_mode"] = mode_group
+        self._parent._settings_widgets["cols_spin"] = self._parent.cols_spin
+        self._parent._settings_widgets["rows_spin"] = self._parent.rows_spin
 
         return widget
 
@@ -286,8 +288,8 @@ class _SheetSettingsBuilder:
 
         layout.addStretch()
 
-        self._parent._settings_widgets['spacing'] = self._parent.spacing_slider
-        self._parent._settings_widgets['background'] = self._parent.bg_combo
+        self._parent._settings_widgets["spacing"] = self._parent.spacing_slider
+        self._parent._settings_widgets["background"] = self._parent.bg_combo
 
         return widget
 
@@ -326,11 +328,7 @@ class _IndividualSettingsBuilder:
         # Clear any existing pattern radios before adding new ones
         self._parent._pattern_radios.clear()
 
-        patterns = [
-            "{name}_{index:03d}",
-            "{name}-{index}",
-            "{name}{index}"
-        ]
+        patterns = ["{name}_{index:03d}", "{name}-{index}", "{name}{index}"]
 
         for i, pattern in enumerate(patterns):
             # Generate initial display text
@@ -343,13 +341,12 @@ class _IndividualSettingsBuilder:
             self._parent._pattern_radios.append(radio)
             layout.addWidget(radio)
 
-
         pattern_group.buttonClicked.connect(self._parent._on_setting_changed)
 
         layout.addStretch()
 
-        self._parent._settings_widgets['base_name'] = self._parent.base_name
-        self._parent._settings_widgets['pattern_group'] = pattern_group
+        self._parent._settings_widgets["base_name"] = self._parent.base_name
+        self._parent._settings_widgets["pattern_group"] = pattern_group
 
         return widget
 
@@ -357,7 +354,11 @@ class _IndividualSettingsBuilder:
         """Generate display text for a pattern with the given base name."""
 
         # Get format extension
-        format_ext = self._parent.format_combo.currentText().lower() if hasattr(self._parent, 'format_combo') else 'png'
+        format_ext = (
+            self._parent.format_combo.currentText().lower()
+            if hasattr(self._parent, "format_combo")
+            else "png"
+        )
 
         # Replace placeholders
         if pattern == "{name}_{index:03d}":
@@ -459,8 +460,8 @@ class _SelectedSettingsBuilder:
 
         layout.addLayout(name_layout)
 
-        self._parent._settings_widgets['frame_list'] = self._parent.frame_list
-        self._parent._settings_widgets['selected_base_name'] = self._parent.selected_base_name
+        self._parent._settings_widgets["frame_list"] = self._parent.frame_list
+        self._parent._settings_widgets["selected_base_name"] = self._parent.selected_base_name
 
         return widget
 
@@ -514,8 +515,8 @@ class _PreviewGenerator:
         layout_mode = "auto"
         cols = rows = 8
 
-        if 'layout_mode' in self._parent._settings_widgets:
-            mode_group = self._parent._settings_widgets['layout_mode']
+        if "layout_mode" in self._parent._settings_widgets:
+            mode_group = self._parent._settings_widgets["layout_mode"]
             modes = ["auto", "columns", "rows", "square"]
             for i, mode in enumerate(modes):
                 if mode_group.button(i) and mode_group.button(i).isChecked():
@@ -536,7 +537,11 @@ class _PreviewGenerator:
             rows = math.ceil(len(self._parent._sprites) / cols)
 
         # Get spacing
-        spacing = self._parent._settings_widgets.get('spacing', QSlider()).value() if 'spacing' in self._parent._settings_widgets else 0
+        spacing = (
+            self._parent._settings_widgets.get("spacing", QSlider()).value()
+            if "spacing" in self._parent._settings_widgets
+            else 0
+        )
 
         # Calculate size
         if self._parent._sprites:
@@ -552,7 +557,11 @@ class _PreviewGenerator:
         pixmap = QPixmap(sheet_w, sheet_h)
 
         # Background
-        bg_index = self._parent._settings_widgets.get('background', QComboBox()).currentIndex() if 'background' in self._parent._settings_widgets else 0
+        bg_index = (
+            self._parent._settings_widgets.get("background", QComboBox()).currentIndex()
+            if "background" in self._parent._settings_widgets
+            else 0
+        )
         if bg_index == 0:  # Transparent
             pixmap.fill(Qt.GlobalColor.transparent)
         elif bg_index == 1:  # White
@@ -576,7 +585,9 @@ class _PreviewGenerator:
         painter.end()
 
         # Update info
-        self._parent._update_preview_info(f"Sprite Sheet: {cols}x{rows} grid, {sheet_w}x{sheet_h}px")
+        self._parent._update_preview_info(
+            f"Sprite Sheet: {cols}x{rows} grid, {sheet_w}x{sheet_h}px"
+        )
 
         return pixmap
 
@@ -600,7 +611,11 @@ class _PreviewGenerator:
             painter.setFont(font)
             painter.setPen(QColor(108, 117, 125))
 
-            text = "No animation segments available" if not self._parent._segment_manager else "Loading segments preview..."
+            text = (
+                "No animation segments available"
+                if not self._parent._segment_manager
+                else "Loading segments preview..."
+            )
             painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, text)
 
             painter.end()
@@ -608,11 +623,17 @@ class _PreviewGenerator:
             return pixmap
 
         # Get all segments
-        segments = self._parent._segment_manager.get_all_segments() if self._parent._segment_manager else []
+        segments = (
+            self._parent._segment_manager.get_all_segments()
+            if self._parent._segment_manager
+            else []
+        )
         logger.debug("Retrieved %d segments from manager", len(segments))
 
         for i, seg in enumerate(segments):
-            logger.debug("  Segment %d: '%s' frames %d-%d", i, seg.name, seg.start_frame, seg.end_frame)
+            logger.debug(
+                "  Segment %d: '%s' frames %d-%d", i, seg.name, seg.start_frame, seg.end_frame
+            )
 
         if not segments:
             logger.debug("No segments found, showing placeholder")
@@ -626,7 +647,9 @@ class _PreviewGenerator:
             font = QFont("Segoe UI", 12)
             painter.setFont(font)
             painter.setPen(QColor(108, 117, 125))
-            painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "No animation segments defined")
+            painter.drawText(
+                pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "No animation segments defined"
+            )
 
             painter.end()
             self._parent._update_preview_info("Segments Per Row: No segments")
@@ -646,7 +669,11 @@ class _PreviewGenerator:
         logger.debug("Preview layout will be %d rows x %d cols", rows, cols)
 
         # Get spacing
-        spacing = self._parent._settings_widgets.get('spacing', QSlider()).value() if 'spacing' in self._parent._settings_widgets else 0
+        spacing = (
+            self._parent._settings_widgets.get("spacing", QSlider()).value()
+            if "spacing" in self._parent._settings_widgets
+            else 0
+        )
 
         # Calculate size
         if self._parent._sprites:
@@ -664,7 +691,6 @@ class _PreviewGenerator:
         sheet_w = max_frames_in_segment * fw + (max_frames_in_segment - 1) * spacing
         # Height: number of segments with spacing
         sheet_h = rows * fh + (rows - 1) * spacing
-
 
         # Scale if needed
         scale = 1.0
@@ -685,7 +711,11 @@ class _PreviewGenerator:
         pixmap = QPixmap(sheet_w, sheet_h)
 
         # Background
-        bg_index = self._parent._settings_widgets.get('background', QComboBox()).currentIndex() if 'background' in self._parent._settings_widgets else 0
+        bg_index = (
+            self._parent._settings_widgets.get("background", QComboBox()).currentIndex()
+            if "background" in self._parent._settings_widgets
+            else 0
+        )
         if bg_index == 0:  # Transparent
             pixmap.fill(Qt.GlobalColor.transparent)
         elif bg_index == 1:  # White
@@ -708,7 +738,10 @@ class _PreviewGenerator:
 
                     if scale < 1.0:
                         scaled_sprite = self._parent._sprites[frame_idx].scaled(
-                            fw, fh, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+                            fw,
+                            fh,
+                            Qt.AspectRatioMode.KeepAspectRatio,
+                            Qt.TransformationMode.SmoothTransformation,
                         )
                         painter.drawPixmap(x, y, scaled_sprite)
                     else:
@@ -720,7 +753,7 @@ class _PreviewGenerator:
         # Update info
         info = f"Segments Per Row: {rows} segments"
         if scale < 1.0:
-            info += f" (preview scaled {int(scale*100)}%)"
+            info += f" (preview scaled {int(scale * 100)}%)"
         self._parent._update_preview_info(info)
 
         return pixmap
@@ -751,8 +784,12 @@ class _PreviewGenerator:
 
         # Get selected frames if in selected mode
         selected_indices = []
-        if self._parent._current_preset and self._parent._current_preset.mode == "selected" and 'frame_list' in self._parent._settings_widgets:
-            for item in self._parent._settings_widgets['frame_list'].selectedItems():
+        if (
+            self._parent._current_preset
+            and self._parent._current_preset.mode == "selected"
+            and "frame_list" in self._parent._settings_widgets
+        ):
+            for item in self._parent._settings_widgets["frame_list"].selectedItems():
                 selected_indices.append(item.data(Qt.ItemDataRole.UserRole))
         else:
             selected_indices = list(range(len(self._parent._sprites)))
@@ -767,7 +804,10 @@ class _PreviewGenerator:
                 y = row * (fh + spacing)
 
                 scaled = self._parent._sprites[frame_idx].scaled(
-                    fw, fh, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+                    fw,
+                    fh,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
                 )
                 painter.drawPixmap(x, y, scaled)
 
@@ -794,13 +834,15 @@ class ModernExportSettings(WizardStep):
 
     previewUpdateRequested = Signal()
 
-    def __init__(self, frame_count: int = 0, current_frame: int = 0,
-                 sprites: list[QPixmap] | None = None, segment_manager=None, parent=None):
-        super().__init__(
-            title="Export Settings",
-            subtitle="Configure your export",
-            parent=parent
-        )
+    def __init__(
+        self,
+        frame_count: int = 0,
+        current_frame: int = 0,
+        sprites: list[QPixmap] | None = None,
+        segment_manager=None,
+        parent=None,
+    ):
+        super().__init__(title="Export Settings", subtitle="Configure your export", parent=parent)
         self.frame_count = frame_count
         self.current_frame = current_frame
         self._sprites = sprites or []
@@ -915,8 +957,9 @@ class ModernExportSettings(WizardStep):
 
         # Load last used export directory from settings
         from managers.settings_manager import get_settings_manager
+
         settings_manager = get_settings_manager()
-        last_export_dir = settings_manager.get_value('export/last_directory')
+        last_export_dir = settings_manager.get_value("export/last_directory")
 
         if last_export_dir and os.path.exists(last_export_dir):
             self.path_edit.setText(last_export_dir)
@@ -987,9 +1030,9 @@ class ModernExportSettings(WizardStep):
 
         layout.addLayout(format_layout)
 
-        self._settings_widgets['output_path'] = self.path_edit
-        self._settings_widgets['format'] = self.format_combo
-        self._settings_widgets['scale_group'] = self.scale_group
+        self._settings_widgets["output_path"] = self.path_edit
+        self._settings_widgets["format"] = self.format_combo
+        self._settings_widgets["scale_group"] = self.scale_group
 
         return widget
 
@@ -1144,11 +1187,7 @@ class ModernExportSettings(WizardStep):
 
         current = self.path_edit.text() or str(Config.File.get_default_export_directory())
 
-        directory = QFileDialog.getExistingDirectory(
-            self,
-            "Select Output Directory",
-            current
-        )
+        directory = QFileDialog.getExistingDirectory(self, "Select Output Directory", current)
 
         if directory:
             self.path_edit.setText(directory)
@@ -1156,8 +1195,9 @@ class ModernExportSettings(WizardStep):
 
             # Save last used directory to settings
             from managers.settings_manager import get_settings_manager
+
             settings_manager = get_settings_manager()
-            settings_manager.set_value('export/last_directory', directory)
+            settings_manager.set_value("export/last_directory", directory)
 
             self._on_setting_changed()
 
@@ -1166,7 +1206,11 @@ class ModernExportSettings(WizardStep):
 
         # Update pattern displays with new format
         try:
-            if hasattr(self, '_pattern_radios') and self._pattern_radios and hasattr(self, 'base_name'):
+            if (
+                hasattr(self, "_pattern_radios")
+                and self._pattern_radios
+                and hasattr(self, "base_name")
+            ):
                 base_name = self.base_name.text() if self.base_name.text() else "frame"
 
                 for _, radio in enumerate(self._pattern_radios):
@@ -1185,7 +1229,7 @@ class ModernExportSettings(WizardStep):
 
     def _update_transparency_warning(self, format: str):
         """Show warning when exporting transparent sprites to JPG."""
-        if not hasattr(self, '_transparency_warning'):
+        if not hasattr(self, "_transparency_warning"):
             return
 
         show_warning = False
@@ -1219,9 +1263,7 @@ class ModernExportSettings(WizardStep):
     def _update_selection_info(self):
         """Update frame selection info."""
         count = len(self.frame_list.selectedItems())
-        self.selection_info.setText(
-            f"{count} of {self.frame_count} frames selected"
-        )
+        self.selection_info.setText(f"{count} of {self.frame_count} frames selected")
 
     def _select_all_frames(self):
         """Select all frames."""
@@ -1244,12 +1286,12 @@ class ModernExportSettings(WizardStep):
 
         if self._current_preset:
             if self._current_preset.mode == "sheet":
-                valid &= bool(self._settings_widgets.get('sheet_filename', QLineEdit()).text())
+                valid &= bool(self._settings_widgets.get("sheet_filename", QLineEdit()).text())
             elif self._current_preset.mode == "individual":
-                valid &= bool(self._settings_widgets.get('base_name', QLineEdit()).text())
+                valid &= bool(self._settings_widgets.get("base_name", QLineEdit()).text())
             elif self._current_preset.mode == "selected":
                 valid &= len(self.frame_list.selectedItems()) > 0
-                valid &= bool(self._settings_widgets.get('selected_base_name', QLineEdit()).text())
+                valid &= bool(self._settings_widgets.get("selected_base_name", QLineEdit()).text())
 
         self.export_btn.setEnabled(valid)
         self.stepValidated.emit(valid)
@@ -1258,7 +1300,9 @@ class ModernExportSettings(WizardStep):
         """Update preview based on settings."""
         logger.debug("_update_preview called")
         logger.debug("Current preset: %s", self._current_preset)
-        logger.debug("Current preset mode: %s", self._current_preset.mode if self._current_preset else 'None')
+        logger.debug(
+            "Current preset mode: %s", self._current_preset.mode if self._current_preset else "None"
+        )
         logger.debug("Number of sprites: %d", len(self._sprites))
         logger.debug("Segment manager available: %s", self._segment_manager is not None)
 
@@ -1322,11 +1366,11 @@ class ModernExportSettings(WizardStep):
         # Mode specific
         if self._current_preset:
             if self._current_preset.mode == "sheet":
-                filename = self._settings_widgets.get('sheet_filename', QLineEdit()).text()
+                filename = self._settings_widgets.get("sheet_filename", QLineEdit()).text()
                 if filename:
                     parts.append(f"→ {filename}.{format.lower()}")
             elif self._current_preset.mode == "selected":
-                count = len(self.frame_list.selectedItems()) if hasattr(self, 'frame_list') else 0
+                count = len(self.frame_list.selectedItems()) if hasattr(self, "frame_list") else 0
                 parts.append(f"({count} frames)")
 
         self.summary_label.setText(" • ".join(parts))
@@ -1337,23 +1381,23 @@ class ModernExportSettings(WizardStep):
 
         # Get preset from wizard
         wizard = self.parent()
-        while wizard and not hasattr(wizard, 'get_wizard_data'):
+        while wizard and not hasattr(wizard, "get_wizard_data"):
             wizard = wizard.parent()
 
-        if wizard and hasattr(wizard, 'get_wizard_data'):
+        if wizard and hasattr(wizard, "get_wizard_data"):
             # Use getattr to safely access the method
-            get_wizard_data = getattr(wizard, 'get_wizard_data', None)
+            get_wizard_data = getattr(wizard, "get_wizard_data", None)
             if get_wizard_data is None:
                 logger.debug("get_wizard_data method not found")
                 return
             wizard_data = get_wizard_data()
             logger.debug("Wizard data keys: %s", list(wizard_data.keys()))
 
-            step_0_data = wizard_data.get('step_0', {})
+            step_0_data = wizard_data.get("step_0", {})
             logger.debug("Step 0 data keys: %s", list(step_0_data.keys()))
 
-            preset = step_0_data.get('preset')
-            logger.debug("Retrieved preset: %s", preset.name if preset else 'None')
+            preset = step_0_data.get("preset")
+            logger.debug("Retrieved preset: %s", preset.name if preset else "None")
 
             if preset:
                 self._setup_for_preset(preset)
@@ -1369,82 +1413,93 @@ class ModernExportSettings(WizardStep):
     def get_data(self) -> dict[str, Any]:
         """Get all settings data."""
         logger.debug("ModernExportSettings.get_data() called")
-        logger.debug("Current preset: %s", self._current_preset.name if self._current_preset else 'None')
-        logger.debug("Current preset mode: %s", self._current_preset.mode if self._current_preset else 'None')
+        logger.debug(
+            "Current preset: %s", self._current_preset.name if self._current_preset else "None"
+        )
+        logger.debug(
+            "Current preset mode: %s", self._current_preset.mode if self._current_preset else "None"
+        )
 
         data = {
-            'output_dir': self.path_edit.text(),
-            'format': self.format_combo.currentText(),
-            'scale': self.scale_group.checkedId() if self.scale_group.checkedButton() else 1
+            "output_dir": self.path_edit.text(),
+            "format": self.format_combo.currentText(),
+            "scale": self.scale_group.checkedId() if self.scale_group.checkedButton() else 1,
         }
 
-        logger.debug("Base data: output_dir='%s', format='%s', scale=%s", data['output_dir'], data['format'], data['scale'])
+        logger.debug(
+            "Base data: output_dir='%s', format='%s', scale=%s",
+            data["output_dir"],
+            data["format"],
+            data["scale"],
+        )
 
         if self._current_preset:
             if self._current_preset.mode == "sheet":
-                data['single_filename'] = self._settings_widgets.get('sheet_filename', QLineEdit()).text()
+                data["single_filename"] = self._settings_widgets.get(
+                    "sheet_filename", QLineEdit()
+                ).text()
 
                 # Layout settings
                 layout_mode = "auto"
-                if 'layout_mode' in self._settings_widgets:
-                    mode_group = self._settings_widgets['layout_mode']
+                if "layout_mode" in self._settings_widgets:
+                    mode_group = self._settings_widgets["layout_mode"]
                     modes = ["auto", "columns", "rows", "square"]
                     for i, mode in enumerate(modes):
                         if mode_group.button(i) and mode_group.button(i).isChecked():
                             layout_mode = mode
                             break
 
-                data['layout_mode'] = layout_mode
-                data['columns'] = self.cols_spin.value()
-                data['rows'] = self.rows_spin.value()
+                data["layout_mode"] = layout_mode
+                data["columns"] = self.cols_spin.value()
+                data["rows"] = self.rows_spin.value()
 
                 # Style settings
-                data['spacing'] = self._settings_widgets.get('spacing', QSlider()).value()
-                data['padding'] = 0
+                data["spacing"] = self._settings_widgets.get("spacing", QSlider()).value()
+                data["padding"] = 0
 
-                bg_index = self._settings_widgets.get('background', QComboBox()).currentIndex()
+                bg_index = self._settings_widgets.get("background", QComboBox()).currentIndex()
                 if bg_index == 0:
-                    data['background_mode'] = 'transparent'
+                    data["background_mode"] = "transparent"
                 elif bg_index == 1:
-                    data['background_mode'] = 'solid'
-                    data['background_color'] = (255, 255, 255, 255)
+                    data["background_mode"] = "solid"
+                    data["background_color"] = (255, 255, 255, 255)
                 else:
-                    data['background_mode'] = 'solid'
-                    data['background_color'] = (0, 0, 0, 255)
+                    data["background_mode"] = "solid"
+                    data["background_color"] = (0, 0, 0, 255)
 
             elif self._current_preset.mode == "individual":
                 # Get base name with proper fallback
-                base_name_widget = self._settings_widgets.get('base_name')
-                if base_name_widget and hasattr(base_name_widget, 'text'):
+                base_name_widget = self._settings_widgets.get("base_name")
+                if base_name_widget and hasattr(base_name_widget, "text"):
                     base_name = base_name_widget.text()
-                    data['base_name'] = base_name if base_name else 'frame'
+                    data["base_name"] = base_name if base_name else "frame"
                 else:
-                    data['base_name'] = 'frame'
+                    data["base_name"] = "frame"
 
                 # Pattern
                 patterns = ["{name}_{index:03d}", "{name}-{index}", "{name}{index}"]
-                pattern_group = self._settings_widgets.get('pattern_group')
+                pattern_group = self._settings_widgets.get("pattern_group")
                 if pattern_group and pattern_group.checkedButton():
-                    data['pattern'] = patterns[pattern_group.id(pattern_group.checkedButton())]
+                    data["pattern"] = patterns[pattern_group.id(pattern_group.checkedButton())]
                 else:
-                    data['pattern'] = patterns[0]
+                    data["pattern"] = patterns[0]
 
             elif self._current_preset.mode == "selected":
                 # Selected frames
                 selected_indices = []
-                if hasattr(self, 'frame_list'):
+                if hasattr(self, "frame_list"):
                     for item in self.frame_list.selectedItems():
                         selected_indices.append(item.data(Qt.ItemDataRole.UserRole))
-                data['selected_indices'] = selected_indices
+                data["selected_indices"] = selected_indices
 
                 # Get base name with proper fallback
-                base_name_widget = self._settings_widgets.get('selected_base_name')
-                if base_name_widget and hasattr(base_name_widget, 'text'):
+                base_name_widget = self._settings_widgets.get("selected_base_name")
+                if base_name_widget and hasattr(base_name_widget, "text"):
                     base_name = base_name_widget.text()
-                    data['base_name'] = base_name if base_name else 'frame'
+                    data["base_name"] = base_name if base_name else "frame"
                 else:
-                    data['base_name'] = 'frame'
-                data['pattern'] = "{name}_{index:03d}"
+                    data["base_name"] = "frame"
+                data["pattern"] = "{name}_{index:03d}"
 
         logger.debug("Final get_data() result: %s", data)
         logger.debug("Data keys: %s", list(data.keys()))

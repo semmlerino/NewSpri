@@ -27,25 +27,43 @@ class AnimationController(QObject):
     # ============================================================================
 
     # Timing & State Signals
-    animationStarted = Signal()             # Animation playback began
-    animationPaused = Signal()              # Animation playback paused
-    animationStopped = Signal()             # Animation playback stopped
-    animationCompleted = Signal()           # Animation completed (non-looping)
+    animationStarted = Signal()  # Animation playback began
+    animationPaused = Signal()  # Animation playback paused
+    animationStopped = Signal()  # Animation playback stopped
+    animationCompleted = Signal()  # Animation completed (non-looping)
 
     # Frame Control Signals
-    frameAdvanced = Signal(int)             # Frame advanced to index
-    playbackStateChanged = Signal(bool)     # Playing state changed
+    frameAdvanced = Signal(int)  # Frame advanced to index
+    playbackStateChanged = Signal(bool)  # Playing state changed
 
     # Configuration Signals
-    fpsChanged = Signal(int)                # Animation speed changed
-    loopModeChanged = Signal(bool)          # Loop mode toggled
+    fpsChanged = Signal(int)  # Animation speed changed
+    loopModeChanged = Signal(bool)  # Loop mode toggled
 
     # Error & Status Signals
-    errorOccurred = Signal(str)             # Error in animation processing
-    statusChanged = Signal(str)             # Status message updates
+    errorOccurred = Signal(str)  # Error in animation processing
+    statusChanged = Signal(str)  # Status message updates
 
-    def __init__(self):
+    def __init__(
+        self,
+        sprite_model: "SpriteModel",
+        sprite_viewer: "SpriteViewer",
+    ):
+        """
+        Initialize controller with Model and View components.
+
+        Args:
+            sprite_model: The sprite data model
+            sprite_viewer: The main application window
+        """
         super().__init__()
+
+        # ============================================================================
+        # CONNECTED COMPONENTS
+        # ============================================================================
+
+        self._sprite_model: SpriteModel = sprite_model
+        self._sprite_viewer: SpriteViewer = sprite_viewer
 
         # ============================================================================
         # TIMER MANAGEMENT
@@ -58,17 +76,10 @@ class AnimationController(QObject):
         # ANIMATION STATE
         # ============================================================================
 
-        self._is_active: bool = False           # Controller is managing animation
-        self._is_playing: bool = False          # Animation is currently playing
+        self._is_active: bool = True  # Controller is managing animation
+        self._is_playing: bool = False  # Animation is currently playing
         self._current_fps: int = Config.Animation.DEFAULT_FPS
         self._loop_enabled: bool = True
-
-        # ============================================================================
-        # CONNECTED COMPONENTS
-        # ============================================================================
-
-        self._sprite_model: SpriteModel | None = None
-        self._sprite_viewer: SpriteViewer | None = None
 
         # Timer precision tracking (for get_actual_fps)
         self._timer_precision: float = 0.0
@@ -76,46 +87,16 @@ class AnimationController(QObject):
         # Connect timer
         self._animation_timer.timeout.connect(self._on_timer_timeout)
 
-        # Initialization tracking
-        self._initialized: bool = False
+        # Connect to Model signals
+        self._connect_model_signals()
 
-    @property
-    def is_ready(self) -> bool:
-        """Check if controller has been initialized with required dependencies."""
-        return self._initialized
+        # Connect to View signals
+        self._connect_view_signals()
 
-    # ============================================================================
-    # CONTROLLER LIFECYCLE
-    # ============================================================================
+        # Initialize state from model
+        self._sync_state_from_model()
 
-    def initialize(self, sprite_model: "SpriteModel", sprite_viewer: "SpriteViewer") -> bool:
-        """
-        Initialize controller with Model and View components.
-        Sets up all signal connections and prepares for animation control.
-        Returns success status.
-        """
-        try:
-            # Store component references
-            self._sprite_model = sprite_model
-            self._sprite_viewer = sprite_viewer
-
-            # Connect to Model signals
-            self._connect_model_signals()
-
-            # Connect to View signals
-            self._connect_view_signals()
-
-            # Initialize state from model
-            self._sync_state_from_model()
-
-            self._is_active = True
-            self._initialized = True
-            self.statusChanged.emit("Animation controller initialized")
-            return True
-
-        except Exception as e:
-            self.errorOccurred.emit(f"Failed to initialize controller: {e!s}")
-            return False
+        self.statusChanged.emit("Animation controller initialized")
 
     def shutdown(self) -> None:
         """Clean shutdown of animation controller."""
@@ -208,7 +189,7 @@ class AnimationController(QObject):
             return False
 
         # Check for special float values
-        if isinstance(fps, float) and (fps != fps or fps == float('inf') or fps == float('-inf')):
+        if isinstance(fps, float) and (fps != fps or fps == float("inf") or fps == float("-inf")):
             self.errorOccurred.emit(f"FPS must be a valid number, not {fps}")
             return False
 
@@ -221,7 +202,9 @@ class AnimationController(QObject):
 
         # Validate FPS range
         if not (Config.Animation.MIN_FPS <= fps <= Config.Animation.MAX_FPS):
-            self.errorOccurred.emit(f"FPS must be between {Config.Animation.MIN_FPS} and {Config.Animation.MAX_FPS}")
+            self.errorOccurred.emit(
+                f"FPS must be between {Config.Animation.MIN_FPS} and {Config.Animation.MAX_FPS}"
+            )
             return False
 
         self._current_fps = fps
@@ -351,7 +334,7 @@ class AnimationController(QObject):
         # to controller methods in SpriteViewer._connect_signals()
 
         # Connect to view lifecycle signals if they exist
-        if hasattr(self._sprite_viewer, 'aboutToClose'):
+        if hasattr(self._sprite_viewer, "aboutToClose"):
             self._sprite_viewer.aboutToClose.connect(self._on_view_closing)  # type: ignore[union-attr]
 
         self.statusChanged.emit("View ↔ Controller signal communication established")
@@ -374,7 +357,9 @@ class AnimationController(QObject):
             self.errorOccurred.emit("Invalid FPS in model, reset to default")
 
         # Log successful synchronization
-        self.statusChanged.emit(f"Controller synced: {self._current_fps} FPS, loop {'enabled' if self._loop_enabled else 'disabled'}")
+        self.statusChanged.emit(
+            f"Controller synced: {self._current_fps} FPS, loop {'enabled' if self._loop_enabled else 'disabled'}"
+        )
 
     def _sync_state_to_model(self) -> None:
         """
@@ -416,7 +401,9 @@ class AnimationController(QObject):
         Handle frame extraction completion in model.
         Updates controller state for animation readiness.
         """
-        self.statusChanged.emit(f"Frame extraction completed: {frame_count} frames ready for animation")
+        self.statusChanged.emit(
+            f"Frame extraction completed: {frame_count} frames ready for animation"
+        )
 
         # Validate that we have animatable frames
         if frame_count == 0:
@@ -428,7 +415,9 @@ class AnimationController(QObject):
             if self._is_playing:
                 self.pause_animation()
         else:
-            self.statusChanged.emit(f"Animation ready: {frame_count} frames at {self._current_fps} FPS")
+            self.statusChanged.emit(
+                f"Animation ready: {frame_count} frames at {self._current_fps} FPS"
+            )
 
     def _on_model_frame_changed(self, current_frame: int, total_frames: int) -> None:
         """
@@ -439,7 +428,9 @@ class AnimationController(QObject):
         if self._is_playing and not self._animation_timer.isActive():
             # Timer is not active but we're supposed to be playing - this is manual
             self.pause_animation()
-            self.statusChanged.emit(f"Animation paused - manual frame change to {current_frame + 1}/{total_frames}")
+            self.statusChanged.emit(
+                f"Animation paused - manual frame change to {current_frame + 1}/{total_frames}"
+            )
 
         # Emit frame advanced signal for UI synchronization
         self.frameAdvanced.emit(current_frame)
@@ -498,9 +489,9 @@ class AnimationController(QObject):
             "loop_enabled": self._loop_enabled,
             "timer_interval_ms": self._calculate_timer_interval(),
             "has_model": self._sprite_model is not None,
-            "has_view": self._sprite_viewer is not None
+            "has_view": self._sprite_viewer is not None,
         }
 
 
 # Export for easy importing
-__all__ = ['AnimationController']
+__all__ = ["AnimationController"]

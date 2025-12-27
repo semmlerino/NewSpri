@@ -4,7 +4,6 @@ Maintains complete API compatibility with original implementation.
 Part of Legacy Integration Phase 1: Create integrated SpriteModel structure.
 """
 
-
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QPixmap
 
@@ -39,12 +38,12 @@ class SpriteModel(QObject):
     """
 
     # Qt Signals - must match original exactly
-    frameChanged = Signal(int, int)         # current_frame, total_frames
-    dataLoaded = Signal(str)                # file_path
-    extractionCompleted = Signal(int)       # frame_count
-    playbackStateChanged = Signal(bool)     # is_playing
-    errorOccurred = Signal(str)            # error_message
-    configurationChanged = Signal()         # frame settings changed
+    frameChanged = Signal(int, int)  # current_frame, total_frames
+    dataLoaded = Signal(str)  # file_path
+    extractionCompleted = Signal(int)  # frame_count
+    playbackStateChanged = Signal(bool)  # is_playing
+    errorOccurred = Signal(str)  # error_message
+    configurationChanged = Signal()  # frame settings changed
 
     def __init__(self):
         """Initialize SpriteModel with all refactored modules."""
@@ -157,8 +156,15 @@ class SpriteModel(QObject):
         self._ccl_operations.clear_ccl_data()
 
     # Frame Extraction Methods
-    def extract_frames(self, width: int, height: int, offset_x: int = 0,
-                      offset_y: int = 0, spacing_x: int = 0, spacing_y: int = 0) -> tuple[bool, str, int]:
+    def extract_frames(
+        self,
+        width: int,
+        height: int,
+        offset_x: int = 0,
+        offset_y: int = 0,
+        spacing_x: int = 0,
+        spacing_y: int = 0,
+    ) -> tuple[bool, str, int]:
         """
         Extract frames from sprite sheet using grid-based extraction.
 
@@ -182,7 +188,9 @@ class SpriteModel(QObject):
         self._spacing_y = spacing_y
 
         # Validate settings first
-        valid, msg = self.validate_frame_settings(width, height, offset_x, offset_y, spacing_x, spacing_y)
+        valid, msg = self.validate_frame_settings(
+            width, height, offset_x, offset_y, spacing_x, spacing_y
+        )
         if not valid:
             return False, msg, 0
 
@@ -193,11 +201,11 @@ class SpriteModel(QObject):
             offset_x=offset_x,
             offset_y=offset_y,
             spacing_x=spacing_x,
-            spacing_y=spacing_y
+            spacing_y=spacing_y,
         )
 
         # Extract frames based on current mode
-        if self._ccl_operations.get_extraction_mode() == 'grid':
+        if self._ccl_operations.get_extraction_mode() == "grid":
             if self._original_sprite_sheet is None:
                 return False, "No sprite sheet loaded", 0
 
@@ -208,7 +216,11 @@ class SpriteModel(QObject):
             if success:
                 # Check for zero frames - this indicates settings don't match sprite sheet
                 if len(frames) == 0:
-                    return False, "No frames could be extracted with current settings. Check frame size and offsets.", 0
+                    return (
+                        False,
+                        "No frames could be extracted with current settings. Check frame size and offsets.",
+                        0,
+                    )
 
                 # Modify list in-place to preserve AnimationStateManager reference
                 self._sprite_frames.clear()
@@ -228,8 +240,15 @@ class SpriteModel(QObject):
             # Use CCL extraction instead
             return self.extract_ccl_frames()
 
-    def set_frame_settings(self, width: int, height: int, offset_x: int = 0,
-                         offset_y: int = 0, spacing_x: int = 0, spacing_y: int = 0) -> None:
+    def set_frame_settings(
+        self,
+        width: int,
+        height: int,
+        offset_x: int = 0,
+        offset_y: int = 0,
+        spacing_x: int = 0,
+        spacing_y: int = 0,
+    ) -> None:
         """Set frame extraction parameters without extracting.
 
         This method is for setting parameters only, without triggering extraction.
@@ -251,8 +270,15 @@ class SpriteModel(QObject):
         self._spacing_x = spacing_x
         self._spacing_y = spacing_y
 
-    def validate_frame_settings(self, width: int, height: int, offset_x: int = 0,
-                              offset_y: int = 0, spacing_x: int = 0, spacing_y: int = 0) -> tuple[bool, str]:
+    def validate_frame_settings(
+        self,
+        width: int,
+        height: int,
+        offset_x: int = 0,
+        offset_y: int = 0,
+        spacing_x: int = 0,
+        spacing_y: int = 0,
+    ) -> tuple[bool, str]:
         """Validate frame extraction settings."""
         if not self._original_sprite_sheet:
             return False, "No sprite sheet loaded"
@@ -264,7 +290,7 @@ class SpriteModel(QObject):
             offset_x=offset_x,
             offset_y=offset_y,
             spacing_x=spacing_x,
-            spacing_y=spacing_y
+            spacing_y=spacing_y,
         )
 
         return validate_grid_frame_settings(self._original_sprite_sheet, config)
@@ -286,7 +312,7 @@ class SpriteModel(QObject):
             ccl_available=self.is_ccl_available(),
             detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
             detect_background_color=detect_background_color,
-            emit_extraction_completed=lambda count: self.extractionCompleted.emit(count)
+            emit_extraction_completed=lambda count: self.extractionCompleted.emit(count),
         )
 
         if success:
@@ -307,9 +333,12 @@ class SpriteModel(QObject):
         def extract_grid_callback():
             # Re-extract using current settings
             return self.extract_frames(
-                self._frame_width, self._frame_height,
-                self._offset_x, self._offset_y,
-                self._spacing_x, self._spacing_y
+                self._frame_width,
+                self._frame_height,
+                self._offset_x,
+                self._offset_y,
+                self._spacing_x,
+                self._spacing_y,
             )
 
         # Get sprite sheet, defaulting to empty QPixmap if None
@@ -323,7 +352,7 @@ class SpriteModel(QObject):
             extract_grid_frames_callback=extract_grid_callback,
             detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
             detect_background_color=detect_background_color,
-            emit_extraction_completed=lambda count: self.extractionCompleted.emit(count)
+            emit_extraction_completed=lambda count: self.extractionCompleted.emit(count),
         )
 
         # If CCL mode succeeded, retrieve and store the extracted frames
@@ -340,7 +369,7 @@ class SpriteModel(QObject):
                 self._animation_state.update_frame_count(len(ccl_frames))
 
                 # Update sprite info to include CCL information
-                if hasattr(self, '_sprite_info'):
+                if hasattr(self, "_sprite_info"):
                     self._sprite_info = self._build_sprite_info() + ccl_info
 
                 # Emit extraction completed signal
@@ -371,8 +400,9 @@ class SpriteModel(QObject):
             return False
 
         # Simple heuristic: sheets larger than 100x100
-        return (self._original_sprite_sheet.width() > 100 and
-                self._original_sprite_sheet.height() > 100)
+        return (
+            self._original_sprite_sheet.width() > 100 and self._original_sprite_sheet.height() > 100
+        )
 
     def auto_detect_frame_size(self) -> tuple[bool, int, int, str]:
         """Auto-detect frame size using detect_frame_size function."""
@@ -431,9 +461,7 @@ class SpriteModel(QObject):
             return False, 0, 0, "No sprite sheet loaded"
 
         success, offset_x, offset_y, message = detect_margins(
-            self._original_sprite_sheet,
-            self._frame_width,
-            self._frame_height
+            self._original_sprite_sheet, self._frame_width, self._frame_height
         )
 
         if success:
@@ -456,7 +484,7 @@ class SpriteModel(QObject):
             self._frame_width,
             self._frame_height,
             self._offset_x,
-            self._offset_y
+            self._offset_y,
         )
 
         if success:
@@ -475,23 +503,22 @@ class SpriteModel(QObject):
             return False, "No sprite sheet loaded"
 
         success, message, result = comprehensive_auto_detect(
-            self._original_sprite_sheet,
-            self._sprite_sheet_path
+            self._original_sprite_sheet, self._sprite_sheet_path
         )
 
         if success and result:
             # Update internal state from result
-            if hasattr(result, 'frame_width'):
+            if hasattr(result, "frame_width"):
                 self._frame_width = result.frame_width
-            if hasattr(result, 'frame_height'):
+            if hasattr(result, "frame_height"):
                 self._frame_height = result.frame_height
-            if hasattr(result, 'offset_x'):
+            if hasattr(result, "offset_x"):
                 self._offset_x = result.offset_x
-            if hasattr(result, 'offset_y'):
+            if hasattr(result, "offset_y"):
                 self._offset_y = result.offset_y
-            if hasattr(result, 'spacing_x'):
+            if hasattr(result, "spacing_x"):
                 self._spacing_x = result.spacing_x
-            if hasattr(result, 'spacing_y'):
+            if hasattr(result, "spacing_y"):
                 self._spacing_y = result.spacing_y
 
             self.configurationChanged.emit()
@@ -505,9 +532,12 @@ class SpriteModel(QObject):
 
             try:
                 extract_success, extract_msg, _count = self.extract_frames(
-                    self._frame_width, self._frame_height,
-                    self._offset_x, self._offset_y,
-                    self._spacing_x, self._spacing_y
+                    self._frame_width,
+                    self._frame_height,
+                    self._offset_x,
+                    self._offset_y,
+                    self._spacing_x,
+                    self._spacing_y,
                 )
 
                 if extract_success:
@@ -580,7 +610,9 @@ class SpriteModel(QObject):
         info_parts = []
 
         # Basic info
-        info_parts.append(f"Size: {self._original_sprite_sheet.width()}x{self._original_sprite_sheet.height()}")
+        info_parts.append(
+            f"Size: {self._original_sprite_sheet.width()}x{self._original_sprite_sheet.height()}"
+        )
 
         # Frame info
         if self._sprite_frames:
@@ -590,7 +622,7 @@ class SpriteModel(QObject):
 
         # Extraction mode
         mode = self.get_extraction_mode()
-        if mode == 'ccl':
+        if mode == "ccl":
             info_parts.append("Mode: CCL")
         else:
             info_parts.append("Mode: Grid")
@@ -690,6 +722,7 @@ class SpriteModel(QObject):
     def file_name(self) -> str:
         """Get file name of loaded sprite sheet."""
         import os
+
         return os.path.basename(self._file_path) if self._file_path else ""
 
     # Helper Methods
@@ -697,9 +730,12 @@ class SpriteModel(QObject):
         """Re-extract frames using current settings."""
         if self._frame_width > 0 and self._frame_height > 0:
             self.extract_frames(
-                self._frame_width, self._frame_height,
-                self._offset_x, self._offset_y,
-                self._spacing_x, self._spacing_y
+                self._frame_width,
+                self._frame_height,
+                self._offset_x,
+                self._offset_y,
+                self._spacing_x,
+                self._spacing_y,
             )
 
     def _build_sprite_info(self) -> str:
@@ -708,7 +744,9 @@ class SpriteModel(QObject):
             return ""
 
         info_parts = []
-        info_parts.append(f"Size: {self._original_sprite_sheet.width()}x{self._original_sprite_sheet.height()}")
+        info_parts.append(
+            f"Size: {self._original_sprite_sheet.width()}x{self._original_sprite_sheet.height()}"
+        )
 
         if self._sprite_frames:
             info_parts.append(f"Frames: {len(self._sprite_frames)}")

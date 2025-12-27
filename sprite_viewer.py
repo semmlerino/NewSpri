@@ -26,6 +26,9 @@ from PySide6.QtWidgets import (
 
 from config import Config
 
+# Coordinators
+from coordinators import SignalCoordinator
+
 # Core controllers
 from core import (
     AnimationController,
@@ -87,7 +90,10 @@ def _validate_sprite_file(file_path: str) -> tuple[bool, str]:
     file_size = os.path.getsize(file_path)
     max_size = 100 * 1024 * 1024
     if file_size > max_size:
-        return False, f"File too large: {file_size / (1024 * 1024):.1f}MB (max {max_size / (1024 * 1024)}MB)"
+        return (
+            False,
+            f"File too large: {file_size / (1024 * 1024):.1f}MB (max {max_size / (1024 * 1024)}MB)",
+        )
 
     return True, ""
 
@@ -145,42 +151,40 @@ def _extract_file_from_drop(event: QDropEvent) -> str | None:
 
 SHORTCUTS = {
     # File actions
-    'file_open': ('Ctrl+O', 'Open sprite sheet'),
-    'file_quit': ('Ctrl+Q', 'Quit application'),
-    'file_export_frames': ('Ctrl+E', 'Export frames'),
-    'file_export_current': ('Ctrl+Shift+E', 'Export current frame'),
-
+    "file_open": ("Ctrl+O", "Open sprite sheet"),
+    "file_quit": ("Ctrl+Q", "Quit application"),
+    "file_export_frames": ("Ctrl+E", "Export frames"),
+    "file_export_current": ("Ctrl+Shift+E", "Export current frame"),
     # View actions
-    'view_zoom_in': ('Ctrl++', 'Zoom in'),
-    'view_zoom_out': ('Ctrl+-', 'Zoom out'),
-    'view_zoom_fit': ('Ctrl+0', 'Fit to window'),
-    'view_zoom_reset': ('Ctrl+1', 'Reset zoom (100%)'),
-    'view_toggle_grid': ('G', 'Toggle grid overlay'),
-
+    "view_zoom_in": ("Ctrl++", "Zoom in"),
+    "view_zoom_out": ("Ctrl+-", "Zoom out"),
+    "view_zoom_fit": ("Ctrl+0", "Fit to window"),
+    "view_zoom_reset": ("Ctrl+1", "Reset zoom (100%)"),
+    "view_toggle_grid": ("G", "Toggle grid overlay"),
     # Animation actions
-    'animation_toggle': ('Space', 'Play/Pause animation'),
-    'animation_prev_frame': ('Left', 'Previous frame'),
-    'animation_next_frame': ('Right', 'Next frame'),
-    'animation_first_frame': ('Home', 'First frame'),
-    'animation_last_frame': ('End', 'Last frame'),
-    'animation_restart': ('R', 'Restart animation'),
-    'animation_speed_decrease': ('[', 'Decrease animation speed'),
-    'animation_speed_increase': (']', 'Increase animation speed'),
+    "animation_toggle": ("Space", "Play/Pause animation"),
+    "animation_prev_frame": ("Left", "Previous frame"),
+    "animation_next_frame": ("Right", "Next frame"),
+    "animation_first_frame": ("Home", "First frame"),
+    "animation_last_frame": ("End", "Last frame"),
+    "animation_restart": ("R", "Restart animation"),
+    "animation_speed_decrease": ("[", "Decrease animation speed"),
+    "animation_speed_increase": ("]", "Increase animation speed"),
 }
 
 # Actions that require frames to be loaded
 ACTIONS_REQUIRING_FRAMES = {
-    'file_export_frames',
-    'file_export_current',
-    'animation_toggle',
-    'animation_prev_frame',
-    'animation_next_frame',
-    'animation_first_frame',
-    'animation_last_frame',
-    'animation_restart',
-    'animation_speed_decrease',
-    'animation_speed_increase',
-    'toolbar_export',
+    "file_export_frames",
+    "file_export_current",
+    "animation_toggle",
+    "animation_prev_frame",
+    "animation_next_frame",
+    "animation_first_frame",
+    "animation_last_frame",
+    "animation_restart",
+    "animation_speed_decrease",
+    "animation_speed_increase",
+    "toolbar_export",
 }
 
 
@@ -237,9 +241,18 @@ class SpriteViewer(QMainWindow):
 
         # Set up canvas zoom label connection and grid state
         self._grid_enabled = False
-        self._canvas.zoomChanged.connect(self._on_zoom_changed)
 
-        # Initialize segment controller with all dependencies (must be after UI setup)
+        # Initialize controllers with all dependencies (single-step init)
+        self._animation_controller = AnimationController(
+            sprite_model=self._sprite_model,
+            sprite_viewer=self,
+        )
+
+        self._auto_detection_controller = AutoDetectionController(
+            sprite_model=self._sprite_model,
+            frame_extractor=self._frame_extractor,
+        )
+
         self._segment_controller = AnimationSegmentController(
             segment_manager=self._segment_manager,
             grid_view=self._grid_view,
@@ -249,10 +262,6 @@ class SpriteViewer(QMainWindow):
             parent=self,
         )
 
-        # Connect UI signals to segment controller (deferred from _create_grid_tab)
-        self._refresh_grid_btn.clicked.connect(self._segment_controller.update_grid_view_frames)
-        self._tab_widget.currentChanged.connect(self._segment_controller.on_tab_changed)
-
         # Initialize export coordinator
         self._export_coordinator = ExportCoordinator(
             sprite_model=self._sprite_model,
@@ -260,21 +269,44 @@ class SpriteViewer(QMainWindow):
             parent=self,
         )
 
-        # Connect action callbacks now that all components exist
-        self._connect_action_callbacks()
+        # Connect UI signals to segment controller (deferred from _create_grid_tab)
+        self._refresh_grid_btn.clicked.connect(self._segment_controller.update_grid_view_frames)
+        self._tab_widget.currentChanged.connect(self._segment_controller.on_tab_changed)
 
         # Set up managers with UI components
         self._setup_managers()
 
-        # Connect all signals
-        self._connect_signals()
-
-        # Initialize auto-detection controller after UI setup
-        self._auto_detection_controller.initialize(self._sprite_model, self._frame_extractor)
-
-        # Verify all controllers are properly initialized
-        assert self._animation_controller.is_ready, "AnimationController not initialized"
-        assert self._auto_detection_controller.is_ready, "AutoDetectionController not initialized"
+        # Create signal coordinator and connect all signals
+        self._signal_coordinator = SignalCoordinator(
+            sprite_model=self._sprite_model,
+            animation_controller=self._animation_controller,
+            auto_detection_controller=self._auto_detection_controller,
+            segment_controller=self._segment_controller,
+            canvas=self._canvas,
+            playback_controls=self._playback_controls,
+            frame_extractor=self._frame_extractor,
+            grid_view=self._grid_view,
+            status_manager=self._status_manager,
+            segment_manager=self._segment_manager,
+            actions=self._actions,
+            # Handler callbacks
+            on_frame_changed=self._on_frame_changed,
+            on_sprite_loaded=self._on_sprite_loaded,
+            on_extraction_completed=self._on_extraction_completed,
+            on_playback_started=self._on_playback_started,
+            on_playback_paused=self._on_playback_paused,
+            on_playback_stopped=self._on_playback_stopped,
+            on_playback_completed=self._on_playback_completed,
+            on_animation_error=self._on_animation_error,
+            on_frame_settings_detected=self._on_frame_settings_detected,
+            on_extraction_mode_changed=self._on_extraction_mode_changed,
+            on_update_frame_slicing=self._update_frame_slicing,
+            on_grid_frame_preview=self._on_grid_frame_preview,
+            on_export_frames_requested=self._on_export_frames_requested,
+            on_export_current_frame_requested=self._on_export_current_frame_requested,
+            on_zoom_changed=self._on_zoom_changed,
+        )
+        self._signal_coordinator.connect_all()
 
         # Apply settings and show welcome
         self._apply_settings()
@@ -291,15 +323,12 @@ class SpriteViewer(QMainWindow):
         self._shortcut_to_action: dict[str, str] = {}  # Key sequence -> action_id
 
     def _init_core_components(self):
-        """Initialize core MVC components."""
-        # Model layer
+        """Initialize core MVC components (model only - controllers need UI)."""
+        # Model layer (no dependencies)
         self._sprite_model = SpriteModel()
 
-        # Controller layer
-        self._animation_controller = AnimationController()
-        self._animation_controller.initialize(self._sprite_model, self)
-
-        self._auto_detection_controller = AutoDetectionController()
+        # Animation splitting components
+        self._segment_manager = AnimationSegmentManager()
 
         # Recent files manager setup - handle clicks on recent file menu items
         self._recent_files = get_recent_files_manager()
@@ -309,12 +338,12 @@ class SpriteViewer(QMainWindow):
 
         self._recent_files.set_file_open_callback(_on_recent_file)
 
-        # Animation splitting components
-        self._segment_manager = AnimationSegmentManager()
-        self._grid_view = None  # Will be initialized in UI setup
-
-        # Status management will be initialized after status bar is created
+        # Placeholders - will be initialized after UI setup
+        self._grid_view = None
         self._status_manager = None
+        self._animation_controller = None
+        self._auto_detection_controller = None
+        self._signal_coordinator = None
 
     def _setup_window(self):
         """Set up main window properties."""
@@ -325,54 +354,56 @@ class SpriteViewer(QMainWindow):
     def _setup_actions(self):
         """Create all QActions with shortcuts and callbacks."""
         # File actions
-        self._create_action('file_open', '📁 Open...', self._load_sprites)
-        self._create_action('file_quit', 'Quit', self.close)
-        self._create_action('file_export_frames', 'Export Frames...', None, requires_frames=True)
-        self._create_action('file_export_current', 'Export Current Frame...', None, requires_frames=True)
+        self._create_action("file_open", "📁 Open...", self._load_sprites)
+        self._create_action("file_quit", "Quit", self.close)
+        self._create_action("file_export_frames", "Export Frames...", None, requires_frames=True)
+        self._create_action(
+            "file_export_current", "Export Current Frame...", None, requires_frames=True
+        )
 
         # View actions (callbacks connected later after canvas is created)
-        self._create_action('view_zoom_in', '🔍+ Zoom In', self._zoom_in)
-        self._create_action('view_zoom_out', '🔍- Zoom Out', self._zoom_out)
-        self._create_action('view_zoom_fit', '🔍⇄ Fit to Window', None)
-        self._create_action('view_zoom_reset', '🔍1:1 Reset Zoom', None)
-        self._create_action('view_toggle_grid', 'Toggle Grid', self._toggle_grid)
+        self._create_action("view_zoom_in", "🔍+ Zoom In", self._zoom_in)
+        self._create_action("view_zoom_out", "🔍- Zoom Out", self._zoom_out)
+        self._create_action("view_zoom_fit", "🔍⇄ Fit to Window", None)
+        self._create_action("view_zoom_reset", "🔍1:1 Reset Zoom", None)
+        self._create_action("view_toggle_grid", "Toggle Grid", self._toggle_grid)
 
         # Animation actions (some callbacks connected later)
-        self._create_action('animation_toggle', 'Play/Pause', None, requires_frames=True)
-        self._create_action('animation_prev_frame', 'Previous Frame', None, requires_frames=True)
-        self._create_action('animation_next_frame', 'Next Frame', None, requires_frames=True)
-        self._create_action('animation_first_frame', 'First Frame', None, requires_frames=True)
-        self._create_action('animation_last_frame', 'Last Frame', None, requires_frames=True)
-        self._create_action('animation_restart', 'Restart Animation', self._restart_animation, requires_frames=True)
-        self._create_action('animation_speed_decrease', 'Decrease Speed', self._decrease_animation_speed, requires_frames=True)
-        self._create_action('animation_speed_increase', 'Increase Speed', self._increase_animation_speed, requires_frames=True)
+        self._create_action("animation_toggle", "Play/Pause", None, requires_frames=True)
+        self._create_action("animation_prev_frame", "Previous Frame", None, requires_frames=True)
+        self._create_action("animation_next_frame", "Next Frame", None, requires_frames=True)
+        self._create_action("animation_first_frame", "First Frame", None, requires_frames=True)
+        self._create_action("animation_last_frame", "Last Frame", None, requires_frames=True)
+        self._create_action(
+            "animation_restart", "Restart Animation", self._restart_animation, requires_frames=True
+        )
+        self._create_action(
+            "animation_speed_decrease",
+            "Decrease Speed",
+            self._decrease_animation_speed,
+            requires_frames=True,
+        )
+        self._create_action(
+            "animation_speed_increase",
+            "Increase Speed",
+            self._increase_animation_speed,
+            requires_frames=True,
+        )
 
         # Toolbar actions
-        self._create_action('toolbar_export', '💾 Export', None, requires_frames=True)
+        self._create_action("toolbar_export", "💾 Export", None, requires_frames=True)
 
         # Help actions
-        self._create_action('help_shortcuts', 'Keyboard Shortcuts', self._show_shortcuts)
-        self._create_action('help_about', 'About', self._show_about)
+        self._create_action("help_shortcuts", "Keyboard Shortcuts", self._show_shortcuts)
+        self._create_action("help_about", "About", self._show_about)
 
-    def _connect_action_callbacks(self):
-        """Connect callbacks that depend on components created after actions."""
-        # Export callbacks (direct handling, no coordinator)
-        self._actions['file_export_frames'].triggered.connect(self._on_export_frames_requested)
-        self._actions['file_export_current'].triggered.connect(self._on_export_current_frame_requested)
-        self._actions['toolbar_export'].triggered.connect(self._on_export_frames_requested)
-
-        # View callbacks (need canvas)
-        self._actions['view_zoom_fit'].triggered.connect(self._canvas.fit_to_window)
-        self._actions['view_zoom_reset'].triggered.connect(self._canvas.reset_view)
-
-        # Animation callbacks (need animation_controller and sprite_model)
-        self._actions['animation_toggle'].triggered.connect(self._animation_controller.toggle_playback)
-        self._actions['animation_prev_frame'].triggered.connect(self._sprite_model.previous_frame)
-        self._actions['animation_next_frame'].triggered.connect(self._sprite_model.next_frame)
-        self._actions['animation_first_frame'].triggered.connect(self._sprite_model.first_frame)
-        self._actions['animation_last_frame'].triggered.connect(self._sprite_model.last_frame)
-
-    def _create_action(self, action_id: str, text: str, callback: Callable[..., object] | None, requires_frames: bool = False):
+    def _create_action(
+        self,
+        action_id: str,
+        text: str,
+        callback: Callable[..., object] | None,
+        requires_frames: bool = False,
+    ):
         """
         Create a QAction with shortcut and callback.
 
@@ -410,35 +441,35 @@ class SpriteViewer(QMainWindow):
         menubar = self.menuBar()
 
         # File menu
-        file_menu = menubar.addMenu('File')
-        file_menu.addAction(self._actions['file_open'])
+        file_menu = menubar.addMenu("File")
+        file_menu.addAction(self._actions["file_open"])
 
         # Recent files submenu
-        self._recent_files_menu = file_menu.addMenu('Recent Files')
-        self._recent_files_menu.setToolTip('Recently opened sprite sheets')
+        self._recent_files_menu = file_menu.addMenu("Recent Files")
+        self._recent_files_menu.setToolTip("Recently opened sprite sheets")
         self._recent_files_menu.aboutToShow.connect(self._update_recent_files_menu)
         self._update_recent_files_menu()  # Initial population
 
         file_menu.addSeparator()
-        file_menu.addAction(self._actions['file_export_frames'])
-        file_menu.addAction(self._actions['file_export_current'])
+        file_menu.addAction(self._actions["file_export_frames"])
+        file_menu.addAction(self._actions["file_export_current"])
         file_menu.addSeparator()
-        file_menu.addAction(self._actions['file_quit'])
+        file_menu.addAction(self._actions["file_quit"])
 
         # View menu
-        view_menu = menubar.addMenu('View')
-        view_menu.addAction(self._actions['view_zoom_in'])
-        view_menu.addAction(self._actions['view_zoom_out'])
-        view_menu.addAction(self._actions['view_zoom_fit'])
-        view_menu.addAction(self._actions['view_zoom_reset'])
+        view_menu = menubar.addMenu("View")
+        view_menu.addAction(self._actions["view_zoom_in"])
+        view_menu.addAction(self._actions["view_zoom_out"])
+        view_menu.addAction(self._actions["view_zoom_fit"])
+        view_menu.addAction(self._actions["view_zoom_reset"])
         view_menu.addSeparator()
-        view_menu.addAction(self._actions['view_toggle_grid'])
+        view_menu.addAction(self._actions["view_toggle_grid"])
 
         # Help menu
-        help_menu = menubar.addMenu('Help')
-        help_menu.addAction(self._actions['help_shortcuts'])
+        help_menu = menubar.addMenu("Help")
+        help_menu.addAction(self._actions["help_shortcuts"])
         help_menu.addSeparator()
-        help_menu.addAction(self._actions['help_about'])
+        help_menu.addAction(self._actions["help_about"])
 
     def _update_recent_files_menu(self):
         """Update recent files menu content."""
@@ -447,14 +478,14 @@ class SpriteViewer(QMainWindow):
 
     def _setup_toolbar(self):
         """Create main toolbar."""
-        self._main_toolbar = self.addToolBar('Main Toolbar')
+        self._main_toolbar = self.addToolBar("Main Toolbar")
         self._main_toolbar.setMovable(False)
         self._main_toolbar.setStyleSheet(Config.Styles.MAIN_TOOLBAR)
 
         # Add toolbar actions
-        self._main_toolbar.addAction(self._actions['file_open'])
+        self._main_toolbar.addAction(self._actions["file_open"])
         self._main_toolbar.addSeparator()
-        self._main_toolbar.addAction(self._actions['toolbar_export'])
+        self._main_toolbar.addAction(self._actions["toolbar_export"])
 
         # Add zoom display widget
         self._main_toolbar.addSeparator()
@@ -598,69 +629,6 @@ class SpriteViewer(QMainWindow):
         # Update action states based on initial context
         self._update_has_frames_actions()
 
-
-
-
-
-
-
-
-
-    def _connect_signals(self):
-        """Connect signals between components."""
-        # Sprite model signals
-        self._sprite_model.frameChanged.connect(self._on_frame_changed)
-        self._sprite_model.dataLoaded.connect(self._on_sprite_loaded)
-        self._sprite_model.extractionCompleted.connect(self._on_extraction_completed)
-
-        # Animation controller signals - inline handlers
-        self._animation_controller.animationStarted.connect(self._on_playback_started)
-        self._animation_controller.animationPaused.connect(self._on_playback_paused)
-        self._animation_controller.animationStopped.connect(self._on_playback_stopped)
-        self._animation_controller.animationCompleted.connect(self._on_playback_completed)
-        self._animation_controller.frameAdvanced.connect(lambda frame_index: None)  # Handled by sprite model
-        self._animation_controller.errorOccurred.connect(self._on_animation_error)
-        if self._status_manager is not None:
-            self._animation_controller.statusChanged.connect(self._status_manager.show_message)
-
-        # Auto-detection controller signals
-        self._auto_detection_controller.frameSettingsDetected.connect(self._on_frame_settings_detected)
-        if self._status_manager is not None:
-            self._auto_detection_controller.statusUpdate.connect(self._status_manager.show_message)
-
-        # Canvas signals (zoom connected in __init__)
-        if self._status_manager is not None:
-            self._canvas.mouseMoved.connect(self._status_manager.update_mouse_position)
-
-        # Frame extractor signals
-        self._frame_extractor.settingsChanged.connect(self._update_frame_slicing)
-        self._frame_extractor.modeChanged.connect(self._on_extraction_mode_changed)
-
-        # Playback controls signals - direct connections
-        self._playback_controls.playPauseClicked.connect(self._animation_controller.toggle_playback)
-        self._playback_controls.frameChanged.connect(self._sprite_model.set_current_frame)
-        self._playback_controls.fpsChanged.connect(self._animation_controller.set_fps)
-        self._playback_controls.loopToggled.connect(self._animation_controller.set_loop_mode)
-
-        # Navigation button signals - direct model calls
-        self._playback_controls.prevFrameClicked.connect(self._sprite_model.previous_frame)
-        self._playback_controls.nextFrameClicked.connect(self._sprite_model.next_frame)
-
-        # Grid view signals
-        if self._grid_view:
-            self._grid_view.frameSelected.connect(
-                lambda idx: self._status_manager.show_message(f"Selected frame {idx}") if self._status_manager else None
-            )
-            self._grid_view.framePreviewRequested.connect(self._on_grid_frame_preview)
-            self._grid_view.segmentCreated.connect(self._segment_controller.create_segment)
-            self._grid_view.segmentDeleted.connect(self._segment_controller.delete_segment)
-            self._grid_view.segmentRenamed.connect(self._segment_controller.rename_segment)
-            self._grid_view.segmentSelected.connect(self._segment_controller.select_segment)
-            self._grid_view.segmentPreviewRequested.connect(self._segment_controller.preview_segment)
-            self._grid_view.exportRequested.connect(
-                lambda segment: self._segment_controller.export_segment(segment, self)
-            )
-
     def _apply_settings(self):
         """Apply saved settings."""
         # Restore window geometry
@@ -675,7 +643,6 @@ class SpriteViewer(QMainWindow):
             if action_id in self._actions:
                 self._actions[action_id].setEnabled(has_frames)
 
-
     # ============================================================================
     # FILE OPERATIONS
     # ============================================================================
@@ -683,10 +650,7 @@ class SpriteViewer(QMainWindow):
     def _load_sprites(self):
         """Show file dialog and load selected sprite sheet."""
         file_path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Open Sprite Sheet",
-            "",
-            Config.File.IMAGE_FILTER
+            self, "Open Sprite Sheet", "", Config.File.IMAGE_FILTER
         )
         if file_path:
             self._load_sprite_file(file_path)
@@ -718,9 +682,10 @@ class SpriteViewer(QMainWindow):
             existing_segments = self._segment_manager.get_all_segments()
             if existing_segments:
                 reply = QMessageBox.question(
-                    self, "Clear Segments?",
+                    self,
+                    "Clear Segments?",
                     f"Loading a new sprite will clear {len(existing_segments)} existing segment(s).\n\nContinue?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 )
                 if reply != QMessageBox.StandardButton.Yes:
                     return False
@@ -755,7 +720,8 @@ class SpriteViewer(QMainWindow):
             QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
             QApplication.processEvents()
             try:
-                self._auto_detection_controller.run_comprehensive_detection_with_dialog()
+                if self._auto_detection_controller:
+                    self._auto_detection_controller.run_comprehensive_detection_with_dialog()
             finally:
                 QApplication.restoreOverrideCursor()
 
@@ -799,6 +765,8 @@ class SpriteViewer(QMainWindow):
 
     def _decrease_animation_speed(self):
         """Decrease animation speed by one step."""
+        if not self._animation_controller:
+            return
         current_fps = self._animation_controller.current_fps
         speed_steps = Config.Animation.SPEED_STEPS
         for i in range(len(speed_steps) - 1, -1, -1):
@@ -810,6 +778,8 @@ class SpriteViewer(QMainWindow):
 
     def _increase_animation_speed(self):
         """Increase animation speed by one step."""
+        if not self._animation_controller:
+            return
         current_fps = self._animation_controller.current_fps
         speed_steps = Config.Animation.SPEED_STEPS
         for i in range(len(speed_steps)):
@@ -925,12 +895,10 @@ class SpriteViewer(QMainWindow):
         if pixmap and not pixmap.isNull():
             self._canvas.set_pixmap(pixmap, auto_fit=False)
 
-
     def _on_frame_settings_detected(self, width: int, height: int):
         """Handle frame settings detected."""
         self._frame_extractor.set_frame_size(width, height)
         self._update_frame_slicing()
-
 
     def _on_extraction_mode_changed(self, mode: str):
         """Handle extraction mode change (grid vs CCL)."""
@@ -1001,7 +969,6 @@ class SpriteViewer(QMainWindow):
     # HELP DIALOGS
     # ============================================================================
 
-
     def _show_welcome_message(self):
         """Show welcome message."""
         self._info_label.setText("Ready - Drag and drop a sprite sheet or use File > Open")
@@ -1053,12 +1020,23 @@ class SpriteViewer(QMainWindow):
 
         # Organize shortcuts by category
         categories = {
-            'File': ['file_open', 'file_export_frames', 'file_export_current', 'file_quit'],
-            'View': ['view_zoom_in', 'view_zoom_out', 'view_zoom_fit', 'view_zoom_reset', 'view_toggle_grid'],
-            'Animation': [
-                'animation_toggle', 'animation_prev_frame', 'animation_next_frame',
-                'animation_first_frame', 'animation_last_frame', 'animation_restart',
-                'animation_speed_decrease', 'animation_speed_increase'
+            "File": ["file_open", "file_export_frames", "file_export_current", "file_quit"],
+            "View": [
+                "view_zoom_in",
+                "view_zoom_out",
+                "view_zoom_fit",
+                "view_zoom_reset",
+                "view_toggle_grid",
+            ],
+            "Animation": [
+                "animation_toggle",
+                "animation_prev_frame",
+                "animation_next_frame",
+                "animation_first_frame",
+                "animation_last_frame",
+                "animation_restart",
+                "animation_speed_decrease",
+                "animation_speed_increase",
             ],
         }
 
@@ -1112,7 +1090,9 @@ class SpriteViewer(QMainWindow):
         modifiers = event.modifiers()
 
         # Build key sequence using Qt's built-in functionality
-        q_key_sequence = QKeySequence(key | modifiers.value if hasattr(modifiers, 'value') else int(modifiers))
+        q_key_sequence = QKeySequence(
+            key | modifiers.value if hasattr(modifiers, "value") else int(modifiers)
+        )
         key_sequence_str = q_key_sequence.toString()
 
         # For special keys not handled well by QKeySequence, use our mapping
@@ -1175,7 +1155,6 @@ class SpriteViewer(QMainWindow):
                     return True
         return False
 
-
     # ============================================================================
     # EXPORT OPERATIONS
     # ============================================================================
@@ -1215,8 +1194,13 @@ class SpriteViewer(QMainWindow):
         # Save settings
         self._settings_manager.save_window_geometry(self)
 
+        # Clean up signal coordinator
+        if self._signal_coordinator:
+            self._signal_coordinator.disconnect_all()
+
         # Clean up controllers
-        self._animation_controller.shutdown()
+        if self._animation_controller:
+            self._animation_controller.shutdown()
 
         # Force settings sync to ensure all pending changes are saved
         self._settings_manager.sync()

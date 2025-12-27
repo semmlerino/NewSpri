@@ -153,15 +153,19 @@ class TestInvalidDataHandling:
     def test_animation_controller_invalid_fps(self):
         """Test animation controller with invalid FPS values."""
         from core import AnimationController
-        
-        controller = AnimationController()
-        
-        # Mock the sprite model and animation
+
+        # Mock the sprite model with required properties
         mock_model = Mock()
         mock_animation = Mock()
         mock_model.sprite_animation = mock_animation
-        
-        controller.initialize(mock_model, Mock())
+        mock_model.fps = 30
+        mock_model.loop_enabled = True
+
+        # Initialize controller (single-step constructor DI)
+        controller = AnimationController(
+            sprite_model=mock_model,
+            sprite_viewer=Mock(),
+        )
         
         # Set initial valid FPS
         controller._current_fps = 30
@@ -388,9 +392,7 @@ class TestRecoveryScenarios:
     def test_animation_controller_recovery(self):
         """Test animation controller recovery after errors."""
         from core import AnimationController
-        
-        controller = AnimationController()
-        
+
         # Create a proper mock with frames that will be recognized
         model = Mock()
         model.sprite_animation = Mock()
@@ -399,15 +401,18 @@ class TestRecoveryScenarios:
         model.sprite_frames = frames
         # Configure the mock to return proper boolean for empty check
         model.configure_mock(**{'sprite_frames': frames})
-        
+
         # Add required model properties
         model.fps = 30
         model.loop_enabled = True
         model.set_fps = Mock(return_value=True)
         model.set_loop_enabled = Mock(return_value=True)
-        
-        # Initialize properly
-        controller.initialize(model, Mock())
+
+        # Initialize controller (single-step constructor DI)
+        controller = AnimationController(
+            sprite_model=model,
+            sprite_viewer=Mock(),
+        )
         
         # Start with working state
         model.next_frame.return_value = (1, True)

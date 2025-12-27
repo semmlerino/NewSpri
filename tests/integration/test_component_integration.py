@@ -117,11 +117,20 @@ class TestModelViewControllerIntegration:
     @pytest.mark.integration
     def test_controller_coordination(self, qtbot):
         """Test coordination between different controllers."""
+        from unittest.mock import Mock
+
         model = SpriteModel()
-        animation_controller = AnimationController()
-        animation_controller.initialize(model, None)
-        detection_controller = AutoDetectionController()
-        detection_controller.initialize(model, None)
+        mock_viewer = Mock()
+        mock_extractor = Mock()
+
+        animation_controller = AnimationController(
+            sprite_model=model,
+            sprite_viewer=mock_viewer,
+        )
+        detection_controller = AutoDetectionController(
+            sprite_model=model,
+            frame_extractor=mock_extractor,
+        )
         
         # Create a sprite sheet with 16 frames (4x4 grid)
         # Add gaps between sprites for CCL compatibility
@@ -182,7 +191,7 @@ class TestModelViewControllerIntegration:
         # Auto-detection should have run when sprite was loaded
         # Just verify the controller was initialized properly
         assert detection_controller._sprite_model == model
-        assert detection_controller._frame_extractor is None  # Not set in this test
+        assert detection_controller._frame_extractor == mock_extractor
     
     @pytest.mark.integration
     def test_signal_propagation_chain(self, qtbot):
@@ -387,16 +396,21 @@ class TestUIComponentIntegration:
     @pytest.mark.integration
     def test_canvas_playback_integration(self, qtbot):
         """Test canvas and playback controls work together."""
+        from unittest.mock import Mock
+
         model = SpriteModel()
         canvas = SpriteCanvas()
         playback = PlaybackControls()
-        controller = AnimationController()
 
         qtbot.addWidget(canvas)
         qtbot.addWidget(playback)
 
-        # Initialize controller with model (current API)
-        controller.initialize(model, None)
+        # Initialize controller with model (single-step constructor DI)
+        mock_viewer = Mock()
+        controller = AnimationController(
+            sprite_model=model,
+            sprite_viewer=mock_viewer,
+        )
 
         # Connect components using current signal names
         model.frameChanged.connect(lambda idx, count: canvas.update())

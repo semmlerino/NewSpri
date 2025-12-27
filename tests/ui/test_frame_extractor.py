@@ -165,10 +165,10 @@ class TestFrameExtractorModeHandling:
         widget.set_extraction_mode("grid")
         assert "Grid mode active" in widget.mode_status.text()
         
-        # CCL mode status
+        # CCL mode status (UI shows "Auto-detect" for user-friendliness)
         widget.set_ccl_available(True)
         widget.set_extraction_mode("ccl")
-        assert "CCL mode active" in widget.mode_status.text()
+        assert "Auto-detect active" in widget.mode_status.text()
 
 
 class TestFrameExtractorPresetHandling:

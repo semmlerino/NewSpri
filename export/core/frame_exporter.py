@@ -22,13 +22,13 @@ logger = logging.getLogger(__name__)
 class SpriteSheetLayout:
     """Configuration for sprite sheet layout and spacing."""
 
-    mode: str = Config.Export.DEFAULT_LAYOUT_MODE              # Layout calculation mode
-    spacing: int = Config.Export.DEFAULT_SPRITE_SPACING        # Pixels between sprites
-    padding: int = Config.Export.DEFAULT_SHEET_PADDING         # Padding around sheet
-    max_columns: int | None = None                           # Max columns (rows mode)
-    max_rows: int | None = None                              # Max rows (columns mode)
-    custom_columns: int | None = None                        # Custom grid columns
-    custom_rows: int | None = None                           # Custom grid rows
+    mode: str = Config.Export.DEFAULT_LAYOUT_MODE  # Layout calculation mode
+    spacing: int = Config.Export.DEFAULT_SPRITE_SPACING  # Pixels between sprites
+    padding: int = Config.Export.DEFAULT_SHEET_PADDING  # Padding around sheet
+    max_columns: int | None = None  # Max columns (rows mode)
+    max_rows: int | None = None  # Max rows (columns mode)
+    custom_columns: int | None = None  # Custom grid columns
+    custom_rows: int | None = None  # Custom grid rows
     background_mode: str = Config.Export.DEFAULT_BACKGROUND_MODE
     background_color: tuple[int, int, int, int] = Config.Export.DEFAULT_BACKGROUND_COLOR
 
@@ -39,35 +39,57 @@ class SpriteSheetLayout:
             raise ValueError(f"Invalid layout mode: {self.mode}")
 
         # Validate spacing
-        if not (Config.Export.MIN_SPRITE_SPACING <= self.spacing <= Config.Export.MAX_SPRITE_SPACING):
-            raise ValueError(f"Spacing must be between {Config.Export.MIN_SPRITE_SPACING} and {Config.Export.MAX_SPRITE_SPACING}")
+        if not (
+            Config.Export.MIN_SPRITE_SPACING <= self.spacing <= Config.Export.MAX_SPRITE_SPACING
+        ):
+            raise ValueError(
+                f"Spacing must be between {Config.Export.MIN_SPRITE_SPACING} and {Config.Export.MAX_SPRITE_SPACING}"
+            )
 
         # Validate padding
         if not (Config.Export.MIN_SHEET_PADDING <= self.padding <= Config.Export.MAX_SHEET_PADDING):
-            raise ValueError(f"Padding must be between {Config.Export.MIN_SHEET_PADDING} and {Config.Export.MAX_SHEET_PADDING}")
+            raise ValueError(
+                f"Padding must be between {Config.Export.MIN_SHEET_PADDING} and {Config.Export.MAX_SHEET_PADDING}"
+            )
 
         # Validate grid constraints
-        if self.max_columns is not None and not (Config.Export.MIN_GRID_SIZE <= self.max_columns <= Config.Export.MAX_GRID_SIZE):
-            raise ValueError(f"Max columns must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}")
+        if self.max_columns is not None and not (
+            Config.Export.MIN_GRID_SIZE <= self.max_columns <= Config.Export.MAX_GRID_SIZE
+        ):
+            raise ValueError(
+                f"Max columns must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}"
+            )
 
-        if self.max_rows is not None and not (Config.Export.MIN_GRID_SIZE <= self.max_rows <= Config.Export.MAX_GRID_SIZE):
-            raise ValueError(f"Max rows must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}")
+        if self.max_rows is not None and not (
+            Config.Export.MIN_GRID_SIZE <= self.max_rows <= Config.Export.MAX_GRID_SIZE
+        ):
+            raise ValueError(
+                f"Max rows must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}"
+            )
 
         # Validate custom grid (for custom mode)
-        if self.mode == 'custom':
+        if self.mode == "custom":
             if self.custom_columns is None or self.custom_rows is None:
                 raise ValueError("Custom mode requires both custom_columns and custom_rows")
-            if not (Config.Export.MIN_GRID_SIZE <= self.custom_columns <= Config.Export.MAX_GRID_SIZE):
-                raise ValueError(f"Custom columns must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}")
+            if not (
+                Config.Export.MIN_GRID_SIZE <= self.custom_columns <= Config.Export.MAX_GRID_SIZE
+            ):
+                raise ValueError(
+                    f"Custom columns must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}"
+                )
             if not (Config.Export.MIN_GRID_SIZE <= self.custom_rows <= Config.Export.MAX_GRID_SIZE):
-                raise ValueError(f"Custom rows must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}")
+                raise ValueError(
+                    f"Custom rows must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}"
+                )
 
         # Validate background mode
         if self.background_mode not in Config.Export.BACKGROUND_MODES:
             raise ValueError(f"Invalid background mode: {self.background_mode}")
 
         # Validate background color (RGBA tuple)
-        if not (isinstance(self.background_color, (tuple, list)) and len(self.background_color) == 4):
+        if not (
+            isinstance(self.background_color, (tuple, list)) and len(self.background_color) == 4
+        ):
             raise ValueError("Background color must be an RGBA tuple with 4 values")
         for value in self.background_color:
             if not (0 <= value <= 255):
@@ -75,35 +97,37 @@ class SpriteSheetLayout:
 
     def get_effective_columns(self, frame_count: int) -> int | None:
         """Get effective max columns for layout calculation."""
-        if self.mode == 'custom':
+        if self.mode == "custom":
             return self.custom_columns
-        elif self.mode == 'rows':
+        elif self.mode == "rows":
             return self.max_columns or Config.Export.DEFAULT_MAX_COLUMNS
         return None
 
     def get_effective_rows(self, frame_count: int) -> int | None:
         """Get effective max rows for layout calculation."""
-        if self.mode == 'custom':
+        if self.mode == "custom":
             return self.custom_rows
-        elif self.mode == 'columns':
+        elif self.mode == "columns":
             return self.max_rows or Config.Export.DEFAULT_MAX_ROWS
         return None
 
-    def calculate_estimated_dimensions(self, frame_width: int, frame_height: int, frame_count: int) -> tuple[int, int]:
+    def calculate_estimated_dimensions(
+        self, frame_width: int, frame_height: int, frame_count: int
+    ) -> tuple[int, int]:
         """Estimate sprite sheet dimensions with current layout settings."""
         import math
 
-        if self.mode == 'custom':
+        if self.mode == "custom":
             # custom_columns and custom_rows validated in __post_init__
             assert self.custom_columns is not None
             assert self.custom_rows is not None
             cols = self.custom_columns
             rows = self.custom_rows
-        elif self.mode == 'rows':
+        elif self.mode == "rows":
             max_cols = self.max_columns or Config.Export.DEFAULT_MAX_COLUMNS
             cols = min(max_cols, frame_count)
             rows = math.ceil(frame_count / cols)
-        elif self.mode == 'columns':
+        elif self.mode == "columns":
             max_rows = self.max_rows or Config.Export.DEFAULT_MAX_ROWS
             rows = min(max_rows, frame_count)
             cols = math.ceil(frame_count / rows)
@@ -120,6 +144,7 @@ class SpriteSheetLayout:
 
 class ExportFormat(Enum):
     """Supported export formats."""
+
     PNG = "PNG"
     JPG = "JPG"
     BMP = "BMP"
@@ -130,13 +155,14 @@ class ExportFormat(Enum):
         return f".{self.value.lower()}"
 
     @classmethod
-    def from_string(cls, format_str: str) -> 'ExportFormat':
+    def from_string(cls, format_str: str) -> "ExportFormat":
         """Create from string representation."""
         return cls(format_str.upper())
 
 
 class ExportMode(Enum):
     """Export modes available."""
+
     INDIVIDUAL_FRAMES = "individual"
     SPRITE_SHEET = "sheet"
 
@@ -144,17 +170,19 @@ class ExportMode(Enum):
 class ExportTask:
     """Represents a single export task."""
 
-    def __init__(self,
-                 frames: list[QImage],
-                 output_dir: Path,
-                 base_name: str,
-                 format: ExportFormat,
-                 mode: ExportMode,
-                 scale_factor: float = 1.0,
-                 pattern: str = "{name}_{index:03d}",
-                 selected_indices: list[int] | None = None,
-                 sprite_sheet_layout: SpriteSheetLayout | None = None,
-                 segment_info: list[dict[str, Any]] | None = None):
+    def __init__(
+        self,
+        frames: list[QImage],
+        output_dir: Path,
+        base_name: str,
+        format: ExportFormat,
+        mode: ExportMode,
+        scale_factor: float = 1.0,
+        pattern: str = "{name}_{index:03d}",
+        selected_indices: list[int] | None = None,
+        sprite_sheet_layout: SpriteSheetLayout | None = None,
+        segment_info: list[dict[str, Any]] | None = None,
+    ):
         """
         Initialize export task.
 
@@ -233,14 +261,14 @@ class ExportWorker(QThread):
         if not self.task.segment_info:
             return False, "No segment data for segments_per_row mode"
 
-        required_keys = {'start_frame', 'end_frame', 'name'}
+        required_keys = {"start_frame", "end_frame", "name"}
         for i, seg in enumerate(self.task.segment_info):
             missing = required_keys - seg.keys()
             if missing:
                 return False, f"Segment {i} missing required keys: {missing}"
-            if not isinstance(seg['start_frame'], int) or not isinstance(seg['end_frame'], int):
+            if not isinstance(seg["start_frame"], int) or not isinstance(seg["end_frame"], int):
                 return False, f"Segment {i} has invalid frame indices"
-            if seg['end_frame'] < seg['start_frame']:
+            if seg["end_frame"] < seg["start_frame"]:
                 return False, f"Segment {i} has end_frame < start_frame"
         return True, ""
 
@@ -256,11 +284,10 @@ class ExportWorker(QThread):
                 return
 
             # Generate filename
-            filename = self.task.pattern.format(
-                name=self.task.base_name,
-                index=i,
-                frame=i + 1
-            ) + self.task.format.extension
+            filename = (
+                self.task.pattern.format(name=self.task.base_name, index=i, frame=i + 1)
+                + self.task.format.extension
+            )
 
             filepath = self.task.output_dir / filename
 
@@ -283,14 +310,10 @@ class ExportWorker(QThread):
                 failed_summary += f" (and {len(failed_frames) - 3} more)"
             self.finished.emit(
                 False,
-                f"Export failed: {len(failed_frames)} of {total_frames} frames failed ({failed_summary})"
+                f"Export failed: {len(failed_frames)} of {total_frames} frames failed ({failed_summary})",
             )
         else:
-            self.finished.emit(
-                True,
-                f"Successfully exported {exported_count} frames"
-            )
-
+            self.finished.emit(True, f"Successfully exported {exported_count} frames")
 
     def _export_sprite_sheet(self):
         """Export all frames as a single sprite sheet with enhanced layout options."""
@@ -305,7 +328,7 @@ class ExportWorker(QThread):
         frame_count = len(self.task.frames)
 
         # Validate segment_info for segments_per_row mode
-        if layout.mode == 'segments_per_row':
+        if layout.mode == "segments_per_row":
             is_valid, error_msg = self._validate_segment_info()
             if not is_valid:
                 self.finished.emit(False, error_msg)
@@ -329,7 +352,7 @@ class ExportWorker(QThread):
         self.progress.emit(1, 3, f"Creating sprite sheet ({cols}x{rows})...")
 
         # Calculate sprite sheet dimensions with spacing and padding
-        if layout.mode == 'segments_per_row' and self.task.segment_info:
+        if layout.mode == "segments_per_row" and self.task.segment_info:
             # For segments per row, calculate dimensions based on actual segment layouts
             sheet_width, sheet_height = self._calculate_segments_sheet_dimensions(
                 frame_width, frame_height, layout
@@ -344,7 +367,7 @@ class ExportWorker(QThread):
         sprite_sheet = self._create_background_sheet(sheet_width, sheet_height, layout)
 
         # Draw frames onto sprite sheet with spacing
-        if layout.mode == 'segments_per_row' and self.task.segment_info:
+        if layout.mode == "segments_per_row" and self.task.segment_info:
             self._draw_sprites_segments_per_row(
                 sprite_sheet, cols, rows, frame_width, frame_height, layout
             )
@@ -363,40 +386,42 @@ class ExportWorker(QThread):
             self.progress.emit(3, 3, f"Saved {filename}")
             self.finished.emit(
                 True,
-                f"Successfully exported sprite sheet ({cols}x{rows}, {layout.spacing}px spacing)"
+                f"Successfully exported sprite sheet ({cols}x{rows}, {layout.spacing}px spacing)",
             )
         else:
             self.finished.emit(False, "Failed to save sprite sheet")
 
-    def _calculate_grid_layout(self, layout: SpriteSheetLayout, frame_count: int) -> tuple[int, int]:
+    def _calculate_grid_layout(
+        self, layout: SpriteSheetLayout, frame_count: int
+    ) -> tuple[int, int]:
         """Calculate optimal grid dimensions based on layout configuration."""
         import math
 
-        if layout.mode == 'custom':
+        if layout.mode == "custom":
             # Use exact user-specified dimensions (validated in __post_init__)
             assert layout.custom_columns is not None
             assert layout.custom_rows is not None
             cols = layout.custom_columns
             rows = layout.custom_rows
 
-        elif layout.mode == 'rows':
+        elif layout.mode == "rows":
             # Prioritize horizontal layout with max columns constraint
             max_cols = layout.max_columns or Config.Export.DEFAULT_MAX_COLUMNS
             cols = min(max_cols, frame_count)
             rows = math.ceil(frame_count / cols)
 
-        elif layout.mode == 'columns':
+        elif layout.mode == "columns":
             # Prioritize vertical layout with max rows constraint
             max_rows = layout.max_rows or Config.Export.DEFAULT_MAX_ROWS
             rows = min(max_rows, frame_count)
             cols = math.ceil(frame_count / rows)
 
-        elif layout.mode == 'square':
+        elif layout.mode == "square":
             # Force closest to square aspect ratio
             cols = math.ceil(math.sqrt(frame_count))
             rows = math.ceil(frame_count / cols)
 
-        elif layout.mode == 'segments_per_row':
+        elif layout.mode == "segments_per_row":
             # Calculate layout based on segments
             cols, rows = self._calculate_segments_per_row_layout()
 
@@ -413,7 +438,9 @@ class ExportWorker(QThread):
 
         return cols, rows
 
-    def _calculate_auto_layout(self, frame_count: int, layout: SpriteSheetLayout) -> tuple[int, int]:
+    def _calculate_auto_layout(
+        self, frame_count: int, layout: SpriteSheetLayout
+    ) -> tuple[int, int]:
         """Calculate automatic layout using intelligent heuristics."""
         import math
 
@@ -455,8 +482,9 @@ class ExportWorker(QThread):
         else:
             return base_cols, base_rows
 
-    def _calculate_sheet_dimensions(self, cols: int, rows: int, frame_width: int,
-                                  frame_height: int, layout: SpriteSheetLayout) -> tuple[int, int]:
+    def _calculate_sheet_dimensions(
+        self, cols: int, rows: int, frame_width: int, frame_height: int, layout: SpriteSheetLayout
+    ) -> tuple[int, int]:
         """Calculate total sprite sheet dimensions including spacing and padding."""
         # Calculate total width: frames + spacing between frames + padding on both sides
         sheet_width = (cols * frame_width) + ((cols - 1) * layout.spacing) + (2 * layout.padding)
@@ -466,8 +494,9 @@ class ExportWorker(QThread):
 
         return sheet_width, sheet_height
 
-    def _calculate_segments_sheet_dimensions(self, frame_width: int, frame_height: int,
-                                           layout: SpriteSheetLayout) -> tuple[int, int]:
+    def _calculate_segments_sheet_dimensions(
+        self, frame_width: int, frame_height: int, layout: SpriteSheetLayout
+    ) -> tuple[int, int]:
         """Calculate sprite sheet dimensions for segments per row mode."""
 
         if not self.task.segment_info:
@@ -475,38 +504,41 @@ class ExportWorker(QThread):
 
         # Find the maximum width needed (longest segment)
         max_frames_in_segment = max(
-            seg['end_frame'] - seg['start_frame'] + 1
-            for seg in self.task.segment_info
+            seg["end_frame"] - seg["start_frame"] + 1 for seg in self.task.segment_info
         )
 
         # Calculate width based on the longest segment
-        sheet_width = (max_frames_in_segment * frame_width) + \
-                     ((max_frames_in_segment - 1) * layout.spacing) + \
-                     (2 * layout.padding)
+        sheet_width = (
+            (max_frames_in_segment * frame_width)
+            + ((max_frames_in_segment - 1) * layout.spacing)
+            + (2 * layout.padding)
+        )
 
         # Calculate height based on actual number of segments (rows)
         num_segments = len(self.task.segment_info)
-        sheet_height = (num_segments * frame_height) + \
-                      ((num_segments - 1) * layout.spacing) + \
-                      (2 * layout.padding)
-
+        sheet_height = (
+            (num_segments * frame_height)
+            + ((num_segments - 1) * layout.spacing)
+            + (2 * layout.padding)
+        )
 
         return sheet_width, sheet_height
 
-    def _create_background_sheet(self, width: int, height: int,
-                               layout: SpriteSheetLayout) -> QImage:
+    def _create_background_sheet(
+        self, width: int, height: int, layout: SpriteSheetLayout
+    ) -> QImage:
         """Create sprite sheet with the specified background (thread-safe QImage)."""
         # Use QImage instead of QPixmap for thread-safety
         sprite_sheet = QImage(width, height, QImage.Format.Format_ARGB32)
 
-        if layout.background_mode == 'transparent':
+        if layout.background_mode == "transparent":
             sprite_sheet.fill(QColor(0, 0, 0, 0))  # Fully transparent
 
-        elif layout.background_mode == 'solid':
+        elif layout.background_mode == "solid":
             r, g, b, a = layout.background_color
             sprite_sheet.fill(QColor(r, g, b, a))
 
-        elif layout.background_mode == 'checkerboard':
+        elif layout.background_mode == "checkerboard":
             # Create checkerboard pattern
             sprite_sheet.fill(QColor(0, 0, 0, 0))  # Start transparent
 
@@ -531,9 +563,15 @@ class ExportWorker(QThread):
 
         return sprite_sheet
 
-    def _draw_sprites_with_layout(self, sprite_sheet: QImage, cols: int, rows: int,
-                                frame_width: int, frame_height: int,
-                                layout: SpriteSheetLayout) -> None:
+    def _draw_sprites_with_layout(
+        self,
+        sprite_sheet: QImage,
+        cols: int,
+        rows: int,
+        frame_width: int,
+        frame_height: int,
+        layout: SpriteSheetLayout,
+    ) -> None:
         """Draw all frames onto the sprite sheet with proper spacing and layout."""
         painter = QPainter(sprite_sheet)
 
@@ -571,28 +609,32 @@ class ExportWorker(QThread):
         if not self.task.segment_info:
             # No segments, fall back to square layout
             import math
+
             frame_count = len(self.task.frames)
             cols = math.ceil(math.sqrt(frame_count))
             rows = math.ceil(frame_count / cols)
             return cols, rows
 
-
         # Calculate maximum frames per segment
         max_frames_per_segment = max(
-            seg['end_frame'] - seg['start_frame'] + 1
-            for seg in self.task.segment_info
+            seg["end_frame"] - seg["start_frame"] + 1 for seg in self.task.segment_info
         )
 
         # Rows = number of segments, cols = max frames in any segment
         rows = len(self.task.segment_info)
         cols = max_frames_per_segment
 
-
         return cols, rows
 
-    def _draw_sprites_segments_per_row(self, sprite_sheet: QImage, cols: int, rows: int,
-                                     frame_width: int, frame_height: int,
-                                     layout: SpriteSheetLayout) -> None:
+    def _draw_sprites_segments_per_row(
+        self,
+        sprite_sheet: QImage,
+        cols: int,
+        rows: int,
+        frame_width: int,
+        frame_height: int,
+        layout: SpriteSheetLayout,
+    ) -> None:
         """Draw sprites with each segment on its own row."""
 
         painter = QPainter(sprite_sheet)
@@ -604,9 +646,8 @@ class ExportWorker(QThread):
 
         # Draw each segment on its own row
         for row_idx, segment in enumerate(self.task.segment_info):
-            start = segment['start_frame']
-            end = segment['end_frame']
-
+            start = segment["start_frame"]
+            end = segment["end_frame"]
 
             frames_drawn = 0
             # Draw frames for this segment
@@ -625,7 +666,6 @@ class ExportWorker(QThread):
                 x = layout.padding + (col_idx * (frame_width + layout.spacing))
                 y = layout.padding + (row_idx * (frame_height + layout.spacing))
 
-
                 # Scale and draw frame
                 if self.task.scale_factor != 1.0:
                     scaled_frame = self._scale_image(frame, self.task.scale_factor)
@@ -635,7 +675,7 @@ class ExportWorker(QThread):
 
                 frames_drawn += 1
 
-            logger.debug("Drew %d frames for segment '%s'", frames_drawn, segment['name'])
+            logger.debug("Drew %d frames for segment '%s'", frames_drawn, segment["name"])
 
         painter.end()
 
@@ -647,7 +687,7 @@ class ExportWorker(QThread):
             new_width,
             new_height,
             aspectMode=Qt.AspectRatioMode.KeepAspectRatio,
-            mode=Qt.TransformationMode.SmoothTransformation
+            mode=Qt.TransformationMode.SmoothTransformation,
         )
 
 
@@ -668,17 +708,19 @@ class FrameExporter(QObject):
         self._worker: ExportWorker | None = None
         self._current_task: ExportTask | None = None
 
-    def export_frames(self,
-                     frames: list[QPixmap],
-                     output_dir: str,
-                     base_name: str = "frame",
-                     format: str = "PNG",
-                     mode: str = "individual",
-                     scale_factor: float = 1.0,
-                     pattern: str | None = None,
-                     selected_indices: list[int] | None = None,
-                     sprite_sheet_layout: SpriteSheetLayout | None = None,
-                     segment_info: list[dict[str, Any]] | None = None) -> bool:
+    def export_frames(
+        self,
+        frames: list[QPixmap],
+        output_dir: str,
+        base_name: str = "frame",
+        format: str = "PNG",
+        mode: str = "individual",
+        scale_factor: float = 1.0,
+        pattern: str | None = None,
+        selected_indices: list[int] | None = None,
+        sprite_sheet_layout: SpriteSheetLayout | None = None,
+        segment_info: list[dict[str, Any]] | None = None,
+    ) -> bool:
         """
         Export frames with the specified settings.
 
@@ -735,10 +777,10 @@ class FrameExporter(QObject):
             logger.debug("Parsed export format: %s", export_format)
 
             # Handle special modes
-            if mode == 'segments_sheet':
+            if mode == "segments_sheet":
                 logger.debug("Converting segments_sheet mode to SPRITE_SHEET")
                 export_mode = ExportMode.SPRITE_SHEET
-            elif mode == 'selected':
+            elif mode == "selected":
                 logger.debug("Converting selected mode to INDIVIDUAL_FRAMES")
                 export_mode = ExportMode.INDIVIDUAL_FRAMES
             else:
@@ -775,7 +817,7 @@ class FrameExporter(QObject):
                 pattern=pattern,
                 selected_indices=selected_indices,
                 sprite_sheet_layout=sprite_sheet_layout,
-                segment_info=segment_info
+                segment_info=segment_info,
             )
         except ValueError as e:
             self.exportError.emit(str(e))
@@ -844,7 +886,11 @@ def reset_frame_exporter() -> None:
     Properly waits for any running export thread to complete before resetting.
     """
     global _exporter_instance
-    if _exporter_instance is not None and _exporter_instance._worker is not None and _exporter_instance._worker.isRunning():
+    if (
+        _exporter_instance is not None
+        and _exporter_instance._worker is not None
+        and _exporter_instance._worker.isRunning()
+    ):
         # Wait for any running export thread to complete
         _exporter_instance._worker.quit()
         _exporter_instance._worker.wait()

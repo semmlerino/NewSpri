@@ -16,17 +16,18 @@ class TestAnimationControllerInitialization:
     """Test AnimationController initialization."""
 
     def test_initial_state(self, animation_controller):
-        """Test controller starts in proper initial state."""
-        assert not animation_controller._is_active
+        """Test controller starts in proper initial state after construction."""
+        # After single-step init, controller is active but not playing
+        assert animation_controller._is_active
         assert not animation_controller._is_playing
         assert animation_controller._current_fps == Config.Animation.DEFAULT_FPS
         assert animation_controller._loop_enabled
-    
+
     def test_timer_initialization(self, animation_controller):
         """Test animation timer is properly initialized."""
         assert isinstance(animation_controller._animation_timer, QTimer)
         assert not animation_controller._animation_timer.isSingleShot()
-    
+
     def test_signals_exist(self, animation_controller):
         """Test all required signals are defined."""
         signals = [
@@ -34,7 +35,7 @@ class TestAnimationControllerInitialization:
             'animationCompleted', 'frameAdvanced', 'playbackStateChanged',
             'fpsChanged', 'loopModeChanged', 'errorOccurred', 'statusChanged'
         ]
-        
+
         for signal_name in signals:
             assert hasattr(animation_controller, signal_name)
 
@@ -379,20 +380,23 @@ class TestAnimationControllerIntegration:
         mock_sprite_model.extractionCompleted = Mock()
         mock_sprite_model.frameChanged = Mock()
         mock_sprite_model.errorOccurred = Mock()
-        
+
         mock_sprite_viewer = Mock()
         # Add viewer signal mocks
         mock_sprite_viewer.closing = Mock()
         mock_sprite_viewer.frame_display_changed = Mock()
-        
-        result = animation_controller.initialize(mock_sprite_model, mock_sprite_viewer)
-        
-        assert result is True  # Check initialization success
-        assert animation_controller._sprite_model == mock_sprite_model
-        assert animation_controller._sprite_viewer == mock_sprite_viewer
-        assert animation_controller._is_active
-    
-    def test_sprite_model_coordination(self, animation_controller):
+
+        # Create controller with dependencies (single-step init)
+        controller = AnimationController(
+            sprite_model=mock_sprite_model,
+            sprite_viewer=mock_sprite_viewer,
+        )
+
+        assert controller._sprite_model == mock_sprite_model
+        assert controller._sprite_viewer == mock_sprite_viewer
+        assert controller._is_active
+
+    def test_sprite_model_coordination(self):
         """Test coordination with sprite model."""
         mock_sprite_model = Mock()
         mock_sprite_model.sprite_frames = [Mock()]  # Add sprite frames
@@ -404,17 +408,20 @@ class TestAnimationControllerIntegration:
         mock_sprite_model.extractionCompleted = Mock()
         mock_sprite_model.frameChanged = Mock()
         mock_sprite_model.errorOccurred = Mock()
-        
+
         mock_sprite_viewer = Mock()
         mock_sprite_viewer.closing = Mock()
         mock_sprite_viewer.frame_display_changed = Mock()
-        
-        animation_controller.initialize(mock_sprite_model, mock_sprite_viewer)
-        animation_controller._is_playing = True  # Manually set playing state
-        
+
+        controller = AnimationController(
+            sprite_model=mock_sprite_model,
+            sprite_viewer=mock_sprite_viewer,
+        )
+        controller._is_playing = True  # Manually set playing state
+
         # Test frame advancement via timer timeout
-        animation_controller._on_timer_timeout()
-        
+        controller._on_timer_timeout()
+
         # Should call sprite model methods
         mock_sprite_model.next_frame.assert_called()
 
@@ -446,9 +453,9 @@ class TestAnimationControllerErrorHandling:
             # Should emit error signal
             # (In real implementation, this would be caught and handled)
     
-    def test_cleanup_on_destruction(self, animation_controller, qapp):
+    def test_cleanup_on_destruction(self, qapp):
         """Test proper cleanup when controller is destroyed."""
-        # Initialize with mock model that has frames
+        # Create controller with mock model that has frames
         mock_model = Mock()
         mock_model.sprite_frames = [Mock()]
         mock_model.fps = 10  # Direct attribute
@@ -458,21 +465,24 @@ class TestAnimationControllerErrorHandling:
         mock_model.extractionCompleted = Mock()
         mock_model.frameChanged = Mock()
         mock_model.errorOccurred = Mock()
-        
+
         mock_viewer = Mock()
         mock_viewer.closing = Mock()
         mock_viewer.frame_display_changed = Mock()
-        
-        animation_controller.initialize(mock_model, mock_viewer)
-        result = animation_controller.start_animation()
-        
+
+        controller = AnimationController(
+            sprite_model=mock_model,
+            sprite_viewer=mock_viewer,
+        )
+        result = controller.start_animation()
+
         # Check that start_animation succeeded
         assert result is True
-        assert animation_controller._is_playing is True
-        
+        assert controller._is_playing is True
+
         # Shutdown (not cleanup)
-        animation_controller.shutdown()
-        
+        controller.shutdown()
+
         # After shutdown, timer and playing state should be false
-        assert not animation_controller._animation_timer.isActive()
-        assert not animation_controller._is_playing
+        assert not controller._animation_timer.isActive()
+        assert not controller._is_playing

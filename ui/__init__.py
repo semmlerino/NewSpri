@@ -18,12 +18,12 @@ from .playback_controls import PlaybackControls
 from .sprite_canvas import SpriteCanvas
 
 __all__ = [
-    'AnimationGridView',
-    'AnimationSegmentPreview',
-    'AnimationSegmentSelector',
-    'EnhancedStatusBar',
-    'FrameExtractor',
-    'PlaybackControls',
-    'SpriteCanvas',
-    'StatusBarManager'
+    "AnimationGridView",
+    "AnimationSegmentPreview",
+    "AnimationSegmentSelector",
+    "EnhancedStatusBar",
+    "FrameExtractor",
+    "PlaybackControls",
+    "SpriteCanvas",
+    "StatusBarManager",
 ]

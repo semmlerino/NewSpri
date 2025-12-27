@@ -24,8 +24,8 @@ class AnimationStateManager(QObject):
     """
 
     # Qt Signals for communication with UI components
-    frameChanged = Signal(int, int)          # (current_frame, total_frames)
-    playbackStateChanged = Signal(bool)      # is_playing
+    frameChanged = Signal(int, int)  # (current_frame, total_frames)
+    playbackStateChanged = Signal(bool)  # is_playing
 
     def __init__(self, sprite_frames: list[QPixmap]):
         """
@@ -296,10 +296,10 @@ class AnimationStateManager(QObject):
             Dictionary with all animation state details
         """
         return {
-            'current_frame': self._current_frame,
-            'total_frames': self.total_frames,
-            'is_playing': self._is_playing,
-            'loop_enabled': self._loop_enabled,
-            'fps': self._fps,
-            'has_frames': len(self._get_frames()) > 0
+            "current_frame": self._current_frame,
+            "total_frames": self.total_frames,
+            "is_playing": self._is_playing,
+            "loop_enabled": self._loop_enabled,
+            "fps": self._fps,
+            "has_frames": len(self._get_frames()) > 0,
         }

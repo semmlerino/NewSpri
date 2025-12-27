@@ -42,8 +42,7 @@ class SettingsManager(QObject):
 
         # Initialize QSettings
         self._settings = QSettings(
-            Config.Settings.ORGANIZATION_NAME,
-            Config.Settings.APPLICATION_NAME
+            Config.Settings.ORGANIZATION_NAME, Config.Settings.APPLICATION_NAME
         )
 
         # Auto-save timer for debounced saving
@@ -94,7 +93,7 @@ class SettingsManager(QObject):
         self.settingsChanged.emit(key, value)
 
         # Special handling for recent files
-        if key == 'recent/files':
+        if key == "recent/files":
             self._recent_files = value if value else []
             self.recentFilesChanged.emit(self._recent_files)
 
@@ -121,8 +120,8 @@ class SettingsManager(QObject):
     # Window geometry methods
     def save_window_geometry(self, window: QMainWindow) -> None:
         """Save window geometry and state."""
-        self.set_value('window/geometry', window.saveGeometry())
-        self.set_value('window/state', window.saveState())
+        self.set_value("window/geometry", window.saveGeometry())
+        self.set_value("window/state", window.saveState())
 
     def restore_window_geometry(self, window: QMainWindow) -> bool:
         """
@@ -131,8 +130,8 @@ class SettingsManager(QObject):
         Returns:
             True if geometry was restored, False if using defaults
         """
-        geometry = self.get_value('window/geometry')
-        state = self.get_value('window/state')
+        geometry = self.get_value("window/geometry")
+        state = self.get_value("window/state")
 
         restored = False
         if geometry and isinstance(geometry, QByteArray):
@@ -145,11 +144,13 @@ class SettingsManager(QObject):
 
         return restored
 
-    def save_splitter_state(self, splitter: QSplitter, key: str = 'window/splitter_state') -> None:
+    def save_splitter_state(self, splitter: QSplitter, key: str = "window/splitter_state") -> None:
         """Save splitter state."""
         self.set_value(key, splitter.saveState())
 
-    def restore_splitter_state(self, splitter: QSplitter, key: str = 'window/splitter_state') -> bool:
+    def restore_splitter_state(
+        self, splitter: QSplitter, key: str = "window/splitter_state"
+    ) -> bool:
         """
         Restore splitter state.
 
@@ -162,30 +163,37 @@ class SettingsManager(QObject):
         return False
 
     # Frame extraction settings
-    def save_extraction_settings(self, width: int, height: int, offset_x: int = 0,
-                                offset_y: int = 0, spacing_x: int = 0, spacing_y: int = 0,
-                                mode: str = 'grid') -> None:
+    def save_extraction_settings(
+        self,
+        width: int,
+        height: int,
+        offset_x: int = 0,
+        offset_y: int = 0,
+        spacing_x: int = 0,
+        spacing_y: int = 0,
+        mode: str = "grid",
+    ) -> None:
         """Save last used frame extraction settings."""
-        self.set_value('extraction/last_width', width)
-        self.set_value('extraction/last_height', height)
-        self.set_value('extraction/last_offset_x', offset_x)
-        self.set_value('extraction/last_offset_y', offset_y)
-        self.set_value('extraction/last_spacing_x', spacing_x)
-        self.set_value('extraction/last_spacing_y', spacing_y)
-        self.set_value('extraction/last_mode', mode)
+        self.set_value("extraction/last_width", width)
+        self.set_value("extraction/last_height", height)
+        self.set_value("extraction/last_offset_x", offset_x)
+        self.set_value("extraction/last_offset_y", offset_y)
+        self.set_value("extraction/last_spacing_x", spacing_x)
+        self.set_value("extraction/last_spacing_y", spacing_y)
+        self.set_value("extraction/last_mode", mode)
 
     # Display preferences
     def save_display_settings(self, grid_visible: bool, zoom: float, zoom_fit_tiny: bool) -> None:
         """Save display preferences."""
-        self.set_value('display/grid_visible', grid_visible)
-        self.set_value('display/last_zoom', zoom)
-        self.set_value('display/zoom_fit_tiny', zoom_fit_tiny)
+        self.set_value("display/grid_visible", grid_visible)
+        self.set_value("display/last_zoom", zoom)
+        self.set_value("display/zoom_fit_tiny", zoom_fit_tiny)
 
     # Animation settings
     def save_animation_settings(self, fps: int, loop_mode: bool) -> None:
         """Save animation preferences."""
-        self.set_value('animation/last_fps', fps)
-        self.set_value('animation/loop_mode', loop_mode)
+        self.set_value("animation/last_fps", fps)
+        self.set_value("animation/loop_mode", loop_mode)
 
     # Recent files management
     def add_recent_file(self, filepath: str) -> None:
@@ -209,11 +217,11 @@ class SettingsManager(QObject):
         self._recent_files.insert(0, abs_path)
 
         # Trim to max size
-        max_files = self.get_value('recent/max_count', Config.Settings.MAX_RECENT_FILES)
+        max_files = self.get_value("recent/max_count", Config.Settings.MAX_RECENT_FILES)
         self._recent_files = self._recent_files[:max_files]
 
         # Save to settings
-        self.set_value('recent/files', self._recent_files)
+        self.set_value("recent/files", self._recent_files)
 
     def get_recent_files(self) -> list[str]:
         """Get list of recent files (most recent first)."""
@@ -222,14 +230,14 @@ class SettingsManager(QObject):
     def clear_recent_files(self) -> None:
         """Clear all recent files."""
         self._recent_files = []
-        self.set_value('recent/files', [])
+        self.set_value("recent/files", [])
 
     def remove_recent_file(self, filepath: str) -> None:
         """Remove a specific file from recent files."""
         abs_path = str(Path(filepath).resolve())
         if abs_path in self._recent_files:
             self._recent_files.remove(abs_path)
-            self.set_value('recent/files', self._recent_files)
+            self.set_value("recent/files", self._recent_files)
 
     def cleanup_recent_files(self) -> None:
         """Remove non-existent files from recent files list."""
@@ -240,11 +248,11 @@ class SettingsManager(QObject):
 
         if len(valid_files) != len(self._recent_files):
             self._recent_files = valid_files
-            self.set_value('recent/files', self._recent_files)
+            self.set_value("recent/files", self._recent_files)
 
     def _load_recent_files(self) -> None:
         """Load recent files from settings."""
-        recent_files = self.get_value('recent/files', [])
+        recent_files = self.get_value("recent/files", [])
         self._recent_files = recent_files if isinstance(recent_files, list) else []
 
         # Clean up non-existent files on load
@@ -275,17 +283,13 @@ class SettingsManager(QObject):
                 value = self.get_value(key)
                 # Convert QByteArray to base64 string for JSON serialization
                 if isinstance(value, QByteArray):
-                    value = bytes(value.toBase64().data()).decode('ascii')
+                    value = bytes(value.toBase64().data()).decode("ascii")
                 settings_dict[key] = value
 
             # Atomic write: write to temp file, then rename
             dir_path = os.path.dirname(filepath) or "."
             with tempfile.NamedTemporaryFile(
-                mode='w',
-                dir=dir_path,
-                delete=False,
-                suffix='.tmp',
-                encoding='utf-8'
+                mode="w", dir=dir_path, delete=False, suffix=".tmp", encoding="utf-8"
             ) as f:
                 json.dump(settings_dict, f, indent=2, ensure_ascii=False)
                 temp_path = f.name
@@ -312,14 +316,14 @@ class SettingsManager(QObject):
             True if successful, False otherwise
         """
         try:
-            with open(filepath, encoding='utf-8') as f:
+            with open(filepath, encoding="utf-8") as f:
                 settings_dict = json.load(f)
 
             # Apply imported settings
             for key, value in settings_dict.items():
                 # Convert base64 strings back to QByteArray for geometry settings
-                if (key.endswith('/geometry') or key.endswith('/state')) and isinstance(value, str):
-                    value = QByteArray.fromBase64(value.encode('utf-8'))
+                if (key.endswith("/geometry") or key.endswith("/state")) and isinstance(value, str):
+                    value = QByteArray.fromBase64(value.encode("utf-8"))
 
                 self.set_value(key, value, auto_save=False)
 
@@ -334,6 +338,7 @@ class SettingsManager(QObject):
 # Singleton implementation (thread-safe double-checked locking)
 _settings_instance: SettingsManager | None = None
 _settings_lock = threading.Lock()
+
 
 def get_settings_manager() -> SettingsManager:
     """Get the global settings manager instance (thread-safe)."""

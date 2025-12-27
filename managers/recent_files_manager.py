@@ -247,12 +247,12 @@ class RecentFilesManager(QObject):
 
             # Get file info
             file_info = {
-                'path': filepath,
-                'name': path_obj.name,
-                'directory': path_obj.parent.name or path_obj.parent.as_posix(),
-                'size': self._format_file_size(path_obj.stat().st_size),
-                'modified': path_obj.stat().st_mtime,
-                'exists': True
+                "path": filepath,
+                "name": path_obj.name,
+                "directory": path_obj.parent.name or path_obj.parent.as_posix(),
+                "size": self._format_file_size(path_obj.stat().st_size),
+                "modified": path_obj.stat().st_mtime,
+                "exists": True,
             }
 
             result.append(file_info)
@@ -297,6 +297,7 @@ class RecentFilesManager(QObject):
 # Singleton implementation (thread-safe double-checked locking)
 _recent_files_instance: RecentFilesManager | None = None
 _recent_files_lock = threading.Lock()
+
 
 def get_recent_files_manager() -> RecentFilesManager:
     """Get the global recent files manager instance (thread-safe)."""

@@ -67,13 +67,15 @@ class TestRunner:
 
         # Coverage options
         if args.coverage:
-            cmd.extend([
-                "--cov=.",
-                "--cov-report=html:htmlcov",
-                "--cov-report=term-missing",
-                "--cov-report=json",
-                f"--cov-config={self.project_root}/pyproject.toml"
-            ])
+            cmd.extend(
+                [
+                    "--cov=.",
+                    "--cov-report=html:htmlcov",
+                    "--cov-report=term-missing",
+                    "--cov-report=json",
+                    f"--cov-config={self.project_root}/pyproject.toml",
+                ]
+            )
 
         # Test selection
         if args.unit:
@@ -109,8 +111,9 @@ class TestRunner:
         if args.parallel:
             cmd.extend(["-n", str(args.parallel)])
             # Install pytest-xdist if needed
-            subprocess.run([self.python_cmd, "-m", "pip", "install", "pytest-xdist"],
-                         capture_output=True)
+            subprocess.run(
+                [self.python_cmd, "-m", "pip", "install", "pytest-xdist"], capture_output=True
+            )
 
         # Exclude archived tests
         cmd.extend(["--ignore=archive/", "--ignore=build/", "--ignore=dist/"])
@@ -147,9 +150,7 @@ class TestRunner:
 
             # Sort by coverage percentage
             sorted_files = sorted(
-                files.items(),
-                key=lambda x: x[1]["summary"]["percent_covered"],
-                reverse=True
+                files.items(), key=lambda x: x[1]["summary"]["percent_covered"], reverse=True
             )
 
             for filepath, data in sorted_files[:20]:  # Show top 20
@@ -169,24 +170,18 @@ class TestRunner:
         test_suites = {
             "wizard": {
                 "desc": "Export Wizard Tests",
-                "pattern": "tests/ui/test_export_wizard.py tests/unit/test_wizard_components.py"
+                "pattern": "tests/ui/test_export_wizard.py tests/unit/test_wizard_components.py",
             },
             "export": {
                 "desc": "All Export System Tests",
-                "pattern": "tests/**/test_export*.py tests/**/test_frame_exporter.py"
+                "pattern": "tests/**/test_export*.py tests/**/test_frame_exporter.py",
             },
-            "ui": {
-                "desc": "UI Component Tests",
-                "pattern": "tests/ui/"
-            },
+            "ui": {"desc": "UI Component Tests", "pattern": "tests/ui/"},
             "core": {
                 "desc": "Core Functionality Tests",
-                "pattern": "tests/unit/test_sprite_model.py tests/unit/test_*controller.py"
+                "pattern": "tests/unit/test_sprite_model.py tests/unit/test_*controller.py",
             },
-            "integration": {
-                "desc": "Integration Tests",
-                "pattern": "tests/integration/"
-            }
+            "integration": {"desc": "Integration Tests", "pattern": "tests/integration/"},
         }
 
         print("\n🎯 Available Test Suites:")
@@ -200,8 +195,9 @@ class TestRunner:
         print("\n👁️  Running tests in watch mode...")
 
         # Install pytest-watch
-        subprocess.run([self.python_cmd, "-m", "pip", "install", "pytest-watch"],
-                      capture_output=True)
+        subprocess.run(
+            [self.python_cmd, "-m", "pip", "install", "pytest-watch"], capture_output=True
+        )
 
         cmd = [self.python_cmd, "-m", "ptw", "--", "-v", "--tb=short"]
         subprocess.run(cmd)
@@ -212,14 +208,19 @@ class TestRunner:
 
         # Run tests with JSON report
         cmd = [
-            self.python_cmd, "-m", "pytest",
-            "--json-report", "--json-report-file=test_report.json",
-            "-v", "tests/"
+            self.python_cmd,
+            "-m",
+            "pytest",
+            "--json-report",
+            "--json-report-file=test_report.json",
+            "-v",
+            "tests/",
         ]
 
         # Install pytest-json-report if needed
-        subprocess.run([self.python_cmd, "-m", "pip", "install", "pytest-json-report"],
-                      capture_output=True)
+        subprocess.run(
+            [self.python_cmd, "-m", "pip", "install", "pytest-json-report"], capture_output=True
+        )
 
         returncode, _, _ = self.run_command(cmd, capture_output=True)
 
@@ -244,44 +245,31 @@ def main():
 
     # Test selection
     parser.add_argument("tests", nargs="*", help="Specific test files or patterns")
-    parser.add_argument("-u", "--unit", action="store_true",
-                       help="Run only unit tests")
-    parser.add_argument("-i", "--integration", action="store_true",
-                       help="Run only integration tests")
-    parser.add_argument("--ui", action="store_true",
-                       help="Run only UI tests")
-    parser.add_argument("-p", "--performance", action="store_true",
-                       help="Run performance tests")
-    parser.add_argument("-s", "--smoke", action="store_true",
-                       help="Run smoke tests only")
+    parser.add_argument("-u", "--unit", action="store_true", help="Run only unit tests")
+    parser.add_argument(
+        "-i", "--integration", action="store_true", help="Run only integration tests"
+    )
+    parser.add_argument("--ui", action="store_true", help="Run only UI tests")
+    parser.add_argument("-p", "--performance", action="store_true", help="Run performance tests")
+    parser.add_argument("-s", "--smoke", action="store_true", help="Run smoke tests only")
 
     # Coverage options
-    parser.add_argument("-c", "--coverage", action="store_true",
-                       help="Generate coverage report")
+    parser.add_argument("-c", "--coverage", action="store_true", help="Generate coverage report")
 
     # Output options
-    parser.add_argument("-v", "--verbose", action="store_true",
-                       help="Verbose output")
-    parser.add_argument("-q", "--quiet", action="store_true",
-                       help="Minimal output")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output")
+    parser.add_argument("-q", "--quiet", action="store_true", help="Minimal output")
 
     # Execution options
-    parser.add_argument("-x", "--exitfirst", action="store_true",
-                       help="Exit on first failure")
-    parser.add_argument("--lf", action="store_true",
-                       help="Run last failed tests")
-    parser.add_argument("-n", "--parallel", type=int,
-                       help="Run tests in parallel")
+    parser.add_argument("-x", "--exitfirst", action="store_true", help="Exit on first failure")
+    parser.add_argument("--lf", action="store_true", help="Run last failed tests")
+    parser.add_argument("-n", "--parallel", type=int, help="Run tests in parallel")
 
     # Special modes
-    parser.add_argument("-w", "--watch", action="store_true",
-                       help="Run tests in watch mode")
-    parser.add_argument("--install", action="store_true",
-                       help="Install test dependencies")
-    parser.add_argument("--report", action="store_true",
-                       help="Generate detailed test report")
-    parser.add_argument("--suites", action="store_true",
-                       help="Show available test suites")
+    parser.add_argument("-w", "--watch", action="store_true", help="Run tests in watch mode")
+    parser.add_argument("--install", action="store_true", help="Install test dependencies")
+    parser.add_argument("--report", action="store_true", help="Generate detailed test report")
+    parser.add_argument("--suites", action="store_true", help="Show available test suites")
 
     args = parser.parse_args()
 

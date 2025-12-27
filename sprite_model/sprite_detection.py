@@ -48,8 +48,10 @@ class DetectionResult:
 # Margin Detection
 # ============================================================================
 
-def detect_margins(sprite_sheet: QPixmap, frame_width: int | None = None,
-                  frame_height: int | None = None) -> tuple[bool, int, int, str]:
+
+def detect_margins(
+    sprite_sheet: QPixmap, frame_width: int | None = None, frame_height: int | None = None
+) -> tuple[bool, int, int, str]:
     """
     Detect transparent margins around sprite content from all four edges.
 
@@ -75,15 +77,18 @@ def detect_margins(sprite_sheet: QPixmap, frame_width: int | None = None,
 
         # Apply validation and reasonableness checks
         validated_left, validated_top, validation_msg = _validate_margins(
-            raw_left, raw_right, raw_top, raw_bottom, width, height, frame_width, frame_height)
+            raw_left, raw_right, raw_top, raw_bottom, width, height, frame_width, frame_height
+        )
 
         # Calculate final content area
         content_width = width - validated_left - (raw_right if validated_left == raw_left else 0)
         content_height = height - validated_top - (raw_bottom if validated_top == raw_top else 0)
 
-        status_msg = (f"Margins: L={raw_left}, R={raw_right}, T={raw_top}, B={raw_bottom} | "
-                     f"Validated: X={validated_left}, Y={validated_top} | "
-                     f"Content: {content_width}×{content_height}")
+        status_msg = (
+            f"Margins: L={raw_left}, R={raw_right}, T={raw_top}, B={raw_bottom} | "
+            f"Validated: X={validated_left}, Y={validated_top} | "
+            f"Content: {content_width}×{content_height}"
+        )
 
         if validation_msg:
             status_msg += f" | {validation_msg}"
@@ -167,9 +172,16 @@ def _detect_raw_margins(image) -> tuple[int, int, int, int]:
     return left_margin, right_margin, top_margin, bottom_margin
 
 
-def _validate_margins(left: int, right: int, top: int, bottom: int,
-                     width: int, height: int,
-                     frame_width: int | None = None, frame_height: int | None = None) -> tuple[int, int, str]:
+def _validate_margins(
+    left: int,
+    right: int,
+    top: int,
+    bottom: int,
+    width: int,
+    height: int,
+    frame_width: int | None = None,
+    frame_height: int | None = None,
+) -> tuple[int, int, str]:
     """
     Validate detected margins and apply reasonableness checks.
 
@@ -208,7 +220,9 @@ def _validate_margins(left: int, right: int, top: int, bottom: int,
             for reduced_left in range(validated_left - 1, -1, -1):
                 if (width - reduced_left) % frame_width == 0:
                     validated_left = reduced_left
-                    validation_msg += f"Adjusted left margin to {reduced_left} for clean frame division; "
+                    validation_msg += (
+                        f"Adjusted left margin to {reduced_left} for clean frame division; "
+                    )
                     break
 
         if available_after_margins[1] % frame_height != 0:
@@ -216,7 +230,9 @@ def _validate_margins(left: int, right: int, top: int, bottom: int,
             for reduced_top in range(validated_top - 1, -1, -1):
                 if (height - reduced_top) % frame_height == 0:
                     validated_top = reduced_top
-                    validation_msg += f"Adjusted top margin to {reduced_top} for clean frame division; "
+                    validation_msg += (
+                        f"Adjusted top margin to {reduced_top} for clean frame division; "
+                    )
                     break
 
     # For horizontal strips (wide aspect ratio), minimize margins
@@ -236,12 +252,13 @@ def _validate_margins(left: int, right: int, top: int, bottom: int,
     if validated_top <= 2:
         validated_top = 0
 
-    return validated_left, validated_top, validation_msg.rstrip('; ')
+    return validated_left, validated_top, validation_msg.rstrip("; ")
 
 
 # ============================================================================
 # Frame Size Detection
 # ============================================================================
+
 
 def detect_frame_size(sprite_sheet: QPixmap) -> tuple[bool, int, int, str]:
     """
@@ -269,7 +286,11 @@ def detect_frame_size(sprite_sheet: QPixmap) -> tuple[bool, int, int, str]:
             frames_y = height // size
             total_frames = frames_x * frames_y
 
-            if Config.FrameExtraction.MIN_REASONABLE_FRAMES <= total_frames <= Config.FrameExtraction.MAX_REASONABLE_FRAMES:
+            if (
+                Config.FrameExtraction.MIN_REASONABLE_FRAMES
+                <= total_frames
+                <= Config.FrameExtraction.MAX_REASONABLE_FRAMES
+            ):
                 return True, size, size, f"Auto-detected frame size: {size}×{size}"
 
     # If no common size fits, try to find the GCD
@@ -310,19 +331,28 @@ def detect_rectangular_frames(sprite_sheet: QPixmap) -> tuple[bool, int, int, st
             frame_height = base_size * aspect_h
 
             # Check if this frame size divides the sheet evenly
-            if (sheet_width % frame_width == 0 and
-                sheet_height % frame_height == 0 and
-                frame_width <= sheet_width and
-                frame_height <= sheet_height):
-
+            if (
+                sheet_width % frame_width == 0
+                and sheet_height % frame_height == 0
+                and frame_width <= sheet_width
+                and frame_height <= sheet_height
+            ):
                 frames_x = sheet_width // frame_width
                 frames_y = sheet_height // frame_height
                 total_frames = frames_x * frames_y
 
                 # Validate frame count is reasonable
-                if Config.FrameExtraction.MIN_REASONABLE_FRAMES <= total_frames <= Config.FrameExtraction.MAX_REASONABLE_FRAMES:
-                    score = _score_frame_candidate(frame_width, frame_height, frames_x, frames_y, total_frames)
-                    candidates.append((score, frame_width, frame_height, frames_x, frames_y, total_frames))
+                if (
+                    Config.FrameExtraction.MIN_REASONABLE_FRAMES
+                    <= total_frames
+                    <= Config.FrameExtraction.MAX_REASONABLE_FRAMES
+                ):
+                    score = _score_frame_candidate(
+                        frame_width, frame_height, frames_x, frames_y, total_frames
+                    )
+                    candidates.append(
+                        (score, frame_width, frame_height, frames_x, frames_y, total_frames)
+                    )
 
     if not candidates:
         return False, 0, 0, "No valid rectangular frame sizes found"
@@ -333,9 +363,14 @@ def detect_rectangular_frames(sprite_sheet: QPixmap) -> tuple[bool, int, int, st
     # Return the best candidate
     score, frame_width, frame_height, frames_x, frames_y, total_frames = candidates[0]
 
-    return True, frame_width, frame_height, (
-        f"Detected rectangular frames: {frame_width}×{frame_height} "
-        f"({frames_x}×{frames_y} = {total_frames} frames, score: {score:.2f})"
+    return (
+        True,
+        frame_width,
+        frame_height,
+        (
+            f"Detected rectangular frames: {frame_width}×{frame_height} "
+            f"({frames_x}×{frames_y} = {total_frames} frames, score: {score:.2f})"
+        ),
     )
 
 
@@ -374,17 +409,23 @@ def detect_content_based(sprite_sheet: QPixmap) -> tuple[bool, int, int, str]:
         # Return the most common dimensions
         frame_width, frame_height, count = frame_dimensions[0]
 
-        return True, frame_width, frame_height, (
-            f"Content-based detection: {frame_width}×{frame_height} "
-            f"(found {count} sprites with these dimensions)"
+        return (
+            True,
+            frame_width,
+            frame_height,
+            (
+                f"Content-based detection: {frame_width}×{frame_height} "
+                f"(found {count} sprites with these dimensions)"
+            ),
         )
 
     except Exception as e:
         return False, 0, 0, f"Content-based detection failed: {e!s}"
 
 
-def _score_frame_candidate(frame_width: int, frame_height: int,
-                          frames_x: int, frames_y: int, total_frames: int) -> float:
+def _score_frame_candidate(
+    frame_width: int, frame_height: int, frames_x: int, frames_y: int, total_frames: int
+) -> float:
     """
     Score a frame size candidate based on various criteria.
 
@@ -478,7 +519,9 @@ def _analyze_content_boundaries(image) -> list[tuple[int, int, int, int]]:
     return content_bounds
 
 
-def _has_content_in_region(image, x: int, y: int, width: int, height: int, alpha_threshold: int) -> bool:
+def _has_content_in_region(
+    image, x: int, y: int, width: int, height: int, alpha_threshold: int
+) -> bool:
     """
     Check if a region contains non-transparent content.
 
@@ -504,7 +547,9 @@ def _has_content_in_region(image, x: int, y: int, width: int, height: int, alpha
     return False
 
 
-def _calculate_common_dimensions(content_bounds: list[tuple[int, int, int, int]]) -> list[tuple[int, int, int]]:
+def _calculate_common_dimensions(
+    content_bounds: list[tuple[int, int, int, int]],
+) -> list[tuple[int, int, int]]:
     """
     Calculate the most common frame dimensions from content boundaries.
 
@@ -533,8 +578,10 @@ def _calculate_common_dimensions(content_bounds: list[tuple[int, int, int, int]]
 # Spacing Detection
 # ============================================================================
 
-def detect_spacing(sprite_sheet: QPixmap, frame_width: int, frame_height: int,
-                  offset_x: int = 0, offset_y: int = 0) -> tuple[bool, int, int, str]:
+
+def detect_spacing(
+    sprite_sheet: QPixmap, frame_width: int, frame_height: int, offset_x: int = 0, offset_y: int = 0
+) -> tuple[bool, int, int, str]:
     """
     Enhanced spacing detection that validates across multiple frame positions.
 
@@ -567,27 +614,37 @@ def detect_spacing(sprite_sheet: QPixmap, frame_width: int, frame_height: int,
 
         # Horizontal spacing detection
         best_spacing_x, best_score_x = _detect_horizontal_spacing(
-            image, frame_width, frame_height, offset_x, offset_y, available_width)
+            image, frame_width, frame_height, offset_x, offset_y, available_width
+        )
 
         # Vertical spacing detection
         best_spacing_y, best_score_y = _detect_vertical_spacing(
-            image, frame_width, frame_height, offset_x, offset_y, available_height)
+            image, frame_width, frame_height, offset_x, offset_y, available_height
+        )
 
         # Calculate confidence based on consistency scores
         avg_confidence = (best_score_x + best_score_y) / 2
-        confidence_text = "high" if avg_confidence >= 0.8 else "medium" if avg_confidence >= 0.5 else "low"
+        confidence_text = (
+            "high" if avg_confidence >= 0.8 else "medium" if avg_confidence >= 0.5 else "low"
+        )
 
-        return True, best_spacing_x, best_spacing_y, (
-            f"Auto-detected spacing: X={best_spacing_x}, Y={best_spacing_y} "
-            f"(confidence: {confidence_text}, consistency: {avg_confidence:.2f})"
+        return (
+            True,
+            best_spacing_x,
+            best_spacing_y,
+            (
+                f"Auto-detected spacing: X={best_spacing_x}, Y={best_spacing_y} "
+                f"(confidence: {confidence_text}, consistency: {avg_confidence:.2f})"
+            ),
         )
 
     except Exception as e:
         return False, 0, 0, f"Error in enhanced spacing detection: {e!s}"
 
 
-def _detect_horizontal_spacing(image, frame_width: int, frame_height: int,
-                              offset_x: int, offset_y: int, available_width: int) -> tuple[int, float]:
+def _detect_horizontal_spacing(
+    image, frame_width: int, frame_height: int, offset_x: int, offset_y: int, available_width: int
+) -> tuple[int, float]:
     """
     Detect horizontal spacing between frames.
 
@@ -613,7 +670,11 @@ def _detect_horizontal_spacing(image, frame_width: int, frame_height: int,
             continue
 
         # Calculate how many frames we could check with this spacing
-        frames_per_row = (available_width + test_spacing) // (frame_width + test_spacing) if test_spacing > 0 else available_width // frame_width
+        frames_per_row = (
+            (available_width + test_spacing) // (frame_width + test_spacing)
+            if test_spacing > 0
+            else available_width // frame_width
+        )
         positions_to_check = min(3, frames_per_row - 1)  # Check up to 3 gap positions
 
         if positions_to_check <= 0:
@@ -666,8 +727,9 @@ def _detect_horizontal_spacing(image, frame_width: int, frame_height: int,
     return best_spacing_x, best_score_x
 
 
-def _detect_vertical_spacing(image, frame_width: int, frame_height: int,
-                            offset_x: int, offset_y: int, available_height: int) -> tuple[int, float]:
+def _detect_vertical_spacing(
+    image, frame_width: int, frame_height: int, offset_x: int, offset_y: int, available_height: int
+) -> tuple[int, float]:
     """
     Detect vertical spacing between frames.
 
@@ -693,7 +755,11 @@ def _detect_vertical_spacing(image, frame_width: int, frame_height: int,
             continue
 
         # Calculate how many frames we could check with this spacing
-        frames_per_col = (available_height + test_spacing) // (frame_height + test_spacing) if test_spacing > 0 else available_height // frame_height
+        frames_per_col = (
+            (available_height + test_spacing) // (frame_height + test_spacing)
+            if test_spacing > 0
+            else available_height // frame_height
+        )
         positions_to_check = min(3, frames_per_col - 1)  # Check up to 3 gap positions
 
         if positions_to_check <= 0:
@@ -750,7 +816,10 @@ def _detect_vertical_spacing(image, frame_width: int, frame_height: int,
 # Comprehensive Auto-Detection Coordinator
 # ============================================================================
 
-def comprehensive_auto_detect(sprite_sheet: QPixmap, sprite_sheet_path: str | None = None) -> tuple[bool, str, DetectionResult]:
+
+def comprehensive_auto_detect(
+    sprite_sheet: QPixmap, sprite_sheet_path: str | None = None
+) -> tuple[bool, str, DetectionResult]:
     """
     Comprehensive one-click auto-detection workflow.
     Detects margins, frame size, and spacing in optimal order with cross-validation.
@@ -796,7 +865,9 @@ def comprehensive_auto_detect(sprite_sheet: QPixmap, sprite_sheet_path: str | No
 
         # Try content-based detection first
         try:
-            content_success, frame_width, frame_height, content_msg = detect_content_based(sprite_sheet)
+            content_success, frame_width, frame_height, content_msg = detect_content_based(
+                sprite_sheet
+            )
 
             if content_success:
                 result.frame_width = frame_width
@@ -809,7 +880,9 @@ def comprehensive_auto_detect(sprite_sheet: QPixmap, sprite_sheet_path: str | No
 
                 # Fall back to rectangular detection
                 try:
-                    rect_success, frame_width, frame_height, frame_msg = detect_rectangular_frames(sprite_sheet)
+                    rect_success, frame_width, frame_height, frame_msg = detect_rectangular_frames(
+                        sprite_sheet
+                    )
 
                     if rect_success:
                         result.frame_width = frame_width
@@ -826,7 +899,9 @@ def comprehensive_auto_detect(sprite_sheet: QPixmap, sprite_sheet_path: str | No
 
                         # Try basic square detection as final fallback
                         try:
-                            basic_success, basic_width, basic_height, basic_msg = detect_frame_size(sprite_sheet)
+                            basic_success, basic_width, basic_height, basic_msg = detect_frame_size(
+                                sprite_sheet
+                            )
                             if basic_success:
                                 result.frame_width = basic_width
                                 result.frame_height = basic_height
@@ -855,7 +930,12 @@ def comprehensive_auto_detect(sprite_sheet: QPixmap, sprite_sheet_path: str | No
 
             try:
                 spacing_success, spacing_x, spacing_y, spacing_msg = detect_spacing(
-                    sprite_sheet, result.frame_width, result.frame_height, result.offset_x, result.offset_y)
+                    sprite_sheet,
+                    result.frame_width,
+                    result.frame_height,
+                    result.offset_x,
+                    result.offset_y,
+                )
 
                 if spacing_success:
                     result.spacing_x = spacing_x
@@ -887,7 +967,9 @@ def comprehensive_auto_detect(sprite_sheet: QPixmap, sprite_sheet_path: str | No
         # Step 4: Cross-validation and final verification
         results.append("\n🔍 Step 4: Cross-validation...")
         try:
-            validation_success, validation_msg = _validate_detection_consistency(sprite_sheet, result)
+            validation_success, validation_msg = _validate_detection_consistency(
+                sprite_sheet, result
+            )
 
             if validation_success:
                 results.append(f"   ✓ {validation_msg}")
@@ -900,8 +982,16 @@ def comprehensive_auto_detect(sprite_sheet: QPixmap, sprite_sheet_path: str | No
             confidence_scores.append(0.3)
 
         # Step 5: Calculate overall confidence and summary
-        overall_confidence = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
-        confidence_text = "high" if overall_confidence >= 0.8 else "medium" if overall_confidence >= 0.6 else "low"
+        overall_confidence = (
+            sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
+        )
+        confidence_text = (
+            "high"
+            if overall_confidence >= 0.8
+            else "medium"
+            if overall_confidence >= 0.6
+            else "low"
+        )
 
         results.append("\n📊 Overall Result:")
         results.append(f"   • Frame Size: {result.frame_width}×{result.frame_height}")
@@ -932,7 +1022,9 @@ def comprehensive_auto_detect(sprite_sheet: QPixmap, sprite_sheet_path: str | No
         return False, "\n".join(results), result
 
 
-def _validate_detection_consistency(sprite_sheet: QPixmap, result: DetectionResult) -> tuple[bool, str]:
+def _validate_detection_consistency(
+    sprite_sheet: QPixmap, result: DetectionResult
+) -> tuple[bool, str]:
     """
     Validate that all detected parameters work together consistently.
 
@@ -953,22 +1045,32 @@ def _validate_detection_consistency(sprite_sheet: QPixmap, result: DetectionResu
         sheet_height = sprite_sheet.height()
 
         if result.offset_x + result.frame_width > sheet_width:
-            return False, f"Frame width + margin ({result.offset_x + result.frame_width}) exceeds sheet width ({sheet_width})"
+            return (
+                False,
+                f"Frame width + margin ({result.offset_x + result.frame_width}) exceeds sheet width ({sheet_width})",
+            )
 
         if result.offset_y + result.frame_height > sheet_height:
-            return False, f"Frame height + margin ({result.offset_y + result.frame_height}) exceeds sheet height ({sheet_height})"
+            return (
+                False,
+                f"Frame height + margin ({result.offset_y + result.frame_height}) exceeds sheet height ({sheet_height})",
+            )
 
         # Calculate expected frame count
         available_width = sheet_width - result.offset_x
         available_height = sheet_height - result.offset_y
 
         if result.spacing_x > 0:
-            frames_x = (available_width + result.spacing_x) // (result.frame_width + result.spacing_x)
+            frames_x = (available_width + result.spacing_x) // (
+                result.frame_width + result.spacing_x
+            )
         else:
             frames_x = available_width // result.frame_width
 
         if result.spacing_y > 0:
-            frames_y = (available_height + result.spacing_y) // (result.frame_height + result.spacing_y)
+            frames_y = (available_height + result.spacing_y) // (
+                result.frame_height + result.spacing_y
+            )
         else:
             frames_y = available_height // result.frame_height
 

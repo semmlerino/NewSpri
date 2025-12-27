@@ -76,9 +76,7 @@ class ExportCoordinator(QObject):
             True if export can proceed, False otherwise
         """
         if not self._sprite_model or not self._sprite_model.sprite_frames:
-            QMessageBox.warning(
-                self._parent_widget, "No Frames", "No frames to export."
-            )
+            QMessageBox.warning(self._parent_widget, "No Frames", "No frames to export.")
             return False
         return True
 
@@ -115,9 +113,7 @@ class ExportCoordinator(QObject):
 
         # Get frame count for progress dialog
         frame_count = (
-            len(self._sprite_model.sprite_frames)
-            if self._sprite_model.sprite_frames
-            else 0
+            len(self._sprite_model.sprite_frames) if self._sprite_model.sprite_frames else 0
         )
 
         # Create and configure progress dialog
@@ -385,9 +381,7 @@ class ExportCoordinator(QObject):
         """Disconnect signals and close progress dialog."""
         if self._progress_dialog:
             try:
-                self._exporter.exportProgress.disconnect(
-                    self._progress_dialog.update_progress
-                )
+                self._exporter.exportProgress.disconnect(self._progress_dialog.update_progress)
                 self._exporter.exportFinished.disconnect(self._on_export_finished)
                 self._exporter.exportError.disconnect(self._on_export_error)
             except RuntimeError:

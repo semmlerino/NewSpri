@@ -113,13 +113,13 @@ class FrameExtractionConfig:
     # Enhanced auto-detection (Phase 2)
     BASE_SIZES = [8, 12, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 160, 192, 256]
     COMMON_ASPECT_RATIOS = [
-        (1, 1),   # Square: 32×32, 64×64
-        (1, 2),   # Tall: 16×32, 32×64, 48×96
-        (2, 1),   # Wide: 32×16, 64×32, 96×48
-        (2, 3),   # Character: 32×48, 64×96
-        (3, 2),   # Wide char: 48×32, 96×64
-        (3, 4),   # Portrait: 48×64, 72×96
-        (4, 3),   # Landscape: 64×48, 96×72
+        (1, 1),  # Square: 32×32, 64×64
+        (1, 2),  # Tall: 16×32, 32×64, 48×96
+        (2, 1),  # Wide: 32×16, 64×32, 96×48
+        (2, 3),  # Character: 32×48, 64×96
+        (3, 2),  # Wide char: 48×32, 96×64
+        (3, 4),  # Portrait: 48×64, 72×96
+        (4, 3),  # Landscape: 64×48, 96×72
     ]
 
     # Frame count constraints for detection
@@ -146,29 +146,29 @@ class UIConfig:
     DEFAULT_WINDOW_Y = 100
 
     # Minimum window size for usability
-    MIN_WINDOW_WIDTH = 800   # Ensures canvas + controls are usable
+    MIN_WINDOW_WIDTH = 800  # Ensures canvas + controls are usable
     MIN_WINDOW_HEIGHT = 600  # Ensures all controls are accessible
 
     # Controls panel (optimized responsive sizing)
     CONTROLS_WIDTH_RATIO = 0.22  # 22% of window width (was 25%)
-    CONTROLS_MIN_WIDTH = 250     # Reduced minimum for better proportions
-    CONTROLS_MAX_WIDTH = 350     # Reduced maximum to improve canvas space
+    CONTROLS_MIN_WIDTH = 250  # Reduced minimum for better proportions
+    CONTROLS_MAX_WIDTH = 350  # Reduced maximum to improve canvas space
 
     # Info group constraints
     INFO_GROUP_MAX_HEIGHT = 120
 
     # Layout spacing (standardized to 6px for consistency)
     MAIN_LAYOUT_SPACING = 6
-    PRESET_GRID_SPACING = 6      # Consistent grid spacing
-    SIZE_LAYOUT_SPACING = 5      # Keep size layout compact
-    NAV_BUTTON_SPACING = 6       # Consistent button spacing
+    PRESET_GRID_SPACING = 6  # Consistent grid spacing
+    SIZE_LAYOUT_SPACING = 5  # Keep size layout compact
+    NAV_BUTTON_SPACING = 6  # Consistent button spacing
 
     # Button dimensions (compacted by 20-25%)
-    PLAYBACK_BUTTON_MIN_HEIGHT = 32   # Reduced from 40
-    NAV_BUTTON_MIN_WIDTH = 28         # Reduced from 35
-    NAV_BUTTON_MIN_HEIGHT = 28        # Reduced from 35
-    COLOR_BUTTON_MAX_WIDTH = 50       # Reduced from 60
-    AUTO_BUTTON_MAX_WIDTH = 50        # Keep for usability
+    PLAYBACK_BUTTON_MIN_HEIGHT = 32  # Reduced from 40
+    NAV_BUTTON_MIN_WIDTH = 28  # Reduced from 35
+    NAV_BUTTON_MIN_HEIGHT = 28  # Reduced from 35
+    COLOR_BUTTON_MAX_WIDTH = 50  # Reduced from 60
+    AUTO_BUTTON_MAX_WIDTH = 50  # Keep for usability
 
     # Navigation button style values (updated to match new dimensions)
     NAV_BUTTON_WIDTH_PX = "28px"
@@ -380,7 +380,7 @@ class UIConfig:
         """Slider and control widget settings."""
 
         # Zoom slider
-        ZOOM_SLIDER_MIN = 10    # 0.1x zoom (10%)
+        ZOOM_SLIDER_MIN = 10  # 0.1x zoom (10%)
         ZOOM_SLIDER_MAX = 1000  # 10x zoom (1000%)
         ZOOM_SLIDER_DEFAULT = 100  # 1x zoom (100%)
 
@@ -477,7 +477,7 @@ class AppConfig:
         """File handling and I/O settings."""
 
         # Supported image formats
-        SUPPORTED_EXTENSIONS = ('.png', '.jpg', '.jpeg', '.bmp', '.gif')
+        SUPPORTED_EXTENSIONS = (".png", ".jpg", ".jpeg", ".bmp", ".gif")
 
         # File dialog filter
         IMAGE_FILTER = "Image Files (*.png *.jpg *.jpeg *.bmp *.gif);;All Files (*)"
@@ -521,31 +521,27 @@ class AppConfig:
         # Default values for settings that don't exist
         DEFAULTS = {
             # Window geometry (will be set by application)
-            'window/geometry': None,
-            'window/state': None,
-            'window/splitter_state': None,
-
+            "window/geometry": None,
+            "window/state": None,
+            "window/splitter_state": None,
             # Frame extraction defaults
-            'extraction/last_width': 32,
-            'extraction/last_height': 32,
-            'extraction/last_offset_x': 0,
-            'extraction/last_offset_y': 0,
-            'extraction/last_spacing_x': 0,
-            'extraction/last_spacing_y': 0,
-            'extraction/last_mode': 'grid',
-
+            "extraction/last_width": 32,
+            "extraction/last_height": 32,
+            "extraction/last_offset_x": 0,
+            "extraction/last_offset_y": 0,
+            "extraction/last_spacing_x": 0,
+            "extraction/last_spacing_y": 0,
+            "extraction/last_mode": "grid",
             # Display preferences
-            'display/grid_visible': False,
-            'display/last_zoom': 1.0,
-            'display/zoom_fit_tiny': True,
-
+            "display/grid_visible": False,
+            "display/last_zoom": 1.0,
+            "display/zoom_fit_tiny": True,
             # Animation preferences
-            'animation/last_fps': 10,
-            'animation/loop_mode': True,
-
+            "animation/last_fps": 10,
+            "animation/loop_mode": True,
             # Recent files
-            'recent/files': [],
-            'recent/max_count': 10,
+            "recent/files": [],
+            "recent/max_count": 10,
         }
 
 
@@ -553,8 +549,8 @@ class ExportConfig:
     """Export functionality settings."""
 
     # Supported image formats
-    IMAGE_FORMATS = ['PNG', 'JPG', 'BMP']
-    DEFAULT_FORMAT = 'PNG'
+    IMAGE_FORMATS = ["PNG", "JPG", "BMP"]
+    DEFAULT_FORMAT = "PNG"
 
     # Default naming patterns
     DEFAULT_PATTERN = "{name}_{index:03d}"
@@ -564,44 +560,45 @@ class ExportConfig:
     # ==========================================
 
     # Layout calculation modes
-    LAYOUT_MODES = ['auto', 'rows', 'columns', 'square', 'custom', 'segments_per_row']
-    DEFAULT_LAYOUT_MODE = 'auto'
+    LAYOUT_MODES = ["auto", "rows", "columns", "square", "custom", "segments_per_row"]
+    DEFAULT_LAYOUT_MODE = "auto"
 
     # Spacing and padding settings
-    DEFAULT_SPRITE_SPACING = 0      # Pixels between sprites
-    MIN_SPRITE_SPACING = 0          # Minimum spacing allowed
-    MAX_SPRITE_SPACING = 50         # Maximum spacing allowed
-    SPRITE_SPACING_STEP = 1         # Increment step for UI controls
+    DEFAULT_SPRITE_SPACING = 0  # Pixels between sprites
+    MIN_SPRITE_SPACING = 0  # Minimum spacing allowed
+    MAX_SPRITE_SPACING = 50  # Maximum spacing allowed
+    SPRITE_SPACING_STEP = 1  # Increment step for UI controls
 
-    DEFAULT_SHEET_PADDING = 0       # Padding around entire sheet
-    MIN_SHEET_PADDING = 0           # Minimum padding allowed
-    MAX_SHEET_PADDING = 100         # Maximum padding allowed
-    SHEET_PADDING_STEP = 5          # Increment step for UI controls
+    DEFAULT_SHEET_PADDING = 0  # Padding around entire sheet
+    MIN_SHEET_PADDING = 0  # Minimum padding allowed
+    MAX_SHEET_PADDING = 100  # Maximum padding allowed
+    SHEET_PADDING_STEP = 5  # Increment step for UI controls
 
     # Grid configuration constraints
-    DEFAULT_MAX_COLUMNS = 10        # Default max columns for 'rows' mode
-    DEFAULT_MAX_ROWS = 10           # Default max rows for 'columns' mode
-    MIN_GRID_SIZE = 1               # Minimum grid dimension
-    MAX_GRID_SIZE = 50              # Maximum grid dimension (reasonable limit)
+    DEFAULT_MAX_COLUMNS = 10  # Default max columns for 'rows' mode
+    DEFAULT_MAX_ROWS = 10  # Default max rows for 'columns' mode
+    MIN_GRID_SIZE = 1  # Minimum grid dimension
+    MAX_GRID_SIZE = 50  # Maximum grid dimension (reasonable limit)
 
     # Background fill options
-    BACKGROUND_MODES = ['transparent', 'solid', 'checkerboard']
-    DEFAULT_BACKGROUND_MODE = 'transparent'
+    BACKGROUND_MODES = ["transparent", "solid", "checkerboard"]
+    DEFAULT_BACKGROUND_MODE = "transparent"
     DEFAULT_BACKGROUND_COLOR = (255, 255, 255, 255)  # White with full alpha
 
     # Checkerboard pattern settings (for background)
-    CHECKERBOARD_TILE_SIZE = 16     # Size of checkerboard tiles
+    CHECKERBOARD_TILE_SIZE = 16  # Size of checkerboard tiles
     CHECKERBOARD_LIGHT_COLOR = (255, 255, 255, 255)  # Light checkerboard color
-    CHECKERBOARD_DARK_COLOR = (192, 192, 192, 255)   # Dark checkerboard color
+    CHECKERBOARD_DARK_COLOR = (192, 192, 192, 255)  # Dark checkerboard color
 
     # Layout calculation preferences
-    PREFER_HORIZONTAL = False       # For auto mode: prefer horizontal vs vertical layouts
-    ENABLE_ANTIALIASING = True      # Enable antialiasing for scaled sprites
+    PREFER_HORIZONTAL = False  # For auto mode: prefer horizontal vs vertical layouts
+    ENABLE_ANTIALIASING = True  # Enable antialiasing for scaled sprites
 
 
 # =============================================================================
 # MAIN CONFIG CLASS - Provides unified access with backward compatibility
 # =============================================================================
+
 
 class Config:
     """Main configuration class providing access to all settings."""
@@ -627,11 +624,11 @@ class Config:
 
 # Export for easy importing
 __all__ = [
-    'AnimationConfig',
-    'AppConfig',
-    'CanvasConfig',
-    'Config',
-    'ExportConfig',
-    'FrameExtractionConfig',
-    'UIConfig',
+    "AnimationConfig",
+    "AppConfig",
+    "CanvasConfig",
+    "Config",
+    "ExportConfig",
+    "FrameExtractionConfig",
+    "UIConfig",
 ]

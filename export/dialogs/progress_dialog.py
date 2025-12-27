@@ -67,4 +67,4 @@ class ExportProgressDialog(QDialog):
         self.reject()
 
 
-__all__ = ['ExportProgressDialog']
+__all__ = ["ExportProgressDialog"]
