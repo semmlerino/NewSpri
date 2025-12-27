@@ -10,10 +10,10 @@ from PySide6.QtGui import QPixmap, QColor
 from PySide6.QtCore import Qt
 
 from sprite_model.core import SpriteModel
-from ui.animation_grid_view import AnimationGridView, AnimationSegment
+from ui.animation_grid_view import AnimationGridView
 from ui.animation_segment_preview import AnimationSegmentPreview
 from core.animation_segment_controller import AnimationSegmentController
-from managers import AnimationSegmentManager
+from managers import AnimationSegment, AnimationSegmentManager
 
 
 class TestSegmentPreviewIntegration:
@@ -85,7 +85,7 @@ class TestSegmentPreviewIntegration:
         assert len(segment_manager.get_all_segments()) == 0
         
         # Create a segment
-        segment = AnimationSegment("TestWalk", 0, 3, QColor(255, 0, 0))
+        segment = AnimationSegment("TestWalk", 0, 3, color_rgb=(255, 0, 0))
         grid_view.add_segment(segment)
         grid_view.segmentCreated.emit(segment)
         
@@ -107,13 +107,13 @@ class TestSegmentPreviewIntegration:
         
         # Create multiple segments
         segments_data = [
-            ("Idle", 0, 2, QColor(255, 0, 0)),
-            ("Walk", 3, 6, QColor(0, 255, 0)),
-            ("Run", 7, 10, QColor(0, 0, 255)),
+            ("Idle", 0, 2, (255, 0, 0)),
+            ("Walk", 3, 6, (0, 255, 0)),
+            ("Run", 7, 10, (0, 0, 255)),
         ]
-        
-        for name, start, end, color in segments_data:
-            segment = AnimationSegment(name, start, end, color)
+
+        for name, start, end, color_rgb in segments_data:
+            segment = AnimationSegment(name, start, end, color_rgb=color_rgb)
             grid_view.add_segment(segment)
             grid_view.segmentCreated.emit(segment)
         
@@ -122,11 +122,11 @@ class TestSegmentPreviewIntegration:
         assert all(name in segment_preview._preview_items for name, _, _, _ in segments_data)
         
         # Verify each preview item
-        for name, start, end, color in segments_data:
+        for name, start, end, color_rgb in segments_data:
             preview_item = segment_preview._preview_items[name]
             assert preview_item.segment_name == name
             assert len(preview_item._frames) == end - start + 1
-            assert preview_item.segment_color == color
+            assert preview_item.segment_color == QColor(*color_rgb)
     
     def test_segment_preview_with_name_conflict(self, qtbot, setup_components):
         """Test that segments with name conflicts still appear in preview with renamed names."""
@@ -135,14 +135,14 @@ class TestSegmentPreviewIntegration:
         segment_manager = setup_components['segment_manager']
         
         # Create first segment
-        segment1 = AnimationSegment("Attack", 0, 3, QColor(255, 0, 0))
+        segment1 = AnimationSegment("Attack", 0, 3, color_rgb=(255, 0, 0))
         grid_view.add_segment(segment1)
         grid_view.segmentCreated.emit(segment1)
         
         assert "Attack" in segment_preview._preview_items
         
         # Try to create segment with same name
-        segment2 = AnimationSegment("Attack", 4, 7, QColor(0, 255, 0))
+        segment2 = AnimationSegment("Attack", 4, 7, color_rgb=(0, 255, 0))
         grid_view.add_segment(segment2)
         grid_view.segmentCreated.emit(segment2)
         
@@ -167,8 +167,8 @@ class TestSegmentPreviewIntegration:
         segment_controller = setup_components['segment_controller']
         
         # Create segments
-        segment1 = AnimationSegment("Segment1", 0, 3, QColor(255, 0, 0))
-        segment2 = AnimationSegment("Segment2", 4, 7, QColor(0, 255, 0))
+        segment1 = AnimationSegment("Segment1", 0, 3, color_rgb=(255, 0, 0))
+        segment2 = AnimationSegment("Segment2", 4, 7, color_rgb=(0, 255, 0))
         
         grid_view.add_segment(segment1)
         grid_view.segmentCreated.emit(segment1)
@@ -196,7 +196,7 @@ class TestSegmentPreviewIntegration:
         
         # Create a segment
         grid_view = setup_components['grid_view']
-        segment = AnimationSegment("Test", 0, 3, QColor(255, 0, 0))
+        segment = AnimationSegment("Test", 0, 3, color_rgb=(255, 0, 0))
         grid_view.add_segment(segment)
         grid_view.segmentCreated.emit(segment)
         
@@ -217,7 +217,7 @@ class TestSegmentPreviewIntegration:
         segment_controller = setup_components['segment_controller']
         
         # Create segments
-        segment = AnimationSegment("Persistent", 0, 5, QColor(128, 128, 255))
+        segment = AnimationSegment("Persistent", 0, 5, color_rgb=(128, 128, 255))
         grid_view.add_segment(segment)
         grid_view.segmentCreated.emit(segment)
         

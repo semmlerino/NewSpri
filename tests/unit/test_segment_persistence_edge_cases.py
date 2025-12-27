@@ -22,7 +22,7 @@ import pytest
 
 from PySide6.QtGui import QColor
 
-from managers.animation_segment_manager import AnimationSegmentManager, AnimationSegmentData
+from managers import AnimationSegment, AnimationSegmentManager
 
 if TYPE_CHECKING:
     from pathlib import Path as PathType

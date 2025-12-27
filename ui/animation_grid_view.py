@@ -4,7 +4,7 @@ Provides a grid view of all sprite frames with selection capabilities for animat
 Part of Animation Splitting Feature implementation.
 """
 
-from dataclasses import dataclass
+import copy
 
 from PySide6.QtCore import QPoint, Qt, Signal
 from PySide6.QtGui import QColor, QMouseEvent, QPixmap
@@ -22,28 +22,9 @@ from PySide6.QtWidgets import (
 )
 
 from config import Config
+from managers import AnimationSegment
 from utils.sprite_rendering import create_padded_pixmap
 from utils.styles import StyleManager
-
-
-@dataclass
-class AnimationSegment:
-    """Represents a single animation segment with start/end frames."""
-    name: str
-    start_frame: int
-    end_frame: int
-    color: QColor
-    bounce_mode: bool = False
-    frame_holds: dict[int, int] | None = None
-
-    def __post_init__(self):
-        if self.frame_holds is None:
-            self.frame_holds = {}
-
-    @property
-    def frame_count(self) -> int:
-        """Get number of frames in this segment."""
-        return self.end_frame - self.start_frame + 1
 
 
 class FrameThumbnail(QLabel):
@@ -598,8 +579,8 @@ class AnimationGridView(QWidget):
                 name=name.strip(),
                 start_frame=start,
                 end_frame=end,
-                color=self._get_next_segment_color(),
             )
+            segment.set_color(self._get_next_segment_color())
             self.add_segment(segment)
             self._clear_selection()
 
@@ -641,25 +622,15 @@ class AnimationGridView(QWidget):
         if not segment_manager:
             return
 
-        # Get all segments from manager
+        # Get all segments from manager (now same type as grid uses)
         manager_segments = segment_manager.get_all_segments()
 
         # Clear current segments and rebuild from manager
         self._segments.clear()
 
-        # Add all segments from manager to grid view
-        for segment_data in manager_segments:
-            # Convert segment manager data to AnimationSegment
-            grid_segment = AnimationSegment(
-                segment_data.name,
-                segment_data.start_frame,
-                segment_data.end_frame,
-                segment_data.color,
-                segment_data.bounce_mode,
-                segment_data.frame_holds.copy() if segment_data.frame_holds else {}
-            )
-
-            self._segments[segment_data.name] = grid_segment
+        # Add copies of segments to ensure data independence
+        for segment in manager_segments:
+            self._segments[segment.name] = copy.deepcopy(segment)
 
         # Update visualization
         self._update_segment_visualization()
@@ -768,8 +739,8 @@ class AnimationGridView(QWidget):
             name="Preview",
             start_frame=sorted_frames[0],
             end_frame=sorted_frames[-1],
-            color=QColor(Config.Colors.SEGMENT_PALETTE[0]),
         )
+        temp_segment.set_color(QColor(Config.Colors.SEGMENT_PALETTE[0]))
         self.segmentPreviewRequested.emit(temp_segment)
 
     def get_segments(self) -> list[AnimationSegment]:

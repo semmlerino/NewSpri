@@ -12,8 +12,7 @@ from PySide6.QtGui import QPixmap, QColor, QPainter
 from PySide6.QtWidgets import QApplication
 
 from sprite_viewer import SpriteViewer
-from managers.animation_segment_manager import AnimationSegmentManager
-from ui.animation_grid_view import AnimationSegment
+from managers import AnimationSegment, AnimationSegmentManager
 
 
 class TestSegmentPersistence:

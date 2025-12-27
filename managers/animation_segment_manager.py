@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
-class AnimationSegmentData:
+class AnimationSegment:
     """Data structure for animation segment with serialization support."""
     name: str
     start_frame: int
@@ -57,7 +57,7 @@ class AnimationSegmentData:
         return asdict(self)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> 'AnimationSegmentData':
+    def from_dict(cls, data: dict[str, Any]) -> 'AnimationSegment':
         """Create from dictionary."""
         # Handle backward compatibility for segments without new fields
         data = data.copy()
@@ -112,18 +112,22 @@ class AnimationSegmentData:
         return True, ""
 
 
+# Backward compatibility alias (will be removed after migration)
+AnimationSegmentData = AnimationSegment
+
+
 class AnimationSegmentManager(QObject):
     """Manages animation segments with persistence and validation."""
 
     # Signals
-    segmentAdded = Signal(AnimationSegmentData)
+    segmentAdded = Signal(AnimationSegment)
     segmentRemoved = Signal(str)  # segment_name
-    segmentUpdated = Signal(AnimationSegmentData)
+    segmentUpdated = Signal(AnimationSegment)
     segmentsCleared = Signal()
 
     def __init__(self):
         super().__init__()
-        self._segments: dict[str, AnimationSegmentData] = {}
+        self._segments: dict[str, AnimationSegment] = {}
         self._sprite_sheet_path: str = ""
         self._max_frames: int = 0
         self._auto_save_enabled: bool = True
@@ -184,7 +188,7 @@ class AnimationSegmentManager(QObject):
             hash_val = abs(hash(name)) % 360
             color = QColor.fromHsv(hash_val, 180, 200)
 
-        segment = AnimationSegmentData(
+        segment = AnimationSegment(
             name=name,
             start_frame=start_frame,
             end_frame=end_frame,
@@ -371,11 +375,11 @@ class AnimationSegmentManager(QObject):
 
         return True, ""
 
-    def get_segment(self, name: str) -> AnimationSegmentData | None:
+    def get_segment(self, name: str) -> AnimationSegment | None:
         """Get a segment by name."""
         return self._segments.get(name)
 
-    def get_all_segments(self) -> list[AnimationSegmentData]:
+    def get_all_segments(self) -> list[AnimationSegment]:
         """Get all segments as a list."""
         return list(self._segments.values())
 
@@ -427,7 +431,7 @@ class AnimationSegmentManager(QObject):
                 return segment.name
         return None
 
-    def get_segment_at_frame(self, frame_index: int) -> AnimationSegmentData | None:
+    def get_segment_at_frame(self, frame_index: int) -> AnimationSegment | None:
         """Get the first segment that contains a specific frame."""
         for _name, segment in self._segments.items():
             if segment.start_frame <= frame_index <= segment.end_frame:
@@ -545,7 +549,7 @@ class AnimationSegmentManager(QObject):
             skipped_segments: list[tuple[str, str]] = []
 
             for segment_data in segments_in_file:
-                segment = AnimationSegmentData.from_dict(segment_data)
+                segment = AnimationSegment.from_dict(segment_data)
 
                 # Validate against current context
                 is_valid, error = segment.validate(self._max_frames)

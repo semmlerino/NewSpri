@@ -2,7 +2,7 @@
 
 import pytest
 from PySide6.QtGui import QColor
-from managers.animation_segment_manager import AnimationSegmentManager, AnimationSegmentData
+from managers import AnimationSegment, AnimationSegmentManager
 
 
 class TestAnimationSegmentBounceHolds:
@@ -92,7 +92,7 @@ class TestAnimationSegmentBounceHolds:
         assert segment_dict["frame_holds"] == {2: 8, 5: 12}
         
         # Test deserialization
-        restored_segment = AnimationSegmentData.from_dict(segment_dict)
+        restored_segment = AnimationSegment.from_dict(segment_dict)
         assert restored_segment.bounce_mode is True
         assert restored_segment.frame_holds == {2: 8, 5: 12}
     
@@ -109,7 +109,7 @@ class TestAnimationSegmentBounceHolds:
         }
         
         # Load old segment
-        segment = AnimationSegmentData.from_dict(old_segment_dict)
+        segment = AnimationSegment.from_dict(old_segment_dict)
         
         # Check that defaults are applied
         assert segment.bounce_mode is False
@@ -122,7 +122,7 @@ class TestAnimationSegmentBounceHolds:
         """Test that frame holds with integer keys serialize correctly."""
         # Create segment with frame holds
         frame_holds = {0: 5, 3: 10, 7: 3}
-        segment = AnimationSegmentData(
+        segment = AnimationSegment(
             "Test", 0, 7,
             frame_holds=frame_holds
         )
@@ -137,7 +137,7 @@ class TestAnimationSegmentBounceHolds:
         loaded_dict = json.loads(json_str)
         
         # Deserialize
-        restored_segment = AnimationSegmentData.from_dict(loaded_dict)
+        restored_segment = AnimationSegment.from_dict(loaded_dict)
         
         # Check that integer keys are restored
         assert restored_segment.frame_holds == frame_holds

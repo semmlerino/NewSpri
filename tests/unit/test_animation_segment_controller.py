@@ -13,8 +13,7 @@ from PySide6.QtCore import QObject
 from PySide6.QtGui import QColor
 
 from core.animation_segment_controller import AnimationSegmentController
-from managers import AnimationSegmentManager
-from managers.animation_segment_manager import AnimationSegmentData
+from managers import AnimationSegment, AnimationSegmentManager
 
 
 class TestAnimationSegmentController(unittest.TestCase):
@@ -52,7 +51,7 @@ class TestAnimationSegmentController(unittest.TestCase):
             self.segment_manager.set_sprite_context(tmp.name, 20)
         
             # Use real AnimationSegmentData
-            segment = AnimationSegmentData(
+            segment = AnimationSegment(
                 name="TestSegment",
                 start_frame=0,
                 end_frame=9,
@@ -80,7 +79,7 @@ class TestAnimationSegmentController(unittest.TestCase):
         mock_manager.add_segment.return_value = (False, "Database error")
         self.controller._segment_manager = mock_manager
 
-        segment = AnimationSegmentData("TestSegment", 0, 9)
+        segment = AnimationSegment("TestSegment", 0, 9)
 
         # Act
         success, message = self.controller.create_segment(segment)
@@ -96,7 +95,7 @@ class TestAnimationSegmentController(unittest.TestCase):
             self.segment_manager.set_sprite_context(tmp.name, 20)
             
             # First add a segment with the same name
-            existing_segment = AnimationSegmentData(
+            existing_segment = AnimationSegment(
                 name="TestSegment",
                 start_frame=10,
                 end_frame=19
@@ -110,7 +109,7 @@ class TestAnimationSegmentController(unittest.TestCase):
             )
         
             # Now try to add another with same name
-            new_segment = AnimationSegmentData(
+            new_segment = AnimationSegment(
                 name="TestSegment",
                 start_frame=0,
                 end_frame=9
@@ -136,7 +135,7 @@ class TestAnimationSegmentController(unittest.TestCase):
     def test_create_segment_max_retry_failure(self):
         """Test segment creation fails after max retries."""
         # Arrange
-        segment = AnimationSegmentData("TestSegment", 0, 9)
+        segment = AnimationSegment("TestSegment", 0, 9)
         
         # Mock the segment manager for this test
         mock_segment_manager = Mock()
@@ -172,7 +171,7 @@ class TestAnimationSegmentController(unittest.TestCase):
             self.segment_manager.set_sprite_context(tmp.name, 20)
             
             # First add a segment
-            segment = AnimationSegmentData("TestSegment", 0, 9)
+            segment = AnimationSegment("TestSegment", 0, 9)
             self.segment_manager.add_segment(
                 segment.name,
                 segment.start_frame,
@@ -207,7 +206,7 @@ class TestAnimationSegmentController(unittest.TestCase):
     def test_select_segment(self):
         """Test segment selection."""
         # Arrange - Use real segment data
-        segment = AnimationSegmentData("TestSegment", 5, 15)
+        segment = AnimationSegment("TestSegment", 5, 15)
         signal_spy = Mock()
         self.controller.statusMessage.connect(signal_spy)
         
@@ -223,7 +222,7 @@ class TestAnimationSegmentController(unittest.TestCase):
     def test_preview_segment(self):
         """Test segment preview."""
         # Arrange - Use real segment data
-        segment = AnimationSegmentData("TestSegment", 10, 20)
+        segment = AnimationSegment("TestSegment", 10, 20)
         signal_spy = Mock()
         self.controller.statusMessage.connect(signal_spy)
         
@@ -245,7 +244,7 @@ class TestAnimationSegmentController(unittest.TestCase):
     def test_export_segment_success(self, mock_msgbox, mock_dialog_class):
         """Test successful segment export."""
         # Arrange
-        segment = AnimationSegmentData("TestSegment", 0, 4)
+        segment = AnimationSegment("TestSegment", 0, 4)
         frames = [Mock() for _ in range(10)]
         segment_frames = frames[0:5]
         
@@ -279,7 +278,7 @@ class TestAnimationSegmentController(unittest.TestCase):
     def test_export_segment_no_frames(self, mock_msgbox):
         """Test export with no frames available."""
         # Arrange
-        segment = AnimationSegmentData("TestSegment", 0, 4)
+        segment = AnimationSegment("TestSegment", 0, 4)
         self.mock_sprite_model.get_all_frames.return_value = []
         
         # Mock segment manager for this test

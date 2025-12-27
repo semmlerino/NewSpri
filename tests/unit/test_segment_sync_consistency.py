@@ -21,8 +21,8 @@ import pytest
 
 from PySide6.QtGui import QColor
 
-from managers.animation_segment_manager import AnimationSegmentManager, AnimationSegmentData
-from ui.animation_grid_view import AnimationGridView, AnimationSegment
+from managers import AnimationSegment, AnimationSegmentManager
+from ui.animation_grid_view import AnimationGridView
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QApplication
@@ -83,7 +83,7 @@ class TestSyncAfterLoad:
     ) -> None:
         """Syncing with empty manager should clear grid view segments."""
         # Add a segment directly to grid view
-        grid_view._segments["Test"] = AnimationSegment("Test", 0, 3, QColor(255, 0, 0))
+        grid_view._segments["Test"] = AnimationSegment("Test", 0, 3, color_rgb=(255, 0, 0))
 
         # Sync with empty manager
         grid_view.sync_segments_with_manager(segment_manager)
@@ -116,7 +116,7 @@ class TestSyncAfterLoad:
     ) -> None:
         """Syncing should overwrite any existing grid segments with manager state."""
         # Add segment to grid with old data
-        grid_view._segments["Walk"] = AnimationSegment("Walk", 0, 3, QColor(255, 0, 0))
+        grid_view._segments["Walk"] = AnimationSegment("Walk", 0, 3, color_rgb=(255, 0, 0))
 
         # Add same segment to manager with different range
         segment_manager.add_segment("Walk", 0, 7, QColor(0, 255, 0))
@@ -391,7 +391,7 @@ class TestBidirectionalConsistency:
         """Manager should be the source of truth after sync."""
         # Add different segments to each
         segment_manager.add_segment("ManagerSeg", 0, 3, QColor(255, 0, 0))
-        grid_view._segments["GridSeg"] = AnimationSegment("GridSeg", 4, 7, QColor(0, 255, 0))
+        grid_view._segments["GridSeg"] = AnimationSegment("GridSeg", 4, 7, color_rgb=(0, 255, 0))
 
         # Sync (manager -> grid)
         grid_view.sync_segments_with_manager(segment_manager)
@@ -405,7 +405,7 @@ class TestBidirectionalConsistency:
     ) -> None:
         """Syncing with None manager should be safe no-op."""
         # Add segment to grid
-        grid_view._segments["Test"] = AnimationSegment("Test", 0, 3, QColor(255, 0, 0))
+        grid_view._segments["Test"] = AnimationSegment("Test", 0, 3, color_rgb=(255, 0, 0))
 
         # Sync with None (should not crash or change anything)
         grid_view.sync_segments_with_manager(None)
