@@ -136,6 +136,11 @@ class AnimationSegmentManager(QObject):
         """
         Set the current sprite sheet context.
 
+        Side effects (important!):
+        - If sprite_sheet_path differs from current, clears ALL existing segments
+        - Loads segments from disk for the new sprite sheet (.sprite_segments/ dir)
+        - Call sync_segments_with_manager() on grid view AFTER this to propagate
+
         Args:
             sprite_sheet_path: Path to the sprite sheet file
             frame_count: Number of frames in the sprite sheet

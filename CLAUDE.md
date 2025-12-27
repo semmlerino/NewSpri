@@ -119,8 +119,8 @@ These are real API contracts discovered through testing. Violating them causes r
 | `SpriteModel` frame settings | `frame_width`, `frame_height`, `offset_x`, `offset_y`, `spacing_x`, `spacing_y` (read-only properties) | `_frame_width`, `_offset_x` (private attrs) |
 | `SpriteModel.file_path` | Read-only property | `_file_path` (private attr) |
 | `FrameExtractor` | `width_spin`, `height_spin` | `frame_width_spin` |
-| `ViewCoordinator` zoom | `canvas.set_zoom(level)` | `zoom_in()`, `zoom_out()` |
-| `ViewCoordinator` grid | `set_grid_overlay(bool)` | `toggle_grid()` |
+| `SpriteCanvas` zoom | `set_zoom(level)` | `zoom_in()`, `zoom_out()` (don't exist) |
+| `SpriteCanvas` grid | `set_grid_overlay(bool)` | `toggle_grid()` (doesn't exist) |
 
 ## Segment System
 

@@ -903,11 +903,11 @@ class SpriteViewer(QMainWindow):
             # Update grid view with new frames
             self._segment_controller.update_grid_view_frames()
 
-            # Update segment manager with sprite context to load saved segments
+            # Load saved segments for this sprite sheet.
+            # ORDER MATTERS: set_sprite_context() loads from disk, sync copies to grid.
             if self._sprite_model.file_path:
                 self._segment_manager.set_sprite_context(self._sprite_model.file_path, frame_count)
 
-                # Sync loaded segments to grid view
                 if self._grid_view:
                     self._grid_view.sync_segments_with_manager(self._segment_manager)
         else:
