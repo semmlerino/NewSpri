@@ -333,10 +333,6 @@ class AnimationController(QObject):
         # Note: Some signals like playPauseClicked are already connected directly
         # to controller methods in SpriteViewer._connect_signals()
 
-        # Connect to view lifecycle signals if they exist
-        if hasattr(self._sprite_viewer, "aboutToClose"):
-            self._sprite_viewer.aboutToClose.connect(self._on_view_closing)  # type: ignore[union-attr]
-
         self.statusChanged.emit("View ↔ Controller signal communication established")
 
     def _sync_state_from_model(self) -> None:
@@ -448,12 +444,6 @@ class AnimationController(QObject):
         controller_error = f"Sprite model error: {error_message}"
         self.errorOccurred.emit(controller_error)
         self.statusChanged.emit("Animation paused due to model error")
-
-    def _on_view_closing(self) -> None:
-        """Handle view closing signal - stop animation and cleanup."""
-        if self._is_playing:
-            self.stop_animation()
-        self.statusChanged.emit("View closing, animation stopped")
 
     # ============================================================================
     # PROPERTIES & STATUS

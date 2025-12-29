@@ -7,10 +7,6 @@ Manages application settings persistence using QSettings.
 Provides centralized access to user preferences and application state.
 """
 
-import contextlib
-import json
-import os
-import tempfile
 import threading
 from pathlib import Path
 from typing import Any
@@ -264,75 +260,6 @@ class SettingsManager(QObject):
         self._settings.clear()
         self._recent_files = []
         self.recentFilesChanged.emit([])
-
-    def export_settings(self, filepath: str) -> bool:
-        """
-        Export settings to a JSON file using atomic write.
-
-        Args:
-            filepath: Path to save the settings file
-
-        Returns:
-            True if successful, False otherwise
-        """
-        temp_path = None
-        try:
-            # Gather all settings
-            settings_dict = {}
-            for key in Config.Settings.DEFAULTS:
-                value = self.get_value(key)
-                # Convert QByteArray to base64 string for JSON serialization
-                if isinstance(value, QByteArray):
-                    value = bytes(value.toBase64().data()).decode("ascii")
-                settings_dict[key] = value
-
-            # Atomic write: write to temp file, then rename
-            dir_path = os.path.dirname(filepath) or "."
-            with tempfile.NamedTemporaryFile(
-                mode="w", dir=dir_path, delete=False, suffix=".tmp", encoding="utf-8"
-            ) as f:
-                json.dump(settings_dict, f, indent=2, ensure_ascii=False)
-                temp_path = f.name
-
-            # Atomic rename (works on POSIX and Windows)
-            os.replace(temp_path, filepath)
-            return True
-        except Exception as e:
-            # Clean up temp file if it exists
-            if temp_path is not None:
-                with contextlib.suppress(OSError):
-                    os.unlink(temp_path)
-            print(f"Failed to export settings: {e}")
-            return False
-
-    def import_settings(self, filepath: str) -> bool:
-        """
-        Import settings from a JSON file.
-
-        Args:
-            filepath: Path to the settings file to import
-
-        Returns:
-            True if successful, False otherwise
-        """
-        try:
-            with open(filepath, encoding="utf-8") as f:
-                settings_dict = json.load(f)
-
-            # Apply imported settings
-            for key, value in settings_dict.items():
-                # Convert base64 strings back to QByteArray for geometry settings
-                if (key.endswith("/geometry") or key.endswith("/state")) and isinstance(value, str):
-                    value = QByteArray.fromBase64(value.encode("utf-8"))
-
-                self.set_value(key, value, auto_save=False)
-
-            # Force sync after import
-            self.sync()
-            return True
-        except Exception as e:
-            print(f"Failed to import settings: {e}")
-            return False
 
 
 # Singleton implementation (thread-safe double-checked locking)

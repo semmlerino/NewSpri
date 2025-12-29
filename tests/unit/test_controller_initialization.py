@@ -57,7 +57,6 @@ class TestAnimationControllerInitialization:
         mock_model.errorOccurred = Mock()
 
         mock_viewer = Mock()
-        mock_viewer.aboutToClose = Mock()
 
         controller = AnimationController(
             sprite_model=mock_model,
@@ -80,7 +79,6 @@ class TestAnimationControllerInitialization:
         mock_model.errorOccurred = Mock()
 
         mock_viewer = Mock()
-        mock_viewer.aboutToClose = Mock()
 
         controller = AnimationController(
             sprite_model=mock_model,

@@ -228,54 +228,6 @@ class RecentFilesManager(QObject):
         """Clear all recent files."""
         self._settings.clear_recent_files()
 
-    def get_recent_files_for_welcome(self) -> list[dict]:
-        """
-        Get recent files formatted for welcome screen display.
-
-        Returns:
-            List of dicts with file info for welcome screen
-        """
-        recent_files = self._settings.get_recent_files()
-        result = []
-
-        for filepath in recent_files[:5]:  # Show only first 5 in welcome screen
-            path_obj = Path(filepath)
-
-            # Skip if file doesn't exist
-            if not path_obj.exists():
-                continue
-
-            # Get file info
-            file_info = {
-                "path": filepath,
-                "name": path_obj.name,
-                "directory": path_obj.parent.name or path_obj.parent.as_posix(),
-                "size": self._format_file_size(path_obj.stat().st_size),
-                "modified": path_obj.stat().st_mtime,
-                "exists": True,
-            }
-
-            result.append(file_info)
-
-        return result
-
-    def _format_file_size(self, size_bytes: int) -> str:
-        """
-        Format file size in human-readable format.
-
-        Args:
-            size_bytes: File size in bytes
-
-        Returns:
-            Formatted size string
-        """
-        if size_bytes < 1024:
-            return f"{size_bytes} B"
-        elif size_bytes < 1024 * 1024:
-            return f"{size_bytes / 1024:.1f} KB"
-        else:
-            return f"{size_bytes / (1024 * 1024):.1f} MB"
-
     def add_file_to_recent(self, filepath: str) -> None:
         """
         Add a file to recent files (convenience method).

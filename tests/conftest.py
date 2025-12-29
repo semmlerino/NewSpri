@@ -228,7 +228,6 @@ def animation_controller(sprite_model) -> AnimationController:
     from unittest.mock import MagicMock
 
     mock_viewer = MagicMock()
-    mock_viewer.aboutToClose = MagicMock()  # Signal mock
     return AnimationController(sprite_model=sprite_model, sprite_viewer=mock_viewer)
 
 

@@ -9,13 +9,11 @@ Covers:
 - Splitter state save/restore
 - Extraction/display/animation settings
 - Recent files management
-- Export/import settings
 - Signal emission
 """
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
@@ -523,133 +521,6 @@ class TestResetToDefaults:
             settings_manager.reset_to_defaults()
 
         assert blocker.args[0] == []
-
-
-# ============================================================================
-# Export/Import Settings Tests
-# ============================================================================
-
-
-class TestExportImportSettings:
-    """Tests for export and import settings functionality."""
-
-    def test_export_settings_creates_file(
-        self, settings_manager: SettingsManager, temp_settings_file: Path
-    ) -> None:
-        """export_settings should create a JSON file."""
-        settings_manager.set_value('extraction/last_width', 64)
-
-        result = settings_manager.export_settings(str(temp_settings_file))
-
-        assert result is True
-        assert temp_settings_file.exists()
-
-        content = json.loads(temp_settings_file.read_text())
-        assert 'extraction/last_width' in content
-
-    def test_export_settings_handles_qbytearray(
-        self, qapp, settings_manager: SettingsManager, temp_settings_file: Path
-    ) -> None:
-        """export_settings should convert QByteArray to base64."""
-        window = QMainWindow()
-        settings_manager.save_window_geometry(window)
-
-        result = settings_manager.export_settings(str(temp_settings_file))
-
-        assert result is True
-
-        content = json.loads(temp_settings_file.read_text())
-        # QByteArray should be serialized as string
-        if 'window/geometry' in content and content['window/geometry']:
-            assert isinstance(content['window/geometry'], str)
-
-    def test_export_settings_returns_false_on_failure(
-        self, settings_manager: SettingsManager
-    ) -> None:
-        """export_settings should return False on failure."""
-        # Try to write to invalid path
-        result = settings_manager.export_settings('/nonexistent/path/settings.json')
-
-        assert result is False
-
-    def test_import_settings_loads_values(
-        self, settings_manager: SettingsManager, temp_settings_file: Path,
-        sample_settings_dict: dict
-    ) -> None:
-        """import_settings should load values from file."""
-        temp_settings_file.write_text(json.dumps(sample_settings_dict))
-
-        result = settings_manager.import_settings(str(temp_settings_file))
-
-        assert result is True
-        assert settings_manager.get_value('extraction/last_width') == 64
-        assert settings_manager.get_value('extraction/last_height') == 48
-        assert settings_manager.get_value('display/grid_visible') is True
-        assert settings_manager.get_value('animation/last_fps') == 24
-
-    def test_import_settings_handles_geometry_restoration(
-        self, qapp, settings_manager: SettingsManager, temp_settings_file: Path
-    ) -> None:
-        """import_settings should restore QByteArray for geometry."""
-        # Export settings with geometry
-        window = QMainWindow()
-        window.resize(800, 600)
-        settings_manager.save_window_geometry(window)
-        settings_manager.export_settings(str(temp_settings_file))
-
-        # Reset and import
-        new_manager = SettingsManager()
-        new_manager._settings.clear()
-        result = new_manager.import_settings(str(temp_settings_file))
-
-        assert result is True
-        geometry = new_manager.get_value('window/geometry')
-        assert isinstance(geometry, QByteArray)
-
-    def test_import_settings_returns_false_on_missing_file(
-        self, settings_manager: SettingsManager
-    ) -> None:
-        """import_settings should return False for missing file."""
-        result = settings_manager.import_settings('/nonexistent/settings.json')
-
-        assert result is False
-
-    def test_import_settings_returns_false_on_invalid_json(
-        self, settings_manager: SettingsManager, temp_settings_file: Path
-    ) -> None:
-        """import_settings should return False for invalid JSON."""
-        temp_settings_file.write_text('not valid json')
-
-        result = settings_manager.import_settings(str(temp_settings_file))
-
-        assert result is False
-
-    def test_export_import_roundtrip(
-        self, qapp, settings_manager: SettingsManager, temp_settings_file: Path
-    ) -> None:
-        """Settings should survive export/import roundtrip."""
-        # Set various settings
-        settings_manager.save_extraction_settings(128, 64, 4, 4, 2, 2, 'manual')
-        settings_manager.save_display_settings(True, 3.0, False)
-        settings_manager.save_animation_settings(60, False)
-
-        window = QMainWindow()
-        window.resize(1024, 768)
-        settings_manager.save_window_geometry(window)
-
-        # Export
-        settings_manager.export_settings(str(temp_settings_file))
-
-        # Create new manager and import
-        new_manager = SettingsManager()
-        new_manager._settings.clear()
-        new_manager.import_settings(str(temp_settings_file))
-
-        # Verify values
-        assert new_manager.get_value('extraction/last_width') == 128
-        assert new_manager.get_value('extraction/last_height') == 64
-        assert new_manager.get_value('display/grid_visible') is True
-        assert new_manager.get_value('animation/last_fps') == 60
 
 
 # ============================================================================

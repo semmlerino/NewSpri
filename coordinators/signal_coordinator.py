@@ -160,9 +160,6 @@ class SignalCoordinator(QObject):
         self._animation_controller.animationPaused.connect(self._on_playback_paused)
         self._animation_controller.animationStopped.connect(self._on_playback_stopped)
         self._animation_controller.animationCompleted.connect(self._on_playback_completed)
-        self._animation_controller.frameAdvanced.connect(
-            lambda frame_index: None
-        )  # Handled by sprite model
         self._animation_controller.errorOccurred.connect(self._on_animation_error)
 
         if self._status_manager is not None:
