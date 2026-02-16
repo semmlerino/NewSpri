@@ -53,6 +53,9 @@ source .venv/bin/activate  # Linux/macOS
 pip install -r requirements-dev.txt
 ```
 
+`requirements*.txt` files are kept for pip compatibility; the canonical dependency source is
+`pyproject.toml` + `uv.lock`.
+
 ## Usage
 
 Launch the desktop app:
@@ -93,11 +96,22 @@ python3 run_tests.py --integration
 python3 run_tests.py --coverage
 ```
 
+`run_tests.py` executes tests only; it no longer installs dependencies at runtime.
+
 ### Lint / format / type-check
 ```bash
 uv run ruff check . --fix
 uv run ruff format .
 uv run basedpyright
+```
+
+### Dependency / workflow tooling
+```bash
+uvx deptry .            # Detect dependency hygiene issues
+uvx pip-audit           # Vulnerability audit
+uv tool install pre-commit
+pre-commit install
+pre-commit run --all-files
 ```
 
 ## Additional Documentation

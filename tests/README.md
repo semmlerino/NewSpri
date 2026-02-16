@@ -27,6 +27,7 @@ uv sync --all-extras
 Alternative:
 ```bash
 pip install -r requirements-dev.txt
+# Optional helper-runner plugins (parallel/report/watch):
 pip install -r tests/requirements-test.txt
 ```
 
@@ -60,6 +61,7 @@ python3 run_tests.py --suites
 
 Notes:
 - `run_tests.py` does not accept raw pytest flags like `-m`.
+- `run_tests.py` does not install dependencies. Run `uv sync --all-extras` first.
 - For custom pytest expressions (`-m "not slow"`, `-k ...`, etc.), use `uv run pytest` directly.
 
 ## Coverage
@@ -85,6 +87,7 @@ Common markers:
 ## CI
 
 GitHub Actions workflow: `.github/workflows/tests.yml`
-- Matrix tests (unit/integration/smoke/performance)
+- Matrix tests (unit/integration/smoke/performance) run via `uv run pytest`
+- Lockfile-based dependency sync (`uv sync --locked --all-extras`)
 - Coverage upload (Codecov)
 - Separate code-quality job (`ruff` + `basedpyright`)

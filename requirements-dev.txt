@@ -1,3 +1,5 @@
+# Legacy pip compatibility file.
+# Canonical dependency definitions live in pyproject.toml + uv.lock.
 -r requirements.txt
 pytest>=7.4.0
 pytest-cov

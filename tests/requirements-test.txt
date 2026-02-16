@@ -1,45 +1,10 @@
-# Testing Dependencies for Python Sprite Viewer
-# Modern pytest ecosystem with comprehensive testing tools
-
-# Core testing framework
+# Legacy pip compatibility file for test-focused installs.
+# Canonical dependency definitions live in pyproject.toml + uv.lock.
 pytest>=7.4.0
-pytest-cov>=4.1.0          # Coverage reporting
-pytest-xdist>=3.3.1        # Parallel test execution
-pytest-mock>=3.11.1        # Enhanced mocking capabilities
-pytest-timeout>=2.1.0      # Test timeout handling
-
-# Qt testing support
-pytest-qt>=4.2.0           # Qt application testing
-
-# Performance and memory testing
-pytest-benchmark>=4.0.0    # Performance benchmarking
-pytest-memray>=1.0.0       # Memory profiling (Python 3.8+)
-memory-profiler>=0.61.0    # Memory usage monitoring
-
-# Test data and utilities
-faker>=19.0.0              # Test data generation
-factory-boy>=3.3.0         # Test object factories
-responses>=0.23.3          # HTTP request mocking
-
-# Code quality and linting
-pytest-flake8>=1.1.1       # Code style checking
-pytest-mypy>=0.10.3        # Type checking
-pytest-black>=0.3.12       # Code formatting checks
-
-# Enhanced reporting
-pytest-html>=3.2.0         # HTML test reports
-pytest-json-report>=1.5.0  # JSON test reports
-pytest-sugar>=0.9.7        # Enhanced test output
-
-# CI/CD integration  
-pytest-github-actions-annotate-failures>=0.2.0  # GitHub Actions integration
-
-# Optional: Advanced testing tools
-hypothesis>=6.82.0         # Property-based testing
-mutmut>=2.4.3             # Mutation testing
-tox>=4.6.4                # Multi-environment testing
-
-# Development utilities (optional)
-pytest-watch>=4.2.0       # File watching for auto-testing
-pytest-testmon>=2.0.0     # Smart test selection
-pytest-picked>=0.4.6      # Run tests from Git changes
+pytest-cov
+pytest-qt>=4.2.0
+pytest-mock
+pytest-timeout
+pytest-xdist
+pytest-json-report
+pytest-watcher
