@@ -882,13 +882,11 @@ class SpriteViewer(QMainWindow):
             # Update grid view with new frames
             self._segment_controller.update_grid_view_frames()
 
-            # Load saved segments for this sprite sheet.
-            # ORDER MATTERS: set_sprite_context() loads from disk, sync copies to grid.
+            # Apply sprite context and synchronize segment state in one place.
             if self._sprite_model.file_path:
-                self._segment_manager.set_sprite_context(self._sprite_model.file_path, frame_count)
-
-                if self._grid_view:
-                    self._grid_view.sync_segments_with_manager(self._segment_manager)
+                self._segment_controller.set_sprite_context_and_sync(
+                    self._sprite_model.file_path, frame_count
+                )
         else:
             self._canvas.set_frame_info(0, 0)
 
@@ -909,13 +907,21 @@ class SpriteViewer(QMainWindow):
         self._frame_extractor.set_frame_size(width, height)
         self._update_frame_slicing()
 
-    def _on_extraction_mode_changed(self, mode: str):
+    def _on_extraction_mode_changed(self, mode: ExtractionMode | str):
         """Handle extraction mode change (grid vs CCL)."""
         if not self._sprite_model.original_sprite_sheet:
             return
 
-        # Convert string from Qt signal to enum
-        mode_enum = ExtractionMode(mode)
+        # Accept either enum payload (preferred) or legacy string payload.
+        if isinstance(mode, ExtractionMode):
+            mode_enum = mode
+        else:
+            try:
+                mode_enum = ExtractionMode(mode)
+            except ValueError:
+                if self._status_manager is not None:
+                    self._status_manager.show_message(f"Unknown extraction mode: {mode}")
+                return
 
         # Update sprite model extraction mode
         success = self._sprite_model.set_extraction_mode(mode_enum)

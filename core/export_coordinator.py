@@ -82,6 +82,17 @@ class ExportCoordinator(QObject):
     # Main Export Entry Point
     # -------------------------------------------------------------------------
 
+    def _parse_mode(self, raw_mode: Any) -> ExportMode | None:
+        """Parse export mode from settings and normalize to ExportMode enum."""
+        if isinstance(raw_mode, ExportMode):
+            return raw_mode
+        if isinstance(raw_mode, str):
+            try:
+                return ExportMode(raw_mode)
+            except ValueError:
+                return None
+        return None
+
     def _validate_export_settings(self, settings: dict[str, Any]) -> bool:
         """
         Validate export settings before creating progress dialog.
@@ -98,13 +109,20 @@ class ExportCoordinator(QObject):
                 self._show_error(f"Missing required setting: {key}")
                 return False
 
+        mode = self._parse_mode(settings.get("mode"))
+        if mode is None:
+            self._show_error(f"Invalid export mode: {settings.get('mode')}")
+            return False
+
         if not self._sprite_model.sprite_frames:
             self._show_error("No frames available to export.")
             return False
 
         return True
 
-    def _validate_mode_preconditions(self, settings: dict[str, Any]) -> tuple[bool, str]:
+    def _validate_mode_preconditions(
+        self, settings: dict[str, Any], mode: ExportMode
+    ) -> tuple[bool, str]:
         """
         Validate mode-specific preconditions before creating progress dialog.
 
@@ -115,10 +133,8 @@ class ExportCoordinator(QObject):
             Tuple of (success, error_message). If success is False, error_message
             contains the warning to show the user.
         """
-        mode = settings.get("mode", "")
-
         # Check segment-specific preconditions
-        if mode == ExportMode.SEGMENTS_SHEET.value:
+        if mode is ExportMode.SEGMENTS_SHEET:
             if not self._segment_manager:
                 return False, "Segment manager not available."
             segments = self._segment_manager.get_all_segments()
@@ -155,19 +171,22 @@ class ExportCoordinator(QObject):
             return
 
         # Validate mode-specific preconditions before creating progress dialog
-        valid, error_message = self._validate_mode_preconditions(settings)
+        mode = self._parse_mode(settings.get("mode"))
+        if mode is None:
+            self._show_error(f"Invalid export mode: {settings.get('mode')}")
+            return
+
+        valid, error_message = self._validate_mode_preconditions(settings, mode)
         if not valid:
             self._show_warning(error_message)
             return
 
-        mode = settings.get("mode", "")
-
         # Determine export type name for progress dialog
         export_type_names = {
-            ExportMode.INDIVIDUAL_FRAMES.value: "Individual Frames",
-            ExportMode.SELECTED_FRAMES.value: "Selected Frames",
-            ExportMode.SPRITE_SHEET.value: "Sprite Sheet",
-            ExportMode.SEGMENTS_SHEET.value: "Segments Per Row Sheet",
+            ExportMode.INDIVIDUAL_FRAMES: "Individual Frames",
+            ExportMode.SELECTED_FRAMES: "Selected Frames",
+            ExportMode.SPRITE_SHEET: "Sprite Sheet",
+            ExportMode.SEGMENTS_SHEET: "Segments Per Row Sheet",
         }
         export_type = export_type_names.get(mode, "Frames")
 
@@ -192,10 +211,10 @@ class ExportCoordinator(QObject):
 
         # Route to appropriate export handler with guaranteed cleanup
         try:
-            if mode == ExportMode.SEGMENTS_SHEET.value:
+            if mode is ExportMode.SEGMENTS_SHEET:
                 self._export_segments_per_row(settings)
             else:
-                self._export_frames(settings)
+                self._export_frames(settings, mode)
         except Exception:
             # Ensure dialog cleanup even if export method raises unexpected exception
             self._cleanup_progress_dialog()
@@ -205,17 +224,17 @@ class ExportCoordinator(QObject):
     # Export Methods
     # -------------------------------------------------------------------------
 
-    def _export_frames(self, settings: dict[str, Any]) -> None:
+    def _export_frames(self, settings: dict[str, Any], mode: ExportMode) -> None:
         """Handle standard frame export (individual or sheet)."""
         all_frames = self._sprite_model.sprite_frames
         frames_to_export = all_frames
-        export_mode = settings["mode"]
+        export_mode = mode
         selected_indices = settings.get("selected_indices", [])
 
         if selected_indices:
             valid_indices = [i for i in selected_indices if 0 <= i < len(all_frames)]
             frames_to_export = [all_frames[i] for i in valid_indices]
-            export_mode = ExportMode.INDIVIDUAL_FRAMES.value
+            export_mode = ExportMode.INDIVIDUAL_FRAMES
 
             if len(valid_indices) != len(selected_indices):
                 invalid_count = len(selected_indices) - len(valid_indices)
@@ -226,7 +245,7 @@ class ExportCoordinator(QObject):
 
         # Create sprite sheet layout if mode is 'sheet' and layout not provided
         sprite_sheet_layout = settings.get("sprite_sheet_layout")
-        if export_mode == ExportMode.SPRITE_SHEET.value and sprite_sheet_layout is None:
+        if export_mode is ExportMode.SPRITE_SHEET and sprite_sheet_layout is None:
             layout_mode = settings.get("layout_mode", "auto")
             sprite_sheet_layout = SpriteSheetLayout(
                 mode=layout_mode,
@@ -245,7 +264,7 @@ class ExportCoordinator(QObject):
             output_dir=settings["output_dir"],
             base_name=settings["base_name"],
             format=settings["format"],
-            mode=export_mode,
+            mode=export_mode.value,
             scale_factor=settings["scale_factor"],
             pattern=settings.get("pattern"),
             selected_indices=selected_indices if selected_indices else None,

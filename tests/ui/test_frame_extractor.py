@@ -80,6 +80,7 @@ class TestFrameExtractorModeHandling:
         """Test mode change emits correct signals."""
         widget = FrameExtractor()
         spy = QSignalSpy(widget.modeChanged)
+        enum_spy = QSignalSpy(widget.modeChangedEnum)
         
         # Switch to CCL mode (first enable it)
         widget.set_ccl_available(True)
@@ -88,6 +89,8 @@ class TestFrameExtractorModeHandling:
         
         assert spy.count() == 1
         assert spy.at(0)[0] == ExtractionMode.CCL.value
+        assert enum_spy.count() == 1
+        assert enum_spy.at(0)[0] == ExtractionMode.CCL
 
         # Switch back to grid mode
         widget.grid_mode_btn.setChecked(True)
@@ -95,6 +98,8 @@ class TestFrameExtractorModeHandling:
 
         assert spy.count() == 2
         assert spy.at(1)[0] == ExtractionMode.GRID.value
+        assert enum_spy.count() == 2
+        assert enum_spy.at(1)[0] == ExtractionMode.GRID
     
     def test_grid_mode_controls(self, qapp):
         """Test grid mode enables correct controls."""

@@ -28,6 +28,7 @@ class TestAnimationSegmentController(unittest.TestCase):
         self.mock_grid_view = Mock()
         self.mock_grid_view._segments = {}  # Initialize as empty dict
         self.mock_grid_view._segment_list = Mock()
+        self.mock_grid_view.has_segment.return_value = False
         self.mock_sprite_model = Mock()
         self.mock_tab_widget = Mock()
 
@@ -300,7 +301,7 @@ class TestAnimationSegmentController(unittest.TestCase):
     # ============================================================================
     
     def test_update_grid_view_frames_with_frames(self):
-        """Test updating grid view with frames."""
+        """Test updating grid view frame thumbnails without mutating context."""
         # Arrange
         with tempfile.NamedTemporaryFile(suffix=".png") as tmp:
             frames = [Mock() for _ in range(5)]
@@ -312,8 +313,8 @@ class TestAnimationSegmentController(unittest.TestCase):
 
             # Assert
             self.mock_grid_view.set_frames.assert_called_once_with(frames)
-            # Verify segment manager was called with real path
-            assert self.segment_manager._sprite_sheet_path == tmp.name
+            # Context changes are handled by set_sprite_context_and_sync().
+            assert self.segment_manager._sprite_sheet_path == ""
     
     def test_update_grid_view_frames_no_frames(self):
         """Test updating grid view with no frames."""
@@ -339,6 +340,22 @@ class TestAnimationSegmentController(unittest.TestCase):
 
             # Assert
             self.mock_grid_view.set_frames.assert_called_once()
+            self.mock_grid_view.sync_segments_with_manager.assert_called_once_with(
+                self.segment_manager
+            )
+
+    def test_set_sprite_context_and_sync(self):
+        """Test context switch and overlay sync happen atomically."""
+        with tempfile.NamedTemporaryFile(suffix=".png") as tmp:
+            self.mock_sprite_model.file_path = tmp.name
+
+            self.controller.set_sprite_context_and_sync(tmp.name, 12)
+
+            self.assertEqual(self.segment_manager._sprite_sheet_path, tmp.name)
+            self.assertEqual(self.segment_manager._max_frames, 12)
+            self.mock_grid_view.sync_segments_with_manager.assert_called_once_with(
+                self.segment_manager
+            )
     
     def test_on_tab_changed_to_other_tab(self):
         """Test tab change to non-animation splitting tab."""

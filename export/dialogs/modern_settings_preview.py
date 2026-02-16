@@ -389,7 +389,7 @@ class _IndividualSettingsBuilder:
                     new_display = self._generate_pattern_display(pattern, base_name)
                     radio.setText(new_display)
         except Exception as e:
-            print(f"Warning: Error updating pattern displays: {e}")
+            logger.warning("Error updating pattern displays: %s", e)
 
         # Trigger regular setting change
         self._parent._on_setting_changed()
@@ -1224,7 +1224,7 @@ class ModernExportSettings(WizardStep):
                         new_display = self._generate_pattern_display(pattern, base_name)
                         radio.setText(new_display)
         except Exception as e:
-            print(f"Warning: Error updating pattern displays on format change: {e}")
+            logger.warning("Error updating pattern displays on format change: %s", e)
 
         # Show/hide transparency warning for JPG format
         self._update_transparency_warning(format)

@@ -11,13 +11,20 @@ from PySide6.QtWidgets import QPushButton
 
 
 @dataclass
-class DetectionResult:
-    """Unified result type for all detection operations."""
+class AutoDetectionResult:
+    """Unified result type for auto-detection operations."""
 
     success: bool
     confidence: str = "medium"  # 'high', 'medium', 'low', 'failed'
     message: str = ""
+    value: Any | None = None
+    x: int | None = None
+    y: int | None = None
     parameters: dict[str, Any] = field(default_factory=dict)
+
+
+# Backward compatibility alias.
+DetectionResult = AutoDetectionResult
 
 
 class AutoButtonManager(QObject):
@@ -125,7 +132,7 @@ class AutoButtonManager(QObject):
         """Get current state of a button."""
         return self._current_states.get(button_type, "default")
 
-    def update_from_detection_result(self, button_type: str, result: DetectionResult):
+    def update_from_detection_result(self, button_type: str, result: AutoDetectionResult):
         """Update button from a DetectionResult object."""
         if result.success:
             self.update_confidence(button_type, result.confidence, result.message)
@@ -167,31 +174,35 @@ class AutoButtonManager(QObject):
             button.setToolTip(base_tooltip)
 
 
-def parse_detection_tuple(result_tuple: tuple) -> DetectionResult:
-    """Convert legacy detection tuple to DetectionResult."""
+def parse_detection_tuple(result_tuple: tuple) -> AutoDetectionResult:
+    """Convert legacy detection tuples to a typed auto-detection result."""
     if len(result_tuple) == 2:
         # Simple success/message format
         success, message = result_tuple
-        return DetectionResult(
+        return AutoDetectionResult(
             success=success, confidence="medium" if success else "failed", message=message
         )
     elif len(result_tuple) == 3:
         # Success/value/message format
         success, value, message = result_tuple
-        return DetectionResult(
+        return AutoDetectionResult(
             success=success,
             confidence="medium" if success else "failed",
             message=message,
+            value=value,
             parameters={"value": value},
         )
     elif len(result_tuple) == 4:
         # Success/value1/value2/message format
         success, value1, value2, message = result_tuple
-        return DetectionResult(
+        return AutoDetectionResult(
             success=success,
             confidence="medium" if success else "failed",
             message=message,
-            parameters={"value1": value1, "value2": value2},
+            x=value1,
+            y=value2,
+            # Keep legacy keys for compatibility with older call sites.
+            parameters={"x": value1, "y": value2, "value1": value1, "value2": value2},
         )
     else:
         raise ValueError(f"Unexpected detection result format: {result_tuple}")

@@ -122,13 +122,20 @@ class AnimationSegmentController(QObject):
                 return True, message
 
         if not success:
-            # Clean up grid view if segment was added there but failed in manager
+            # Clean up optimistic grid state if any callers pre-added a segment.
             if self._grid_view:
-                self._grid_view.delete_segment(original_name)
+                has_segment = getattr(self._grid_view, "has_segment", None)
+                if callable(has_segment):
+                    has_segment_result = has_segment(original_name)
+                    if isinstance(has_segment_result, bool) and has_segment_result:
+                        self._grid_view.delete_segment(original_name)
+                else:
+                    self._grid_view.delete_segment(original_name)
             error_msg = f"{error}\n\nPlease try a different name."
             return False, error_msg
 
         # Success case
+        self._sync_segment_to_grid(segment.name, fallback_segment=segment)
         message = f"Created animation segment '{segment.name}' with {segment.frame_count} frames"
         self.statusMessage.emit(message)
 
@@ -167,7 +174,16 @@ class AnimationSegmentController(QObject):
             if success:
                 # Update segment name in grid view
                 if self._grid_view:
-                    self._grid_view.rename_segment(original_name, new_name)
+                    has_segment = getattr(self._grid_view, "has_segment", None)
+                    has_old_segment = False
+                    if callable(has_segment):
+                        has_old_segment_result = has_segment(original_name)
+                        has_old_segment = (
+                            isinstance(has_old_segment_result, bool) and has_old_segment_result
+                        )
+                    if has_old_segment:
+                        self._grid_view.rename_segment(original_name, new_name)
+                    self._sync_segment_to_grid(new_name, fallback_segment=segment)
 
                 # Add to preview panel with new name
                 self._add_segment_to_preview(
@@ -181,6 +197,23 @@ class AnimationSegmentController(QObject):
                 return True, new_name
 
         return False, None
+
+    def _sync_segment_to_grid(self, segment_name: str, fallback_segment=None) -> None:
+        """Ensure grid contains a segment that exists in manager state."""
+        if not self._grid_view:
+            return
+
+        has_segment = getattr(self._grid_view, "has_segment", None)
+        if callable(has_segment):
+            has_segment_result = has_segment(segment_name)
+            if isinstance(has_segment_result, bool) and has_segment_result:
+                return
+
+        segment = self._segment_manager.get_segment(segment_name) if self._segment_manager else None
+        if segment is None:
+            segment = fallback_segment
+        if segment is not None:
+            self._grid_view.add_segment(segment)
 
     def _add_segment_to_preview(
         self,
@@ -388,34 +421,47 @@ class AnimationSegmentController(QObject):
 
         if frames:
             self._grid_view.set_frames(frames)
+            # Reset per-frame overlays; they will be repopulated from manager state.
+            self._grid_view.clear_segments()
 
             if self._segment_preview:
                 self._segment_preview.set_frames(frames)
                 self._segment_preview.clear_segments()
-
-                for seg in self._segment_manager.get_all_segments():
-                    self._segment_preview.add_segment(
-                        seg.name,
-                        seg.start_frame,
-                        seg.end_frame,
-                        seg.color,
-                        seg.bounce_mode,
-                        seg.frame_holds,
-                    )
-
-            sprite_path = self._sprite_model.file_path
-            if sprite_path:
-                self._segment_manager.set_sprite_context(sprite_path, len(frames))
         else:
             self._grid_view.set_frames([])
             if self._segment_preview:
                 self._segment_preview.set_frames([])
                 self._segment_preview.clear_segments()
 
+    def sync_segments_from_manager(self) -> None:
+        """Synchronize grid/preview segment overlays from manager (source of truth)."""
+        if self._grid_view and self._segment_manager:
+            self._grid_view.sync_segments_with_manager(self._segment_manager)
+
+        if self._segment_preview:
+            self._segment_preview.clear_segments()
+            for seg in self._segment_manager.get_all_segments():
+                self._add_segment_to_preview(
+                    seg.name,
+                    seg.start_frame,
+                    seg.end_frame,
+                    seg.color,
+                    seg.bounce_mode,
+                    seg.frame_holds,
+                )
+
+    def set_sprite_context_and_sync(self, sprite_path: str, frame_count: int) -> None:
+        """Set manager sprite context then synchronize all segment overlays."""
+        if not self._segment_manager:
+            return
+        self._segment_manager.set_sprite_context(sprite_path, frame_count)
+        self.sync_segments_from_manager()
+
     def on_tab_changed(self, index: int) -> None:
         """Handle tab change event to refresh grid view."""
         if index == 1 and self._grid_view:
             self.update_grid_view_frames()
+            self.sync_segments_from_manager()
 
     def _on_manager_segment_removed(self, segment_name: str) -> None:
         """Handle segment removal from manager by updating grid view."""

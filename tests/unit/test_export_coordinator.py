@@ -13,6 +13,7 @@ from PySide6.QtCore import QObject
 from PySide6.QtGui import QImage
 
 from core.export_coordinator import ExportCoordinator
+from export.core.frame_exporter import ExportMode
 
 
 @pytest.fixture
@@ -128,7 +129,7 @@ def test_validate_mode_preconditions_segments_no_manager(
     settings = basic_settings.copy()
     settings["mode"] = "segments_sheet"
 
-    valid, message = coordinator._validate_mode_preconditions(settings)
+    valid, message = coordinator._validate_mode_preconditions(settings, ExportMode.SEGMENTS_SHEET)
 
     assert valid is False
     assert message == "Segment manager not available."
@@ -145,7 +146,7 @@ def test_validate_mode_preconditions_segments_no_segments(
     settings = basic_settings.copy()
     settings["mode"] = "segments_sheet"
 
-    valid, message = coordinator._validate_mode_preconditions(settings)
+    valid, message = coordinator._validate_mode_preconditions(settings, ExportMode.SEGMENTS_SHEET)
 
     assert valid is False
     assert message == "No animation segments defined."
@@ -160,7 +161,9 @@ def test_validate_mode_preconditions_selected_empty_indices(
     settings = basic_settings.copy()
     settings["selected_indices"] = []
 
-    valid, message = coordinator._validate_mode_preconditions(settings)
+    valid, message = coordinator._validate_mode_preconditions(
+        settings, ExportMode.INDIVIDUAL_FRAMES
+    )
 
     # Empty list is valid - precondition only fails if indices exist but are all invalid
     assert valid is True
@@ -176,7 +179,9 @@ def test_validate_mode_preconditions_selected_invalid_indices(
     # Model has 5 frames, indices 10, 20 are invalid
     settings["selected_indices"] = [10, 20]
 
-    valid, message = coordinator._validate_mode_preconditions(settings)
+    valid, message = coordinator._validate_mode_preconditions(
+        settings, ExportMode.INDIVIDUAL_FRAMES
+    )
 
     assert valid is False
     assert message == "No valid frames selected for export."
@@ -192,7 +197,9 @@ def test_validate_mode_preconditions_selected_some_valid_indices(
     # Model has 5 frames, indices 1, 2 are valid
     settings["selected_indices"] = [1, 2, 10]
 
-    valid, message = coordinator._validate_mode_preconditions(settings)
+    valid, message = coordinator._validate_mode_preconditions(
+        settings, ExportMode.INDIVIDUAL_FRAMES
+    )
 
     assert valid is True
     assert message == ""
@@ -205,14 +212,16 @@ def test_validate_mode_preconditions_valid_settings(
     coordinator = ExportCoordinator(mock_sprite_model, mock_segment_manager, mock_exporter)
 
     # Test individual mode
-    valid, message = coordinator._validate_mode_preconditions(basic_settings)
+    valid, message = coordinator._validate_mode_preconditions(
+        basic_settings, ExportMode.INDIVIDUAL_FRAMES
+    )
     assert valid is True
     assert message == ""
 
     # Test segments_sheet mode
     settings = basic_settings.copy()
     settings["mode"] = "segments_sheet"
-    valid, message = coordinator._validate_mode_preconditions(settings)
+    valid, message = coordinator._validate_mode_preconditions(settings, ExportMode.SEGMENTS_SHEET)
     assert valid is True
     assert message == ""
 

@@ -13,12 +13,15 @@ Handles:
 - Sprite boundary management
 """
 
+import logging
 from collections.abc import Callable
 
 from PySide6.QtCore import QRect
 from PySide6.QtGui import QImage, QPixmap
 
 from sprite_model.extraction_mode import ExtractionMode
+
+logger = logging.getLogger(__name__)
 
 
 class CCLOperations:
@@ -112,8 +115,11 @@ class CCLOperations:
                             raw_tolerance = bg_color_info[1]
                             self._ccl_color_tolerance = min(raw_tolerance, 25)
                             if raw_tolerance > 25:
-                                print(
-                                    f"   🛡️ CCL: Reduced tolerance from {raw_tolerance} to {self._ccl_color_tolerance} to preserve sprite content"
+                                logger.debug(
+                                    "CCL reduced background tolerance from %d to %d to preserve sprite "
+                                    "content",
+                                    raw_tolerance,
+                                    self._ccl_color_tolerance,
                                 )
                 else:
                     return False, "CCL auto-detection failed. Cannot extract CCL frames.", 0, [], ""
@@ -132,8 +138,8 @@ class CCLOperations:
 
             sheet_width = sprite_sheet.width()
             sheet_height = sprite_sheet.height()
-            print(f"   📐 Sheet dimensions: {sheet_width}×{sheet_height}")
-            print(f"   🎯 Processing {len(self._ccl_sprite_bounds)} detected sprite bounds...")
+            logger.debug("CCL sheet dimensions: %dx%d", sheet_width, sheet_height)
+            logger.debug("CCL processing %d detected sprite bounds", len(self._ccl_sprite_bounds))
 
             for i, (x, y, width, height) in enumerate(self._ccl_sprite_bounds):
                 # Ensure bounds are within sheet dimensions
@@ -152,25 +158,39 @@ class CCLOperations:
                     else:
                         null_frame_count += 1
                         if null_frame_count <= 5:  # Only log first few
-                            print(
-                                f"   ❌ Sprite {i + 1}: NULL frame from ({x}, {y}) {width}×{height}"
+                            logger.debug(
+                                "CCL sprite %d produced null frame from (%d, %d) %dx%d",
+                                i + 1,
+                                x,
+                                y,
+                                width,
+                                height,
                             )
                 else:
                     # Log invalid bounds but continue
                     filtered_count += 1
                     if filtered_count <= 5:  # Only log first few invalid bounds
-                        print(
-                            f"   ❌ Sprite {i + 1}: Invalid bounds ({x}, {y}) {width}×{height} vs sheet {sheet_width}×{sheet_height}"
+                        logger.debug(
+                            "CCL sprite %d has invalid bounds (%d, %d) %dx%d for sheet %dx%d",
+                            i + 1,
+                            x,
+                            y,
+                            width,
+                            height,
+                            sheet_width,
+                            sheet_height,
                         )
 
             # Report filtering statistics
             total_detected = len(self._ccl_sprite_bounds)
             total_extracted = len(sprite_frames)
-            print(f"   📊 Extraction Results: {total_extracted}/{total_detected} sprites extracted")
+            logger.debug(
+                "CCL extraction results: %d/%d sprites extracted", total_extracted, total_detected
+            )
             if filtered_count > 0:
-                print(f"   ⚠️  {filtered_count} sprites filtered (invalid bounds)")
+                logger.debug("CCL filtered %d sprites with invalid bounds", filtered_count)
             if null_frame_count > 0:
-                print(f"   ⚠️  {null_frame_count} sprites failed (null frames)")
+                logger.debug("CCL had %d null sprite frames", null_frame_count)
 
             # Set extraction mode
             self._extraction_mode = ExtractionMode.CCL
@@ -343,7 +363,7 @@ class CCLOperations:
             return QPixmap.fromImage(image)
 
         except Exception as e:
-            print(f"Warning: Failed to apply background transparency: {e}")
+            logger.warning("Failed to apply background transparency: %s", e)
             return pixmap  # Return original if processing fails
 
     # State accessors for integration

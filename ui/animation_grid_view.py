@@ -585,9 +585,9 @@ class AnimationGridView(QWidget):
                 end_frame=end,
             )
             segment.set_color(self._get_next_segment_color())
-            self.add_segment(segment)
             self._clear_selection()
-
+            # Manager/controller own segment persistence and validation.
+            # Grid updates are applied only after controller confirms success.
             self.segmentCreated.emit(segment)
 
     def _generate_unique_segment_name(self, base_name: str = "Animation") -> str:
@@ -703,13 +703,8 @@ class AnimationGridView(QWidget):
         Returns:
             True if renamed successfully, False if old_name not found or new_name exists
         """
-        if old_name in self._segments and new_name not in self._segments:
-            segment = self._segments.pop(old_name)
-            segment.name = new_name
-            self._segments[new_name] = segment
-            self._update_segment_visualization()
-            return True
-        return False
+        # Keep legacy API but delegate to validate-first path.
+        return self.commit_rename(old_name, new_name)
 
     def has_segment(self, segment_name: str) -> bool:
         """

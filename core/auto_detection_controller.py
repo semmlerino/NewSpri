@@ -195,8 +195,8 @@ class AutoDetectionController(QObject):
             result = parse_detection_tuple(result_tuple)
 
             if result.success:
-                width = result.parameters.get("value1", 0)
-                height = result.parameters.get("value2", 0)
+                width = result.x if result.x is not None else 0
+                height = result.y if result.y is not None else 0
                 self.frameSettingsDetected.emit(width, height)
 
                 # Extract confidence and update button
@@ -225,8 +225,8 @@ class AutoDetectionController(QObject):
             result = parse_detection_tuple(result_tuple)
 
             if result.success:
-                offset_x = result.parameters.get("value1", 0)
-                offset_y = result.parameters.get("value2", 0)
+                offset_x = result.x if result.x is not None else 0
+                offset_y = result.y if result.y is not None else 0
                 self.marginSettingsDetected.emit(offset_x, offset_y)
 
                 # Margin detection confidence based on results
@@ -255,8 +255,8 @@ class AutoDetectionController(QObject):
             result = parse_detection_tuple(result_tuple)
 
             if result.success:
-                spacing_x = result.parameters.get("value1", 0)
-                spacing_y = result.parameters.get("value2", 0)
+                spacing_x = result.x if result.x is not None else 0
+                spacing_y = result.y if result.y is not None else 0
                 self.spacingSettingsDetected.emit(spacing_x, spacing_y)
 
                 # Extract confidence from message

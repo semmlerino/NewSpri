@@ -167,7 +167,8 @@ class AnimationSegmentManager(QObject):
         Side effects (important!):
         - If sprite_sheet_path differs from current, clears ALL existing segments
         - Loads segments from disk for the new sprite sheet (.sprite_segments/ dir)
-        - Call sync_segments_with_manager() on grid view AFTER this to propagate
+        - UI overlays must be synchronized after this call
+          (use AnimationSegmentController.set_sprite_context_and_sync)
 
         Args:
             sprite_sheet_path: Path to the sprite sheet file

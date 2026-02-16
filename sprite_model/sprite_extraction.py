@@ -11,6 +11,7 @@ This module provides both class-based and function-based interfaces for extracti
 All grid extraction methods are now module-level functions.
 """
 
+import logging
 from typing import NamedTuple, cast
 
 import numpy as np
@@ -20,6 +21,8 @@ from PySide6.QtGui import QPixmap
 from scipy import ndimage
 
 from config import Config
+
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # Data Structures
@@ -305,7 +308,7 @@ def detect_background_color(image_path: str) -> tuple[tuple[int, int, int], int]
         return None  # No background color detected (transparent image)
 
     except Exception as e:
-        print(f"   ⚠️  Background color detection failed: {e}")
+        logger.warning("Background color detection failed: %s", e)
         return None
 
 
@@ -362,7 +365,7 @@ def _detect_color_key_mask(
         if best_result is not None:
             mask, bg_color, tolerance = best_result
             debug_log.append(f"   ✅ Selected color key: {bg_color} with tolerance {tolerance}")
-            print(f"   ✅ Selected color key: {bg_color} with tolerance {tolerance}")
+            logger.debug("Selected color key %s with tolerance %d", bg_color, tolerance)
             return best_result
 
         return None
@@ -414,8 +417,13 @@ def _test_color_key_background(
             debug_log.append(
                 f"   🧪 Testing {background_color} (tol={tolerance}): {background_percentage:.1f}% bg, {num_components} comp, score: {score:.1f}"
             )
-            print(
-                f"   🧪 Testing {background_color} (tol={tolerance}): {background_percentage:.1f}% bg, {num_components} comp, score: {score:.1f}"
+            logger.debug(
+                "Testing color key %s (tol=%d): %.1f%% bg, %d comp, score: %.1f",
+                background_color,
+                tolerance,
+                background_percentage,
+                num_components,
+                score,
             )
 
             return sprite_mask.astype(np.uint8), score

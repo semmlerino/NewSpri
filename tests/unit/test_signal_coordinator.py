@@ -99,6 +99,7 @@ def mock_frame_extractor():
     extractor = MagicMock()
     extractor.settingsChanged = create_mock_signal()
     extractor.modeChanged = create_mock_signal()
+    extractor.modeChangedEnum = create_mock_signal()
 
     # Mock auto-detection buttons
     extractor.comprehensive_auto_btn = MagicMock()
@@ -520,9 +521,9 @@ class TestFrameExtractorSignalConnections:
         )
 
     def test_mode_changed_connected(self, signal_coordinator, mock_frame_extractor, mock_handlers):
-        """FrameExtractor.modeChanged is connected."""
+        """FrameExtractor.modeChangedEnum is connected when available."""
         signal_coordinator.connect_all()
-        mock_frame_extractor.modeChanged.connect.assert_called_once_with(
+        mock_frame_extractor.modeChangedEnum.connect.assert_called_once_with(
             mock_handlers["on_extraction_mode_changed"]
         )
 

@@ -184,7 +184,11 @@ class SignalCoordinator(QObject):
     def _connect_frame_extractor_signals(self) -> None:
         """Connect FrameExtractor signals to handlers."""
         self._frame_extractor.settingsChanged.connect(self._on_update_frame_slicing)
-        self._frame_extractor.modeChanged.connect(self._on_extraction_mode_changed)
+        if hasattr(self._frame_extractor, "modeChangedEnum"):
+            self._frame_extractor.modeChangedEnum.connect(self._on_extraction_mode_changed)
+        else:
+            # Backward compatibility for older FrameExtractor implementations.
+            self._frame_extractor.modeChanged.connect(self._on_extraction_mode_changed)
 
         # Auto-detect button connections
         self._frame_extractor.comprehensive_auto_btn.clicked.connect(
