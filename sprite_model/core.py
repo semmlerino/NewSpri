@@ -543,7 +543,7 @@ class SpriteModel(QObject):
                 if extract_success:
                     return True, f"{message}. {extract_msg}"
                 else:
-                    return True, message
+                    return False, f"{message}. Extraction failed: {extract_msg}"
             finally:
                 # Always restore original mode
                 self.set_extraction_mode(original_mode)

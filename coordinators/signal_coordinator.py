@@ -186,6 +186,20 @@ class SignalCoordinator(QObject):
         self._frame_extractor.settingsChanged.connect(self._on_update_frame_slicing)
         self._frame_extractor.modeChanged.connect(self._on_extraction_mode_changed)
 
+        # Auto-detect button connections
+        self._frame_extractor.comprehensive_auto_btn.clicked.connect(
+            self._auto_detection_controller.run_comprehensive_detection_with_dialog
+        )
+        self._frame_extractor.auto_btn.clicked.connect(
+            self._auto_detection_controller.run_frame_detection
+        )
+        self._frame_extractor.auto_margins_btn.clicked.connect(
+            self._auto_detection_controller.run_margin_detection
+        )
+        self._frame_extractor.auto_spacing_btn.clicked.connect(
+            self._auto_detection_controller.run_spacing_detection
+        )
+
     def _connect_playback_controls_signals(self) -> None:
         """Connect PlaybackControls signals to controllers/model."""
         # Direct connections to animation controller
@@ -216,7 +230,7 @@ class SignalCoordinator(QObject):
         # Segment operations -> segment controller
         self._grid_view.segmentCreated.connect(self._segment_controller.create_segment)
         self._grid_view.segmentDeleted.connect(self._segment_controller.delete_segment)
-        self._grid_view.segmentRenamed.connect(self._segment_controller.rename_segment)
+        self._grid_view.segmentRenameRequested.connect(self._segment_controller.rename_segment)
         self._grid_view.segmentSelected.connect(self._segment_controller.select_segment)
         self._grid_view.segmentPreviewRequested.connect(self._segment_controller.preview_segment)
 

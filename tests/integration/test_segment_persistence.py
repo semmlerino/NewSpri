@@ -54,9 +54,10 @@ class TestSegmentPersistence:
         segments = viewer1._segment_manager.get_all_segments()
         assert len(segments) == 2
         
-        # Check segments file was created
+        # Check segments file was created (new format: {stem}_{ext}_segments.json)
         segments_dir = sprite_path.parent / ".sprite_segments"
-        segments_file = segments_dir / f"{sprite_path.stem}_segments.json"
+        ext = sprite_path.suffix.lstrip(".")
+        segments_file = segments_dir / f"{sprite_path.stem}_{ext}_segments.json"
         assert segments_file.exists(), "Segments file should be created"
         
         # Close first viewer

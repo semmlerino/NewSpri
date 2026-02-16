@@ -189,7 +189,8 @@ class AnimationGridView(QWidget):
     selectionChanged = Signal(list)  # selected_frame_indices
     segmentCreated = Signal(AnimationSegment)  # new_segment
     segmentDeleted = Signal(str)  # segment_name
-    segmentRenamed = Signal(str, str)  # old_name, new_name
+    segmentRenamed = Signal(str, str)  # old_name, new_name (kept for compat)
+    segmentRenameRequested = Signal(str, str)  # old_name, new_name (validate-first)
     segmentSelected = Signal(AnimationSegment)  # selected_segment
     segmentPreviewRequested = Signal(AnimationSegment)  # segment_to_preview (double-click)
     exportRequested = Signal(str)  # segment_name
@@ -345,6 +346,7 @@ class AnimationGridView(QWidget):
             self._grid_columns = new_columns
             self._columns_display.setText(str(self._grid_columns))
             if self._frames:
+                self._clear_grid()
                 self._populate_grid()
 
     def _on_frame_clicked(self, frame_index: int, modifiers: int):
@@ -655,28 +657,37 @@ class AnimationGridView(QWidget):
         return False
 
     def _prompt_rename_segment(self, old_name: str):
-        """Prompt user to rename a segment."""
-        # Get new name from user
+        """Prompt user to rename a segment (validate-first: emits request, doesn't mutate)."""
         new_name, ok = QInputDialog.getText(
             self, "Rename Segment", f"Enter new name for '{old_name}':", text=old_name
         )
 
         if ok and new_name.strip():
             new_name = new_name.strip()
+            if new_name != old_name:
+                # Emit request — controller validates via manager, then calls commit_rename
+                self.segmentRenameRequested.emit(old_name, new_name)
 
-            # Check if new name already exists
-            if new_name in self._segments and new_name != old_name:
-                QMessageBox.warning(
-                    self,
-                    "Name Already Exists",
-                    f"A segment named '{new_name}' already exists.\nPlease choose a different name.",
-                )
-                return
+    def commit_rename(self, old_name: str, new_name: str) -> bool:
+        """Commit a validated rename to local grid state.
 
-            # Perform the rename
-            if new_name != old_name and self.rename_segment(old_name, new_name):
-                # Emit signal to notify other components
-                self.segmentRenamed.emit(old_name, new_name)
+        Called by controller after manager validation succeeds.
+
+        Args:
+            old_name: Current name of segment
+            new_name: New name for segment
+
+        Returns:
+            True if renamed successfully
+        """
+        if old_name in self._segments and new_name not in self._segments:
+            segment = self._segments.pop(old_name)
+            segment.name = new_name
+            self._segments[new_name] = segment
+            self._update_segment_visualization()
+            self.segmentRenamed.emit(old_name, new_name)
+            return True
+        return False
 
     # ============================================================================
     # PUBLIC SEGMENT MANIPULATION API

@@ -505,14 +505,37 @@ class AnimationSegmentManager(QObject):
         return all_frames[start : end + 1]
 
     def _get_segments_file_path(self) -> str:
-        """Get the file path for saving segments."""
+        """Get the file path for saving segments (new format with extension)."""
         if not self._sprite_sheet_path:
             return ""
 
         sprite_path = Path(self._sprite_sheet_path)
         segments_dir = sprite_path.parent / ".sprite_segments"
-        segments_dir.mkdir(exist_ok=True)
+        try:
+            segments_dir.mkdir(exist_ok=True)
+        except OSError as e:
+            logger.warning("Failed to create segments directory: %s", e)
+            return ""
 
+        # New format: {stem}_{ext}_segments.json (e.g., hero_png_segments.json)
+        ext = sprite_path.suffix.lstrip(".")
+        segments_file = segments_dir / f"{sprite_path.stem}_{ext}_segments.json"
+        return str(segments_file)
+
+    def _get_legacy_segments_file_path(self) -> str:
+        """Get the legacy file path for segments (old format without extension)."""
+        if not self._sprite_sheet_path:
+            return ""
+
+        sprite_path = Path(self._sprite_sheet_path)
+        segments_dir = sprite_path.parent / ".sprite_segments"
+        try:
+            segments_dir.mkdir(exist_ok=True)
+        except OSError as e:
+            logger.warning("Failed to create segments directory: %s", e)
+            return ""
+
+        # Legacy format: {stem}_segments.json
         segments_file = segments_dir / f"{sprite_path.stem}_segments.json"
         return str(segments_file)
 
@@ -621,17 +644,49 @@ class AnimationSegmentManager(QObject):
     def _load_segments_for_sprite(self):
         """Load segments for the current sprite sheet if they exist."""
         segments_file = self._get_segments_file_path()
+        legacy_segments_file = self._get_legacy_segments_file_path()
+
+        # Try new format first
         if segments_file and os.path.exists(segments_file):
             success, message = self.load_segments_from_file(segments_file)
             if not success:
                 logger.warning("Failed to load segments from %s: %s", segments_file, message)
             elif message:  # Partial success with skipped segments
                 logger.info("Segment load: %s", message)
+        # Try legacy format if new format doesn't exist
+        elif legacy_segments_file and os.path.exists(legacy_segments_file):
+            success, message = self.load_segments_from_file(legacy_segments_file)
+            if not success:
+                logger.warning(
+                    "Failed to load legacy segments from %s: %s", legacy_segments_file, message
+                )
+            else:
+                # Migrate to new format
+                logger.info(
+                    "Migrating segments from legacy format %s to new format %s",
+                    legacy_segments_file,
+                    segments_file,
+                )
+                migrate_success, migrate_error = self.save_segments_to_file(segments_file)
+                if migrate_success:
+                    # Delete legacy file after successful migration
+                    try:
+                        os.unlink(legacy_segments_file)
+                        logger.info("Legacy segments file deleted after migration")
+                    except OSError as e:
+                        logger.warning("Failed to delete legacy file: %s", e)
+                else:
+                    logger.warning("Failed to migrate segments: %s", migrate_error)
+
+                if message:  # Partial success with skipped segments
+                    logger.info("Segment load: %s", message)
 
     def _auto_save(self):
         """Auto-save segments if enabled and sprite sheet is loaded."""
         if self._auto_save_enabled and self._sprite_sheet_path:
-            self.save_segments_to_file()
+            success, error_msg = self.save_segments_to_file()
+            if not success:
+                logger.warning("Auto-save failed: %s", error_msg)
 
     def set_auto_save_enabled(self, enabled: bool):
         """Enable or disable auto-save functionality."""

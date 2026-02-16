@@ -81,6 +81,28 @@ class ExportCoordinator(QObject):
     # Main Export Entry Point
     # -------------------------------------------------------------------------
 
+    def _validate_export_settings(self, settings: dict[str, Any]) -> bool:
+        """
+        Validate export settings before creating progress dialog.
+
+        Args:
+            settings: Export settings dictionary
+
+        Returns:
+            True if validation passes, False otherwise
+        """
+        required_keys = ["output_dir", "base_name", "format", "mode", "scale_factor"]
+        for key in required_keys:
+            if key not in settings:
+                self._show_error(f"Missing required setting: {key}")
+                return False
+
+        if not self._sprite_model.sprite_frames:
+            self._show_error("No frames available to export.")
+            return False
+
+        return True
+
     def handle_export_request(self, settings: dict[str, Any]) -> None:
         """
         Handle unified export request from dialog.
@@ -96,6 +118,10 @@ class ExportCoordinator(QObject):
                 - scale_factor: Scale multiplier
                 - And mode-specific options
         """
+        # Validate settings before creating progress dialog
+        if not self._validate_export_settings(settings):
+            return
+
         mode = settings.get("mode", "")
 
         # Determine export type name for progress dialog
@@ -138,12 +164,7 @@ class ExportCoordinator(QObject):
 
     def _export_frames(self, settings: dict[str, Any]) -> None:
         """Handle standard frame export (individual or sheet)."""
-        required_keys = ["output_dir", "base_name", "format", "mode", "scale_factor"]
-        for key in required_keys:
-            if key not in settings:
-                self._show_error(f"Missing required setting: {key}")
-                return
-
+        # Validation already done in handle_export_request, but keep as safety net
         if not self._sprite_model.sprite_frames:
             self._show_warning("No frames available to export.")
             return

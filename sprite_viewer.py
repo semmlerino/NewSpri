@@ -8,7 +8,7 @@ import os
 import sys
 from collections.abc import Callable
 
-from PySide6.QtCore import QMimeData, Qt
+from PySide6.QtCore import QMimeData, Qt, QTimer
 from PySide6.QtGui import QAction, QDragEnterEvent, QDropEvent, QKeySequence
 from PySide6.QtWidgets import (
     QApplication,
@@ -276,6 +276,12 @@ class SpriteViewer(QMainWindow):
         # Set up managers with UI components
         self._setup_managers()
 
+        # Debounce timer for frame slicing (prevents per-keystroke extraction)
+        self._slicing_debounce_timer = QTimer(self)
+        self._slicing_debounce_timer.setSingleShot(True)
+        self._slicing_debounce_timer.setInterval(300)
+        self._slicing_debounce_timer.timeout.connect(self._update_frame_slicing)
+
         # Create signal coordinator and connect all signals
         self._signal_coordinator = SignalCoordinator(
             sprite_model=self._sprite_model,
@@ -300,7 +306,7 @@ class SpriteViewer(QMainWindow):
             on_animation_error=self._on_animation_error,
             on_frame_settings_detected=self._on_frame_settings_detected,
             on_extraction_mode_changed=self._on_extraction_mode_changed,
-            on_update_frame_slicing=self._update_frame_slicing,
+            on_update_frame_slicing=self._on_settings_changed_debounced,
             on_grid_frame_preview=self._on_grid_frame_preview,
             on_export_frames_requested=self._on_export_frames_requested,
             on_export_current_frame_requested=self._on_export_current_frame_requested,
@@ -906,7 +912,17 @@ class SpriteViewer(QMainWindow):
             return
 
         # Update sprite model extraction mode
-        self._sprite_model.set_extraction_mode(mode)
+        success = self._sprite_model.set_extraction_mode(mode)
+
+        if not success:
+            # Revert UI radio button to current model mode without re-triggering
+            current_mode = self._sprite_model.get_extraction_mode()
+            self._frame_extractor.blockSignals(True)
+            self._frame_extractor.set_extraction_mode(current_mode)
+            self._frame_extractor.blockSignals(False)
+            if self._status_manager is not None:
+                self._status_manager.show_message(f"Failed to switch extraction mode to {mode}")
+            return
 
         # Update info label immediately to reflect mode change
         self._info_label.setText(self._sprite_model.sprite_info)
@@ -918,6 +934,10 @@ class SpriteViewer(QMainWindow):
         mode_name = "CCL" if mode == "ccl" else "Grid"
         if self._status_manager is not None:
             self._status_manager.show_message(f"Switched to {mode_name} extraction mode")
+
+    def _on_settings_changed_debounced(self):
+        """Restart debounce timer on settings change (prevents per-keystroke extraction)."""
+        self._slicing_debounce_timer.start()
 
     def _update_frame_slicing(self):
         """Update frame slicing based on current settings."""

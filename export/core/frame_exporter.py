@@ -751,11 +751,11 @@ class FrameExporter(QObject):
             for i, seg in enumerate(segment_info):
                 logger.debug("  Segment %d: %s", i, seg)
 
-        # Wait for any existing worker to complete before starting a new export
+        # Reject export if previous worker is still running
         if self._worker is not None and self._worker.isRunning():
-            logger.debug("Waiting for previous export worker to complete")
-            self._worker.wait()
-            logger.debug("Previous export worker completed")
+            logger.debug("Export rejected: already in progress")
+            self.exportError.emit("An export is already in progress")
+            return False
 
         # Validate inputs
         if not frames:

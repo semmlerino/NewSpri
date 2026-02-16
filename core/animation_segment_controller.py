@@ -13,7 +13,7 @@ import time
 from typing import Any
 
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QDialog, QMessageBox
+from PySide6.QtWidgets import QMessageBox
 
 from managers import AnimationSegmentManager
 
@@ -62,6 +62,9 @@ class AnimationSegmentController(QObject):
         self._sprite_model = sprite_model
         self._tab_widget = tab_widget
         self._segment_preview = segment_preview
+
+        # Guard flag: suppress _on_manager_segment_removed during rename
+        self._renaming = False
 
         # Configuration
         self.MAX_NAME_RETRY_ATTEMPTS = 10
@@ -205,10 +208,19 @@ class AnimationSegmentController(QObject):
     # ============================================================================
 
     def rename_segment(self, old_name: str, new_name: str) -> tuple[bool, str]:
-        """Rename an animation segment. Returns (success, message)."""
-        success, error = self._segment_manager.rename_segment(old_name, new_name)
+        """Rename an animation segment (validate-first). Returns (success, message)."""
+        # Guard: manager emits segmentRemoved during rename which would delete from grid
+        self._renaming = True
+        try:
+            success, error = self._segment_manager.rename_segment(old_name, new_name)
+        finally:
+            self._renaming = False
 
         if success:
+            # Commit rename to grid view after manager validation
+            if self._grid_view:
+                self._grid_view.commit_rename(old_name, new_name)
+
             message = f"Renamed segment '{old_name}' to '{new_name}'"
             self.statusMessage.emit(message)
 
@@ -228,6 +240,7 @@ class AnimationSegmentController(QObject):
 
             return True, message
 
+        self.statusMessage.emit(f"Rename failed: {error}")
         return False, error
 
     def delete_segment(self, segment_name: str) -> tuple[bool, str]:
@@ -334,15 +347,19 @@ class AnimationSegmentController(QObject):
             lambda settings: self._handle_segment_export(settings, segment_frames, segment.name)
         )
 
-        if dialog.exec() == QDialog.DialogCode.Accepted:
-            self.statusMessage.emit(f"Exported segment '{segment.name}'")
+        dialog.exec()
 
     def _handle_segment_export(
         self, settings: dict[str, Any], segment_frames: list, segment_name: str
     ) -> None:
         """Handle segment-specific export request."""
         required = {"output_dir", "base_name", "format", "mode", "scale_factor"}
-        if not segment_frames or not required.issubset(settings):
+        if not segment_frames:
+            self.statusMessage.emit("Export failed: no frames available")
+            return
+        if not required.issubset(settings):
+            missing = required - settings.keys()
+            self.statusMessage.emit(f"Export failed: missing settings {missing}")
             return
 
         from export.core.frame_exporter import get_frame_exporter
@@ -402,6 +419,8 @@ class AnimationSegmentController(QObject):
 
     def _on_manager_segment_removed(self, segment_name: str) -> None:
         """Handle segment removal from manager by updating grid view."""
+        if self._renaming:
+            return  # Suppress during rename (commit_rename handles grid state)
         if self._grid_view:
             self._grid_view.delete_segment(segment_name)
 
