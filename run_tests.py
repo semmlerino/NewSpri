@@ -73,6 +73,7 @@ class TestRunner:
                     "--cov-report=html:htmlcov",
                     "--cov-report=term-missing",
                     "--cov-report=json",
+                    "--cov-report=xml",
                     f"--cov-config={self.project_root}/pyproject.toml",
                 ]
             )

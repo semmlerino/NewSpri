@@ -1078,7 +1078,7 @@ class SpriteViewer(QMainWindow):
 <ul>
 <li>Automatic frame extraction</li>
 <li>Smooth animation playback</li>
-<li>Frame export (PNG, JPG, BMP, GIF)</li>
+<li>Frame export (PNG, JPG, BMP)</li>
 <li>Sprite sheet generation</li>
 </ul>
         """

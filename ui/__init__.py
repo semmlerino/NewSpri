@@ -4,7 +4,7 @@ UI package - User interface components.
 Contains all UI widgets and visual components:
 - Core display widgets (canvas, playback controls)
 - Specialized widgets (frame extractor, animation grid)
-- Common UI utilities and validation widgets
+- Segment preview/selection and status bar components
 - Status bar and progress indicators
 """
 

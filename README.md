@@ -1,238 +1,111 @@
 # Python Sprite Viewer
 
-A professional PySide6-based application for previewing and editing sprite sheet animations with modern MVC architecture, advanced animation splitting, and comprehensive export capabilities.
+PySide6 desktop application for previewing sprite sheets, extracting frames, splitting animations into segments, and exporting assets.
 
-## 🏗️ Architecture Overview
+## Architecture Overview
 
-The application features a **complete component-based MVC architecture** after comprehensive refactoring:
-
-### **Component Structure**
+### Project Structure
 ```
-📁 Python Sprite Viewer - Professional Architecture
-├── 🎨 UI Components (ui/)
-│   ├── sprite_canvas.py               - Zoom/pan display widget
-│   ├── playback_controls.py           - Animation control panel
-│   ├── frame_extractor.py             - Configuration interface
-│   ├── animation_grid_view.py         - Animation splitting interface
-│   ├── animation_segment_preview.py   - Segment preview panel
-│   └── validation_widgets.py          - Input validation widgets
-├── 🧠 Core Controllers (core/)
-│   ├── animation_controller.py        - Animation timing control
-│   ├── animation_segment_controller.py - Segment management
-│   ├── auto_detection_controller.py   - Frame detection logic
-│   └── file_controller.py             - File loading orchestration
-├── 📦 Managers (managers/)
-│   ├── animation_segment_manager.py   - Segment persistence
-│   ├── menu_manager.py                - Menu system
-│   ├── recent_files_manager.py        - Recent files tracking
-│   └── settings_manager.py            - Application settings
-├── ⚙️ Foundation
-│   ├── sprite_viewer.py               - Main application window
-│   ├── config.py                      - Centralized configuration
-│   └── utils/styles.py                - Centralized styling
-├── 🔧 Data Layer
-│   └── sprite_model/                  - Data layer & algorithms
-└── 📚 Export System (export/)
-    ├── core/                          - Export engine & presets
-    ├── dialogs/                       - Export wizard dialogs
-    └── widgets/                       - Export UI components
+sprite_viewer.py                 # Main window and app wiring
+config.py                        # Centralized configuration
+
+ui/                              # Widgets and presentation
+core/                            # Controllers/workflow orchestration
+managers/                        # Settings, recent files, segment persistence
+coordinators/                    # Signal wiring between components
+sprite_model/                    # Frame extraction and image-processing logic
+export/                          # Export engine and dialogs
+tests/                           # Unit/integration/UI/performance-marked tests
+spritetests/                     # Sample sprite sheets used by tests/manual checks
 ```
 
-### **Key Architectural Benefits**
-- **✅ Complete MVC Separation** - Clean data/controller/view layers
-- **✅ Component Modularity** - Reusable widgets across projects  
-- **✅ Event-Driven Communication** - Professional Qt signal/slot architecture
-- **✅ Team Development Ready** - Multiple developers can work simultaneously
-- **✅ Test-Friendly Design** - Individual components fully testable
+### Key Modules
+- `ui/`: `sprite_canvas.py`, `playback_controls.py`, `frame_extractor.py`, `animation_grid_view.py`, `animation_segment_preview.py`, `animation_segment_widget.py`, `enhanced_status_bar.py`
+- `core/`: `animation_controller.py`, `animation_segment_controller.py`, `auto_detection_controller.py`, `export_coordinator.py`
+- `managers/`: `animation_segment_manager.py`, `recent_files_manager.py`, `settings_manager.py`
+- `coordinators/`: `signal_coordinator.py`
+- `export/`: `core/` + `dialogs/` (no separate `widgets/` directory)
 
-## 🚀 Features
+## Features
 
-### **Core Functionality**
-- **Smart Sprite Sheet Processing** - Automatic frame extraction with pixel-perfect algorithms
-- **Professional Animation Playback** - Precise timing control with performance monitoring
-- **Advanced Display Engine** - Zoom, pan, overlays with smooth interaction
-- **Intelligent Auto-Detection** - Frame size and margin detection algorithms
-- **Comprehensive UI Controls** - Intuitive interface with keyboard shortcuts
-- **Recent Files Menu** - Quick access to recently opened sprite sheets (Alt+1 through Alt+9)
-- **Export System** - Export frames as individual files, sprite sheets, or animated GIFs
-- **Animation Splitting** - Split sprite sheets into named animation segments with color coding
-- **Segment Preview** - Individual playback controls for each animation segment
-- **Connected Component Labeling** - Advanced frame extraction for complex sprite sheets
+- Sprite sheet loading via file dialog, drag/drop, and recent-files menu
+- Frame extraction in `grid` mode and `ccl` (connected-component labeling) mode
+- Playback controls with precise FPS control (1-60), frame stepping, and looping
+- Canvas zoom/pan and optional grid overlay
+- Animation splitting with named segments and persisted segment metadata
+- Export presets for individual frames, sprite sheets, and segments-per-row layouts
+- Export formats: `PNG`, `JPG`, `BMP`
 
-### **Technical Highlights**
-- **Performance Optimized** - Real-time FPS monitoring and smart UI updates
-- **Memory Efficient** - Optimized pixmap handling and resource management
-- **Cross-Platform** - Pure PySide6 implementation for Windows/Mac/Linux
-- **Extensible Design** - Plugin-ready architecture for future enhancements
+Supported input formats: `PNG`, `JPG`, `JPEG`, `BMP`, `GIF`.
 
-## 📋 Installation
+## Installation
 
-### **Requirements**
-- Python 3.11+
-- PySide6
-- Modern Qt-compatible system
+### Recommended
+```bash
+uv sync --all-extras
+```
 
-### **Setup**
-1. **Clone and navigate:**
-   ```bash
-   git clone <repository>
-   cd sprite-viewer
-   ```
+### Alternative (pip)
+```bash
+python3 -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+# .venv\Scripts\activate  # Windows
+pip install -r requirements-dev.txt
+```
 
-2. **Create virtual environment:**
-   ```bash
-   python3 -m venv venv
-   source venv/bin/activate  # Linux/Mac
-   # or
-   venv\Scripts\activate     # Windows
-   ```
+## Usage
 
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-## 🎮 Usage
-
-### **Launch Application**
+Launch the desktop app:
 ```bash
 python sprite_viewer.py
 ```
 
-### **File Loading**
-- **📁 Open Button** - Browse and select sprite sheets
-- **🖱️ Drag & Drop** - Drop image files directly onto canvas
-- **⌨️ Ctrl+O** - Quick file open shortcut
-- **⌨️ Alt+1 to Alt+9** - Quick access to recent files
-
-**Supported Formats:** PNG, JPG, JPEG, BMP, GIF
-
-### **Frame Extraction**
-The application excels at intelligent sprite sheet processing:
-
-- **🎯 Smart Presets** - Common sizes (32×32, 64×64, 128×128, 192×192)
-- **⚙️ Custom Dimensions** - Precise width/height control
-- **🔍 Auto-Detection** - Intelligent frame size and margin detection
-- **📐 Offset Control** - Handle sprite sheet borders and padding
-- **⚡ Real-Time Updates** - Instant visual feedback during configuration
-
-### **Animation Controls**
-
-**Playback Management:**
-- **▶️ Play/Pause** - Spacebar or button control
-- **⏮️⏭️ Frame Navigation** - Arrow keys or dedicated buttons
-- **🏠🔚 Jump Controls** - Home/End for first/last frame
-- **🔄 Loop Mode** - Continuous or single-play options
-
-**Speed Control:**
-- **📊 FPS Slider** - 1-60 FPS with real-time adjustment
-- **📈 Performance Monitoring** - Actual vs target FPS display
-- **⚡ Optimization** - Smart timing with precision indicators
-
-### **Display Features**
-
-**Viewing Controls:**
-- **🔍 Zoom** - Mouse wheel or toolbar (10%-1000%)
-- **🖱️ Pan** - Click and drag navigation
-- **📐 Grid Overlay** - Alignment assistance (G key toggle)
-- **🎨 Background Options** - Checkerboard or solid color
-- **📏 Frame Info** - Real-time frame counter display
-
-### **Animation Splitting**
-
-**Segment Creation:**
-- **🎯 Frame Selection** - Click, drag, or shift-click to select frames
-- **✂️ Create Segments** - Right-click or button to create named segments
-- **🎨 Color Coding** - Automatic distinct colors for each segment
-- **💾 Auto-Save** - Segments persist with sprite sheet files
-
-**Segment Management:**
-- **▶️ Individual Playback** - Preview each segment separately
-- **📤 Export Segments** - Export specific animations independently
-- **🔄 Edit Segments** - Rename, delete, or modify segments
-- **👁️ Visual Markers** - Clear start/end frame indicators
-
-### **Keyboard Shortcuts**
-| Key | Function |
-|-----|----------|
-| `Space` | Play/pause animation |
+### Core Shortcuts
+| Key | Action |
+|---|---|
+| `Space` | Play/pause |
 | `←` / `→` | Previous/next frame |
 | `Home` / `End` | First/last frame |
 | `G` | Toggle grid overlay |
-| `Ctrl+O` | Open file dialog |
+| `Ctrl+O` | Open sprite sheet |
 | `Ctrl++` / `Ctrl+-` | Zoom in/out |
 | `Ctrl+0` | Fit to window |
 | `Ctrl+1` | Reset zoom (100%) |
-| `Ctrl+E` | Export all frames |
+| `Ctrl+E` | Export frames |
 | `Ctrl+Shift+E` | Export current frame |
-| `Alt+1` to `Alt+9` | Open recent file 1-9 |
-| `Ctrl+Q` | Quit application |
+| `Alt+1` to `Alt+9` | Open recent file slot |
+| `Ctrl+Q` | Quit |
 
-## 🏆 Professional Features
+## Development
 
-### **Performance Excellence**
-- **Real-Time Monitoring** - FPS accuracy tracking and quality indicators
-- **Smart UI Updates** - Redundant update prevention for smooth performance  
-- **Memory Optimization** - Efficient pixmap caching and resource management
-- **Responsive Interface** - Non-blocking operations with progress feedback
-
-### **Developer-Friendly Architecture**
-- **Component Testing** - Individual widget testing capabilities
-- **Signal Debugging** - Clear event flow for troubleshooting
-- **Extensible Design** - Add new features without breaking existing code
-- **Documentation** - Comprehensive phase documentation and code reviews
-
-### **Production Quality**
-- **Error Handling** - Graceful failure recovery with user feedback
-- **Resource Management** - Proper cleanup and memory management
-- **Cross-Platform** - Consistent behavior across operating systems
-- **Accessibility** - Keyboard navigation and clear visual feedback
-
-## 📚 Documentation
-
-- **README.md** - This file - main project documentation
-- **CLAUDE.md** - Instructions for Claude AI assistant when working with this codebase
-- **requirements.txt** - Python package dependencies
-- **pyproject.toml** - Project configuration including test markers
-
-## 🔧 Development
-
-### **Testing**
-Run the comprehensive test suite:
+### Run tests
 ```bash
-# All tests
-python -m pytest
-
-# Specific test categories
-python -m pytest -m unit          # Unit tests only
-python -m pytest -m integration   # Integration tests
-python -m pytest tests/ui/        # UI component tests
-
-# With coverage
-python -m pytest --cov=. --cov-report=html
+uv run pytest
+uv run pytest -m unit
+uv run pytest -m integration
+uv run pytest tests/ui/
 ```
 
-### **Architecture Highlights**
-The codebase demonstrates **professional software engineering** with:
+### Run helper test runner
+```bash
+python3 run_tests.py --unit
+python3 run_tests.py --integration
+python3 run_tests.py --coverage
+```
 
-- **Modular Design** - 20+ independent components with clear responsibilities
-- **Zero Circular Dependencies** - Proper import hierarchy maintained
-- **Event-Driven Architecture** - Qt signals for loose coupling
-- **Comprehensive Testing** - Unit, integration, and UI tests
-- **Enterprise Quality** - Production-ready code organization
+### Lint / format / type-check
+```bash
+uv run ruff check . --fix
+uv run ruff format .
+uv run basedpyright
+```
 
-### **Future Enhancement Ready**
-The architecture enables advanced features:
-- Plugin systems for custom functionality
-- Advanced export capabilities (GIF, video)
-- Cloud integration for sprite sharing
-- Machine learning-powered auto-detection
-- Professional timeline editing tools
+## Additional Documentation
 
-## 📄 License
+- `CLAUDE.md`: assistant-oriented engineering notes and API contracts
+- `tests/README.md`: current testing workflow and markers
+- `WEB_UI_README.md`: status of the web UI effort (currently not active in this repo)
 
-This project is open source. Feel free to use and modify for your needs.
+## License
 
----
-
-**Python Sprite Viewer** - A professional sprite sheet animation tool built with modern software engineering principles.
+Open source; use and modify as needed.

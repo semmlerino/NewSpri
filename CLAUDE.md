@@ -50,7 +50,6 @@ ui/                         - UI components
   animation_segment_preview.py - Segment preview panel
   animation_segment_widget.py - Segment list widget
   enhanced_status_bar.py    - Status bar with enhanced info
-  validation_widgets.py     - Input validation widgets
 
 core/                       - Controllers
   animation_controller.py   - Animation timing control
@@ -60,22 +59,18 @@ core/                       - Controllers
 
 managers/                   - Manager classes
   animation_segment_manager.py - Segment persistence
-  menu_manager.py           - Menu system
-  action_manager.py         - Action registry
   recent_files_manager.py   - Recent files tracking
   settings_manager.py       - Application settings
-  shortcut_manager.py       - Keyboard shortcuts
 
 utils/                      - Utilities
   styles.py                 - Centralized styling (StyleManager)
   sprite_rendering.py       - Sprite pixmap utilities (create_padded_pixmap)
-  extraction_modes.py       - Extraction mode definitions
   ui_common.py              - Common UI utilities
 
 coordinators/               - Component coordination
   signal_coordinator.py     - Centralized signal wiring
 sprite_model/               - Data layer & algorithms
-export/                     - Export system (core/, dialogs/, widgets/)
+export/                     - Export system (core/, dialogs/)
 tests/                      - Test suite (unit/, integration/, ui/, performance/)
 archive/                    - Historical documentation (ignore for development)
 ```
@@ -93,7 +88,7 @@ button_height = Config.UI.PLAYBACK_BUTTON_MIN_HEIGHT
 button_height = 40
 ```
 
-Key config classes: `Config.Canvas`, `Config.Animation`, `Config.FrameExtraction`, `Config.UI`, `Config.Drawing`, `Config.File`, `Config.Export`, `Config.AnimationSplitting`
+Key config classes: `Config.Canvas`, `Config.Animation`, `Config.FrameExtraction`, `Config.UI`, `Config.Drawing`, `Config.File`, `Config.Export`
 
 ### Signal/Slot Communication
 Component communication uses Qt signals. Key signals:
@@ -151,10 +146,9 @@ export/
   dialogs/base/wizard_base.py   - Wizard base class
   dialogs/modern_settings_preview.py - Settings preview step
   dialogs/type_selection.py     - Export type selection
-  widgets/settings_widgets.py   - Settings controls
 ```
 
-Formats: PNG, JPG, BMP, GIF. Scale factors: 0.5x-4.0x. Shortcuts: Ctrl+E (all), Ctrl+Shift+E (current).
+Formats: PNG, JPG, BMP. Scale factors: 0.5x-4.0x. Shortcuts: Ctrl+E (all), Ctrl+Shift+E (current).
 
 ## Testing Notes
 
@@ -227,6 +221,6 @@ uv run ruff check . && uv run ruff format . && uv run basedpyright && uv run pyt
 ## Files to Ignore
 
 - `archive/` - Historical documentation, not active code
-- `web_backend/`, `web_frontend/` - Separate web interface (untracked)
+- `web_frontend/` - Local/dependency-only web directory (not active product source)
 - `debug_*.py` - Debug utilities, not production code
 - `venv/` - Virtual environment
