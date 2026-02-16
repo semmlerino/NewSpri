@@ -76,7 +76,7 @@ The application features a **complete component-based MVC architecture** after c
 1. **Clone and navigate:**
    ```bash
    git clone <repository>
-   cd NewSpri
+   cd sprite-viewer
    ```
 
 2. **Create virtual environment:**

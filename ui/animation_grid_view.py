@@ -192,7 +192,7 @@ class AnimationGridView(QWidget):
     segmentRenamed = Signal(str, str)  # old_name, new_name
     segmentSelected = Signal(AnimationSegment)  # selected_segment
     segmentPreviewRequested = Signal(AnimationSegment)  # segment_to_preview (double-click)
-    exportRequested = Signal(AnimationSegment)  # segment_to_export
+    exportRequested = Signal(str)  # segment_name
 
     def __init__(self):
         super().__init__()

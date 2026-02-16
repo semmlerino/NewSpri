@@ -26,7 +26,6 @@ class ExportDialog(QDialog):
     """
 
     # Signals
-    exportCompleted = Signal(str)  # Emitted with output path when export completes
     exportRequested = Signal(dict)  # Emitted when export is requested (for compatibility)
 
     def __init__(

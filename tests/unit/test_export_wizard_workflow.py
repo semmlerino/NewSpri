@@ -363,7 +363,6 @@ class TestExportDialog:
             sprites=sample_sprites
         )
 
-        assert hasattr(dialog, 'exportCompleted')
         assert hasattr(dialog, 'exportRequested')
 
     def test_export_dialog_with_segment_manager(

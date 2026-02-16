@@ -5,7 +5,6 @@ Consolidates export logic that was previously split between SpriteViewer
 and AnimationSegmentController.
 """
 
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QObject, Signal
@@ -19,8 +18,6 @@ from export.core.frame_exporter import (
 from export.dialogs.progress_dialog import ExportProgressDialog
 
 if TYPE_CHECKING:
-    from PySide6.QtGui import QPixmap
-
     from managers.animation_segment_manager import AnimationSegmentManager
     from sprite_model import SpriteModel
 
@@ -106,7 +103,6 @@ class ExportCoordinator(QObject):
             "individual": "Individual Frames",
             "selected": "Selected Frames",
             "sheet": "Sprite Sheet",
-            "segments": "Animation Segments",
             "segments_sheet": "Segments Per Row Sheet",
         }
         export_type = export_type_names.get(mode, "Frames")
@@ -131,9 +127,7 @@ class ExportCoordinator(QObject):
         self._progress_dialog.show()
 
         # Route to appropriate export handler
-        if mode == "segments" and "selected_segments" in settings:
-            self._export_segments(settings)
-        elif mode == "segments_sheet":
+        if mode == "segments_sheet":
             self._export_segments_per_row(settings)
         else:
             self._export_frames(settings)
@@ -242,106 +236,6 @@ class ExportCoordinator(QObject):
 
         if not success:
             self._show_error("Failed to start segments per row export.")
-
-    def _export_segments(self, settings: dict[str, Any]) -> None:
-        """Handle animation segment export (batch export of selected segments)."""
-        selected_segments = settings.get("selected_segments", [])
-
-        if not selected_segments:
-            self._show_warning("No animation segments selected for export.")
-            return
-
-        if not self._sprite_model.sprite_frames:
-            self._show_warning("No frames available to export.")
-            return
-
-        if not self._segment_manager:
-            self._show_error("Segment manager not available.")
-            return
-
-        all_frames = self._sprite_model.sprite_frames
-
-        for segment_name in selected_segments:
-            segment = self._segment_manager.get_segment(segment_name)
-            if not segment:
-                continue
-
-            segment_frames = self._segment_manager.extract_frames_for_segment(
-                segment_name, all_frames
-            )
-            if not segment_frames:
-                continue
-
-            base_output_dir = settings["output_dir"]
-            segment_output_dir = Path(base_output_dir) / segment_name
-            segment_output_dir.mkdir(parents=True, exist_ok=True)
-
-            mode_index = settings.get("mode_index", 0)
-
-            if mode_index == 0:  # Individual segments (separate folders)
-                success = self._exporter.export_frames(
-                    frames=segment_frames,
-                    output_dir=str(segment_output_dir),
-                    base_name=settings.get("base_name", segment_name),
-                    format=settings["format"],
-                    mode="individual",
-                    scale_factor=settings["scale_factor"],
-                )
-            elif mode_index == 1:  # Combined sprite sheet
-                success = self._exporter.export_frames(
-                    frames=segment_frames,
-                    output_dir=str(segment_output_dir),
-                    base_name=f"{segment_name}_sheet",
-                    format=settings["format"],
-                    mode="sheet",
-                    scale_factor=settings["scale_factor"],
-                )
-            else:  # All frames (with segment prefixes)
-                success = self._exporter.export_frames(
-                    frames=segment_frames,
-                    output_dir=str(base_output_dir),
-                    base_name=f"{settings.get('base_name', 'frame')}_{segment_name}",
-                    format=settings["format"],
-                    mode="individual",
-                    scale_factor=settings["scale_factor"],
-                )
-
-            if not success:
-                self._show_error(f"Failed to export segment '{segment_name}'.")
-
-    def export_single_segment(
-        self,
-        segment_name: str,
-        frames: "list[QPixmap]",
-        settings: dict[str, Any],
-    ) -> bool:
-        """
-        Export a single segment with provided frames.
-
-        Used by AnimationSegmentController for context menu exports.
-
-        Args:
-            segment_name: Name of the segment
-            frames: List of QPixmap frames to export
-            settings: Export settings dictionary
-
-        Returns:
-            True if export started successfully
-        """
-        required = {"output_dir", "base_name", "format", "mode", "scale_factor"}
-        if not frames or not required.issubset(settings):
-            return False
-
-        return self._exporter.export_frames(
-            frames=frames,
-            output_dir=settings["output_dir"],
-            base_name=f"{settings['base_name']}_{segment_name}",
-            format=settings["format"],
-            mode=settings["mode"],
-            scale_factor=settings["scale_factor"],
-            pattern=settings.get("pattern"),
-            sprite_sheet_layout=settings.get("sprite_sheet_layout"),
-        )
 
     # -------------------------------------------------------------------------
     # Signal Handlers

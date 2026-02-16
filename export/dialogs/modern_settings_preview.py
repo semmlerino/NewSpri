@@ -8,7 +8,7 @@ import math
 import os
 from typing import Any
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPixmap
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -831,8 +831,6 @@ class ModernExportSettings(WizardStep):
     """
     Modern, compact export settings with live preview.
     """
-
-    previewUpdateRequested = Signal()
 
     def __init__(
         self,

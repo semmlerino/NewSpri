@@ -279,18 +279,10 @@ class TestManagerIntegration:
         # Test that status manager exists and has the right methods
         assert hasattr(status, 'show_message')
         assert hasattr(status, 'update_mouse_position')
-        assert hasattr(status, 'connect_to_sprite_model')
-        assert hasattr(status, 'connect_to_animation_controller')
-        assert hasattr(status, 'connect_to_canvas')
-        
+
         # Test basic functionality
         status.show_message("Test message")
         status.update_mouse_position(100, 200)
-        
-        # Test that connections can be made without errors
-        status.connect_to_sprite_model(viewer._sprite_model)
-        status.connect_to_animation_controller(viewer._animation_controller)
-        status.connect_to_canvas(viewer._canvas)
     
     @pytest.mark.integration
     def test_recent_files_integration(self, qtbot):

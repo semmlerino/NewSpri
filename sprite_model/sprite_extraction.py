@@ -11,9 +11,6 @@ This module provides both class-based and function-based interfaces for extracti
 All grid extraction methods are now module-level functions.
 """
 
-import contextlib
-import os
-import tempfile
 from typing import NamedTuple, cast
 
 import numpy as np
@@ -822,76 +819,3 @@ def _analyze_ccl_results(
 
     debug_log.append("CCL Failed: layout too irregular or insufficient sprites")
     return {"success": False, "method": "ccl_enhanced"}
-
-
-# ============================================================================
-# CCL Extractor Class (for backward compatibility)
-# ============================================================================
-
-
-class CCLExtractor:
-    """
-    Connected Component Labeling extractor class.
-    Provides object-oriented interface for CCL sprite extraction.
-    """
-
-    def __init__(self):
-        """Initialize CCL extractor."""
-        pass
-
-    def extract_sprites(self, sprite_sheet):
-        """
-        Extract sprites from sprite sheet using CCL.
-
-        Args:
-            sprite_sheet: QPixmap sprite sheet
-
-        Returns:
-            Tuple of (sprites_list, info_string)
-        """
-        temp_path = None
-        try:
-            # Create temporary file
-            with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_file:
-                temp_path = tmp_file.name
-
-            # Save sprite sheet to temp file
-            if not sprite_sheet.save(temp_path, "PNG"):
-                return [], "Failed to save sprite sheet for CCL processing"
-
-            # Run CCL detection
-            ccl_result = detect_sprites_ccl_enhanced(temp_path)
-
-            # Ensure we got a dictionary result
-            if not isinstance(ccl_result, dict):
-                return [], f"CCL detection returned unexpected type: {type(ccl_result)}"
-
-            if ccl_result and ccl_result.get("success", False):
-                sprite_bounds = ccl_result.get("ccl_sprite_bounds", [])
-                sprite_count = len(sprite_bounds)
-
-                if sprite_count >= 2:
-                    # Create list of individual sprite QPixmaps
-                    sprites = []
-                    for x, y, w, h in sprite_bounds:
-                        sprite_pixmap = sprite_sheet.copy(x, y, w, h)
-                        sprites.append(sprite_pixmap)
-
-                    info_string = f"CCL detected {sprite_count} sprites"
-                    return sprites, info_string
-                else:
-                    return [], f"CCL detected only {sprite_count} sprites (need at least 2)"
-            else:
-                error_msg = (
-                    ccl_result.get("error", "Unknown error") if ccl_result else "No result returned"
-                )
-                return [], f"CCL detection failed: {error_msg}"
-
-        except Exception as e:
-            return [], f"CCL extraction error: {e!s}"
-
-        finally:
-            # Clean up temporary file - guaranteed to run on all exit paths
-            if temp_path is not None:
-                with contextlib.suppress(OSError):
-                    os.unlink(temp_path)

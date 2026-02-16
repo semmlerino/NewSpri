@@ -173,16 +173,11 @@ class TestAnimationSplittingWorkflow:
         export_signals = []
         animation_grid.exportRequested.connect(lambda seg: export_signals.append(seg))
         
-        # Trigger export by emitting the export signal
-        # This simulates what would happen when user triggers export from UI
-        segment = animation_grid._segments.get("Export_Test")
-        if segment:
-            animation_grid.exportRequested.emit(segment)
-        
+        # Trigger export by emitting the export signal (emits segment name as str)
+        animation_grid.exportRequested.emit("Export_Test")
+
         assert len(export_signals) == 1
-        assert export_signals[0].name == "Export_Test"
-        assert export_signals[0].start_frame == 5
-        assert export_signals[0].end_frame == 10
+        assert export_signals[0] == "Export_Test"
     
     def test_multi_segment_management(self, qtbot):
         """Test managing multiple animation segments."""

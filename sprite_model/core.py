@@ -571,22 +571,6 @@ class SpriteModel(QObject):
         """Move to last frame."""
         return self._animation_state.last_frame()
 
-    def play(self) -> bool:
-        """Start animation playback."""
-        return self._animation_state.play()
-
-    def pause(self) -> None:
-        """Pause animation playback."""
-        self._animation_state.pause()
-
-    def stop(self) -> None:
-        """Stop animation playback."""
-        self._animation_state.stop()
-
-    def toggle_playback(self) -> bool:
-        """Toggle animation playback."""
-        return self._animation_state.toggle_playback()
-
     def set_fps(self, fps: int) -> bool:
         """Set frames per second."""
         return self._animation_state.set_fps(fps)

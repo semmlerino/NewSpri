@@ -64,21 +64,15 @@ class TestSpriteViewerInitialization:
         # Test that status manager has the methods that caused failures
         status_manager = viewer._status_manager
         
-        # These methods must exist (they were missing and caused errors)
+        # These methods must exist
         assert hasattr(status_manager, 'show_message')
         assert hasattr(status_manager, 'update_mouse_position')
-        assert hasattr(status_manager, 'connect_to_sprite_model')
-        assert hasattr(status_manager, 'connect_to_animation_controller') 
-        assert hasattr(status_manager, 'connect_to_canvas')
-        
+
         # Test that these methods are actually callable
         assert callable(status_manager.show_message)
         assert callable(status_manager.update_mouse_position)
-        assert callable(status_manager.connect_to_sprite_model)
-        assert callable(status_manager.connect_to_animation_controller)
-        assert callable(status_manager.connect_to_canvas)
-        
-        # Test actual method calls work (these were failing before)
+
+        # Test actual method calls work
         status_manager.show_message("Test message")
         status_manager.update_mouse_position(100, 200)
     

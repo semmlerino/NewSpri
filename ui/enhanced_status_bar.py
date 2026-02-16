@@ -285,29 +285,6 @@ class StatusBarManager(QObject):
         super().__init__()
         self._status_bar = status_bar
 
-    def connect_to_sprite_model(self, sprite_model) -> None:
-        """Connect to sprite model signals for automatic updates."""
-        if hasattr(sprite_model, "frameChanged"):
-            sprite_model.frameChanged.connect(self._status_bar.update_frame_info)
-
-    def connect_to_animation_controller(self, animation_controller) -> None:
-        """Connect to animation controller signals."""
-        if hasattr(animation_controller, "frameChanged"):
-            animation_controller.frameChanged.connect(self._status_bar.update_frame_info)
-        if hasattr(animation_controller, "fpsChanged"):
-            animation_controller.fpsChanged.connect(self._status_bar.update_fps)
-
-    def connect_to_canvas(self, canvas) -> None:
-        """Connect to canvas signals for zoom and mouse tracking."""
-        if hasattr(canvas, "zoomChanged"):
-            canvas.zoomChanged.connect(self._on_zoom_changed)
-        if hasattr(canvas, "mouseMoved"):
-            canvas.mouseMoved.connect(self._status_bar.update_mouse_position)
-
-    def _on_zoom_changed(self, zoom_factor: float) -> None:
-        """Handle zoom change signal - converts factor to percentage."""
-        self._status_bar.update_zoom_level(zoom_factor * 100.0)
-
     def update_extraction_mode(self, mode: str) -> None:
         """Update extraction mode."""
         self._status_bar.update_extraction_mode(mode)
