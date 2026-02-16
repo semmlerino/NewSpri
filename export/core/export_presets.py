@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from .frame_exporter import SpriteSheetLayout
+from .frame_exporter import ExportMode, SpriteSheetLayout
 
 
 @dataclass
@@ -44,7 +44,7 @@ PRESETS: dict[str, ExportPreset] = {
         display_name="Individual Frames",
         icon="📁",
         description="Export frames as separate PNG files",
-        mode="individual",
+        mode=ExportMode.INDIVIDUAL_FRAMES.value,
         format="PNG",
         scale=1.0,
         default_pattern="{name}_{index:03d}",
@@ -64,7 +64,7 @@ PRESETS: dict[str, ExportPreset] = {
         display_name="Sprite Sheet",
         icon="📋",
         description="Combine all frames into a single image",
-        mode="sheet",
+        mode=ExportMode.SPRITE_SHEET.value,
         format="PNG",
         scale=1.0,
         default_pattern="{name}_sheet",
@@ -80,7 +80,7 @@ PRESETS: dict[str, ExportPreset] = {
         display_name="Web Optimized",
         icon="🌐",
         description="Smaller files optimized for web use",
-        mode="individual",
+        mode=ExportMode.INDIVIDUAL_FRAMES.value,
         format="PNG",
         scale=0.5,
         default_pattern="{name}_web_{index:03d}",
@@ -92,7 +92,7 @@ PRESETS: dict[str, ExportPreset] = {
         display_name="Print Quality",
         icon="🖨️",
         description="High resolution for printing",
-        mode="individual",
+        mode=ExportMode.INDIVIDUAL_FRAMES.value,
         format="PNG",
         scale=2.0,
         default_pattern="{name}_print_{index:03d}",
@@ -104,7 +104,7 @@ PRESETS: dict[str, ExportPreset] = {
         display_name="Web Game Atlas",
         icon="🎮",
         description="Compact sprite sheet optimized for web games",
-        mode="sheet",
+        mode=ExportMode.SPRITE_SHEET.value,
         format="PNG",
         scale=1.0,
         default_pattern="{name}_atlas",
@@ -119,7 +119,7 @@ PRESETS: dict[str, ExportPreset] = {
         display_name="Spaced Sprite Sheet",
         icon="📐",
         description="Sprite sheet with spacing for easier editing",
-        mode="sheet",
+        mode=ExportMode.SPRITE_SHEET.value,
         format="PNG",
         scale=1.0,
         default_pattern="{name}_spaced",
@@ -134,7 +134,7 @@ PRESETS: dict[str, ExportPreset] = {
         display_name="Selected Frames",
         icon="🎯",
         description="Export only specific frames you choose",
-        mode="selected",
+        mode=ExportMode.SELECTED_FRAMES.value,
         format="PNG",
         scale=1.0,
         default_pattern="{name}_selected_{index:03d}",
@@ -147,7 +147,7 @@ PRESETS: dict[str, ExportPreset] = {
         display_name="Segments Per Row",
         icon="🎬",
         description="Export sprite sheet with each segment on its own row",
-        mode="segments_sheet",
+        mode=ExportMode.SEGMENTS_SHEET.value,
         format="PNG",
         scale=1.0,
         default_pattern="{name}_segments_sheet",

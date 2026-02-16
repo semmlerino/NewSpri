@@ -164,7 +164,9 @@ class ExportMode(Enum):
     """Export modes available."""
 
     INDIVIDUAL_FRAMES = "individual"
+    SELECTED_FRAMES = "selected"
     SPRITE_SHEET = "sheet"
+    SEGMENTS_SHEET = "segments_sheet"
 
 
 class ExportTask:
@@ -237,9 +239,9 @@ class ExportWorker(QThread):
     def run(self):
         """Execute the export task."""
         try:
-            if self.task.mode == ExportMode.INDIVIDUAL_FRAMES:
+            if self.task.mode in (ExportMode.INDIVIDUAL_FRAMES, ExportMode.SELECTED_FRAMES):
                 self._export_individual_frames()
-            elif self.task.mode == ExportMode.SPRITE_SHEET:
+            elif self.task.mode in (ExportMode.SPRITE_SHEET, ExportMode.SEGMENTS_SHEET):
                 self._export_sprite_sheet()
             else:
                 raise ValueError(f"Unsupported export mode: {self.task.mode}")
@@ -776,15 +778,7 @@ class FrameExporter(QObject):
             export_format = ExportFormat.from_string(format)
             logger.debug("Parsed export format: %s", export_format)
 
-            # Handle special modes
-            if mode == "segments_sheet":
-                logger.debug("Converting segments_sheet mode to SPRITE_SHEET")
-                export_mode = ExportMode.SPRITE_SHEET
-            elif mode == "selected":
-                logger.debug("Converting selected mode to INDIVIDUAL_FRAMES")
-                export_mode = ExportMode.INDIVIDUAL_FRAMES
-            else:
-                export_mode = ExportMode(mode)
+            export_mode = ExportMode(mode)
             logger.debug("Parsed export mode: %s", export_mode)
         except ValueError as e:
             self.exportError.emit(f"Invalid export settings: {e!s}")

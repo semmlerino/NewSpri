@@ -11,6 +11,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox, QWidget
 
 from export.core.frame_exporter import (
+    ExportMode,
     FrameExporter,
     SpriteSheetLayout,
     get_frame_exporter,
@@ -117,7 +118,7 @@ class ExportCoordinator(QObject):
         mode = settings.get("mode", "")
 
         # Check segment-specific preconditions
-        if mode == "segments_sheet":
+        if mode == ExportMode.SEGMENTS_SHEET.value:
             if not self._segment_manager:
                 return False, "Segment manager not available."
             segments = self._segment_manager.get_all_segments()
@@ -163,10 +164,10 @@ class ExportCoordinator(QObject):
 
         # Determine export type name for progress dialog
         export_type_names = {
-            "individual": "Individual Frames",
-            "selected": "Selected Frames",
-            "sheet": "Sprite Sheet",
-            "segments_sheet": "Segments Per Row Sheet",
+            ExportMode.INDIVIDUAL_FRAMES.value: "Individual Frames",
+            ExportMode.SELECTED_FRAMES.value: "Selected Frames",
+            ExportMode.SPRITE_SHEET.value: "Sprite Sheet",
+            ExportMode.SEGMENTS_SHEET.value: "Segments Per Row Sheet",
         }
         export_type = export_type_names.get(mode, "Frames")
 
@@ -191,7 +192,7 @@ class ExportCoordinator(QObject):
 
         # Route to appropriate export handler with guaranteed cleanup
         try:
-            if mode == "segments_sheet":
+            if mode == ExportMode.SEGMENTS_SHEET.value:
                 self._export_segments_per_row(settings)
             else:
                 self._export_frames(settings)
@@ -214,7 +215,7 @@ class ExportCoordinator(QObject):
         if selected_indices:
             valid_indices = [i for i in selected_indices if 0 <= i < len(all_frames)]
             frames_to_export = [all_frames[i] for i in valid_indices]
-            export_mode = "individual"
+            export_mode = ExportMode.INDIVIDUAL_FRAMES.value
 
             if len(valid_indices) != len(selected_indices):
                 invalid_count = len(selected_indices) - len(valid_indices)
@@ -225,7 +226,7 @@ class ExportCoordinator(QObject):
 
         # Create sprite sheet layout if mode is 'sheet' and layout not provided
         sprite_sheet_layout = settings.get("sprite_sheet_layout")
-        if export_mode == "sheet" and sprite_sheet_layout is None:
+        if export_mode == ExportMode.SPRITE_SHEET.value and sprite_sheet_layout is None:
             layout_mode = settings.get("layout_mode", "auto")
             sprite_sheet_layout = SpriteSheetLayout(
                 mode=layout_mode,
@@ -271,7 +272,7 @@ class ExportCoordinator(QObject):
             output_dir=settings["output_dir"],
             base_name=settings["base_name"],
             format=settings["format"],
-            mode="segments_sheet",
+            mode=ExportMode.SEGMENTS_SHEET.value,
             scale_factor=settings["scale_factor"],
             sprite_sheet_layout=settings.get("sprite_sheet_layout"),
             segment_info=segment_info,

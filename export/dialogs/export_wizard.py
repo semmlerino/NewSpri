@@ -12,6 +12,7 @@ from PySide6.QtWidgets import QDialog, QMessageBox, QVBoxLayout
 
 from config import Config
 
+from ..core.frame_exporter import ExportMode
 from .base.wizard_base import WizardWidget
 from .modern_settings_preview import ModernExportSettings
 from .type_selection import ExportTypeStepSimple as ExportTypeStep
@@ -122,7 +123,7 @@ class ExportDialog(QDialog):
         export_config = self._prepare_export_config(preset, settings)
 
         # Include selected_indices for 'selected' mode
-        if preset.mode == "selected":
+        if preset.mode == ExportMode.SELECTED_FRAMES.value:
             export_config["selected_indices"] = settings.get("selected_indices", [])
 
         # Emit exportRequested for coordinator to handle export execution
@@ -146,7 +147,7 @@ class ExportDialog(QDialog):
         }
 
         # Add base_name for all export types
-        if preset.mode == "sheet" or preset.mode == "segments_sheet":
+        if preset.mode in (ExportMode.SPRITE_SHEET.value, ExportMode.SEGMENTS_SHEET.value):
             # For sprite sheets, use single_filename as base_name
             config["base_name"] = settings.get("single_filename", "spritesheet")
             config.update(
@@ -160,7 +161,7 @@ class ExportDialog(QDialog):
                 }
             )
             # Special handling for segments per row
-            if preset.mode == "segments_sheet":
+            if preset.mode == ExportMode.SEGMENTS_SHEET.value:
                 config["sprite_sheet_layout"] = preset.sprite_sheet_layout
         else:
             # For individual/selected frames

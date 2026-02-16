@@ -39,6 +39,7 @@ from config import Config
 from utils.styles import StyleManager
 
 from ..core.export_presets import ExportPreset
+from ..core.frame_exporter import ExportMode
 from ..dialogs.base.wizard_base import WizardStep
 
 logger = logging.getLogger(__name__)
@@ -501,7 +502,10 @@ class _PreviewGenerator:
             return QPixmap()
 
         # Special handling for segments per row mode
-        if self._parent._current_preset and self._parent._current_preset.mode == "segments_sheet":
+        if (
+            self._parent._current_preset
+            and self._parent._current_preset.mode == ExportMode.SEGMENTS_SHEET.value
+        ):
             logger.debug("Detected segments_sheet mode, calling generate_segments_preview")
             try:
                 return self.generate_segments_preview()
@@ -786,7 +790,7 @@ class _PreviewGenerator:
         selected_indices = []
         if (
             self._parent._current_preset
-            and self._parent._current_preset.mode == "selected"
+            and self._parent._current_preset.mode == ExportMode.SELECTED_FRAMES.value
             and "frame_list" in self._parent._settings_widgets
         ):
             for item in self._parent._settings_widgets["frame_list"].selectedItems():
@@ -814,7 +818,10 @@ class _PreviewGenerator:
         painter.end()
 
         # Update info
-        if self._parent._current_preset and self._parent._current_preset.mode == "selected":
+        if (
+            self._parent._current_preset
+            and self._parent._current_preset.mode == ExportMode.SELECTED_FRAMES.value
+        ):
             info = f"Selected: {len(selected_indices)} frames"
         else:
             info = f"Individual: {len(self._parent._sprites)} frames"
@@ -1129,13 +1136,13 @@ class ModernExportSettings(WizardStep):
             self.mode_stack.removeWidget(self.mode_stack.widget(0))
 
         # Add appropriate settings widget
-        if preset.mode == "sheet":
+        if preset.mode == ExportMode.SPRITE_SHEET.value:
             logger.debug("Creating sheet settings widget")
             settings = self._create_sheet_settings()
-        elif preset.mode == "segments_sheet":
+        elif preset.mode == ExportMode.SEGMENTS_SHEET.value:
             logger.debug("Creating sheet settings widget for segments_sheet mode")
             settings = self._create_sheet_settings()
-        elif preset.mode == "selected":
+        elif preset.mode == ExportMode.SELECTED_FRAMES.value:
             logger.debug("Creating selected settings widget")
             settings = self._create_selected_settings()
         else:  # individual
@@ -1283,11 +1290,11 @@ class ModernExportSettings(WizardStep):
         valid = bool(self.path_edit.text())
 
         if self._current_preset:
-            if self._current_preset.mode == "sheet":
+            if self._current_preset.mode == ExportMode.SPRITE_SHEET.value:
                 valid &= bool(self._settings_widgets.get("sheet_filename", QLineEdit()).text())
-            elif self._current_preset.mode == "individual":
+            elif self._current_preset.mode == ExportMode.INDIVIDUAL_FRAMES.value:
                 valid &= bool(self._settings_widgets.get("base_name", QLineEdit()).text())
-            elif self._current_preset.mode == "selected":
+            elif self._current_preset.mode == ExportMode.SELECTED_FRAMES.value:
                 valid &= len(self.frame_list.selectedItems()) > 0
                 valid &= bool(self._settings_widgets.get("selected_base_name", QLineEdit()).text())
 
@@ -1310,7 +1317,10 @@ class ModernExportSettings(WizardStep):
             return
 
         # Generate preview
-        if self._current_preset.mode == "sheet" or self._current_preset.mode == "segments_sheet":
+        if self._current_preset.mode in (
+            ExportMode.SPRITE_SHEET.value,
+            ExportMode.SEGMENTS_SHEET.value,
+        ):
             logger.debug("Generating sheet preview for mode: %s", self._current_preset.mode)
             pixmap = self._generate_sheet_preview()
         else:
@@ -1363,11 +1373,11 @@ class ModernExportSettings(WizardStep):
 
         # Mode specific
         if self._current_preset:
-            if self._current_preset.mode == "sheet":
+            if self._current_preset.mode == ExportMode.SPRITE_SHEET.value:
                 filename = self._settings_widgets.get("sheet_filename", QLineEdit()).text()
                 if filename:
                     parts.append(f"→ {filename}.{format.lower()}")
-            elif self._current_preset.mode == "selected":
+            elif self._current_preset.mode == ExportMode.SELECTED_FRAMES.value:
                 count = len(self.frame_list.selectedItems()) if hasattr(self, "frame_list") else 0
                 parts.append(f"({count} frames)")
 
@@ -1432,7 +1442,7 @@ class ModernExportSettings(WizardStep):
         )
 
         if self._current_preset:
-            if self._current_preset.mode == "sheet":
+            if self._current_preset.mode == ExportMode.SPRITE_SHEET.value:
                 data["single_filename"] = self._settings_widgets.get(
                     "sheet_filename", QLineEdit()
                 ).text()
@@ -1465,7 +1475,7 @@ class ModernExportSettings(WizardStep):
                     data["background_mode"] = "solid"
                     data["background_color"] = (0, 0, 0, 255)
 
-            elif self._current_preset.mode == "individual":
+            elif self._current_preset.mode == ExportMode.INDIVIDUAL_FRAMES.value:
                 # Get base name with proper fallback
                 base_name_widget = self._settings_widgets.get("base_name")
                 if base_name_widget and hasattr(base_name_widget, "text"):
@@ -1482,7 +1492,7 @@ class ModernExportSettings(WizardStep):
                 else:
                     data["pattern"] = patterns[0]
 
-            elif self._current_preset.mode == "selected":
+            elif self._current_preset.mode == ExportMode.SELECTED_FRAMES.value:
                 # Selected frames
                 selected_indices = []
                 if hasattr(self, "frame_list"):
