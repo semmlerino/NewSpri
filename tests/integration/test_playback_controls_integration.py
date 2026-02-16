@@ -14,6 +14,7 @@ from PySide6.QtTest import QSignalSpy
 from PySide6.QtWidgets import QApplication
 
 from sprite_viewer import SpriteViewer
+from sprite_model.extraction_mode import ExtractionMode
 
 
 class TestPlaybackControlsIntegration:
@@ -44,7 +45,7 @@ class TestPlaybackControlsIntegration:
 
         # Extract frames if CCL didn't auto-detect
         if len(viewer._sprite_model.sprite_frames) == 0:
-            viewer._sprite_model.set_extraction_mode('grid')
+            viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
             viewer._sprite_model.extract_frames(32, 32, 2, 2, 4, 0)
 
         os.unlink(tmp_path)
@@ -286,7 +287,7 @@ class TestPlaybackControlsErrorHandling:
         viewer._sprite_model.load_sprite_sheet(tmp_path)
 
         if len(viewer._sprite_model.sprite_frames) == 0:
-            viewer._sprite_model.set_extraction_mode('grid')
+            viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
             viewer._sprite_model.extract_frames(32, 32, 2, 2, 4, 0)
 
         os.unlink(tmp_path)
@@ -320,7 +321,7 @@ class TestPlaybackControlsErrorHandling:
         viewer._sprite_model.load_sprite_sheet(tmp_path)
 
         if len(viewer._sprite_model.sprite_frames) == 0:
-            viewer._sprite_model.set_extraction_mode('grid')
+            viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
             viewer._sprite_model.extract_frames(32, 32, 2, 2, 4, 0)
 
         os.unlink(tmp_path)

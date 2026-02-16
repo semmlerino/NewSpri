@@ -11,6 +11,7 @@ from PySide6.QtGui import QPixmap, QColor, QPainter
 from PySide6.QtWidgets import QApplication
 
 from sprite_viewer import SpriteViewer
+from sprite_model.extraction_mode import ExtractionMode
 
 
 class TestStateConsistency:
@@ -39,7 +40,7 @@ class TestStateConsistency:
         viewer._sprite_model.load_sprite_sheet(tmp_path)
 
         if len(viewer._sprite_model.sprite_frames) == 0:
-            viewer._sprite_model.set_extraction_mode('grid')
+            viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
             viewer._sprite_model.extract_frames(32, 32, 2, 2, 4, 0)
 
         os.unlink(tmp_path)
@@ -88,7 +89,7 @@ class TestStateConsistency:
         assert slider_max == model_frame_count - 1  # Slider is 0-indexed
 
         # Do new extraction
-        viewer._sprite_model.set_extraction_mode('grid')
+        viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
         viewer._sprite_model.extract_frames(32, 32, 0, 0, 4, 0)  # No spacing
         QApplication.processEvents()
 

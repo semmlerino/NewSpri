@@ -15,6 +15,7 @@ from PySide6.QtGui import QPixmap, QColor, QWheelEvent, QKeyEvent
 from PySide6.QtTest import QTest
 
 from sprite_viewer import SpriteViewer
+from sprite_model.extraction_mode import ExtractionMode
 from managers import AnimationSegment
 from managers.recent_files_manager import RecentFilesManager
 
@@ -38,7 +39,7 @@ class TestSegmentRenameWorkflow:
         assert success
         
         # Extract frames
-        viewer._sprite_model.set_extraction_mode('grid')
+        viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
         success, msg, count = viewer._sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
         assert success
         assert count == 8

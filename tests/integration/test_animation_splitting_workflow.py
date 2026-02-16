@@ -13,6 +13,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap, QColor
 
 from sprite_viewer import SpriteViewer
+from sprite_model.extraction_mode import ExtractionMode
 from managers import AnimationSegment
 
 
@@ -68,7 +69,7 @@ class TestAnimationSplittingWorkflow:
         assert success, f"Failed to load sprite sheet: {msg}"
         
         # Switch to grid mode and extract frames
-        viewer._sprite_model.set_extraction_mode('grid')
+        viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
         success, msg, count = viewer._sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
         assert success, f"Failed to extract frames: {msg}"
         assert count == 12
@@ -458,7 +459,7 @@ class TestRealAnimationSplittingIntegration:
         success, msg = viewer._sprite_model.load_sprite_sheet(sprite_path)
         assert success
         
-        viewer._sprite_model.set_extraction_mode('grid')
+        viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
         success, msg, count = viewer._sprite_model.extract_frames(48, 48, 0, 0, 0, 0)
         assert success
         assert count == 12
@@ -521,7 +522,7 @@ class TestRealAnimationSplittingIntegration:
         assert success
         
         # Test grid extraction with offsets and spacing
-        viewer._sprite_model.set_extraction_mode('grid')
+        viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
         success, msg, count = viewer._sprite_model.extract_frames(
             frame_size, frame_size, margin, margin, spacing, spacing
         )

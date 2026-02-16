@@ -11,6 +11,8 @@ from pathlib import Path
 from unittest.mock import patch, MagicMock
 from PySide6.QtWidgets import QApplication
 
+from sprite_model.extraction_mode import ExtractionMode
+
 
 class TestCCLUIAvailability:
     """Test that CCL extraction mode is always available when sprite is loaded."""
@@ -215,7 +217,7 @@ class TestCCLUIAvailability:
             
             # Test that we can actually set CCL mode
             ccl_button.setChecked(True)
-            viewer._sprite_model.set_extraction_mode("ccl")
+            viewer._sprite_model.set_extraction_mode(ExtractionMode.CCL)
             
             # Should have sprites
             frames = viewer._sprite_model.sprite_frames

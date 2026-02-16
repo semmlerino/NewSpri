@@ -7,6 +7,7 @@ Part of Legacy Integration Phase 1: Create integrated SpriteModel structure.
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QPixmap
 
+from sprite_model.extraction_mode import ExtractionMode
 from sprite_model.sprite_animation import AnimationStateManager
 from sprite_model.sprite_ccl import CCLOperations
 from sprite_model.sprite_detection import (
@@ -205,7 +206,7 @@ class SpriteModel(QObject):
         )
 
         # Extract frames based on current mode
-        if self._ccl_operations.get_extraction_mode() == "grid":
+        if self._ccl_operations.get_extraction_mode() is ExtractionMode.GRID:
             if self._original_sprite_sheet is None:
                 return False, "No sprite sheet loaded", 0
 
@@ -323,7 +324,7 @@ class SpriteModel(QObject):
 
         return success, message, frame_count
 
-    def set_extraction_mode(self, mode: str) -> bool:
+    def set_extraction_mode(self, mode: ExtractionMode) -> bool:
         """Set extraction mode (grid or ccl)."""
         from sprite_model.sprite_extraction import (
             detect_background_color,
@@ -356,7 +357,7 @@ class SpriteModel(QObject):
         )
 
         # If CCL mode succeeded, retrieve and store the extracted frames
-        if success and mode == "ccl":
+        if success and mode is ExtractionMode.CCL:
             ccl_frames = self._ccl_operations.get_last_extracted_frames()
             ccl_info = self._ccl_operations.get_last_extracted_info()
 
@@ -377,7 +378,7 @@ class SpriteModel(QObject):
 
         return success
 
-    def get_extraction_mode(self) -> str:
+    def get_extraction_mode(self) -> ExtractionMode:
         """Get current extraction mode."""
         return self._ccl_operations.get_extraction_mode()
 
@@ -528,7 +529,7 @@ class SpriteModel(QObject):
             original_mode = self._ccl_operations.get_extraction_mode()
 
             # Temporarily switch to grid mode for testing detected parameters
-            self.set_extraction_mode("grid")
+            self.set_extraction_mode(ExtractionMode.GRID)
 
             try:
                 extract_success, extract_msg, _count = self.extract_frames(
@@ -606,7 +607,7 @@ class SpriteModel(QObject):
 
         # Extraction mode
         mode = self.get_extraction_mode()
-        if mode == "ccl":
+        if mode is ExtractionMode.CCL:
             info_parts.append("Mode: CCL")
         else:
             info_parts.append("Mode: Grid")

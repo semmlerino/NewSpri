@@ -18,6 +18,8 @@ from collections.abc import Callable
 from PySide6.QtCore import QRect
 from PySide6.QtGui import QImage, QPixmap
 
+from sprite_model.extraction_mode import ExtractionMode
+
 
 class CCLOperations:
     """
@@ -41,7 +43,7 @@ class CCLOperations:
         self._ccl_color_tolerance: int = 10  # Tolerance for background color matching
 
         # Mode state
-        self._extraction_mode: str = "ccl"  # "grid" or "ccl" - CCL is now the default
+        self._extraction_mode: ExtractionMode = ExtractionMode.CCL  # CCL is now the default
 
     def extract_ccl_frames(
         self,
@@ -171,7 +173,7 @@ class CCLOperations:
                 print(f"   ⚠️  {null_frame_count} sprites failed (null frames)")
 
             # Set extraction mode
-            self._extraction_mode = "ccl"
+            self._extraction_mode = ExtractionMode.CCL
 
             # Generate updated sprite sheet info with CCL extraction information
             updated_info = ""
@@ -203,7 +205,7 @@ class CCLOperations:
 
     def set_extraction_mode(
         self,
-        mode: str,
+        mode: ExtractionMode,
         sprite_sheet: QPixmap,
         sprite_sheet_path: str,
         ccl_available: bool,
@@ -216,7 +218,7 @@ class CCLOperations:
         Set extraction mode and extract frames accordingly.
 
         Args:
-            mode: Extraction mode ("grid" or "ccl")
+            mode: Extraction mode (ExtractionMode.GRID or ExtractionMode.CCL)
             sprite_sheet: The original sprite sheet QPixmap
             sprite_sheet_path: Path to the sprite sheet file
             ccl_available: Whether CCL functionality is available
@@ -228,17 +230,14 @@ class CCLOperations:
         Returns:
             True if successful, False otherwise
         """
-        if mode not in ["grid", "ccl"]:
-            return False
-
-        if mode == "ccl" and not ccl_available:
+        if mode is ExtractionMode.CCL and not ccl_available:
             return False
 
         old_mode = self._extraction_mode
         self._extraction_mode = mode
 
         # Re-extract frames with new mode
-        if mode == "ccl":
+        if mode is ExtractionMode.CCL:
             success, _error, _count, frames, info = self.extract_ccl_frames(
                 sprite_sheet=sprite_sheet,
                 sprite_sheet_path=sprite_sheet_path,
@@ -262,8 +261,8 @@ class CCLOperations:
 
         return True
 
-    def get_extraction_mode(self) -> str:
-        """Get current extraction mode: 'grid' or 'ccl'."""
+    def get_extraction_mode(self) -> ExtractionMode:
+        """Get current extraction mode."""
         return self._extraction_mode
 
     def is_ccl_available(self, ccl_available: bool) -> bool:
@@ -293,7 +292,7 @@ class CCLOperations:
         self._ccl_available = False
         self._ccl_background_color = None
         self._ccl_color_tolerance = 10
-        self._extraction_mode = "grid"
+        self._extraction_mode = ExtractionMode.GRID
 
     def _apply_background_transparency(
         self, pixmap: QPixmap, background_color: tuple[int, int, int], tolerance: int

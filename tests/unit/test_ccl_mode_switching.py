@@ -21,6 +21,7 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QRect
 
 from sprite_model import SpriteModel
+from sprite_model.extraction_mode import ExtractionMode
 from sprite_model.sprite_ccl import CCLOperations
 
 if TYPE_CHECKING:
@@ -73,7 +74,7 @@ def loaded_model(sprite_model: SpriteModel, test_sprite_sheet: QPixmap, tmp_path
 
     # CCL is now default mode, so we need to clear CCL data and switch to grid mode first
     sprite_model._ccl_operations.clear_ccl_data()
-    assert sprite_model.get_extraction_mode() == "grid"  # clear_ccl_data sets mode to grid
+    assert sprite_model.get_extraction_mode() == ExtractionMode.GRID  # clear_ccl_data sets mode to grid
 
     # Extract frames using grid mode
     success, _msg, frame_count = sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
@@ -108,14 +109,14 @@ class TestModeSwitching:
 
     def test_initial_mode_is_ccl(self, sprite_model: SpriteModel) -> None:
         """Default extraction mode should be CCL (changed from grid)."""
-        assert sprite_model.get_extraction_mode() == "ccl"
+        assert sprite_model.get_extraction_mode() == ExtractionMode.CCL
 
     def test_switch_to_grid_without_sprite_sheet_fails(self, sprite_model: SpriteModel) -> None:
         """Cannot switch to grid without a loaded sprite sheet."""
-        result = sprite_model.set_extraction_mode("grid")
+        result = sprite_model.set_extraction_mode(ExtractionMode.GRID)
 
         assert result is False
-        assert sprite_model.get_extraction_mode() == "ccl"
+        assert sprite_model.get_extraction_mode() == ExtractionMode.CCL
 
     def test_switch_grid_to_ccl_with_mock_detection(
         self, loaded_model: SpriteModel, mock_ccl_detection
@@ -125,10 +126,10 @@ class TestModeSwitching:
 
         with patch("sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites), \
              patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background):
-            result = loaded_model.set_extraction_mode("ccl")
+            result = loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
         assert result is True
-        assert loaded_model.get_extraction_mode() == "ccl"
+        assert loaded_model.get_extraction_mode() == ExtractionMode.CCL
 
     def test_switch_ccl_to_grid_restores_mode(
         self, loaded_model: SpriteModel, mock_ccl_detection
@@ -139,18 +140,18 @@ class TestModeSwitching:
         # First switch to CCL
         with patch("sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites), \
              patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background):
-            loaded_model.set_extraction_mode("ccl")
+            loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
         # Then switch back to grid
-        result = loaded_model.set_extraction_mode("grid")
+        result = loaded_model.set_extraction_mode(ExtractionMode.GRID)
 
         assert result is True
-        assert loaded_model.get_extraction_mode() == "grid"
+        assert loaded_model.get_extraction_mode() == ExtractionMode.GRID
 
     def test_switch_to_invalid_mode_fails(self, loaded_model: SpriteModel) -> None:
         """Switching to an invalid mode should fail."""
         original_mode = loaded_model.get_extraction_mode()
-        result = loaded_model.set_extraction_mode("invalid_mode")
+        result = loaded_model.set_extraction_mode("invalid_mode")  # Test with invalid string
 
         assert result is False
         assert loaded_model.get_extraction_mode() == original_mode
@@ -176,7 +177,7 @@ class TestCCLDetectionFailures:
             return None
 
         with patch("sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", failing_detect_sprites):
-            result = loaded_model.set_extraction_mode("ccl")
+            result = loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
         assert result is False
         assert loaded_model.get_extraction_mode() == original_mode
@@ -194,7 +195,7 @@ class TestCCLDetectionFailures:
             return {'success': False, 'error': 'Detection failed'}
 
         with patch("sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", failing_detect_sprites):
-            result = loaded_model.set_extraction_mode("ccl")
+            result = loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
         assert result is False
         assert loaded_model.get_extraction_mode() == original_mode
@@ -212,7 +213,7 @@ class TestCCLDetectionFailures:
             raise RuntimeError("Image codec error")
 
         with patch("sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", failing_detect_sprites):
-            result = loaded_model.set_extraction_mode("ccl")
+            result = loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
         assert result is False
         assert loaded_model.get_extraction_mode() == original_mode
@@ -224,7 +225,7 @@ class TestCCLDetectionFailures:
             return {'success': True, 'ccl_sprite_bounds': []}
 
         with patch("sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites):
-            result = loaded_model.set_extraction_mode("ccl")
+            result = loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
         # With empty bounds, extraction produces no frames - mode should still switch
         # but frame count would be 0, so let's verify behavior
@@ -251,7 +252,7 @@ class TestFrameCountSync:
 
         with patch("sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites), \
              patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background):
-            loaded_model.set_extraction_mode("ccl")
+            loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
         # CCL mock returns 3 bounds, so should have 3 frames
         assert loaded_model.total_frames == 3
@@ -267,10 +268,10 @@ class TestFrameCountSync:
         # Switch to CCL
         with patch("sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites), \
              patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background):
-            loaded_model.set_extraction_mode("ccl")
+            loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
         # Switch back to grid
-        loaded_model.set_extraction_mode("grid")
+        loaded_model.set_extraction_mode(ExtractionMode.GRID)
 
         assert loaded_model.total_frames == initial_frame_count
 
@@ -296,7 +297,7 @@ class TestToleranceCapping:
 
         with patch("sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites), \
              patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background):
-            loaded_model.set_extraction_mode("ccl")
+            loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
         # Verify tolerance was capped (internal state check)
         ccl_ops = loaded_model._ccl_operations
@@ -315,7 +316,7 @@ class TestToleranceCapping:
 
         with patch("sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites), \
              patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background):
-            loaded_model.set_extraction_mode("ccl")
+            loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
         ccl_ops = loaded_model._ccl_operations
         assert ccl_ops._ccl_color_tolerance == 10
@@ -347,7 +348,7 @@ class TestBoundsValidation:
 
         with patch("sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites), \
              patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background):
-            loaded_model.set_extraction_mode("ccl")
+            loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
         # Only valid bounds should produce frames
         assert loaded_model.total_frames == 2
@@ -369,7 +370,7 @@ class TestBoundsValidation:
 
         with patch("sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites), \
              patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background):
-            loaded_model.set_extraction_mode("ccl")
+            loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
         assert loaded_model.total_frames == 1
 
@@ -382,28 +383,17 @@ class TestBoundsValidation:
 class TestCCLOperationsUnit:
     """Unit tests for CCLOperations class directly."""
 
-    def test_set_extraction_mode_invalid_mode(self) -> None:
-        """Invalid mode should return False."""
-        ccl_ops = CCLOperations()
-
-        result = ccl_ops.set_extraction_mode(
-            mode="invalid",
-            sprite_sheet=QPixmap(100, 100),
-            sprite_sheet_path="/fake/path.png",
-            ccl_available=True,
-            extract_grid_frames_callback=lambda: (True, "", 8),
-            detect_sprites_ccl_enhanced=lambda x: {},
-            detect_background_color=lambda x: None
-        )
-
-        assert result is False
+    def test_extraction_mode_invalid_string_raises(self) -> None:
+        """Invalid string should raise ValueError when constructing ExtractionMode."""
+        with pytest.raises(ValueError):
+            ExtractionMode("invalid")
 
     def test_set_extraction_mode_ccl_not_available(self) -> None:
         """CCL mode when not available should return False."""
         ccl_ops = CCLOperations()
 
         result = ccl_ops.set_extraction_mode(
-            mode="ccl",
+            mode=ExtractionMode.CCL,
             sprite_sheet=QPixmap(100, 100),
             sprite_sheet_path="/fake/path.png",
             ccl_available=False,
@@ -451,7 +441,7 @@ class TestCCLOperationsUnit:
     def test_get_extraction_mode_default(self) -> None:
         """Default extraction mode should be 'ccl' (changed from grid)."""
         ccl_ops = CCLOperations()
-        assert ccl_ops.get_extraction_mode() == "ccl"
+        assert ccl_ops.get_extraction_mode() == ExtractionMode.CCL
 
     def test_get_ccl_sprite_bounds_empty(self) -> None:
         """CCL bounds should be empty initially."""
@@ -480,7 +470,7 @@ class TestStateConsistency:
             return None  # Simulate failure
 
         with patch("sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", failing_detect_sprites):
-            result = loaded_model.set_extraction_mode("ccl")
+            result = loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
         assert result is False
         assert loaded_model.get_extraction_mode() == original_mode
@@ -498,13 +488,13 @@ class TestStateConsistency:
         # After CCL switch
         with patch("sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites), \
              patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background):
-            loaded_model.set_extraction_mode("ccl")
+            loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
         # Should still have frames (from CCL)
         assert len(loaded_model.sprite_frames) > 0
 
         # After switching back to grid
-        loaded_model.set_extraction_mode("grid")
+        loaded_model.set_extraction_mode(ExtractionMode.GRID)
 
         # Should still have frames (from grid)
         assert len(loaded_model.sprite_frames) > 0

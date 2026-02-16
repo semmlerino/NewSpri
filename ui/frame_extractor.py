@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
 )
 
 from config import Config
+from sprite_model.extraction_mode import ExtractionMode
 from utils.ui_common import AutoButtonManager
 
 
@@ -279,13 +280,13 @@ class FrameExtractor(QGroupBox):
     def _on_mode_changed(self, button):
         """Handle extraction mode change."""
         if button == self.grid_mode_btn:
-            mode = "grid"
+            mode = ExtractionMode.GRID
             self.mode_status.setText("🔲 Grid mode active")
             color = Config.Colors.MODE_GRID
             # Enable grid controls
             self._set_grid_controls_enabled(True)
         else:  # Auto-detect mode
-            mode = "ccl"
+            mode = ExtractionMode.CCL
             self.mode_status.setText("🎯 Auto-detect active (size controls not needed)")
             color = Config.Colors.MODE_CCL
             # Disable grid controls since auto-detect finds exact boundaries
@@ -298,7 +299,7 @@ class FrameExtractor(QGroupBox):
                 font-style: italic;
             }}
         """)
-        self.modeChanged.emit(mode)
+        self.modeChanged.emit(mode.value)
 
     def _set_grid_controls_enabled(self, enabled: bool):
         """Enable/disable grid-specific controls."""
@@ -331,17 +332,19 @@ class FrameExtractor(QGroupBox):
         else:
             self.ccl_mode_btn.setToolTip("Auto-Detect: Load a sprite sheet first")
 
-    def get_extraction_mode(self) -> str:
+    def get_extraction_mode(self) -> ExtractionMode:
         """Get current extraction mode."""
-        return "ccl" if self.ccl_mode_btn.isChecked() else "grid"
+        return ExtractionMode.CCL if self.ccl_mode_btn.isChecked() else ExtractionMode.GRID
 
-    def set_extraction_mode(self, mode: str):
+    def set_extraction_mode(self, mode: ExtractionMode):
         """Set extraction mode programmatically."""
-        if mode == "ccl" and self.ccl_mode_btn.isEnabled():
+        if mode is ExtractionMode.CCL and self.ccl_mode_btn.isEnabled():
             self.ccl_mode_btn.setChecked(True)
         else:
             self.grid_mode_btn.setChecked(True)
-        self._on_mode_changed(self.ccl_mode_btn if mode == "ccl" else self.grid_mode_btn)
+        self._on_mode_changed(
+            self.ccl_mode_btn if mode is ExtractionMode.CCL else self.grid_mode_btn
+        )
 
     def _create_collapsible_section(self, title: str, content_widget: QWidget) -> QWidget:
         """Create a collapsible section with expand/collapse button."""

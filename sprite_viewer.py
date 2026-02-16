@@ -50,6 +50,9 @@ from managers import (
 # Core MVC Components
 from sprite_model import SpriteModel
 
+# Sprite model
+from sprite_model.extraction_mode import ExtractionMode
+
 # UI Components
 from ui import (
     AnimationGridView,
@@ -715,7 +718,7 @@ class SpriteViewer(QMainWindow):
 
         # Trigger appropriate detection based on current extraction mode
         current_mode = self._frame_extractor.get_extraction_mode()
-        if current_mode == "ccl":
+        if current_mode is ExtractionMode.CCL:
             # For CCL mode, try direct CCL extraction without grid auto-detection
             if self._status_manager is not None:
                 self._status_manager.show_message("Running CCL extraction...")
@@ -911,8 +914,11 @@ class SpriteViewer(QMainWindow):
         if not self._sprite_model.original_sprite_sheet:
             return
 
+        # Convert string from Qt signal to enum
+        mode_enum = ExtractionMode(mode)
+
         # Update sprite model extraction mode
-        success = self._sprite_model.set_extraction_mode(mode)
+        success = self._sprite_model.set_extraction_mode(mode_enum)
 
         if not success:
             # Revert UI radio button to current model mode without re-triggering
@@ -931,7 +937,7 @@ class SpriteViewer(QMainWindow):
         self._update_frame_slicing()
 
         # Update status
-        mode_name = "CCL" if mode == "ccl" else "Grid"
+        mode_name = "CCL" if mode_enum is ExtractionMode.CCL else "Grid"
         if self._status_manager is not None:
             self._status_manager.show_message(f"Switched to {mode_name} extraction mode")
 
@@ -951,7 +957,7 @@ class SpriteViewer(QMainWindow):
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         QApplication.processEvents()
         try:
-            if mode == "ccl":
+            if mode is ExtractionMode.CCL:
                 # Use CCL extraction
                 success, error_message, total_frames = self._sprite_model.extract_ccl_frames()
             else:

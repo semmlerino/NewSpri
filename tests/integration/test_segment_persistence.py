@@ -12,6 +12,7 @@ from PySide6.QtGui import QPixmap, QColor, QPainter
 from PySide6.QtWidgets import QApplication
 
 from sprite_viewer import SpriteViewer
+from sprite_model.extraction_mode import ExtractionMode
 from managers import AnimationSegment, AnimationSegmentManager
 
 
@@ -35,7 +36,7 @@ class TestSegmentPersistence:
         assert success, f"Failed to load sprite sheet: {msg}"
         
         # Extract frames
-        viewer1._sprite_model.set_extraction_mode('grid')
+        viewer1._sprite_model.set_extraction_mode(ExtractionMode.GRID)
         success, msg, count = viewer1._sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
         assert success
         assert count == 8
@@ -72,7 +73,7 @@ class TestSegmentPersistence:
         assert success
         
         # Extract frames
-        viewer2._sprite_model.set_extraction_mode('grid')
+        viewer2._sprite_model.set_extraction_mode(ExtractionMode.GRID)
         success, msg, count = viewer2._sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
         assert success
         assert count == 8
@@ -145,7 +146,7 @@ class TestSegmentPersistence:
         
         # Load first sprite and create segments
         viewer._sprite_model.load_sprite_sheet(str(sprite1_path))
-        viewer._sprite_model.set_extraction_mode('grid')
+        viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
         success, msg, count = viewer._sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
         assert success
         
@@ -160,7 +161,7 @@ class TestSegmentPersistence:
         
         # Load second sprite
         viewer._sprite_model.load_sprite_sheet(str(sprite2_path))
-        viewer._sprite_model.set_extraction_mode('grid')
+        viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
         success, msg, count = viewer._sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
         assert success
         
@@ -175,8 +176,8 @@ class TestSegmentPersistence:
         
         # Load first sprite again
         viewer._sprite_model.load_sprite_sheet(str(sprite1_path))
-        
-        viewer._sprite_model.set_extraction_mode('grid')
+
+        viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
         success, msg, count = viewer._sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
         assert success
         

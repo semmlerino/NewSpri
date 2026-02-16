@@ -10,6 +10,7 @@ from PySide6.QtGui import QPixmap
 from PySide6.QtTest import QSignalSpy
 
 from sprite_model import SpriteModel
+from sprite_model.extraction_mode import ExtractionMode
 from core.animation_controller import AnimationController
 from core.auto_detection_controller import AutoDetectionController
 
@@ -115,7 +116,7 @@ class TestSpriteLoadingWorkflow:
         
         # Test with large frame settings (use grid mode for direct pixmap)
         sprite_model._original_sprite_sheet = large_pixmap
-        sprite_model._ccl_operations._extraction_mode = 'grid'  # Direct mode set to avoid callback
+        sprite_model._ccl_operations._extraction_mode = ExtractionMode.GRID  # Direct mode set to avoid callback
 
         # Extract frames (should handle large sheets gracefully)
         success, message, frame_count = sprite_model.extract_frames(128, 128, 0, 0, 0, 0)
@@ -187,7 +188,7 @@ class TestPerformanceWorkflow:
         """Test rapid changes to frame extraction settings."""
         sprite_model = SpriteModel()
         sprite_model._original_sprite_sheet = mock_pixmap
-        sprite_model._ccl_operations._extraction_mode = 'grid'  # Direct mode set to avoid callback
+        sprite_model._ccl_operations._extraction_mode = ExtractionMode.GRID  # Direct mode set to avoid callback
 
         extraction_times = []
         frame_sizes = [(16, 16), (32, 32), (48, 48), (64, 64)]
@@ -214,7 +215,7 @@ class TestPerformanceWorkflow:
         """Test memory usage with multiple frame extractions."""
         sprite_model = SpriteModel()
         sprite_model._original_sprite_sheet = mock_pixmap
-        sprite_model._ccl_operations._extraction_mode = 'grid'  # Direct mode set to avoid callback
+        sprite_model._ccl_operations._extraction_mode = ExtractionMode.GRID  # Direct mode set to avoid callback
 
         # Perform multiple extractions to test memory handling
         for i in range(10):
@@ -301,7 +302,7 @@ class TestComponentInteraction:
         
         # Load sprite (use grid mode for direct pixmap assignment)
         sprite_model._original_sprite_sheet = mock_pixmap
-        sprite_model._ccl_operations._extraction_mode = 'grid'  # Direct mode set to avoid callback
+        sprite_model._ccl_operations._extraction_mode = ExtractionMode.GRID  # Direct mode set to avoid callback
         success, message, frame_count = sprite_model.extract_frames(64, 64, 0, 0, 0, 0)
         assert success, f"Extraction failed: {message}"
         assert frame_count > 0

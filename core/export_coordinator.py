@@ -103,6 +103,37 @@ class ExportCoordinator(QObject):
 
         return True
 
+    def _validate_mode_preconditions(self, settings: dict[str, Any]) -> tuple[bool, str]:
+        """
+        Validate mode-specific preconditions before creating progress dialog.
+
+        Args:
+            settings: Export settings dictionary
+
+        Returns:
+            Tuple of (success, error_message). If success is False, error_message
+            contains the warning to show the user.
+        """
+        mode = settings.get("mode", "")
+
+        # Check segment-specific preconditions
+        if mode == "segments_sheet":
+            if not self._segment_manager:
+                return False, "Segment manager not available."
+            segments = self._segment_manager.get_all_segments()
+            if not segments:
+                return False, "No animation segments defined."
+
+        # Check selected indices preconditions
+        selected_indices = settings.get("selected_indices", [])
+        if selected_indices:
+            all_frames = self._sprite_model.sprite_frames
+            valid_indices = [i for i in selected_indices if 0 <= i < len(all_frames)]
+            if not valid_indices:
+                return False, "No valid frames selected for export."
+
+        return True, ""
+
     def handle_export_request(self, settings: dict[str, Any]) -> None:
         """
         Handle unified export request from dialog.
@@ -120,6 +151,12 @@ class ExportCoordinator(QObject):
         """
         # Validate settings before creating progress dialog
         if not self._validate_export_settings(settings):
+            return
+
+        # Validate mode-specific preconditions before creating progress dialog
+        valid, error_message = self._validate_mode_preconditions(settings)
+        if not valid:
+            self._show_warning(error_message)
             return
 
         mode = settings.get("mode", "")
@@ -152,11 +189,16 @@ class ExportCoordinator(QObject):
         # Show progress dialog
         self._progress_dialog.show()
 
-        # Route to appropriate export handler
-        if mode == "segments_sheet":
-            self._export_segments_per_row(settings)
-        else:
-            self._export_frames(settings)
+        # Route to appropriate export handler with guaranteed cleanup
+        try:
+            if mode == "segments_sheet":
+                self._export_segments_per_row(settings)
+            else:
+                self._export_frames(settings)
+        except Exception:
+            # Ensure dialog cleanup even if export method raises unexpected exception
+            self._cleanup_progress_dialog()
+            raise
 
     # -------------------------------------------------------------------------
     # Export Methods
@@ -164,11 +206,6 @@ class ExportCoordinator(QObject):
 
     def _export_frames(self, settings: dict[str, Any]) -> None:
         """Handle standard frame export (individual or sheet)."""
-        # Validation already done in handle_export_request, but keep as safety net
-        if not self._sprite_model.sprite_frames:
-            self._show_warning("No frames available to export.")
-            return
-
         all_frames = self._sprite_model.sprite_frames
         frames_to_export = all_frames
         export_mode = settings["mode"]
@@ -176,10 +213,6 @@ class ExportCoordinator(QObject):
 
         if selected_indices:
             valid_indices = [i for i in selected_indices if 0 <= i < len(all_frames)]
-            if not valid_indices:
-                self._show_warning("No valid frames selected for export.")
-                return
-
             frames_to_export = [all_frames[i] for i in valid_indices]
             export_mode = "individual"
 
@@ -223,19 +256,8 @@ class ExportCoordinator(QObject):
 
     def _export_segments_per_row(self, settings: dict[str, Any]) -> None:
         """Handle segments per row sprite sheet export."""
-        if not self._sprite_model.sprite_frames:
-            self._show_warning("No frames available to export.")
-            return
-
-        if not self._segment_manager:
-            self._show_error("Segment manager not available.")
-            return
-
+        assert self._segment_manager is not None  # validated by _validate_mode_preconditions
         segments = self._segment_manager.get_all_segments()
-        if not segments:
-            self._show_warning("No animation segments defined.")
-            return
-
         segment_info = sorted(
             [
                 {"name": s.name, "start_frame": s.start_frame, "end_frame": s.end_frame}

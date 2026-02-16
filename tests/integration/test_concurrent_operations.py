@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QApplication
 
 from sprite_viewer import SpriteViewer
 from sprite_model.core import SpriteModel
+from sprite_model.extraction_mode import ExtractionMode
 from core.animation_controller import AnimationController
 
 
@@ -42,7 +43,7 @@ class TestConcurrentOperations:
         viewer._sprite_model.load_sprite_sheet(tmp_path)
 
         if len(viewer._sprite_model.sprite_frames) == 0:
-            viewer._sprite_model.set_extraction_mode('grid')
+            viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
             viewer._sprite_model.extract_frames(32, 32, 2, 2, 4, 0)
 
         os.unlink(tmp_path)
@@ -120,12 +121,12 @@ class TestConcurrentOperations:
         os.unlink(tmp_path_file)
 
         # Initial extraction with grid mode
-        viewer._sprite_model.set_extraction_mode('grid')
+        viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
         viewer._sprite_model.extract_frames(32, 32, 2, 2, 4, 0)
         initial_frames = len(viewer._sprite_model.sprite_frames)
 
         # Change to CCL mode
-        viewer._sprite_model.set_extraction_mode('ccl')
+        viewer._sprite_model.set_extraction_mode(ExtractionMode.CCL)
 
         # Try CCL extraction
         viewer._sprite_model.extract_ccl_frames()
@@ -134,7 +135,7 @@ class TestConcurrentOperations:
         assert len(viewer._sprite_model.sprite_frames) >= 0
 
         # Change back to grid mode
-        viewer._sprite_model.set_extraction_mode('grid')
+        viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
         viewer._sprite_model.extract_frames(32, 32, 2, 2, 4, 0)
 
         # Should have frames again

@@ -14,6 +14,7 @@ from PySide6.QtWidgets import QApplication
 
 from sprite_viewer import SpriteViewer
 from sprite_model import SpriteModel
+from sprite_model.extraction_mode import ExtractionMode
 from core.animation_controller import AnimationController
 from core.auto_detection_controller import AutoDetectionController
 from ui.sprite_canvas import SpriteCanvas
@@ -76,7 +77,7 @@ class TestModelViewControllerIntegration:
         # If CCL doesn't detect 10 frames, fall back to grid mode
         if len(model.sprite_frames) != 10:
             # Set extraction mode to grid and extract manually
-            model.set_extraction_mode('grid')
+            model.set_extraction_mode(ExtractionMode.GRID)
             success, msg, count = model.extract_frames(32, 32, 2, 2, 4, 5)
             assert success, f"Failed to extract frames: {msg}"
             assert count == 10, f"Expected 10 frames, got {count}"
@@ -163,7 +164,7 @@ class TestModelViewControllerIntegration:
         # If CCL doesn't detect 16 frames, fall back to grid mode
         if len(model.sprite_frames) != 16:
             # Set extraction mode to grid and extract manually
-            model.set_extraction_mode('grid')
+            model.set_extraction_mode(ExtractionMode.GRID)
             success, msg, count = model.extract_frames(32, 32, 2, 2, 4, 4)
             assert success
             assert count == 16
@@ -432,7 +433,7 @@ class TestUIComponentIntegration:
 
         # Extract frames if needed
         if len(model.sprite_frames) == 0:
-            model.set_extraction_mode('grid')
+            model.set_extraction_mode(ExtractionMode.GRID)
             model.extract_frames(32, 32, 0, 0, 0, 0)
 
         # Clean up temp file
@@ -524,7 +525,7 @@ class TestCrossComponentCommunication:
 
         # Extract frames if CCL didn't work
         if len(viewer._sprite_model.sprite_frames) == 0:
-            viewer._sprite_model.set_extraction_mode('grid')
+            viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
             viewer._sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
 
         # Clean up temp file
@@ -655,7 +656,7 @@ class TestPerformanceIntegration:
 
         # Extract frames if CCL didn't work
         if len(viewer._sprite_model.sprite_frames) == 0:
-            viewer._sprite_model.set_extraction_mode('grid')
+            viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
             viewer._sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
 
         import os

@@ -14,6 +14,7 @@ from PySide6.QtWidgets import QMessageBox
 
 from sprite_viewer import SpriteViewer
 from sprite_model import SpriteModel
+from sprite_model.extraction_mode import ExtractionMode
 from export import ExportDialog, get_frame_exporter
 from managers import AnimationSegmentManager
 
@@ -354,7 +355,7 @@ class TestExportFailureRecovery:
             pytest.skip("Could not load test sprite")
 
         # Use grid extraction mode for predictable results
-        model.set_extraction_mode('grid')
+        model.set_extraction_mode(ExtractionMode.GRID)
 
         # Extract frames
         success, msg, count = model.extract_frames(50, 50, 0, 0, 0, 0)
