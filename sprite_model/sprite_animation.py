@@ -287,19 +287,3 @@ class AnimationStateManager(QObject):
         self._is_playing = False
         self._loop_enabled = True
         self._fps = Config.Animation.DEFAULT_FPS
-
-    def get_animation_info(self) -> dict:
-        """
-        Get comprehensive animation state information.
-
-        Returns:
-            Dictionary with all animation state details
-        """
-        return {
-            "current_frame": self._current_frame,
-            "total_frames": self.total_frames,
-            "is_playing": self._is_playing,
-            "loop_enabled": self._loop_enabled,
-            "fps": self._fps,
-            "has_frames": len(self._get_frames()) > 0,
-        }

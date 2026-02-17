@@ -26,7 +26,7 @@ from sprite_model.sprite_extraction import (
 )
 
 # Import all refactored modules
-from sprite_model.sprite_file_ops import FileLoader, FileValidator, MetadataExtractor
+from sprite_model.sprite_file_ops import FileLoader
 
 
 class SpriteModel(QObject):
@@ -57,8 +57,6 @@ class SpriteModel(QObject):
 
         # Initialize refactored modules (pass dependencies directly)
         self._file_loader = FileLoader()
-        self._file_validator = FileValidator()
-        self._metadata_extractor = MetadataExtractor()
         self._animation_state = AnimationStateManager(self._sprite_frames)  # Pass frames reference
         self._ccl_operations = CCLOperations()
 
@@ -358,7 +356,6 @@ class SpriteModel(QObject):
         # If CCL mode succeeded, retrieve and store the extracted frames
         if success and mode is ExtractionMode.CCL:
             ccl_frames = self._ccl_operations.get_last_extracted_frames()
-            ccl_info = self._ccl_operations.get_last_extracted_info()
 
             if ccl_frames:
                 # Update main model state with CCL results
@@ -367,10 +364,6 @@ class SpriteModel(QObject):
                 self._sprite_frames.extend(ccl_frames)
                 # CRITICAL FIX: Update animation state so total_frames property reflects CCL frame count
                 self._animation_state.update_frame_count(len(ccl_frames))
-
-                # Update sprite info to include CCL information
-                if hasattr(self, "_sprite_info"):
-                    self._sprite_info = self._build_sprite_info() + ccl_info
 
                 # Emit extraction completed signal
                 self.extractionCompleted.emit(len(ccl_frames))
@@ -681,20 +674,3 @@ class SpriteModel(QObject):
                 self._spacing_x,
                 self._spacing_y,
             )
-
-    def _build_sprite_info(self) -> str:
-        """Build sprite information string."""
-        if not self._original_sprite_sheet:
-            return ""
-
-        info_parts = []
-        info_parts.append(
-            f"Size: {self._original_sprite_sheet.width()}x{self._original_sprite_sheet.height()}"
-        )
-
-        if self._sprite_frames:
-            info_parts.append(f"Frames: {len(self._sprite_frames)}")
-            if self._frame_width > 0 and self._frame_height > 0:
-                info_parts.append(f"Frame size: {self._frame_width}x{self._frame_height}")
-
-        return " | ".join(info_parts)

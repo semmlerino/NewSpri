@@ -109,7 +109,7 @@ class AnimationController(QObject):
         self.statusChanged.emit("Animation controller shutdown")
 
     # ============================================================================
-    # ANIMATION CONTROL (Will be implemented in Step 4.2-4.3)
+    # ANIMATION CONTROL
     # ============================================================================
 
     def start_animation(self) -> bool:
@@ -174,7 +174,7 @@ class AnimationController(QObject):
         return self._is_playing
 
     # ============================================================================
-    # TIMING CONFIGURATION (Will be implemented in Step 4.3)
+    # TIMING CONFIGURATION
     # ============================================================================
 
     def set_fps(self, fps: int) -> bool:
@@ -307,7 +307,7 @@ class AnimationController(QObject):
             self.pause_animation()
 
     # ============================================================================
-    # SIGNAL COORDINATION (Will be implemented in Step 4.4-4.5)
+    # SIGNAL COORDINATION
     # ============================================================================
 
     def _connect_model_signals(self) -> None:
@@ -326,14 +326,7 @@ class AnimationController(QObject):
         Connect to SpriteViewer signals for user interaction.
         Sets up bidirectional communication between View and Controller.
         """
-        if not self._sprite_viewer:
-            return
-
-        # Connect view's status requests to controller
-        # Note: Some signals like playPauseClicked are already connected directly
-        # to controller methods in SpriteViewer._connect_signals()
-
-        self.statusChanged.emit("View ↔ Controller signal communication established")
+        pass
 
     def _sync_state_from_model(self) -> None:
         """
@@ -372,7 +365,7 @@ class AnimationController(QObject):
         self.statusChanged.emit("Model updated with controller settings")
 
     # ============================================================================
-    # MODEL EVENT HANDLERS (Implemented in Step 4.4)
+    # MODEL EVENT HANDLERS
     # ============================================================================
 
     def _on_model_data_loaded(self, file_path: str) -> None:

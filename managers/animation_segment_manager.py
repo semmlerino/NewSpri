@@ -425,10 +425,6 @@ class AnimationSegmentManager(QObject):
         """Get all segments as a list."""
         return list(self._segments.values())
 
-    def get_segment_names(self) -> list[str]:
-        """Get all segment names."""
-        return list(self._segments.keys())
-
     def clear_segments(self):
         """Clear all segments."""
         self._segments.clear()

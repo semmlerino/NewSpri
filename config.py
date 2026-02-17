@@ -42,7 +42,6 @@ class CanvasConfig:
 
     # Grid overlay
     DEFAULT_GRID_SIZE = 32
-    GRID_LINE_ALPHA = 128  # Semi-transparent grid lines
 
 
 class AnimationConfig:
@@ -125,8 +124,6 @@ class FrameExtractionConfig:
     # Frame count constraints for detection
     MIN_REASONABLE_FRAMES = 2
     MAX_REASONABLE_FRAMES = 200
-    OPTIMAL_FRAME_COUNT_MIN = 4
-    OPTIMAL_FRAME_COUNT_MAX = 100
 
 
 class UIConfig:
@@ -139,23 +136,9 @@ class UIConfig:
     # LAYOUT AND SIZING (formerly UIConfig)
     # ==========================================================================
 
-    # Main window (optimized sizing - 17% smaller)
-    DEFAULT_WINDOW_WIDTH = 1000
-    DEFAULT_WINDOW_HEIGHT = 700
-    DEFAULT_WINDOW_X = 100
-    DEFAULT_WINDOW_Y = 100
-
     # Minimum window size for usability
     MIN_WINDOW_WIDTH = 800  # Ensures canvas + controls are usable
     MIN_WINDOW_HEIGHT = 600  # Ensures all controls are accessible
-
-    # Controls panel (optimized responsive sizing)
-    CONTROLS_WIDTH_RATIO = 0.22  # 22% of window width (was 25%)
-    CONTROLS_MIN_WIDTH = 250  # Reduced minimum for better proportions
-    CONTROLS_MAX_WIDTH = 350  # Reduced maximum to improve canvas space
-
-    # Info group constraints
-    INFO_GROUP_MAX_HEIGHT = 120
 
     # Layout spacing (standardized to 6px for consistency)
     MAIN_LAYOUT_SPACING = 6
@@ -165,14 +148,7 @@ class UIConfig:
 
     # Button dimensions (compacted by 20-25%)
     PLAYBACK_BUTTON_MIN_HEIGHT = 32  # Reduced from 40
-    NAV_BUTTON_MIN_WIDTH = 28  # Reduced from 35
-    NAV_BUTTON_MIN_HEIGHT = 28  # Reduced from 35
-    COLOR_BUTTON_MAX_WIDTH = 50  # Reduced from 60
     AUTO_BUTTON_MAX_WIDTH = 50  # Keep for usability
-
-    # Navigation button style values (updated to match new dimensions)
-    NAV_BUTTON_WIDTH_PX = "28px"
-    NAV_BUTTON_HEIGHT_PX = "28px"
 
     # Zoom display
     ZOOM_LABEL_MIN_WIDTH = 60
@@ -184,8 +160,6 @@ class UIConfig:
 
     # Icon button sizes
     ICON_BUTTON_SIZE = 32  # Standard icon button (play, etc.)
-    ICON_BUTTON_SMALL = 24  # Small icon buttons (zoom +/-)
-    ICON_BUTTON_TINY = 20  # Tiny buttons (remove, etc.)
 
     # Preview widget sizes
     PREVIEW_SIZE = 120  # Segment preview display size
@@ -200,29 +174,11 @@ class UIConfig:
 
         # Mode indicators (Grid vs CCL detection)
         MODE_GRID = "#4CAF50"  # Material Green 500
-        MODE_GRID_HOVER = "#45a049"
         MODE_CCL = "#2196F3"  # Material Blue 500
-        MODE_CCL_HOVER = "#1976D2"
-
-        # Play button states
-        PLAY_STOPPED = "#4CAF50"  # Green - ready to play
-        PLAY_STOPPED_HOVER = "#45a049"
-        PLAY_PLAYING = "#FF9800"  # Orange - currently playing
-        PLAY_PLAYING_HOVER = "#F57C00"
 
         # Selection and highlighting
         SELECTION_HIGHLIGHT = "#2196F3"  # Blue for selected items
         SELECTION_BORDER = "#1976D2"
-
-        # Action buttons
-        BUTTON_DANGER = "#f44336"  # Red for destructive actions
-        BUTTON_DANGER_HOVER = "#d32f2f"
-        BUTTON_PRIMARY = "#1976D2"  # Blue for primary actions
-        BUTTON_PRIMARY_HOVER = "#1565C0"
-
-        # Neutral/disabled
-        BUTTON_DISABLED_BG = "#cccccc"
-        BUTTON_DISABLED_TEXT = "#666666"
 
         # Segment colors (Material Design palette for animation segments)
         SEGMENT_PALETTE = [

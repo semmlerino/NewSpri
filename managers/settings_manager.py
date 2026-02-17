@@ -158,39 +158,6 @@ class SettingsManager(QObject):
             return splitter.restoreState(state)
         return False
 
-    # Frame extraction settings
-    def save_extraction_settings(
-        self,
-        width: int,
-        height: int,
-        offset_x: int = 0,
-        offset_y: int = 0,
-        spacing_x: int = 0,
-        spacing_y: int = 0,
-        mode: str = "grid",
-    ) -> None:
-        """Save last used frame extraction settings."""
-        self.set_value("extraction/last_width", width)
-        self.set_value("extraction/last_height", height)
-        self.set_value("extraction/last_offset_x", offset_x)
-        self.set_value("extraction/last_offset_y", offset_y)
-        self.set_value("extraction/last_spacing_x", spacing_x)
-        self.set_value("extraction/last_spacing_y", spacing_y)
-        self.set_value("extraction/last_mode", mode)
-
-    # Display preferences
-    def save_display_settings(self, grid_visible: bool, zoom: float, zoom_fit_tiny: bool) -> None:
-        """Save display preferences."""
-        self.set_value("display/grid_visible", grid_visible)
-        self.set_value("display/last_zoom", zoom)
-        self.set_value("display/zoom_fit_tiny", zoom_fit_tiny)
-
-    # Animation settings
-    def save_animation_settings(self, fps: int, loop_mode: bool) -> None:
-        """Save animation preferences."""
-        self.set_value("animation/last_fps", fps)
-        self.set_value("animation/loop_mode", loop_mode)
-
     # Recent files management
     def add_recent_file(self, filepath: str) -> None:
         """
@@ -253,13 +220,6 @@ class SettingsManager(QObject):
 
         # Clean up non-existent files on load
         self.cleanup_recent_files()
-
-    # Utility methods
-    def reset_to_defaults(self) -> None:
-        """Reset all settings to default values."""
-        self._settings.clear()
-        self._recent_files = []
-        self.recentFilesChanged.emit([])
 
 
 # Singleton implementation (thread-safe double-checked locking)

@@ -7,7 +7,6 @@ Manages the recent files menu and related UI functionality.
 Provides integration between settings persistence and menu display.
 """
 
-import contextlib
 import threading
 from collections.abc import Callable
 from pathlib import Path
@@ -40,11 +39,7 @@ class RecentFilesManager(QObject):
         self._max_display_length = max_display_length
 
         # Menu references
-        self._recent_menu: QMenu | None = None
         self._file_actions: list[QAction] = []
-
-        # Connect to settings changes
-        self._settings.recentFilesChanged.connect(self._update_menu)
 
         # File open callback
         self._file_open_callback: Callable[[str], None] | None = None
@@ -62,20 +57,6 @@ class RecentFilesManager(QObject):
         """
         self._file_actions.clear()
         self._populate_menu_items(parent_menu)
-
-    def _update_menu(self) -> None:
-        """Update the recent files menu with current files."""
-        if not self._recent_menu:
-            return
-
-        # Disconnect signals from existing actions before clearing
-        for action in self._file_actions:
-            with contextlib.suppress(RuntimeError, TypeError):
-                action.triggered.disconnect()
-
-        self._recent_menu.clear()
-        self._file_actions.clear()
-        self._populate_menu_items(self._recent_menu)
 
     def _populate_menu_items(self, menu: QMenu) -> None:
         """

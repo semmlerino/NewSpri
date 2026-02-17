@@ -1161,20 +1161,6 @@ class ModernExportSettings(WizardStep):
         builder = _SheetSettingsBuilder(self)
         return builder.build()
 
-    def _create_layout_tab(self) -> QWidget:
-        """Create layout configuration tab (delegated to _SheetSettingsBuilder)."""
-        # This method is now only called via _SheetSettingsBuilder
-        # Kept for backward compatibility if called directly
-        builder = _SheetSettingsBuilder(self)
-        return builder._create_layout_tab()
-
-    def _create_style_tab(self) -> QWidget:
-        """Create style configuration tab (delegated to _SheetSettingsBuilder)."""
-        # This method is now only called via _SheetSettingsBuilder
-        # Kept for backward compatibility if called directly
-        builder = _SheetSettingsBuilder(self)
-        return builder._create_style_tab()
-
     def _create_individual_settings(self) -> QWidget:
         """Create individual frames settings."""
         builder = _IndividualSettingsBuilder(self)
@@ -1316,11 +1302,6 @@ class ModernExportSettings(WizardStep):
         """Generate sprite sheet preview."""
         generator = _PreviewGenerator(self)
         return generator.generate_sheet_preview()
-
-    def _generate_segments_preview(self) -> QPixmap:
-        """Generate preview for segments per row mode."""
-        generator = _PreviewGenerator(self)
-        return generator.generate_segments_preview()
 
     def _generate_frames_preview(self) -> QPixmap:
         """Generate individual frames preview."""

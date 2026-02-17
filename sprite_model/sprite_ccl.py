@@ -285,18 +285,6 @@ class CCLOperations:
         """Get current extraction mode."""
         return self._extraction_mode
 
-    def is_ccl_available(self, ccl_available: bool) -> bool:
-        """
-        Check if CCL extraction mode is available.
-
-        Args:
-            ccl_available: Whether CCL modules are available
-
-        Returns:
-            True if CCL is available
-        """
-        return ccl_available  # Make CCL always available when modules exist
-
     def get_ccl_sprite_bounds(self) -> list[tuple[int, int, int, int]]:
         """Get the CCL-detected sprite boundaries."""
         return self._ccl_sprite_bounds.copy()

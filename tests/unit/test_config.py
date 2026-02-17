@@ -98,20 +98,9 @@ class TestUIConfig:
     """Test UI configuration settings."""
     
     def test_window_dimensions(self):
-        """Test default window size is reasonable."""
-        assert UIConfig.DEFAULT_WINDOW_WIDTH >= UIConfig.MIN_WINDOW_WIDTH
-        assert UIConfig.DEFAULT_WINDOW_HEIGHT >= UIConfig.MIN_WINDOW_HEIGHT
-    
-    def test_controls_sizing(self):
-        """Test controls panel sizing."""
-        assert 0 < UIConfig.CONTROLS_WIDTH_RATIO < 0.5  # Should be less than half
-        assert UIConfig.CONTROLS_MIN_WIDTH < UIConfig.CONTROLS_MAX_WIDTH
-    
-    def test_button_dimensions(self):
-        """Test button size constraints."""
-        assert UIConfig.PLAYBACK_BUTTON_MIN_HEIGHT > 20  # Reasonable minimum
-        assert UIConfig.NAV_BUTTON_MIN_WIDTH > 20
-        assert UIConfig.NAV_BUTTON_MIN_HEIGHT > 20
+        """Test minimum window size is reasonable."""
+        assert UIConfig.MIN_WINDOW_WIDTH >= 600
+        assert UIConfig.MIN_WINDOW_HEIGHT >= 400
 
 
 class TestFileConfig:
@@ -153,14 +142,10 @@ class TestMainConfig:
         """Test configuration values are internally consistent."""
         # Canvas zoom settings should be consistent
         assert Config.Canvas.ZOOM_MIN < Config.Canvas.ZOOM_MAX
-        
+
         # Animation FPS should be within slider bounds
         assert Config.Animation.MIN_FPS <= Config.Animation.DEFAULT_FPS
         assert Config.Animation.DEFAULT_FPS <= Config.Animation.MAX_FPS
-        
-        # UI sizing should be consistent
-        assert Config.UI.MIN_WINDOW_WIDTH <= Config.UI.DEFAULT_WINDOW_WIDTH
-        assert Config.UI.MIN_WINDOW_HEIGHT <= Config.UI.DEFAULT_WINDOW_HEIGHT
 
 
 @pytest.mark.parametrize("fps", [1, 5, 10, 15, 30, 60])

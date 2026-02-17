@@ -171,22 +171,6 @@ class StyleManager:
         """
 
     @classmethod
-    def button_secondary(cls, border_radius: int = 4) -> str:
-        """Gray secondary/neutral button."""
-        return f"""
-            QPushButton {{
-                background-color: {cls.Colors.BG_LIGHT};
-                border: 1px solid {cls.Colors.BORDER_LIGHT};
-                border-radius: {border_radius}px;
-                padding: 4px 12px;
-                font-size: 10px;
-            }}
-            QPushButton:hover {{
-                background-color: {cls.Colors.BG_HOVER};
-            }}
-        """
-
-    @classmethod
     def button_secondary_large(cls, border_radius: int = 6) -> str:
         """Large secondary button (for wizard navigation)."""
         return f"""
@@ -270,18 +254,6 @@ class StyleManager:
     # =========================================================================
 
     @classmethod
-    def frame_empty_state(cls) -> str:
-        """Dashed border frame for empty states."""
-        return f"""
-            QFrame {{
-                background-color: {cls.Colors.BG_LIGHT};
-                border: 2px dashed {cls.Colors.BORDER_LIGHT};
-                border-radius: 8px;
-                padding: 20px;
-            }}
-        """
-
-    @classmethod
     def frame_title_bar(cls) -> str:
         """Title bar frame with bottom border."""
         return f"""
@@ -289,15 +261,6 @@ class StyleManager:
                 background-color: {cls.Colors.PRIMARY_LIGHT};
                 border-bottom: 2px solid {cls.Colors.SELECTION_BORDER};
                 padding: 8px;
-            }}
-        """
-
-    @classmethod
-    def frame_panel(cls) -> str:
-        """Standard panel frame."""
-        return f"""
-            QFrame {{
-                background-color: {cls.Colors.BG_LIGHT};
             }}
         """
 
@@ -358,19 +321,6 @@ class StyleManager:
             }}
             QListWidget::item:hover {{
                 background-color: #f5f5f5;
-            }}
-        """
-
-    @classmethod
-    def text_edit_readonly(cls) -> str:
-        """Read-only text area."""
-        return f"""
-            QTextEdit {{
-                border: 1px solid {cls.Colors.BORDER_DEFAULT};
-                border-radius: 4px;
-                background-color: {cls.Colors.BG_LIGHT};
-                font-size: 10px;
-                color: {cls.Colors.TEXT_DARK};
             }}
         """
 
@@ -686,35 +636,6 @@ class StyleManager:
         """
 
     @classmethod
-    def scale_button(cls, selected: bool = False) -> str:
-        """Scale selection button."""
-        if selected:
-            return f"""
-                QPushButton {{
-                    background-color: {cls.Colors.BOOTSTRAP_PRIMARY};
-                    color: white;
-                    border: none;
-                    border-radius: 4px;
-                    padding: 8px 12px;
-                    font-weight: bold;
-                }}
-            """
-        else:
-            return f"""
-                QPushButton {{
-                    background-color: {cls.Colors.BG_WHITE};
-                    color: {cls.Colors.TEXT_DARK};
-                    border: 1px solid {cls.Colors.BORDER_LIGHT};
-                    border-radius: 4px;
-                    padding: 8px 12px;
-                }}
-                QPushButton:hover {{
-                    background-color: {cls.Colors.BG_LIGHT};
-                    border-color: {cls.Colors.BOOTSTRAP_PRIMARY};
-                }}
-            """
-
-    @classmethod
     def preview_label(cls) -> str:
         """Preview area label styling."""
         return f"""
@@ -803,22 +724,6 @@ class StyleManager:
     def preview_panel(cls) -> str:
         """Preview panel background."""
         return f"background-color: {cls.Colors.BG_LIGHT};"
-
-    @classmethod
-    def fit_button(cls) -> str:
-        """Fit/Reset button in preview area."""
-        return f"""
-            QPushButton {{
-                padding: 4px 12px;
-                border: 1px solid {cls.Colors.BORDER_LIGHT};
-                border-radius: 4px;
-                font-size: 11px;
-                background-color: {cls.Colors.BG_WHITE};
-            }}
-            QPushButton:hover {{
-                background-color: {cls.Colors.BG_LIGHT};
-            }}
-        """
 
     @classmethod
     def export_button(cls) -> str:

@@ -321,38 +321,6 @@ class TestMetadataExtractor:
         info = extractor.format_sprite_info("large.png", 512, 512, "PNG", 2 * 1024 * 1024)
         assert "<b>File Size:</b> 2.0 MB" in info
     
-    def test_update_sprite_info_with_frames(self):
-        """Test updating sprite info with frame information."""
-        extractor = MetadataExtractor()
-        
-        base_info = "<b>File:</b> test.png<br><b>Size:</b> 128 × 64 px"
-        
-        # Test with frame count only
-        updated = extractor.update_sprite_info_with_frames(base_info, 8)
-        assert "<b>Frames:</b> 8" in updated
-        assert base_info in updated
-        
-        # Test with grid information
-        updated = extractor.update_sprite_info_with_frames(base_info, 12, 4, 3)
-        assert "<b>Frames:</b> 12 (4×3)" in updated
-        
-        # Test with zero frames
-        updated = extractor.update_sprite_info_with_frames(base_info, 0)
-        assert "<b>Frames:</b> 0" in updated
-    
-    def test_update_sprite_info_removes_existing_frames(self):
-        """Test that updating sprite info removes existing frame information."""
-        extractor = MetadataExtractor()
-        
-        # Start with info that already has frame data
-        existing_info = "<b>File:</b> test.png<br><b>Frames:</b> 5 (old)"
-        
-        updated = extractor.update_sprite_info_with_frames(existing_info, 10, 5, 2)
-        
-        # Should have new frame info, not old
-        assert "<b>Frames:</b> 10 (5×2)" in updated
-        assert "5 (old)" not in updated
-    
 class TestFileLoader:
     """Test file loading functionality."""
     

@@ -311,53 +311,6 @@ class TestSplitterState:
 
 
 # ============================================================================
-# Settings Save Methods Tests
-# ============================================================================
-
-
-class TestSettingsSaveMethods:
-    """Tests for specialized save methods."""
-
-    def test_save_extraction_settings(
-        self, settings_manager: SettingsManager
-    ) -> None:
-        """save_extraction_settings should save all extraction parameters."""
-        settings_manager.save_extraction_settings(
-            width=64, height=48, offset_x=4, offset_y=8,
-            spacing_x=2, spacing_y=2, mode='manual'
-        )
-
-        assert settings_manager.get_value('extraction/last_width') == 64
-        assert settings_manager.get_value('extraction/last_height') == 48
-        assert settings_manager.get_value('extraction/last_offset_x') == 4
-        assert settings_manager.get_value('extraction/last_offset_y') == 8
-        assert settings_manager.get_value('extraction/last_spacing_x') == 2
-        assert settings_manager.get_value('extraction/last_spacing_y') == 2
-        assert settings_manager.get_value('extraction/last_mode') == 'manual'
-
-    def test_save_display_settings(
-        self, settings_manager: SettingsManager
-    ) -> None:
-        """save_display_settings should save display preferences."""
-        settings_manager.save_display_settings(
-            grid_visible=True, zoom=2.5, zoom_fit_tiny=False
-        )
-
-        assert settings_manager.get_value('display/grid_visible') is True
-        assert settings_manager.get_value('display/last_zoom') == 2.5
-        assert settings_manager.get_value('display/zoom_fit_tiny') is False
-
-    def test_save_animation_settings(
-        self, settings_manager: SettingsManager
-    ) -> None:
-        """save_animation_settings should save animation preferences."""
-        settings_manager.save_animation_settings(fps=30, loop_mode=False)
-
-        assert settings_manager.get_value('animation/last_fps') == 30
-        assert settings_manager.get_value('animation/loop_mode') is False
-
-
-# ============================================================================
 # Recent Files Management Tests
 # ============================================================================
 
@@ -481,46 +434,6 @@ class TestRecentFilesManagement:
         recent = settings_manager.get_recent_files()
         assert len(recent) == 1
         assert str(existing_file) in recent
-
-
-# ============================================================================
-# Reset to Defaults Tests
-# ============================================================================
-
-
-class TestResetToDefaults:
-    """Tests for reset_to_defaults functionality."""
-
-    def test_reset_to_defaults_clears_settings(
-        self, settings_manager: SettingsManager
-    ) -> None:
-        """reset_to_defaults should clear all settings."""
-        settings_manager.set_value('test/key', 'value')
-
-        settings_manager.reset_to_defaults()
-
-        # Should return default now
-        value = settings_manager.get_value('test/key', 'default')
-        assert value == 'default'
-
-    def test_reset_to_defaults_clears_recent_files(
-        self, settings_manager: SettingsManager, tmp_path: Path
-    ) -> None:
-        """reset_to_defaults should clear recent files."""
-        settings_manager.add_recent_file(str(tmp_path / "test.png"))
-
-        settings_manager.reset_to_defaults()
-
-        assert len(settings_manager.get_recent_files()) == 0
-
-    def test_reset_to_defaults_emits_signal(
-        self, settings_manager: SettingsManager, qtbot
-    ) -> None:
-        """reset_to_defaults should emit recentFilesChanged signal."""
-        with qtbot.waitSignal(settings_manager.recentFilesChanged, timeout=1000) as blocker:
-            settings_manager.reset_to_defaults()
-
-        assert blocker.args[0] == []
 
 
 # ============================================================================

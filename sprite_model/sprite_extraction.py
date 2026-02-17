@@ -237,27 +237,6 @@ def _calculate_grid_layout(
     )
 
 
-def create_frame_info_string(layout: GridLayout, config: GridConfig) -> str:
-    """
-    Create a formatted info string describing the grid extraction.
-
-    Args:
-        layout: Grid layout information
-        config: Grid configuration used
-
-    Returns:
-        Formatted string with frame extraction details
-    """
-    if layout.total_frames > 0:
-        return (
-            f"<br><b>Frames:</b> {layout.total_frames} "
-            f"({layout.frames_per_row}×{layout.frames_per_col})<br>"
-            f"<b>Frame size:</b> {config.width}×{config.height} px"
-        )
-    else:
-        return "<br><b>Frames:</b> 0"
-
-
 # ============================================================================
 # Background Detection Functions
 # ============================================================================

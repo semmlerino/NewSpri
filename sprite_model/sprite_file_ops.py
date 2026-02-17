@@ -250,34 +250,6 @@ class MetadataExtractor:
 
         return "<br>".join(info_parts)
 
-    def update_sprite_info_with_frames(
-        self, current_info: str, frame_count: int, frames_per_row: int = 0, frames_per_col: int = 0
-    ) -> str:
-        """
-        Update sprite info string with frame information.
-
-        Args:
-            current_info: Current sprite info string
-            frame_count: Number of extracted frames
-            frames_per_row: Frames per row (optional)
-            frames_per_col: Frames per column (optional)
-
-        Returns:
-            Updated info string with frame information
-        """
-        # Remove any existing frame information
-        base_info = current_info.split("<br><b>Frames:</b>")[0]
-
-        if frame_count > 0:
-            if frames_per_row > 0 and frames_per_col > 0:
-                frame_info = f"<br><b>Frames:</b> {frame_count} ({frames_per_row}×{frames_per_col})"
-            else:
-                frame_info = f"<br><b>Frames:</b> {frame_count}"
-        else:
-            frame_info = "<br><b>Frames:</b> 0"
-
-        return base_info + frame_info
-
 
 class FileLoader:
     """
