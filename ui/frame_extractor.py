@@ -45,23 +45,7 @@ class FrameExtractor(QGroupBox):
 
         # Comprehensive auto-detect button (optimized)
         self.comprehensive_auto_btn = QPushButton("🔍 Auto-Detect All")
-        self.comprehensive_auto_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #1976d2;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                padding: 6px 12px;
-                font-weight: bold;
-                font-size: 12px;
-            }
-            QPushButton:hover {
-                background-color: #1565c0;
-            }
-            QPushButton:pressed {
-                background-color: #0d47a1;
-            }
-        """)
+        self.comprehensive_auto_btn.setStyleSheet(StyleManager.button_primary())
         self.comprehensive_auto_btn.setToolTip(
             "Automatically detect margins, frame size, and spacing in one click"
         )
@@ -96,13 +80,9 @@ class FrameExtractor(QGroupBox):
 
         # Mode status indicator
         self.mode_status = QLabel("🎯 Auto-detect active")
-        self.mode_status.setStyleSheet("""
-            QLabel {
-                color: #d32f2f;
-                font-size: 11px;
-                font-style: italic;
-            }
-        """)
+        self.mode_status.setStyleSheet(
+            StyleManager.label_mode_status(StyleManager.Colors.DANGER_HOVER)
+        )
         mode_layout.addWidget(self.mode_status)
         mode_layout.addStretch()
 
@@ -293,13 +273,7 @@ class FrameExtractor(QGroupBox):
             # Disable grid controls since auto-detect finds exact boundaries
             self._set_grid_controls_enabled(False)
 
-        self.mode_status.setStyleSheet(f"""
-            QLabel {{
-                color: {color};
-                font-size: 11px;
-                font-style: italic;
-            }}
-        """)
+        self.mode_status.setStyleSheet(StyleManager.label_mode_status(color))
         self.modeChangedEnum.emit(mode)
 
     def _set_grid_controls_enabled(self, enabled: bool):
@@ -368,7 +342,9 @@ class FrameExtractor(QGroupBox):
 
         # Section title
         title_label = QLabel(title)
-        title_label.setStyleSheet("color: #555; font-weight: bold; margin-top: 2px;")
+        title_label.setStyleSheet(
+            f"color: {StyleManager.Colors.TEXT_MUTED}; font-weight: bold; margin-top: 2px;"
+        )
         header_layout.addWidget(title_label)
 
         header_layout.addStretch()

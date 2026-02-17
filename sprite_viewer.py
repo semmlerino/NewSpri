@@ -38,7 +38,7 @@ from core import (
 )
 
 # Export dialog
-from export.dialogs.export_wizard import ExportDialog
+from export import ExportDialog
 
 # Managers
 from managers import (
@@ -262,7 +262,6 @@ class SpriteViewer(QMainWindow):
             frame_extractor=self._frame_extractor,
             grid_view=self._grid_view,
             status_manager=self._status_manager,
-            segment_manager=self._segment_manager,
             actions=self._actions,
             # Handler callbacks
             on_frame_changed=self._on_frame_changed,

@@ -1002,14 +1002,7 @@ class ModernExportSettings(WizardStep):
 
         # Transparency warning for JPG format
         self._transparency_warning = QLabel("⚠ JPG does not support transparency")
-        self._transparency_warning.setStyleSheet("""
-            QLabel {
-                color: #ff9800;
-                font-weight: bold;
-                font-size: 11px;
-                padding: 2px 6px;
-            }
-        """)
+        self._transparency_warning.setStyleSheet(StyleManager.warning_label())
         self._transparency_warning.hide()  # Hidden by default
         format_layout.addWidget(self._transparency_warning)
 

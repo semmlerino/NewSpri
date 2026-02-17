@@ -7,7 +7,7 @@ Part of Animation Segment System Enhancement.
 import contextlib
 
 from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QPixmap
+from PySide6.QtGui import QColor, QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
     QFrame,
@@ -522,8 +522,6 @@ class AnimationSegmentPreview(QWidget):
         layout.addWidget(title_bar)
 
         # Add keyboard shortcuts for zoom
-        from PySide6.QtGui import QKeySequence, QShortcut
-
         zoom_in_shortcut = QShortcut(QKeySequence("Ctrl++"), self)
         zoom_in_shortcut.activated.connect(self._zoom_in)
         zoom_in_shortcut2 = QShortcut(QKeySequence("Ctrl+="), self)  # For keyboards without numpad

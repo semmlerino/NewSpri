@@ -16,7 +16,6 @@ if TYPE_CHECKING:
     from PySide6.QtGui import QAction
 
     from core import AnimationController, AnimationSegmentController, AutoDetectionController
-    from managers import AnimationSegmentManager
     from sprite_model import SpriteModel
     from ui import (
         AnimationGridView,
@@ -62,7 +61,6 @@ class SignalCoordinator(QObject):
         grid_view: AnimationGridView | None,
         # Managers
         status_manager: StatusBarManager | None,
-        segment_manager: AnimationSegmentManager,
         # Actions dict
         actions: dict[str, QAction],
         # Handler callbacks (from SpriteViewer)
@@ -94,7 +92,6 @@ class SignalCoordinator(QObject):
         self._frame_extractor = frame_extractor
         self._grid_view = grid_view
         self._status_manager = status_manager
-        self._segment_manager = segment_manager
         self._actions = actions
 
         # Store handler callbacks

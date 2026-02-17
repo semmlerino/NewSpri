@@ -503,6 +503,29 @@ class StyleManager:
         """Info/summary label."""
         return f"color: {cls.Colors.TEXT_SECONDARY}; font-size: 12px;"
 
+    @classmethod
+    def label_mode_status(cls, color: str) -> str:
+        """Mode status indicator label (italic, small font)."""
+        return f"""
+            QLabel {{
+                color: {color};
+                font-size: 11px;
+                font-style: italic;
+            }}
+        """
+
+    @classmethod
+    def warning_label(cls) -> str:
+        """Warning label for format/transparency notices."""
+        return f"""
+            QLabel {{
+                color: {cls.Colors.WARNING};
+                font-weight: bold;
+                font-size: 11px;
+                padding: 2px 6px;
+            }}
+        """
+
     # =========================================================================
     # Dynamic Style Builders
     # =========================================================================
@@ -800,178 +823,178 @@ class StyleManager:
     # Migrated from Config.Styles
     # =========================================================================
 
-    @staticmethod
-    def canvas_normal() -> str:
+    @classmethod
+    def canvas_normal(cls) -> str:
         """Normal canvas border and background."""
-        return """
-            QLabel {
-                border: 2px solid #ccc;
+        return f"""
+            QLabel {{
+                border: 2px solid {cls.Colors.DISABLED_BG};
                 border-radius: 4px;
                 background-color: #f5f5f5;
-            }
+            }}
         """
 
-    @staticmethod
-    def canvas_drag_hover() -> str:
+    @classmethod
+    def canvas_drag_hover(cls) -> str:
         """Canvas style when a drag is hovering over it."""
-        return """
-            QLabel {
-                border: 4px dashed #4CAF50;
+        return f"""
+            QLabel {{
+                border: 4px dashed {cls.Colors.SUCCESS};
                 border-radius: 8px;
-                background-color: #e8f5e9;
-            }
+                background-color: {cls.Colors.SUCCESS_LIGHT};
+            }}
         """
 
-    @staticmethod
-    def play_button_stopped() -> str:
+    @classmethod
+    def play_button_stopped(cls) -> str:
         """Play button style when animation is stopped."""
-        return """
-            QPushButton {
+        return f"""
+            QPushButton {{
                 font-size: 14pt;
                 font-weight: bold;
-                background-color: #4CAF50;
+                background-color: {cls.Colors.SUCCESS};
                 color: white;
                 border: none;
                 border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-            QPushButton:pressed {
-                background-color: #3d8b40;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
+            }}
+            QPushButton:hover {{
+                background-color: {cls.Colors.SUCCESS_HOVER};
+            }}
+            QPushButton:pressed {{
+                background-color: {cls.Colors.SUCCESS_PRESSED};
+            }}
+            QPushButton:disabled {{
+                background-color: {cls.Colors.DISABLED_BG};
+                color: {cls.Colors.TEXT_MUTED};
+            }}
         """
 
-    @staticmethod
-    def play_button_playing() -> str:
+    @classmethod
+    def play_button_playing(cls) -> str:
         """Play button style when animation is playing."""
-        return """
-            QPushButton {
+        return f"""
+            QPushButton {{
                 font-size: 14pt;
                 font-weight: bold;
-                background-color: #ff9800;
+                background-color: {cls.Colors.WARNING};
                 color: white;
                 border: none;
                 border-radius: 4px;
-            }
-            QPushButton:hover {
+            }}
+            QPushButton:hover {{
                 background-color: #e68900;
-            }
-            QPushButton:pressed {
+            }}
+            QPushButton:pressed {{
                 background-color: #cc7a00;
-            }
+            }}
         """
 
-    @staticmethod
-    def playback_controls_frame() -> str:
+    @classmethod
+    def playback_controls_frame(cls) -> str:
         """Playback controls container frame."""
-        return """
-            QFrame {
+        return f"""
+            QFrame {{
                 background-color: #f8f8f8;
-                border: 1px solid #ddd;
+                border: 1px solid {cls.Colors.BORDER_DEFAULT};
                 border-radius: 6px;
                 padding: 10px;
-            }
+            }}
         """
 
-    @staticmethod
-    def frame_extractor_groupbox() -> str:
+    @classmethod
+    def frame_extractor_groupbox(cls) -> str:
         """Frame extractor group box."""
-        return """
-            QGroupBox {
+        return f"""
+            QGroupBox {{
                 font-weight: bold;
-                border: 2px solid #cccccc;
+                border: 2px solid {cls.Colors.DISABLED_BG};
                 border-radius: 5px;
                 margin-top: 10px;
                 padding-top: 10px;
-            }
-            QGroupBox::title {
+            }}
+            QGroupBox::title {{
                 subcontrol-origin: margin;
                 left: 10px;
                 padding: 0 5px 0 5px;
-            }
+            }}
         """
 
-    @staticmethod
-    def main_toolbar() -> str:
+    @classmethod
+    def main_toolbar(cls) -> str:
         """Main toolbar style."""
-        return """
-            QToolBar {
+        return f"""
+            QToolBar {{
                 background-color: #f5f5f5;
-                border-bottom: 1px solid #ddd;
+                border-bottom: 1px solid {cls.Colors.BORDER_DEFAULT};
                 padding: 5px;
                 spacing: 5px;
-            }
-            QToolButton {
+            }}
+            QToolButton {{
                 background-color: white;
-                border: 1px solid #ddd;
+                border: 1px solid {cls.Colors.BORDER_DEFAULT};
                 border-radius: 4px;
                 padding: 5px;
                 margin: 2px;
-            }
-            QToolButton:hover {
+            }}
+            QToolButton:hover {{
                 background-color: #e8e8e8;
                 border-color: #bbb;
-            }
-            QToolButton:pressed {
-                background-color: #ddd;
-            }
+            }}
+            QToolButton:pressed {{
+                background-color: {cls.Colors.BORDER_DEFAULT};
+            }}
         """
 
-    @staticmethod
-    def info_label() -> str:
+    @classmethod
+    def info_label(cls) -> str:
         """Info label style."""
-        return "color: #666; font-size: 10pt;"
+        return f"color: {cls.Colors.TEXT_MUTED}; font-size: 10pt;"
 
-    @staticmethod
-    def help_label() -> str:
+    @classmethod
+    def help_label(cls) -> str:
         """Help label style."""
         return "color: #888; font-style: italic; padding: 10px;"
 
-    @staticmethod
-    def speed_label() -> str:
+    @classmethod
+    def speed_label(cls) -> str:
         """Speed label style."""
         return "font-weight: bold;"
 
-    @staticmethod
-    def zoom_display() -> str:
+    @classmethod
+    def zoom_display(cls) -> str:
         """Zoom display label style."""
-        return """
-            QLabel {
+        return f"""
+            QLabel {{
                 background-color: white;
-                border: 1px solid #ddd;
+                border: 1px solid {cls.Colors.BORDER_DEFAULT};
                 border-radius: 4px;
                 padding: 5px;
                 font-weight: bold;
-            }
+            }}
         """
 
-    @staticmethod
-    def preset_label() -> str:
+    @classmethod
+    def preset_label(cls) -> str:
         """Preset mode label style."""
         return "font-weight: normal; margin-bottom: 5px;"
 
-    @staticmethod
-    def custom_label() -> str:
+    @classmethod
+    def custom_label(cls) -> str:
         """Custom mode label style."""
         return "font-weight: normal; margin-top: 10px;"
 
-    @staticmethod
-    def offset_label() -> str:
+    @classmethod
+    def offset_label(cls) -> str:
         """Offset settings label style."""
         return "font-weight: normal; margin-top: 10px;"
 
-    @staticmethod
-    def grid_checkbox() -> str:
+    @classmethod
+    def grid_checkbox(cls) -> str:
         """Grid overlay checkbox style."""
         return "margin-top: 10px;"
 
-    @staticmethod
-    def navigation_buttons() -> str:
+    @classmethod
+    def navigation_buttons(cls) -> str:
         """Navigation (prev/next frame) button style."""
         return """
             QPushButton {

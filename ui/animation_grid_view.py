@@ -127,21 +127,8 @@ class FrameThumbnail(QLabel):
         self._selected = False
         self._highlighted = False
 
-        # Set explicit default style
-        default_style = """
-            QLabel {
-                border: 1px solid #CCCCCC;
-                background-color: rgb(255, 255, 255);
-                background: rgb(255, 255, 255);
-                border-radius: 4px;
-                margin: 2px;
-            }
-            QLabel:hover {
-                border-color: #2196F3;
-                background-color: rgb(240, 248, 255);
-            }
-        """
-        self.setStyleSheet(default_style)
+        # Use the same style path as _update_style() for the unselected, no-segment state
+        self.setStyleSheet(StyleManager.thumbnail_style())
 
         # Schedule visual update (Qt batches efficiently)
         self.update()
