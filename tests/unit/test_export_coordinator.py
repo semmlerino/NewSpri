@@ -5,6 +5,7 @@ Tests progress dialog lifecycle management, validation, and error handling
 to ensure the dialog is always cleaned up properly.
 """
 
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -13,7 +14,7 @@ from PySide6.QtCore import QObject
 from PySide6.QtGui import QImage
 
 from core.export_coordinator import ExportCoordinator
-from export.core.frame_exporter import ExportMode
+from export.core.frame_exporter import ExportConfig, ExportFormat, ExportMode, SpriteSheetLayout, LayoutMode
 
 
 @pytest.fixture
@@ -57,62 +58,15 @@ def mock_exporter():
 
 
 @pytest.fixture
-def basic_settings() -> dict[str, Any]:
-    """Create basic export settings."""
-    return {
-        "output_dir": "/tmp/export",
-        "base_name": "test",
-        "format": "png",
-        "mode": "individual",
-        "scale_factor": 1.0,
-    }
-
-
-# -------------------------------------------------------------------------
-# Validation Tests
-# -------------------------------------------------------------------------
-
-
-def test_validate_export_settings_missing_key(mock_sprite_model, mock_exporter):
-    """Missing required settings returns False and shows error."""
-    coordinator = ExportCoordinator(mock_sprite_model, None, mock_exporter)
-
-    with patch.object(coordinator, "_show_error") as mock_error:
-        result = coordinator._validate_export_settings({"output_dir": "/tmp"})
-
-    assert result is False
-    mock_error.assert_called_once()
-    assert "Missing required setting" in mock_error.call_args[0][0]
-
-
-def test_validate_export_settings_no_frames(mock_exporter):
-    """No frames available returns False and shows error."""
-    model = MagicMock()
-    model.sprite_frames = []
-    coordinator = ExportCoordinator(model, None, mock_exporter)
-
-    settings = {
-        "output_dir": "/tmp",
-        "base_name": "test",
-        "format": "png",
-        "mode": "individual",
-        "scale_factor": 1.0,
-    }
-
-    with patch.object(coordinator, "_show_error") as mock_error:
-        result = coordinator._validate_export_settings(settings)
-
-    assert result is False
-    mock_error.assert_called_once_with("No frames available to export.")
-
-
-def test_validate_export_settings_valid(mock_sprite_model, mock_exporter, basic_settings):
-    """Valid settings returns True."""
-    coordinator = ExportCoordinator(mock_sprite_model, None, mock_exporter)
-
-    result = coordinator._validate_export_settings(basic_settings)
-
-    assert result is True
+def basic_settings() -> ExportConfig:
+    """Create basic export settings as ExportConfig."""
+    return ExportConfig(
+        output_dir=Path("/tmp/export"),
+        base_name="test",
+        format=ExportFormat.PNG,
+        mode=ExportMode.INDIVIDUAL_FRAMES,
+        scale_factor=1.0,
+    )
 
 
 # -------------------------------------------------------------------------
@@ -121,32 +75,42 @@ def test_validate_export_settings_valid(mock_sprite_model, mock_exporter, basic_
 
 
 def test_validate_mode_preconditions_segments_no_manager(
-    mock_sprite_model, mock_exporter, basic_settings
+    mock_sprite_model, mock_exporter
 ):
     """segments_sheet mode with no segment_manager returns error."""
     coordinator = ExportCoordinator(mock_sprite_model, None, mock_exporter)
 
-    settings = basic_settings.copy()
-    settings["mode"] = "segments_sheet"
+    config = ExportConfig(
+        output_dir=Path("/tmp/export"),
+        base_name="test",
+        format=ExportFormat.PNG,
+        mode=ExportMode.SEGMENTS_SHEET,
+        scale_factor=1.0,
+    )
 
-    valid, message = coordinator._validate_mode_preconditions(settings, ExportMode.SEGMENTS_SHEET)
+    valid, message = coordinator._validate_mode_preconditions(config)
 
     assert valid is False
     assert message == "Segment manager not available."
 
 
 def test_validate_mode_preconditions_segments_no_segments(
-    mock_sprite_model, mock_exporter, basic_settings
+    mock_sprite_model, mock_exporter
 ):
     """segments_sheet mode with no segments returns error."""
     manager = MagicMock()
     manager.get_all_segments.return_value = []
     coordinator = ExportCoordinator(mock_sprite_model, manager, mock_exporter)
 
-    settings = basic_settings.copy()
-    settings["mode"] = "segments_sheet"
+    config = ExportConfig(
+        output_dir=Path("/tmp/export"),
+        base_name="test",
+        format=ExportFormat.PNG,
+        mode=ExportMode.SEGMENTS_SHEET,
+        scale_factor=1.0,
+    )
 
-    valid, message = coordinator._validate_mode_preconditions(settings, ExportMode.SEGMENTS_SHEET)
+    valid, message = coordinator._validate_mode_preconditions(config)
 
     assert valid is False
     assert message == "No animation segments defined."
@@ -155,51 +119,63 @@ def test_validate_mode_preconditions_segments_no_segments(
 def test_validate_mode_preconditions_selected_empty_indices(
     mock_sprite_model, mock_exporter, basic_settings
 ):
-    """Mode with empty selected_indices returns error."""
+    """Mode with empty selected_indices returns no error."""
     coordinator = ExportCoordinator(mock_sprite_model, None, mock_exporter)
 
-    settings = basic_settings.copy()
-    settings["selected_indices"] = []
-
-    valid, message = coordinator._validate_mode_preconditions(
-        settings, ExportMode.INDIVIDUAL_FRAMES
+    config = ExportConfig(
+        output_dir=Path("/tmp/export"),
+        base_name="test",
+        format=ExportFormat.PNG,
+        mode=ExportMode.INDIVIDUAL_FRAMES,
+        scale_factor=1.0,
+        selected_indices=[],
     )
+
+    valid, message = coordinator._validate_mode_preconditions(config)
 
     # Empty list is valid - precondition only fails if indices exist but are all invalid
     assert valid is True
 
 
 def test_validate_mode_preconditions_selected_invalid_indices(
-    mock_sprite_model, mock_exporter, basic_settings
+    mock_sprite_model, mock_exporter
 ):
     """Mode with all invalid selected_indices returns error."""
     coordinator = ExportCoordinator(mock_sprite_model, None, mock_exporter)
 
-    settings = basic_settings.copy()
     # Model has 5 frames, indices 10, 20 are invalid
-    settings["selected_indices"] = [10, 20]
-
-    valid, message = coordinator._validate_mode_preconditions(
-        settings, ExportMode.INDIVIDUAL_FRAMES
+    config = ExportConfig(
+        output_dir=Path("/tmp/export"),
+        base_name="test",
+        format=ExportFormat.PNG,
+        mode=ExportMode.INDIVIDUAL_FRAMES,
+        scale_factor=1.0,
+        selected_indices=[10, 20],
     )
+
+    valid, message = coordinator._validate_mode_preconditions(config)
 
     assert valid is False
     assert message == "No valid frames selected for export."
 
 
 def test_validate_mode_preconditions_selected_some_valid_indices(
-    mock_sprite_model, mock_exporter, basic_settings
+    mock_sprite_model, mock_exporter
 ):
     """Mode with some valid selected_indices succeeds."""
     coordinator = ExportCoordinator(mock_sprite_model, None, mock_exporter)
 
-    settings = basic_settings.copy()
     # Model has 5 frames, indices 1, 2 are valid
-    settings["selected_indices"] = [1, 2, 10]
-
-    valid, message = coordinator._validate_mode_preconditions(
-        settings, ExportMode.INDIVIDUAL_FRAMES
+    config = ExportConfig(
+        output_dir=Path("/tmp/export"),
+        base_name="test",
+        format=ExportFormat.PNG,
+        mode=ExportMode.INDIVIDUAL_FRAMES,
+        scale_factor=1.0,
+        selected_indices=[1, 2, 10],
     )
+
+    valid, message = coordinator._validate_mode_preconditions(config)
 
     assert valid is True
     assert message == ""
@@ -212,16 +188,19 @@ def test_validate_mode_preconditions_valid_settings(
     coordinator = ExportCoordinator(mock_sprite_model, mock_segment_manager, mock_exporter)
 
     # Test individual mode
-    valid, message = coordinator._validate_mode_preconditions(
-        basic_settings, ExportMode.INDIVIDUAL_FRAMES
-    )
+    valid, message = coordinator._validate_mode_preconditions(basic_settings)
     assert valid is True
     assert message == ""
 
     # Test segments_sheet mode
-    settings = basic_settings.copy()
-    settings["mode"] = "segments_sheet"
-    valid, message = coordinator._validate_mode_preconditions(settings, ExportMode.SEGMENTS_SHEET)
+    segments_config = ExportConfig(
+        output_dir=Path("/tmp/export"),
+        base_name="test",
+        format=ExportFormat.PNG,
+        mode=ExportMode.SEGMENTS_SHEET,
+        scale_factor=1.0,
+    )
+    valid, message = coordinator._validate_mode_preconditions(segments_config)
     assert valid is True
     assert message == ""
 
@@ -232,32 +211,22 @@ def test_validate_mode_preconditions_valid_settings(
 
 
 @patch("core.export_coordinator.ExportProgressDialog")
-def test_handle_export_request_no_dialog_on_validation_failure(
-    mock_dialog_class, mock_sprite_model, mock_exporter, basic_settings
-):
-    """Failed validation does not create progress dialog."""
-    coordinator = ExportCoordinator(mock_sprite_model, None, mock_exporter)
-
-    # Invalid settings (missing keys)
-    with patch.object(coordinator, "_show_error"):
-        coordinator.handle_export_request({"output_dir": "/tmp"})
-
-    # Dialog should not be created
-    mock_dialog_class.assert_not_called()
-
-
-@patch("core.export_coordinator.ExportProgressDialog")
 def test_handle_export_request_no_dialog_on_precondition_failure(
-    mock_dialog_class, mock_sprite_model, mock_exporter, basic_settings
+    mock_dialog_class, mock_sprite_model, mock_exporter
 ):
     """Failed mode preconditions do not create progress dialog."""
     coordinator = ExportCoordinator(mock_sprite_model, None, mock_exporter)
 
-    settings = basic_settings.copy()
-    settings["mode"] = "segments_sheet"
+    config = ExportConfig(
+        output_dir=Path("/tmp/export"),
+        base_name="test",
+        format=ExportFormat.PNG,
+        mode=ExportMode.SEGMENTS_SHEET,
+        scale_factor=1.0,
+    )
 
     with patch.object(coordinator, "_show_warning"):
-        coordinator.handle_export_request(settings)
+        coordinator.handle_export_request(config)
 
     # Dialog should not be created
     mock_dialog_class.assert_not_called()
@@ -426,14 +395,14 @@ def test_export_frames_calls_exporter(
     call_kwargs = mock_exporter.export_frames.call_args[1]
     assert call_kwargs["output_dir"] == "/tmp/export"
     assert call_kwargs["base_name"] == "test"
-    assert call_kwargs["format"] == "png"
+    assert call_kwargs["format"] == "PNG"
     assert call_kwargs["mode"] == "individual"
     assert call_kwargs["scale_factor"] == 1.0
 
 
 @patch("core.export_coordinator.ExportProgressDialog")
 def test_export_segments_per_row_calls_exporter(
-    mock_dialog_class, mock_sprite_model, mock_segment_manager, mock_exporter, basic_settings
+    mock_dialog_class, mock_sprite_model, mock_segment_manager, mock_exporter
 ):
     """_export_segments_per_row calls exporter with segment info."""
     mock_dialog = MagicMock()
@@ -443,10 +412,15 @@ def test_export_segments_per_row_calls_exporter(
 
     coordinator = ExportCoordinator(mock_sprite_model, mock_segment_manager, mock_exporter)
 
-    settings = basic_settings.copy()
-    settings["mode"] = "segments_sheet"
+    config = ExportConfig(
+        output_dir=Path("/tmp/export"),
+        base_name="test",
+        format=ExportFormat.PNG,
+        mode=ExportMode.SEGMENTS_SHEET,
+        scale_factor=1.0,
+    )
 
-    coordinator.handle_export_request(settings)
+    coordinator.handle_export_request(config)
 
     # Verify exporter was called with segment info
     mock_exporter.export_frames.assert_called_once()
@@ -460,7 +434,7 @@ def test_export_segments_per_row_calls_exporter(
 
 @patch("core.export_coordinator.ExportProgressDialog")
 def test_export_frames_with_selected_indices(
-    mock_dialog_class, mock_sprite_model, mock_exporter, basic_settings
+    mock_dialog_class, mock_sprite_model, mock_exporter
 ):
     """_export_frames handles selected_indices correctly."""
     mock_dialog = MagicMock()
@@ -470,10 +444,16 @@ def test_export_frames_with_selected_indices(
 
     coordinator = ExportCoordinator(mock_sprite_model, None, mock_exporter)
 
-    settings = basic_settings.copy()
-    settings["selected_indices"] = [1, 2]
+    config = ExportConfig(
+        output_dir=Path("/tmp/export"),
+        base_name="test",
+        format=ExportFormat.PNG,
+        mode=ExportMode.INDIVIDUAL_FRAMES,
+        scale_factor=1.0,
+        selected_indices=[1, 2],
+    )
 
-    coordinator.handle_export_request(settings)
+    coordinator.handle_export_request(config)
 
     # Verify mode changed to individual and indices passed
     mock_exporter.export_frames.assert_called_once()
@@ -485,7 +465,7 @@ def test_export_frames_with_selected_indices(
 @patch("core.export_coordinator.ExportProgressDialog")
 @patch("core.export_coordinator.QMessageBox")
 def test_export_frames_shows_info_on_invalid_indices(
-    mock_messagebox, mock_dialog_class, mock_sprite_model, mock_exporter, basic_settings
+    mock_messagebox, mock_dialog_class, mock_sprite_model, mock_exporter
 ):
     """_export_frames shows info when some indices are invalid."""
     mock_dialog = MagicMock()
@@ -495,11 +475,17 @@ def test_export_frames_shows_info_on_invalid_indices(
 
     coordinator = ExportCoordinator(mock_sprite_model, None, mock_exporter)
 
-    settings = basic_settings.copy()
     # Model has 5 frames, index 10 is invalid
-    settings["selected_indices"] = [1, 2, 10]
+    config = ExportConfig(
+        output_dir=Path("/tmp/export"),
+        base_name="test",
+        format=ExportFormat.PNG,
+        mode=ExportMode.INDIVIDUAL_FRAMES,
+        scale_factor=1.0,
+        selected_indices=[1, 2, 10],
+    )
 
-    coordinator.handle_export_request(settings)
+    coordinator.handle_export_request(config)
 
     # Info message should be shown
     mock_messagebox.information.assert_called_once()
@@ -530,7 +516,7 @@ def test_export_frames_export_failure_shows_error(
 
 @patch("core.export_coordinator.ExportProgressDialog")
 def test_export_segments_per_row_export_failure_shows_error(
-    mock_dialog_class, mock_sprite_model, mock_segment_manager, mock_exporter, basic_settings
+    mock_dialog_class, mock_sprite_model, mock_segment_manager, mock_exporter
 ):
     """_export_segments_per_row shows error when export_frames returns False."""
     mock_dialog = MagicMock()
@@ -542,10 +528,15 @@ def test_export_segments_per_row_export_failure_shows_error(
 
     coordinator = ExportCoordinator(mock_sprite_model, mock_segment_manager, mock_exporter)
 
-    settings = basic_settings.copy()
-    settings["mode"] = "segments_sheet"
+    config = ExportConfig(
+        output_dir=Path("/tmp/export"),
+        base_name="test",
+        format=ExportFormat.PNG,
+        mode=ExportMode.SEGMENTS_SHEET,
+        scale_factor=1.0,
+    )
 
     with patch.object(coordinator, "_show_error") as mock_error:
-        coordinator.handle_export_request(settings)
+        coordinator.handle_export_request(config)
 
     mock_error.assert_called_once_with("Failed to start segments per row export.")

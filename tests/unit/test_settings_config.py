@@ -4,6 +4,7 @@ Tests the configuration additions for settings persistence and export functional
 """
 
 import pytest
+from export.core.frame_exporter import LayoutMode
 
 
 def test_settings_config_import():
@@ -83,9 +84,9 @@ def test_export_config_values():
     assert 1.0 in ExportConfig.DEFAULT_SCALE_FACTORS
     assert all(factor > 0 for factor in ExportConfig.DEFAULT_SCALE_FACTORS)
 
-    # Test layout modes
-    assert 'auto' in ExportConfig.LAYOUT_MODES
-    assert ExportConfig.DEFAULT_LAYOUT_MODE == 'auto'
+    # Test layout modes enum
+    assert LayoutMode.AUTO.value == "auto"
+    assert LayoutMode.AUTO in LayoutMode
 
 
 def test_config_integration():

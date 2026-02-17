@@ -28,6 +28,7 @@ from export.core.frame_exporter import (
     ExportMode,
     ExportFormat,
     FrameExporter,
+    LayoutMode,
     get_frame_exporter,
     reset_frame_exporter,
     SpriteSheetLayout,
@@ -102,7 +103,7 @@ def sheet_export_task(sample_frames: list[QImage], export_dir: Path) -> ExportTa
         format=ExportFormat.PNG,
         mode=ExportMode.SPRITE_SHEET,
         scale_factor=1.0,
-        sprite_sheet_layout=SpriteSheetLayout(mode='rows', max_columns=4),
+        sprite_sheet_layout=SpriteSheetLayout(mode=LayoutMode.ROWS, max_columns=4),
     )
 
 
@@ -474,21 +475,21 @@ class TestSpriteSheetLayout:
 
     def test_layout_columns_calculation_rows_mode(self, qapp) -> None:
         """Layout in rows mode should return configured max_columns."""
-        layout = SpriteSheetLayout(mode='rows', max_columns=4)
+        layout = SpriteSheetLayout(mode=LayoutMode.ROWS, max_columns=4)
         # In rows mode, effective columns is the configured max_columns
         effective_cols = layout.get_effective_columns(8)
         assert effective_cols == 4
 
     def test_layout_rows_calculation_columns_mode(self, qapp) -> None:
         """Layout in columns mode should return configured max_rows."""
-        layout = SpriteSheetLayout(mode='columns', max_rows=4)
+        layout = SpriteSheetLayout(mode=LayoutMode.COLUMNS, max_rows=4)
         # In columns mode, effective rows is the configured max_rows
         effective_rows = layout.get_effective_rows(8)
         assert effective_rows == 4
 
     def test_layout_with_padding(self, qapp) -> None:
         """Layout with padding should account for spacing."""
-        layout = SpriteSheetLayout(mode='rows', max_columns=4, padding=2)
+        layout = SpriteSheetLayout(mode=LayoutMode.ROWS, max_columns=4, padding=2)
         width, height = layout.calculate_estimated_dimensions(
             frame_width=32,
             frame_height=32,
@@ -509,7 +510,7 @@ class TestSpriteSheetLayout:
             format=ExportFormat.PNG,
             mode=ExportMode.SPRITE_SHEET,
             scale_factor=1.0,
-            sprite_sheet_layout=SpriteSheetLayout(mode='rows', max_columns=4, spacing=0, padding=0),
+            sprite_sheet_layout=SpriteSheetLayout(mode=LayoutMode.ROWS, max_columns=4, spacing=0, padding=0),
         )
         worker = ExportWorker(task)
         worker.run()

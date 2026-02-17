@@ -23,7 +23,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPixmap
 
 from export.core.export_presets import ExportPreset, get_preset, get_all_presets
-from export.core.frame_exporter import SpriteSheetLayout
+from export.core.frame_exporter import ExportMode, LayoutMode, SpriteSheetLayout
 from export.dialogs.base.wizard_base import WizardStep, WizardWidget
 from export.dialogs.export_wizard import ExportDialog
 
@@ -205,7 +205,7 @@ class TestExportPreset:
             display_name="Test Preset",
             icon="🎯",
             description="A test preset",
-            mode="individual",
+            mode=ExportMode.INDIVIDUAL_FRAMES,
             format="PNG",
             scale=1.0,
             default_pattern="{base}_{index}",
@@ -215,7 +215,7 @@ class TestExportPreset:
 
         assert preset.name == "test"
         assert preset.display_name == "Test Preset"
-        assert preset.mode == "individual"
+        assert preset.mode == ExportMode.INDIVIDUAL_FRAMES
         assert preset.format == "PNG"
 
     def test_export_preset_get_settings_dict(self, qapp) -> None:
@@ -225,7 +225,7 @@ class TestExportPreset:
             display_name="Test",
             icon="🎯",
             description="Test",
-            mode="sheet",
+            mode=ExportMode.SPRITE_SHEET,
             format="PNG",
             scale=2.0,
             default_pattern="{base}",
@@ -242,13 +242,13 @@ class TestExportPreset:
 
     def test_export_preset_with_sprite_sheet_layout(self, qapp) -> None:
         """ExportPreset should include sprite sheet layout when set."""
-        layout = SpriteSheetLayout(mode='rows', max_columns=4)
+        layout = SpriteSheetLayout(mode=LayoutMode.ROWS, max_columns=4)
         preset = ExportPreset(
             name="sheet_test",
             display_name="Sheet Test",
             icon="📋",
             description="Test",
-            mode="sheet",
+            mode=ExportMode.SPRITE_SHEET,
             format="PNG",
             scale=1.0,
             default_pattern="{base}",
@@ -417,7 +417,7 @@ class TestExportConfigPreparation:
             display_name="Individual",
             icon="🖼",
             description="Export individual frames",
-            mode="individual",
+            mode=ExportMode.INDIVIDUAL_FRAMES,
             format="PNG",
             scale=1.0,
             default_pattern="{base}_{index}",
@@ -434,10 +434,10 @@ class TestExportConfigPreparation:
 
         config = dialog._prepare_export_config(preset, settings)
 
-        assert 'output_dir' in config
-        assert 'format' in config
-        assert 'mode' in config
-        assert config['mode'] == 'individual'
+        assert hasattr(config, 'output_dir')
+        assert hasattr(config, 'format')
+        assert hasattr(config, 'mode')
+        assert config.mode == ExportMode.INDIVIDUAL_FRAMES
 
     def test_prepare_export_config_sheet_mode(
         self, qapp, sample_sprites: list[QPixmap]
@@ -455,7 +455,7 @@ class TestExportConfigPreparation:
             display_name="Sprite Sheet",
             icon="📋",
             description="Export as sprite sheet",
-            mode="sheet",
+            mode=ExportMode.SPRITE_SHEET,
             format="PNG",
             scale=1.0,
             default_pattern="{base}",
@@ -475,10 +475,8 @@ class TestExportConfigPreparation:
 
         config = dialog._prepare_export_config(preset, settings)
 
-        assert config['mode'] == 'sheet'
-        assert 'layout_mode' in config
-        assert 'columns' in config
-        assert 'rows' in config
+        assert config.mode == ExportMode.SPRITE_SHEET
+        assert config.sprite_sheet_layout is not None
 
     def test_prepare_export_config_includes_scale_factor(
         self, qapp, sample_sprites: list[QPixmap]
@@ -496,7 +494,7 @@ class TestExportConfigPreparation:
             display_name="Test",
             icon="🎯",
             description="Test",
-            mode="individual",
+            mode=ExportMode.INDIVIDUAL_FRAMES,
             format="PNG",
             scale=2.0,
             default_pattern="{base}",
@@ -508,8 +506,8 @@ class TestExportConfigPreparation:
 
         config = dialog._prepare_export_config(preset, settings)
 
-        assert 'scale_factor' in config
-        assert config['scale_factor'] == 2.0
+        assert hasattr(config, 'scale_factor')
+        assert config.scale_factor == 2.0
 
 
 # ============================================================================
@@ -636,7 +634,7 @@ class TestEdgeCases:
             display_name="Test",
             icon="🎯",
             description="Test",
-            mode="individual",
+            mode=ExportMode.INDIVIDUAL_FRAMES,
             format="PNG",
             scale=1.0,
             default_pattern="{base}",

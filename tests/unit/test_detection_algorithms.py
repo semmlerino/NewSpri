@@ -19,6 +19,8 @@ from PySide6.QtCore import Qt
 from PySide6.QtTest import QSignalSpy
 
 from sprite_model.sprite_detection import (
+    DetectionResult,
+    DetectionStepResult,
     detect_content_based,
     detect_frame_size,
     detect_margins,
@@ -608,7 +610,11 @@ class TestAutoDetectionController:
         # Create mock sprite model with required attributes
         mock_sprite_model = Mock()
         mock_sprite_model.original_sprite_sheet = QPixmap(100, 100)
-        mock_sprite_model.comprehensive_auto_detect.return_value = (True, "Test report")
+        _mock_result = DetectionResult()
+        _mock_result.success = True
+        _mock_result.messages = ["Test report"]
+        _mock_result.confidence = 0.9
+        mock_sprite_model.comprehensive_auto_detect.return_value = (True, _mock_result)
 
         # Mock attributes that get set
         mock_sprite_model.frame_width = 32
@@ -761,22 +767,45 @@ class TestAutoDetectionController:
         assert "margins (4,4)" in summary
         assert "spacing (2,2)" in summary
 
-    def test_button_confidence_update_from_report(self, qapp):
-        """Test button confidence updates from detection report."""
+    def test_button_confidence_update_from_result(self, qapp):
+        """Test button confidence updates from detection result."""
         controller = AutoDetectionController(
             sprite_model=Mock(),
             frame_extractor=Mock(),
         )
         button_spy = QSignalSpy(controller.buttonConfidenceUpdate)
-        
-        report = """
-        ✓ Auto-detected frame size: 32×32 (high confidence)
-        ✓ Margins: detected 4px margins
-        ✓ Auto-detected spacing: 2px (medium confidence)
-        """
-        
-        controller._update_button_confidence_from_report(report)
-        
+
+        result = DetectionResult()
+        result.success = True
+        result.messages = [
+            "Auto-detected frame size: 32×32 (high confidence)",
+            "Margins: detected 4px margins",
+            "Auto-detected spacing: 2px (medium confidence)",
+        ]
+        result._confidence = 0.85
+        result.step_results = [
+            DetectionStepResult(
+                step_name="frame_size",
+                success=True,
+                confidence=0.9,
+                description="Auto-detected frame size: 32×32",
+            ),
+            DetectionStepResult(
+                step_name="margins",
+                success=True,
+                confidence=0.8,
+                description="Detected 4px margins",
+            ),
+            DetectionStepResult(
+                step_name="spacing",
+                success=True,
+                confidence=0.7,
+                description="Auto-detected spacing: 2px",
+            ),
+        ]
+
+        controller._update_button_confidence_from_result(result)
+
         # Should have emitted signals for frame, margins, and spacing
         assert button_spy.count() >= 2  # At least frame and spacing
 

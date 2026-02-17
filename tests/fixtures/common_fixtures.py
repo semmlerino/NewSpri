@@ -14,6 +14,7 @@ from PySide6.QtWidgets import QApplication
 
 from sprite_model import SpriteModel
 from export import ExportPreset
+from export.core.frame_exporter import BackgroundMode, ExportMode, LayoutMode, SpriteSheetLayout
 
 
 # Sprite Creation Fixtures
@@ -134,7 +135,7 @@ def mock_individual_preset():
         display_name="Individual Frames",
         icon="📁",
         description="Export frames as separate files",
-        mode="individual",
+        mode=ExportMode.INDIVIDUAL_FRAMES,
         format="PNG",
         scale=1.0,
         default_pattern="{name}_{index:03d}",
@@ -147,24 +148,22 @@ def mock_individual_preset():
 @pytest.fixture
 def mock_sprite_sheet_preset():
     """Create a mock sprite sheet export preset."""
-    from export.core.frame_exporter import SpriteSheetLayout
-
     return ExportPreset(
         name="sprite_sheet",
         display_name="Sprite Sheet",
         icon="📋",
         description="Combine all frames into one image",
-        mode="sheet",
+        mode=ExportMode.SPRITE_SHEET,
         format="PNG",
         scale=1.0,
         default_pattern="{name}_sheet",
         tooltip="Create a sprite sheet for game engines",
         use_cases=["Game development", "Web animations"],
         sprite_sheet_layout=SpriteSheetLayout(
-            mode='auto',
+            mode=LayoutMode.AUTO,
             spacing=0,
             padding=0,
-            background_mode='transparent'
+            background_mode=BackgroundMode.TRANSPARENT
         ),
         short_description="Optimized for games"
     )
@@ -178,8 +177,8 @@ def mock_gif_preset():
         display_name="Animated GIF",
         icon="🎬",
         description="Create an animated GIF",
-        mode="gif",
-        format="GIF",
+        mode=ExportMode.INDIVIDUAL_FRAMES,
+        format="PNG",
         scale=1.0,
         default_pattern="{name}_animation",
         tooltip="Export as animated GIF for sharing",
@@ -277,8 +276,6 @@ def sample_export_settings():
 @pytest.fixture
 def sample_sprite_sheet_settings():
     """Sample sprite sheet export settings."""
-    from export.core.frame_exporter import SpriteSheetLayout
-    
     return {
         'output_dir': '/tmp/sprites',
         'base_name': 'spritesheet',
@@ -288,10 +285,10 @@ def sample_sprite_sheet_settings():
         'pattern': '{name}',
         'preset_name': 'sprite_sheet',
         'sprite_sheet_layout': SpriteSheetLayout(
-            mode='auto',
+            mode=LayoutMode.AUTO,
             spacing=2,
             padding=4,
-            background_mode='transparent'
+            background_mode=BackgroundMode.TRANSPARENT
         )
     }
 
