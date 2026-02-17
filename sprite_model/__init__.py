@@ -29,11 +29,7 @@ from .sprite_detection import (
 from .sprite_extraction import detect_background_color, detect_sprites_ccl_enhanced
 
 # Import file operations
-from .sprite_file_ops import FileLoader, load_sprite_sheet, validate_file_path
-
-# Backwards compatibility aliases
-FileOperations = FileLoader
-validate_image_file = validate_file_path
+from .sprite_file_ops import load_sprite_sheet
 
 # Version info
 __version__ = "2.0.0-refactored"
@@ -42,7 +38,6 @@ __author__ = "Python Sprite Viewer Team"
 # Public API
 __all__ = [
     "DetectionResult",
-    "FileOperations",
     "SpriteModel",
     "comprehensive_auto_detect",
     "detect_background_color",
@@ -51,5 +46,4 @@ __all__ = [
     "detect_spacing",
     "detect_sprites_ccl_enhanced",
     "load_sprite_sheet",
-    "validate_image_file",
 ]

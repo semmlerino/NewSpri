@@ -572,8 +572,9 @@ class TestAutoDetectionController:
         assert hasattr(controller, 'buttonConfidenceUpdate')
         assert hasattr(controller, 'statusUpdate')
 
-        # Check state signals
-        assert hasattr(controller, 'workflowStateChanged')
+        # Check state properties
+        assert hasattr(controller, 'workflow_state')
+        assert hasattr(controller, 'is_working')
 
     def test_controller_stores_dependencies(self, qapp):
         """Test controller properly stores dependencies at construction."""
@@ -728,20 +729,15 @@ class TestAutoDetectionController:
             sprite_model=Mock(),
             frame_extractor=Mock(),
         )
-        state_spy = QSignalSpy(controller.workflowStateChanged)
 
-        # Test state transitions
-        controller._set_workflow_state("working")
+        # Test state transitions via direct assignment (signal was removed)
+        controller._workflow_state = "working"
         assert controller.workflow_state == "working"
         assert controller.is_working
-        assert state_spy.count() == 1
-        assert state_spy.at(0)[0] == "working"
 
-        controller._set_workflow_state("completed")
+        controller._workflow_state = "completed"
         assert controller.workflow_state == "completed"
         assert not controller.is_working
-        assert state_spy.count() == 2
-        assert state_spy.at(1)[0] == "completed"
 
     def test_detection_summary_creation(self, qapp):
         """Test creation of detection summary."""

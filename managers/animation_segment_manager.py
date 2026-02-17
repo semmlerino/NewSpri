@@ -140,10 +140,6 @@ class AnimationSegment:
         return True, ""
 
 
-# Backward compatibility alias (will be removed after migration)
-AnimationSegmentData = AnimationSegment
-
-
 class AnimationSegmentManager(QObject):
     """Manages animation segments with persistence and validation."""
 
@@ -441,24 +437,6 @@ class AnimationSegmentManager(QObject):
         if self._auto_save_enabled:
             self._auto_save()
 
-    def has_overlapping_segments(self) -> list[tuple[str, str]]:
-        """
-        Check for overlapping segments.
-
-        Returns:
-            List of tuples containing overlapping segment names
-        """
-        overlaps = []
-        segments = list(self._segments.values())
-
-        for i, seg1 in enumerate(segments):
-            for seg2 in segments[i + 1 :]:
-                # Check if segments overlap
-                if seg1.start_frame <= seg2.end_frame and seg2.start_frame <= seg1.end_frame:
-                    overlaps.append((seg1.name, seg2.name))
-
-        return overlaps
-
     def _find_overlapping_segment(self, start_frame: int, end_frame: int) -> str | None:
         """
         Find if a frame range overlaps with any existing segment.
@@ -474,13 +452,6 @@ class AnimationSegmentManager(QObject):
             # Check if ranges overlap using interval overlap logic
             if start_frame <= segment.end_frame and segment.start_frame <= end_frame:
                 return segment.name
-        return None
-
-    def get_segment_at_frame(self, frame_index: int) -> AnimationSegment | None:
-        """Get the first segment that contains a specific frame."""
-        for _name, segment in self._segments.items():
-            if segment.start_frame <= frame_index <= segment.end_frame:
-                return segment
         return None
 
     def extract_frames_for_segment(

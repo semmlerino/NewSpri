@@ -38,9 +38,6 @@ class AutoDetectionController(QObject):
     buttonConfidenceUpdate = Signal(str, str, str)  # button_type, confidence, message
     statusUpdate = Signal(str, int)  # message, timeout_ms
 
-    # Workflow state signals
-    workflowStateChanged = Signal(str)  # state: "idle", "working", "completed", "failed"
-
     def __init__(self, sprite_model, frame_extractor):
         """
         Initialize controller with required dependencies.
@@ -56,7 +53,6 @@ class AutoDetectionController(QObject):
         self._frame_extractor = frame_extractor
 
         # Workflow state
-        self._current_workflow = None
         self._workflow_state = "idle"
 
     # ============================================================================
@@ -122,21 +118,21 @@ class AutoDetectionController(QObject):
             return False
 
         try:
-            self._set_workflow_state("working")
+            self._workflow_state = "working"
             success, detailed_report = self._sprite_model.comprehensive_auto_detect()
 
             if success:
                 # Parse and update button confidence from report
                 self._update_button_confidence_from_report(detailed_report)
-                self._set_workflow_state("completed")
+                self._workflow_state = "completed"
             else:
-                self._set_workflow_state("failed")
+                self._workflow_state = "failed"
 
             return success
 
         except Exception:
             logger.exception("Auto-detection failed with unexpected error")
-            self._set_workflow_state("failed")
+            self._workflow_state = "failed"
             return False
 
     # ============================================================================
@@ -150,7 +146,7 @@ class AutoDetectionController(QObject):
             return
 
         self.detectionStarted.emit("comprehensive")
-        self._set_workflow_state("working")
+        self._workflow_state = "working"
 
         try:
             # Run the comprehensive workflow
@@ -167,18 +163,18 @@ class AutoDetectionController(QObject):
 
             # Update workflow state
             if success:
-                self._set_workflow_state("completed")
+                self._workflow_state = "completed"
                 self.detectionCompleted.emit(
                     "comprehensive", True, "Auto-detection completed successfully"
                 )
             else:
-                self._set_workflow_state("failed")
+                self._workflow_state = "failed"
                 self.detectionCompleted.emit(
                     "comprehensive", False, "Auto-detection completed with issues"
                 )
 
         except Exception as e:
-            self._set_workflow_state("failed")
+            self._workflow_state = "failed"
             self.detectionFailed.emit("comprehensive", str(e))
 
     def run_frame_detection(self):
@@ -350,11 +346,6 @@ class AutoDetectionController(QObject):
     def _update_comprehensive_button_default(self):
         """Signal to update comprehensive button to default state."""
         self.buttonConfidenceUpdate.emit("comprehensive", "reset", "")
-
-    def _set_workflow_state(self, state: str):
-        """Update workflow state and emit signal."""
-        self._workflow_state = state
-        self.workflowStateChanged.emit(state)
 
     # ============================================================================
     # PROPERTIES

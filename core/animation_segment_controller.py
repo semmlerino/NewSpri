@@ -10,7 +10,6 @@ Part of safe refactoring phase to reduce god class responsibilities.
 """
 
 import time
-from typing import Any
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox
@@ -41,6 +40,7 @@ class AnimationSegmentController(QObject):
         sprite_model,
         tab_widget,
         segment_preview,
+        export_coordinator=None,
         parent=None,
     ):
         """
@@ -52,6 +52,7 @@ class AnimationSegmentController(QObject):
             sprite_model: Sprite model for frame data
             tab_widget: Tab widget for view switching
             segment_preview: Segment preview widget
+            export_coordinator: Export coordinator for segment export
             parent: Parent QObject
         """
         super().__init__(parent)
@@ -62,6 +63,7 @@ class AnimationSegmentController(QObject):
         self._sprite_model = sprite_model
         self._tab_widget = tab_widget
         self._segment_preview = segment_preview
+        self._export_coordinator = export_coordinator
 
         # Guard flag: suppress _on_manager_segment_removed during rename
         self._renaming = False
@@ -376,37 +378,16 @@ class AnimationSegmentController(QObject):
             segment_manager=self._segment_manager,
         )
         dialog.set_sprites(segment_frames)
-        dialog.exportRequested.connect(
-            lambda settings: self._handle_segment_export(settings, segment_frames, segment.name)
-        )
+        coordinator = self._export_coordinator
+        if coordinator is not None:
+            dialog.exportRequested.connect(
+                lambda settings: coordinator.handle_export_request(
+                    {**settings, "base_name": f"{settings['base_name']}_{segment.name}"},
+                    frames=segment_frames,
+                )
+            )
 
         dialog.exec()
-
-    def _handle_segment_export(
-        self, settings: dict[str, Any], segment_frames: list, segment_name: str
-    ) -> None:
-        """Handle segment-specific export request."""
-        required = {"output_dir", "base_name", "format", "mode", "scale_factor"}
-        if not segment_frames:
-            self.statusMessage.emit("Export failed: no frames available")
-            return
-        if not required.issubset(settings):
-            missing = required - settings.keys()
-            self.statusMessage.emit(f"Export failed: missing settings {missing}")
-            return
-
-        from export.core.frame_exporter import get_frame_exporter
-
-        get_frame_exporter().export_frames(
-            frames=segment_frames,
-            output_dir=settings["output_dir"],
-            base_name=f"{settings['base_name']}_{segment_name}",
-            format=settings["format"],
-            mode=settings["mode"],
-            scale_factor=settings["scale_factor"],
-            pattern=settings.get("pattern"),
-            sprite_sheet_layout=settings.get("sprite_sheet_layout"),
-        )
 
     # ============================================================================
     # GRID VIEW SYNCHRONIZATION

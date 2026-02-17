@@ -170,9 +170,28 @@ class SignalCoordinator(QObject):
         self._auto_detection_controller.frameSettingsDetected.connect(
             self._on_frame_settings_detected
         )
+        self._auto_detection_controller.marginSettingsDetected.connect(
+            self._on_margin_settings_detected
+        )
+        self._auto_detection_controller.spacingSettingsDetected.connect(
+            self._on_spacing_settings_detected
+        )
+        self._auto_detection_controller.buttonConfidenceUpdate.connect(
+            self._frame_extractor.update_auto_button_confidence
+        )
 
         if self._status_manager is not None:
             self._auto_detection_controller.statusUpdate.connect(self._status_manager.show_message)
+
+    def _on_margin_settings_detected(self, offset_x: int, offset_y: int) -> None:
+        """Update margin spin boxes when auto-detection finds margin values."""
+        self._frame_extractor.offset_x.setValue(offset_x)
+        self._frame_extractor.offset_y.setValue(offset_y)
+
+    def _on_spacing_settings_detected(self, spacing_x: int, spacing_y: int) -> None:
+        """Update spacing spin boxes when auto-detection finds spacing values."""
+        self._frame_extractor.spacing_x.setValue(spacing_x)
+        self._frame_extractor.spacing_y.setValue(spacing_y)
 
     def _connect_canvas_signals(self) -> None:
         """Connect SpriteCanvas signals to handlers."""

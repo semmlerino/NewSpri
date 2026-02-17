@@ -4,7 +4,6 @@ Clean, simple export type selection without clutter.
 """
 
 import logging
-from dataclasses import dataclass
 from typing import Any
 
 from PySide6.QtCore import Qt, Signal
@@ -267,14 +266,3 @@ class ExportTypeStepSimple(WizardStep):
             preset = get_preset(preset_name)
             if preset:
                 self._select_preset(preset)
-
-
-@dataclass
-class EnhancedExportPreset(ExportPreset):
-    """Enhanced export preset with additional metadata."""
-
-    recommended_for: list[str] | None = None
-
-    def __post_init__(self):
-        if self.recommended_for is None:
-            self.recommended_for = []

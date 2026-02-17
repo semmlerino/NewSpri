@@ -12,7 +12,7 @@ import threading
 from collections.abc import Callable
 from pathlib import Path
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import QMenu
 
@@ -31,9 +31,7 @@ class RecentFilesManager(QObject):
     - Welcome screen integration
     """
 
-    # Signals
-    fileRequested = Signal(str)  # Emitted when user selects a recent file
-    menuUpdated = Signal()  # Emitted when menu is updated
+    # Signals (none currently emitted)
 
     def __init__(self, max_display_length: int = 50):
         super().__init__()
@@ -54,32 +52,6 @@ class RecentFilesManager(QObject):
     def set_file_open_callback(self, callback: Callable[[str], None]) -> None:
         """Set the callback function for opening files."""
         self._file_open_callback = callback
-
-    def create_recent_files_menu(self, parent_menu: QMenu) -> QMenu:
-        """
-        Create and return the recent files submenu.
-
-        Args:
-            parent_menu: Parent menu to add the recent files submenu to
-
-        Returns:
-            The created recent files submenu
-        """
-        # Remove existing recent menu if it exists
-        if self._recent_menu:
-            # SIM105: Use contextlib.suppress instead of try/except/pass
-            with contextlib.suppress(RuntimeError):
-                # Menu was already deleted by Qt
-                parent_menu.removeAction(self._recent_menu.menuAction())
-
-        # Create new recent files submenu
-        self._recent_menu = parent_menu.addMenu("Recent Files")
-        self._recent_menu.setToolTip("Recently opened sprite sheets")
-
-        # Initial population
-        self._update_menu()
-
-        return self._recent_menu
 
     def populate_recent_files_directly(self, parent_menu: QMenu) -> None:
         """
@@ -104,7 +76,6 @@ class RecentFilesManager(QObject):
         self._recent_menu.clear()
         self._file_actions.clear()
         self._populate_menu_items(self._recent_menu)
-        self.menuUpdated.emit()
 
     def _populate_menu_items(self, menu: QMenu) -> None:
         """
@@ -216,9 +187,6 @@ class RecentFilesManager(QObject):
             # File doesn't exist, remove from recent files
             self._settings.remove_recent_file(filepath)
             return
-
-        # Emit signal for file opening
-        self.fileRequested.emit(filepath)
 
         # Call callback if available
         if self._file_open_callback:

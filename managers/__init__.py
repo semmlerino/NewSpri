@@ -10,7 +10,6 @@ Contains all singleton manager classes that coordinate application behavior:
 # Import commonly used managers for easy access
 from .animation_segment_manager import (
     AnimationSegment,
-    AnimationSegmentData,  # Backward compat alias
     AnimationSegmentManager,
 )
 from .recent_files_manager import RecentFilesManager, get_recent_files_manager
@@ -18,7 +17,6 @@ from .settings_manager import SettingsManager, get_settings_manager
 
 __all__ = [
     "AnimationSegment",
-    "AnimationSegmentData",  # Backward compat alias
     "AnimationSegmentManager",
     "RecentFilesManager",
     "SettingsManager",

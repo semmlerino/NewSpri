@@ -151,7 +151,7 @@ class ExportCoordinator(QObject):
 
         return True, ""
 
-    def handle_export_request(self, settings: dict[str, Any]) -> None:
+    def handle_export_request(self, settings: dict[str, Any], frames: list | None = None) -> None:
         """
         Handle unified export request from dialog.
 
@@ -165,6 +165,7 @@ class ExportCoordinator(QObject):
                 - format: Export format (png, jpg, etc.)
                 - scale_factor: Scale multiplier
                 - And mode-specific options
+            frames: Optional list of specific frames to export (for segment export)
         """
         # Validate settings before creating progress dialog
         if not self._validate_export_settings(settings):
@@ -192,7 +193,9 @@ class ExportCoordinator(QObject):
 
         # Get frame count for progress dialog
         frame_count = (
-            len(self._sprite_model.sprite_frames) if self._sprite_model.sprite_frames else 0
+            len(frames)
+            if frames is not None
+            else (len(self._sprite_model.sprite_frames) if self._sprite_model.sprite_frames else 0)
         )
 
         # Create and configure progress dialog
@@ -214,7 +217,7 @@ class ExportCoordinator(QObject):
             if mode is ExportMode.SEGMENTS_SHEET:
                 self._export_segments_per_row(settings)
             else:
-                self._export_frames(settings, mode)
+                self._export_frames(settings, mode, frames=frames)
         except Exception:
             # Ensure dialog cleanup even if export method raises unexpected exception
             self._cleanup_progress_dialog()
@@ -224,9 +227,11 @@ class ExportCoordinator(QObject):
     # Export Methods
     # -------------------------------------------------------------------------
 
-    def _export_frames(self, settings: dict[str, Any], mode: ExportMode) -> None:
+    def _export_frames(
+        self, settings: dict[str, Any], mode: ExportMode, frames: list | None = None
+    ) -> None:
         """Handle standard frame export (individual or sheet)."""
-        all_frames = self._sprite_model.sprite_frames
+        all_frames = frames if frames is not None else self._sprite_model.sprite_frames
         frames_to_export = all_frames
         export_mode = mode
         selected_indices = settings.get("selected_indices", [])

@@ -189,7 +189,6 @@ class AnimationGridView(QWidget):
     selectionChanged = Signal(list)  # selected_frame_indices
     segmentCreated = Signal(AnimationSegment)  # new_segment
     segmentDeleted = Signal(str)  # segment_name
-    segmentRenamed = Signal(str, str)  # old_name, new_name (kept for compat)
     segmentRenameRequested = Signal(str, str)  # old_name, new_name (validate-first)
     segmentSelected = Signal(AnimationSegment)  # selected_segment
     segmentPreviewRequested = Signal(AnimationSegment)  # segment_to_preview (double-click)
@@ -685,7 +684,6 @@ class AnimationGridView(QWidget):
             segment.name = new_name
             self._segments[new_name] = segment
             self._update_segment_visualization()
-            self.segmentRenamed.emit(old_name, new_name)
             return True
         return False
 

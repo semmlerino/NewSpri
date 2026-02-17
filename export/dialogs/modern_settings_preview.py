@@ -1260,24 +1260,6 @@ class ModernExportSettings(WizardStep):
         self.rows_spin.setEnabled(mode == "rows")
         self._on_setting_changed()
 
-    def _on_frame_selection_changed(self):
-        """Handle frame selection change."""
-        self._update_selection_info()
-        self._on_setting_changed()
-
-    def _update_selection_info(self):
-        """Update frame selection info."""
-        count = len(self.frame_list.selectedItems())
-        self.selection_info.setText(f"{count} of {self.frame_count} frames selected")
-
-    def _select_all_frames(self):
-        """Select all frames."""
-        self.frame_list.selectAll()
-
-    def _clear_frame_selection(self):
-        """Clear frame selection."""
-        self.frame_list.clearSelection()
-
     def _on_setting_changed(self):
         """Handle any setting change."""
         self._preview_timer.stop()
@@ -1523,8 +1505,3 @@ class ModernExportSettings(WizardStep):
         """Generate display text for a pattern with the given base name."""
         builder = _IndividualSettingsBuilder(self)
         return builder._generate_pattern_display(pattern, base_name)
-
-    def _on_base_name_changed(self, text: str):
-        """Handle base name change - update pattern displays."""
-        builder = _IndividualSettingsBuilder(self)
-        builder._on_base_name_changed(text)

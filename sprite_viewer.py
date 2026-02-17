@@ -65,42 +65,6 @@ from ui import (
 from ui.animation_segment_preview import AnimationSegmentPreview
 
 
-def _validate_sprite_file(file_path: str) -> tuple[bool, str]:
-    """
-    Validate a file for loading as a sprite sheet.
-
-    Args:
-        file_path: Path to validate
-
-    Returns:
-        Tuple of (is_valid, error_message)
-    """
-    if not file_path:
-        return False, "No file path provided"
-
-    if not os.path.exists(file_path):
-        return False, f"File not found: {file_path}"
-
-    if not os.path.isfile(file_path):
-        return False, f"Not a file: {file_path}"
-
-    # Check if file has a supported extension
-    _, ext = os.path.splitext(file_path)
-    if ext.lower() not in Config.File.SUPPORTED_EXTENSIONS:
-        return False, f"Unsupported file format: {ext}"
-
-    # Check file size (100MB max)
-    file_size = os.path.getsize(file_path)
-    max_size = 100 * 1024 * 1024
-    if file_size > max_size:
-        return (
-            False,
-            f"File too large: {file_size / (1024 * 1024):.1f}MB (max {max_size / (1024 * 1024)}MB)",
-        )
-
-    return True, ""
-
-
 def _is_valid_sprite_drop(mime_data: QMimeData) -> bool:
     """
     Check if mime data contains a valid sprite file URL.
@@ -123,8 +87,8 @@ def _is_valid_sprite_drop(mime_data: QMimeData) -> bool:
         return False
 
     file_path = first_url.toLocalFile()
-    is_valid, _ = _validate_sprite_file(file_path)
-    return is_valid
+    _, ext = os.path.splitext(file_path)
+    return ext.lower() in Config.File.SUPPORTED_EXTENSIONS
 
 
 def _extract_file_from_drop(event: QDropEvent) -> str | None:
@@ -256,19 +220,20 @@ class SpriteViewer(QMainWindow):
             frame_extractor=self._frame_extractor,
         )
 
+        # Initialize export coordinator (must be before segment controller)
+        self._export_coordinator = ExportCoordinator(
+            sprite_model=self._sprite_model,
+            segment_manager=self._segment_manager,
+            parent=self,
+        )
+
         self._segment_controller = AnimationSegmentController(
             segment_manager=self._segment_manager,
             grid_view=self._grid_view,
             sprite_model=self._sprite_model,
             tab_widget=self._tab_widget,
             segment_preview=self._segment_preview,
-            parent=self,
-        )
-
-        # Initialize export coordinator
-        self._export_coordinator = ExportCoordinator(
-            sprite_model=self._sprite_model,
-            segment_manager=self._segment_manager,
+            export_coordinator=self._export_coordinator,
             parent=self,
         )
 
@@ -679,12 +644,6 @@ class SpriteViewer(QMainWindow):
         Returns:
             True if loading succeeded
         """
-        # Validate file first
-        is_valid, error_msg = _validate_sprite_file(file_path)
-        if not is_valid:
-            QMessageBox.critical(self, "Load Error", error_msg)
-            return False
-
         # Check if loading a new sprite would clear existing segments
         current_path = self._sprite_model.file_path
         if current_path and current_path != file_path:
@@ -1211,13 +1170,15 @@ class SpriteViewer(QMainWindow):
         if not self._export_coordinator.validate_export():
             return
 
+        current_idx = self._sprite_model.current_frame
+        current_sprite = self._sprite_model.sprite_frames[current_idx]
         dialog = ExportDialog(
             self,
-            frame_count=len(self._sprite_model.sprite_frames),
-            current_frame=self._sprite_model.current_frame,
+            frame_count=1,
+            current_frame=0,
             segment_manager=self._segment_manager,
         )
-        dialog.set_sprites(self._sprite_model.sprite_frames)
+        dialog.set_sprites([current_sprite])
         dialog.exportRequested.connect(self._export_coordinator.handle_export_request)
         dialog.exec()
 

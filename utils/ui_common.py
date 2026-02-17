@@ -23,10 +23,6 @@ class AutoDetectionResult:
     parameters: dict[str, Any] = field(default_factory=dict)
 
 
-# Backward compatibility alias.
-DetectionResult = AutoDetectionResult
-
-
 class AutoButtonManager(QObject):
     """Manages auto-detection button states and styles."""
 

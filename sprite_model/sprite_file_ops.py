@@ -11,6 +11,8 @@ import os
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from config import Config
+
 if TYPE_CHECKING:
     from PySide6.QtGui import QPixmap
 
@@ -45,8 +47,7 @@ class FileValidator:
     Validates file paths, formats, and accessibility.
     """
 
-    # Supported image formats (must match Config.File.SUPPORTED_EXTENSIONS)
-    SUPPORTED_FORMATS = {".png", ".jpg", ".jpeg", ".bmp", ".gif"}
+    SUPPORTED_FORMATS = set(Config.File.SUPPORTED_EXTENSIONS)
 
     def __init__(self):
         """Initialize file validator."""
@@ -124,7 +125,7 @@ class FileValidator:
         Returns:
             Set of supported file extensions (including dots)
         """
-        return self.SUPPORTED_FORMATS.copy()
+        return set(self.SUPPORTED_FORMATS)
 
 
 class MetadataExtractor:

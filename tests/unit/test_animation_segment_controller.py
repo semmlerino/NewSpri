@@ -32,6 +32,9 @@ class TestAnimationSegmentController(unittest.TestCase):
         self.mock_sprite_model = Mock()
         self.mock_tab_widget = Mock()
 
+        # Create mock export coordinator
+        self.mock_export_coordinator = Mock()
+
         # Create controller with all dependencies (constructor DI)
         self.controller = AnimationSegmentController(
             segment_manager=self.segment_manager,
@@ -39,6 +42,7 @@ class TestAnimationSegmentController(unittest.TestCase):
             sprite_model=self.mock_sprite_model,
             tab_widget=self.mock_tab_widget,
             segment_preview=None,  # Not needed for most tests
+            export_coordinator=self.mock_export_coordinator,
         )
     
     # ============================================================================
