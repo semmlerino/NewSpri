@@ -28,9 +28,6 @@ from .sprite_detection import (
 # Import standalone functions that external code expects
 from .sprite_extraction import detect_background_color, detect_sprites_ccl_enhanced
 
-# Import file operations
-from .sprite_file_ops import load_sprite_sheet
-
 # Version info
 __version__ = "2.0.0-refactored"
 __author__ = "Python Sprite Viewer Team"
@@ -45,5 +42,4 @@ __all__ = [
     "detect_margins",
     "detect_spacing",
     "detect_sprites_ccl_enhanced",
-    "load_sprite_sheet",
 ]

@@ -12,8 +12,6 @@ from sprite_model.sprite_animation import AnimationStateManager
 from sprite_model.sprite_ccl import CCLOperations
 from sprite_model.sprite_detection import (
     comprehensive_auto_detect,
-    detect_content_based,
-    detect_frame_size,
     detect_margins,
     detect_rectangular_frames,
     detect_spacing,
@@ -395,56 +393,12 @@ class SpriteModel(QObject):
         return self._ccl_operations.get_ccl_sprite_bounds()
 
     # Auto-Detection Methods
-    def should_auto_detect_size(self) -> bool:
-        """Check if auto-detection should be attempted."""
-        if not self._original_sprite_sheet:
-            return False
-
-        # Simple heuristic: sheets larger than 100x100
-        return (
-            self._original_sprite_sheet.width() > 100 and self._original_sprite_sheet.height() > 100
-        )
-
-    def auto_detect_frame_size(self) -> tuple[bool, int, int, str]:
-        """Auto-detect frame size using detect_frame_size function."""
-        if not self._original_sprite_sheet:
-            return False, 0, 0, "No sprite sheet loaded"
-
-        success, width, height, message = detect_frame_size(self._original_sprite_sheet)
-
-        if success:
-            # Update internal state
-            self._frame_width = width
-            self._frame_height = height
-            self.configurationChanged.emit()
-
-            return True, width, height, message
-        else:
-            return False, 0, 0, message
-
     def auto_detect_rectangular_frames(self) -> tuple[bool, int, int, str]:
         """Auto-detect rectangular frames using detect_rectangular_frames function."""
         if not self._original_sprite_sheet:
             return False, 0, 0, "No sprite sheet loaded"
 
         success, width, height, message = detect_rectangular_frames(self._original_sprite_sheet)
-
-        if success:
-            # Update internal state
-            self._frame_width = width
-            self._frame_height = height
-            self.configurationChanged.emit()
-
-            return True, width, height, message
-        else:
-            return False, 0, 0, message
-
-    def auto_detect_content_based(self) -> tuple[bool, int, int, str]:
-        """Auto-detect content-based frames using detect_content_based function."""
-        if not self._original_sprite_sheet:
-            return False, 0, 0, "No sprite sheet loaded"
-
-        success, width, height, message = detect_content_based(self._original_sprite_sheet)
 
         if success:
             # Update internal state

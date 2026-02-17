@@ -344,33 +344,3 @@ class FileLoader:
             return False, None, {}, "No sprite sheet path provided"
 
         return self.load_sprite_sheet(file_path)
-
-
-# Convenience functions for backwards compatibility
-def load_sprite_sheet(file_path: str) -> tuple[bool, str]:
-    """
-    Convenience function to load and validate a sprite sheet.
-
-    Args:
-        file_path: Path to the sprite sheet file
-
-    Returns:
-        Tuple of (success, error_message)
-    """
-    loader = FileLoader()
-    success, _pixmap, _metadata, error = loader.load_sprite_sheet(file_path)
-    return success, error if not success else ""
-
-
-def validate_file_path(file_path: str) -> tuple[bool, str]:
-    """
-    Convenience function for file path validation.
-
-    Args:
-        file_path: Path to validate
-
-    Returns:
-        Tuple of (is_valid, error_message)
-    """
-    validator = FileValidator()
-    return validator.validate_file_path(file_path)

@@ -19,7 +19,7 @@ from unittest.mock import Mock, patch, MagicMock
 from PySide6.QtGui import QPixmap
 from PySide6.QtCore import Qt
 
-from sprite_model.sprite_file_ops import FileLoader, FileValidator, validate_file_path, MetadataExtractor
+from sprite_model.sprite_file_ops import FileLoader, FileValidator, MetadataExtractor
 
 
 class TestFileValidator:
@@ -208,17 +208,6 @@ class TestFileValidator:
                 assert "Error validating file" in error
                 assert "Simulated error" in error
     
-    def test_convenience_function(self, temp_dir):
-        """Test convenience function for file validation."""
-        # Create a valid test file
-        test_file = temp_dir / "test.png"
-        test_file.write_bytes(b"fake PNG content")
-        
-        is_valid, error = validate_file_path(str(test_file))
-        
-        assert is_valid
-        assert error == ""
-
 
 class TestMetadataExtractor:
     """Test metadata extraction functionality."""

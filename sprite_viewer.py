@@ -290,7 +290,6 @@ class SpriteViewer(QMainWindow):
         """Initialize all centralized managers."""
         # Utility managers (keep using factories - used by dialogs etc.)
         self._settings_manager = get_settings_manager()
-        self._recent_files = get_recent_files_manager()
 
         # Actions storage
         self._actions: dict[str, QAction] = {}
