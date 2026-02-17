@@ -103,7 +103,7 @@ class FileValidator:
 
             return True, ""
 
-        except Exception as e:
+        except OSError as e:
             return False, f"Error validating file: {e!s}"
 
     def _is_supported_format(self, path: Path) -> bool:
@@ -203,7 +203,7 @@ class MetadataExtractor:
                 "sprite_sheet_info": sprite_sheet_info,
             }
 
-        except Exception as e:
+        except OSError as e:
             # Return minimal metadata on error
             return {
                 "file_path": file_path,
@@ -324,7 +324,7 @@ class FileLoader:
 
             return True, pixmap, metadata, ""
 
-        except Exception as e:
+        except OSError as e:
             return False, None, {}, f"Error loading sprite sheet: {e!s}"
 
     def reload_sprite_sheet(self, file_path: str) -> tuple[bool, QPixmap | None, dict, str]:

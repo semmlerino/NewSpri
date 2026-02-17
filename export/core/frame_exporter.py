@@ -797,7 +797,7 @@ class FrameExporter(QObject):
         output_path = Path(output_dir)
         try:
             output_path.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
+        except OSError as e:
             self.exportError.emit(f"Failed to create output directory: {e!s}")
             return False
 

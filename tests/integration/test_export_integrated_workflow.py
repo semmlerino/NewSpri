@@ -48,9 +48,9 @@ class TestIntegratedExportWorkflow:
     def _wait_for_preview_update(self, qtbot, settings_step, timeout=500):
         """Wait for preview debounce timer to complete."""
         # Wait for any pending updates to process
-        if hasattr(settings_step, '_debounce_timer') and settings_step._debounce_timer.isActive():
+        if hasattr(settings_step, '_preview_timer') and settings_step._preview_timer.isActive():
             qtbot.waitUntil(
-                lambda: not settings_step._debounce_timer.isActive(),
+                lambda: not settings_step._preview_timer.isActive(),
                 timeout=timeout
             )
         QApplication.processEvents()

@@ -548,7 +548,7 @@ class AnimationSegmentManager(QObject):
 
             return True, ""
 
-        except Exception as e:
+        except (OSError, TypeError) as e:
             # Clean up temp file if it exists
             if temp_path is not None:
                 # SIM105: Use contextlib.suppress instead of try/except/pass
@@ -610,7 +610,7 @@ class AnimationSegmentManager(QObject):
 
             return True, ""
 
-        except Exception as e:
+        except (OSError, json.JSONDecodeError, ValueError, KeyError) as e:
             return False, f"Failed to load segments: {e!s}"
 
     def _load_segments_for_sprite(self):
