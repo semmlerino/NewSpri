@@ -23,7 +23,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPixmap
 
 from export.core.export_presets import ExportPreset, get_preset, get_all_presets
-from export.core.frame_exporter import ExportMode, LayoutMode, SpriteSheetLayout
+from export.core.frame_exporter import ExportFormat, ExportMode, LayoutMode, SpriteSheetLayout
 from export.dialogs.base.wizard_base import WizardStep, WizardWidget
 from export.dialogs.export_wizard import ExportDialog
 
@@ -434,10 +434,11 @@ class TestExportConfigPreparation:
 
         config = dialog._prepare_export_config(preset, settings)
 
-        assert hasattr(config, 'output_dir')
-        assert hasattr(config, 'format')
-        assert hasattr(config, 'mode')
+        assert config.output_dir == Path('/tmp/export')
+        assert config.format == ExportFormat.PNG
         assert config.mode == ExportMode.INDIVIDUAL_FRAMES
+        assert config.base_name == 'frame'
+        assert config.scale_factor == 1.0
 
     def test_prepare_export_config_sheet_mode(
         self, qapp, sample_sprites: list[QPixmap]
@@ -477,6 +478,8 @@ class TestExportConfigPreparation:
 
         assert config.mode == ExportMode.SPRITE_SHEET
         assert config.sprite_sheet_layout is not None
+        assert config.sprite_sheet_layout.mode == LayoutMode.AUTO
+        assert config.base_name == 'spritesheet'
 
     def test_prepare_export_config_includes_scale_factor(
         self, qapp, sample_sprites: list[QPixmap]
@@ -509,6 +512,81 @@ class TestExportConfigPreparation:
         assert hasattr(config, 'scale_factor')
         assert config.scale_factor == 2.0
 
+    def test_prepare_export_config_selected_frames(
+        self, qapp, sample_sprites: list[QPixmap]
+    ) -> None:
+        """_prepare_export_config should handle selected frames mode."""
+        dialog = ExportDialog(
+            parent=None,
+            frame_count=len(sample_sprites),
+            current_frame=0,
+            sprites=sample_sprites
+        )
+
+        preset = ExportPreset(
+            name="selected",
+            display_name="Selected",
+            icon="🎯",
+            description="Export selected frames",
+            mode=ExportMode.SELECTED_FRAMES,
+            format="PNG",
+            scale=1.0,
+            default_pattern="{base}_{index}",
+            tooltip="Test",
+            use_cases=[]
+        )
+
+        settings = {
+            'output_dir': '/tmp/export',
+            'format': 'PNG',
+            'scale': 1.0,
+            'base_name': 'frame',
+            'selected_indices': [0, 2, 5],
+        }
+
+        config = dialog._prepare_export_config(preset, settings)
+
+        assert config.mode == ExportMode.SELECTED_FRAMES
+        assert config.selected_indices == [0, 2, 5]
+
+    def test_prepare_export_config_current_frame(
+        self, qapp, sample_sprites: list[QPixmap]
+    ) -> None:
+        """_prepare_export_config should handle current-frame mode."""
+        dialog = ExportDialog(
+            parent=None,
+            frame_count=len(sample_sprites),
+            current_frame=3,
+            sprites=sample_sprites
+        )
+
+        preset = ExportPreset(
+            name="current",
+            display_name="Current Frame",
+            icon="🖼",
+            description="Export current frame",
+            mode=ExportMode.INDIVIDUAL_FRAMES,
+            format="PNG",
+            scale=1.0,
+            default_pattern="{base}",
+            tooltip="Test",
+            use_cases=[]
+        )
+
+        settings = {
+            'output_dir': '/tmp/export',
+            'format': 'PNG',
+            'scale': 1.0,
+            'base_name': 'current_frame',
+        }
+
+        config = dialog._prepare_export_config(preset, settings)
+
+        assert config.mode == ExportMode.INDIVIDUAL_FRAMES
+        assert config.base_name == 'current_frame'
+        assert config.sprite_sheet_layout is None
+        assert config.selected_indices is None
+
 
 # ============================================================================
 # Wizard Navigation Tests
@@ -535,7 +613,8 @@ class TestWizardNavigation:
         event = QShowEvent()
         dialog.showEvent(event)
 
-        # Wizard should be at step 0 - verify dialog is ready
+        # Wizard should be at step 0
+        assert dialog.wizard.current_step_index == 0
 
     def test_wizard_back_navigation(self, qapp) -> None:
         """WizardWidget should support back navigation."""
@@ -549,7 +628,7 @@ class TestWizardNavigation:
         wizard.set_current_step(1)
         wizard._on_back()
 
-        # Should navigate back (implementation specific)
+        assert wizard.current_step_index == 0
 
     def test_wizard_next_navigation(self, qapp) -> None:
         """WizardWidget should support next navigation."""
@@ -563,7 +642,7 @@ class TestWizardNavigation:
         wizard.set_current_step(0)
         wizard._on_next()
 
-        # Should navigate to next step
+        assert wizard.current_step_index == 1
 
 
 # ============================================================================
@@ -685,10 +764,14 @@ class TestIntegration:
             sprites=sample_sprites
         )
 
+        # Navigate forward to trigger step_0 data collection
+        dialog.wizard._on_next()
+
         # Get wizard data
         data = dialog.wizard.get_wizard_data()
 
         assert isinstance(data, dict)
+        assert 'step_0' in data
 
     def test_export_requested_signal_type(
         self, qapp, sample_sprites: list[QPixmap]
