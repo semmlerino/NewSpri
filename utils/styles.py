@@ -890,3 +890,201 @@ class StyleManager:
                 border-radius: 8px;
             }}
         """
+
+    # =========================================================================
+    # Migrated from Config.Styles
+    # =========================================================================
+
+    @staticmethod
+    def canvas_normal() -> str:
+        """Normal canvas border and background."""
+        return """
+            QLabel {
+                border: 2px solid #ccc;
+                border-radius: 4px;
+                background-color: #f5f5f5;
+            }
+        """
+
+    @staticmethod
+    def canvas_drag_hover() -> str:
+        """Canvas style when a drag is hovering over it."""
+        return """
+            QLabel {
+                border: 4px dashed #4CAF50;
+                border-radius: 8px;
+                background-color: #e8f5e9;
+            }
+        """
+
+    @staticmethod
+    def play_button_stopped() -> str:
+        """Play button style when animation is stopped."""
+        return """
+            QPushButton {
+                font-size: 14pt;
+                font-weight: bold;
+                background-color: #4CAF50;
+                color: white;
+                border: none;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #45a049;
+            }
+            QPushButton:pressed {
+                background-color: #3d8b40;
+            }
+            QPushButton:disabled {
+                background-color: #cccccc;
+                color: #666666;
+            }
+        """
+
+    @staticmethod
+    def play_button_playing() -> str:
+        """Play button style when animation is playing."""
+        return """
+            QPushButton {
+                font-size: 14pt;
+                font-weight: bold;
+                background-color: #ff9800;
+                color: white;
+                border: none;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #e68900;
+            }
+            QPushButton:pressed {
+                background-color: #cc7a00;
+            }
+        """
+
+    @staticmethod
+    def playback_controls_frame() -> str:
+        """Playback controls container frame."""
+        return """
+            QFrame {
+                background-color: #f8f8f8;
+                border: 1px solid #ddd;
+                border-radius: 6px;
+                padding: 10px;
+            }
+        """
+
+    @staticmethod
+    def frame_extractor_groupbox() -> str:
+        """Frame extractor group box."""
+        return """
+            QGroupBox {
+                font-weight: bold;
+                border: 2px solid #cccccc;
+                border-radius: 5px;
+                margin-top: 10px;
+                padding-top: 10px;
+            }
+            QGroupBox::title {
+                subcontrol-origin: margin;
+                left: 10px;
+                padding: 0 5px 0 5px;
+            }
+        """
+
+    @staticmethod
+    def main_toolbar() -> str:
+        """Main toolbar style."""
+        return """
+            QToolBar {
+                background-color: #f5f5f5;
+                border-bottom: 1px solid #ddd;
+                padding: 5px;
+                spacing: 5px;
+            }
+            QToolButton {
+                background-color: white;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                padding: 5px;
+                margin: 2px;
+            }
+            QToolButton:hover {
+                background-color: #e8e8e8;
+                border-color: #bbb;
+            }
+            QToolButton:pressed {
+                background-color: #ddd;
+            }
+        """
+
+    @staticmethod
+    def info_label() -> str:
+        """Info label style."""
+        return "color: #666; font-size: 10pt;"
+
+    @staticmethod
+    def help_label() -> str:
+        """Help label style."""
+        return "color: #888; font-style: italic; padding: 10px;"
+
+    @staticmethod
+    def speed_label() -> str:
+        """Speed label style."""
+        return "font-weight: bold;"
+
+    @staticmethod
+    def zoom_display() -> str:
+        """Zoom display label style."""
+        return """
+            QLabel {
+                background-color: white;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                padding: 5px;
+                font-weight: bold;
+            }
+        """
+
+    @staticmethod
+    def preset_label() -> str:
+        """Preset mode label style."""
+        return "font-weight: normal; margin-bottom: 5px;"
+
+    @staticmethod
+    def custom_label() -> str:
+        """Custom mode label style."""
+        return "font-weight: normal; margin-top: 10px;"
+
+    @staticmethod
+    def offset_label() -> str:
+        """Offset settings label style."""
+        return "font-weight: normal; margin-top: 10px;"
+
+    @staticmethod
+    def grid_checkbox() -> str:
+        """Grid overlay checkbox style."""
+        return "margin-top: 10px;"
+
+    @staticmethod
+    def navigation_buttons() -> str:
+        """Navigation (prev/next frame) button style."""
+        return """
+            QPushButton {
+                font-size: 12pt;
+                min-width: 28px;
+                min-height: 28px;
+                background-color: #e0e0e0;
+                border: 1px solid #bbb;
+                border-radius: 4px;
+            }
+            QPushButton:hover:enabled {
+                background-color: #d0d0d0;
+            }
+            QPushButton:pressed {
+                background-color: #c0c0c0;
+            }
+            QPushButton:disabled {
+                color: #999;
+                background-color: #f0f0f0;
+            }
+        """

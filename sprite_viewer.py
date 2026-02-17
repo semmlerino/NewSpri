@@ -63,6 +63,7 @@ from ui import (
     StatusBarManager,
 )
 from ui.animation_segment_preview import AnimationSegmentPreview
+from utils.styles import StyleManager
 
 
 def _is_valid_sprite_drop(mime_data: QMimeData) -> bool:
@@ -453,7 +454,7 @@ class SpriteViewer(QMainWindow):
         """Create main toolbar."""
         self._main_toolbar = self.addToolBar("Main Toolbar")
         self._main_toolbar.setMovable(False)
-        self._main_toolbar.setStyleSheet(Config.Styles.MAIN_TOOLBAR)
+        self._main_toolbar.setStyleSheet(StyleManager.main_toolbar())
 
         # Add toolbar actions
         self._main_toolbar.addAction(self._actions["file_open"])
@@ -465,7 +466,7 @@ class SpriteViewer(QMainWindow):
         self._zoom_label = QLabel("100%")
         self._zoom_label.setMinimumWidth(Config.UI.ZOOM_LABEL_MIN_WIDTH)
         self._zoom_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self._zoom_label.setStyleSheet(Config.Styles.ZOOM_DISPLAY)
+        self._zoom_label.setStyleSheet(StyleManager.zoom_display())
         self._main_toolbar.addWidget(self._zoom_label)
 
     def _setup_status_bar(self):
@@ -500,7 +501,7 @@ class SpriteViewer(QMainWindow):
         # Info label at bottom
         self._info_label = QLabel("Ready - Drag and drop a sprite sheet or use File > Open")
         self._info_label.setWordWrap(True)
-        self._info_label.setStyleSheet(Config.Styles.INFO_LABEL)
+        self._info_label.setStyleSheet(StyleManager.info_label())
         main_layout.addWidget(self._info_label)
 
     def _create_canvas_tab(self):
@@ -960,16 +961,16 @@ class SpriteViewer(QMainWindow):
         """Handle drag enter event."""
         if _is_valid_sprite_drop(event.mimeData()):
             event.acceptProposedAction()
-            self._canvas.setStyleSheet(Config.Styles.CANVAS_DRAG_HOVER)
+            self._canvas.setStyleSheet(StyleManager.canvas_drag_hover())
 
     def dragLeaveEvent(self, event):
         """Handle drag leave event."""
-        self._canvas.setStyleSheet(Config.Styles.CANVAS_NORMAL)
+        self._canvas.setStyleSheet(StyleManager.canvas_normal())
         self._show_welcome_message()
 
     def dropEvent(self, event: QDropEvent):
         """Handle drop event."""
-        self._canvas.setStyleSheet(Config.Styles.CANVAS_NORMAL)
+        self._canvas.setStyleSheet(StyleManager.canvas_normal())
         file_path = _extract_file_from_drop(event)
         if file_path:
             self._load_sprite_file(file_path)

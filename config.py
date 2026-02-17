@@ -245,134 +245,6 @@ class UIConfig:
         ]
 
     # ==========================================================================
-    # STYLES (formerly StylesConfig)
-    # ==========================================================================
-
-    class Styles:
-        """CSS stylesheet constants for UI components."""
-
-        # Canvas styles
-        CANVAS_NORMAL = """
-            QLabel {
-                border: 2px solid #ccc;
-                border-radius: 4px;
-                background-color: #f5f5f5;
-            }
-        """
-        CANVAS_DRAG_HOVER = """
-            QLabel {
-                border: 4px dashed #4CAF50;
-                border-radius: 8px;
-                background-color: #e8f5e9;
-            }
-        """
-
-        # Button styles
-        PLAY_BUTTON_STOPPED = """
-            QPushButton {
-                font-size: 14pt;
-                font-weight: bold;
-                background-color: #4CAF50;
-                color: white;
-                border: none;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #45a049;
-            }
-            QPushButton:pressed {
-                background-color: #3d8b40;
-            }
-            QPushButton:disabled {
-                background-color: #cccccc;
-                color: #666666;
-            }
-        """
-        PLAY_BUTTON_PLAYING = """
-            QPushButton {
-                font-size: 14pt;
-                font-weight: bold;
-                background-color: #ff9800;
-                color: white;
-                border: none;
-                border-radius: 4px;
-            }
-            QPushButton:hover {
-                background-color: #e68900;
-            }
-            QPushButton:pressed {
-                background-color: #cc7a00;
-            }
-        """
-
-        # Container styles
-        PLAYBACK_CONTROLS_FRAME = """
-            QFrame {
-                background-color: #f8f8f8;
-                border: 1px solid #ddd;
-                border-radius: 6px;
-                padding: 10px;
-            }
-        """
-        FRAME_EXTRACTOR_GROUPBOX = """
-            QGroupBox {
-                font-weight: bold;
-                border: 2px solid #cccccc;
-                border-radius: 5px;
-                margin-top: 10px;
-                padding-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 5px 0 5px;
-            }
-        """
-        MAIN_TOOLBAR = """
-            QToolBar {
-                background-color: #f5f5f5;
-                border-bottom: 1px solid #ddd;
-                padding: 5px;
-                spacing: 5px;
-            }
-            QToolButton {
-                background-color: white;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                padding: 5px;
-                margin: 2px;
-            }
-            QToolButton:hover {
-                background-color: #e8e8e8;
-                border-color: #bbb;
-            }
-            QToolButton:pressed {
-                background-color: #ddd;
-            }
-        """
-
-        # Label styles
-        INFO_LABEL = "color: #666; font-size: 10pt;"
-        HELP_LABEL = "color: #888; font-style: italic; padding: 10px;"
-        SPEED_LABEL = "font-weight: bold;"
-        ZOOM_DISPLAY = """
-            QLabel {
-                background-color: white;
-                border: 1px solid #ddd;
-                border-radius: 4px;
-                padding: 5px;
-                font-weight: bold;
-            }
-        """
-        PRESET_LABEL = "font-weight: normal; margin-bottom: 5px;"
-        CUSTOM_LABEL = "font-weight: normal; margin-top: 10px;"
-        OFFSET_LABEL = "font-weight: normal; margin-top: 10px;"
-        GRID_CHECKBOX = "margin-top: 10px;"
-
-        # Navigation buttons (uses outer class values - initialized below)
-        NAVIGATION_BUTTONS: str = ""
-
-    # ==========================================================================
     # SLIDER (formerly SliderConfig)
     # ==========================================================================
 
@@ -426,29 +298,6 @@ class UIConfig:
         # Grid overlay
         GRID_PEN_WIDTH = 1
         GRID_COLOR = QColor(255, 0, 0, 128)  # Semi-transparent red
-
-
-# Initialize NAVIGATION_BUTTONS style after class is defined
-UIConfig.Styles.NAVIGATION_BUTTONS = f"""
-    QPushButton {{
-        font-size: 12pt;
-        min-width: {UIConfig.NAV_BUTTON_WIDTH_PX};
-        min-height: {UIConfig.NAV_BUTTON_HEIGHT_PX};
-        background-color: #e0e0e0;
-        border: 1px solid #bbb;
-        border-radius: 4px;
-    }}
-    QPushButton:hover:enabled {{
-        background-color: #d0d0d0;
-    }}
-    QPushButton:pressed {{
-        background-color: #c0c0c0;
-    }}
-    QPushButton:disabled {{
-        color: #999;
-        background-color: #f0f0f0;
-    }}
-"""
 
 
 class AppConfig:
@@ -608,7 +457,6 @@ class Config:
     # Backward compatibility aliases for nested configs
     # These allow existing code using Config.Colors.X to continue working
     Colors = UIConfig.Colors
-    Styles = UIConfig.Styles
     Slider = UIConfig.Slider
     Font = UIConfig.Font
     Drawing = UIConfig.Drawing

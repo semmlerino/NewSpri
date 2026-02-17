@@ -386,7 +386,7 @@ class TestPlaybackControlsStyleAndLayout:
         """Test style sheets are applied to widgets."""
         widget = PlaybackControls()
         
-        # Frame should have style sheet (from Config.Styles)
+        # Frame should have style sheet (from StyleManager)
         assert widget.styleSheet() != ""
         
         # Play button should have style sheet
