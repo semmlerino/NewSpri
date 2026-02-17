@@ -224,9 +224,10 @@ class TestSegmentPreviewIntegration:
         assert "Persistent" in segment_preview._preview_items
         initial_item = segment_preview._preview_items["Persistent"]
         
-        # Refresh grid view
+        # Refresh grid view (mirrors on_tab_changed flow: clear then re-sync)
         segment_controller.update_grid_view_frames()
-        
+        segment_controller.sync_segments_from_manager()
+
         # Segment should still be in preview
         assert "Persistent" in segment_preview._preview_items
         # Note: Item might be recreated during refresh, but should have same properties

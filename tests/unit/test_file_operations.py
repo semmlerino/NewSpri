@@ -197,7 +197,7 @@ class TestFileValidator:
             mock_path.exists.return_value = True
             mock_path.is_file.return_value = True
             mock_path.suffix.lower.return_value = '.png'
-            mock_path.stat.side_effect = Exception("Simulated error")
+            mock_path.stat.side_effect = OSError("Simulated error")
             mock_path_class.return_value = mock_path
             
             # Also mock os.access to return True to avoid early exit
@@ -428,7 +428,7 @@ class TestFileLoader:
         loader = FileLoader()
         
         # Mock validator to raise exception
-        loader.validator.validate_file_path = Mock(side_effect=Exception("Test exception"))
+        loader.validator.validate_file_path = Mock(side_effect=OSError("Test exception"))
         
         success, pixmap, metadata, error = loader.load_sprite_sheet("any_path")
         
