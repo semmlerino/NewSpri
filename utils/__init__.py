@@ -10,7 +10,6 @@ from .sprite_rendering import create_padded_pixmap
 from .ui_common import (
     AutoButtonManager,
     AutoDetectionResult,
-    extract_confidence_from_message,
     parse_detection_tuple,
 )
 
@@ -18,6 +17,5 @@ __all__ = [
     "AutoButtonManager",
     "AutoDetectionResult",
     "create_padded_pixmap",
-    "extract_confidence_from_message",
     "parse_detection_tuple",
 ]

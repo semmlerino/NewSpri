@@ -11,6 +11,7 @@ from sprite_model.extraction_mode import ExtractionMode
 from sprite_model.sprite_animation import AnimationStateManager
 from sprite_model.sprite_ccl import CCLOperations
 from sprite_model.sprite_detection import (
+    DetectionResult,
     comprehensive_auto_detect,
     detect_margins,
     detect_rectangular_frames,
@@ -452,10 +453,12 @@ class SpriteModel(QObject):
         else:
             return False, 0, 0, message
 
-    def comprehensive_auto_detect(self) -> tuple[bool, str]:
+    def comprehensive_auto_detect(self) -> tuple[bool, DetectionResult]:
         """Run comprehensive auto-detection."""
         if not self._original_sprite_sheet:
-            return False, "No sprite sheet loaded"
+            empty_result = DetectionResult()
+            empty_result.messages = ["No sprite sheet loaded"]
+            return False, empty_result
 
         success, message, result = comprehensive_auto_detect(
             self._original_sprite_sheet, self._sprite_sheet_path
@@ -496,14 +499,16 @@ class SpriteModel(QObject):
                 )
 
                 if extract_success:
-                    return True, f"{message}. {extract_msg}"
+                    result.messages.append(extract_msg)
+                    return True, result
                 else:
-                    return False, f"{message}. Extraction failed: {extract_msg}"
+                    result.messages.append(f"Extraction failed: {extract_msg}")
+                    return False, result
             finally:
                 # Always restore original mode
                 self.set_extraction_mode(original_mode)
 
-        return False, message
+        return False, result
 
     # Animation Control Methods (delegate to AnimationStateManager)
     def set_current_frame(self, frame: int) -> bool:

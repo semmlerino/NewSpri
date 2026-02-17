@@ -559,10 +559,6 @@ class ExportConfig:
     # Enhanced Sprite Sheet Layout Configuration
     # ==========================================
 
-    # Layout calculation modes
-    LAYOUT_MODES = ["auto", "rows", "columns", "square", "custom", "segments_per_row"]
-    DEFAULT_LAYOUT_MODE = "auto"
-
     # Spacing and padding settings
     DEFAULT_SPRITE_SPACING = 0  # Pixels between sprites
     MIN_SPRITE_SPACING = 0  # Minimum spacing allowed
@@ -581,8 +577,6 @@ class ExportConfig:
     MAX_GRID_SIZE = 50  # Maximum grid dimension (reasonable limit)
 
     # Background fill options
-    BACKGROUND_MODES = ["transparent", "solid", "checkerboard"]
-    DEFAULT_BACKGROUND_MODE = "transparent"
     DEFAULT_BACKGROUND_COLOR = (255, 255, 255, 255)  # White with full alpha
 
     # Checkerboard pattern settings (for background)

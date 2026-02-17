@@ -202,34 +202,3 @@ def parse_detection_tuple(result_tuple: tuple) -> AutoDetectionResult:
         )
     else:
         raise ValueError(f"Unexpected detection result format: {result_tuple}")
-
-
-def extract_confidence_from_message(message: str) -> str:
-    """Extract confidence level from detection message."""
-    message_lower = message.lower()
-
-    # Check for explicit confidence indicators
-    if "high confidence" in message_lower or "perfect" in message_lower:
-        return "high"
-    elif "medium confidence" in message_lower or "moderate" in message_lower:
-        return "medium"
-    elif "low confidence" in message_lower or "uncertain" in message_lower:
-        return "low"
-    elif "failed" in message_lower or "error" in message_lower:
-        return "failed"
-
-    # Check for percentage confidence
-    import re
-
-    percentage_match = re.search(r"(\d+)%", message)
-    if percentage_match:
-        percentage = int(percentage_match.group(1))
-        if percentage >= 80:
-            return "high"
-        elif percentage >= 50:
-            return "medium"
-        else:
-            return "low"
-
-    # Default to medium if successful message
-    return "medium"

@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import Any
 
-from .frame_exporter import ExportMode, SpriteSheetLayout
+from .frame_exporter import BackgroundMode, ExportMode, LayoutMode, SpriteSheetLayout
 
 
 @dataclass
@@ -14,7 +14,7 @@ class ExportPreset:
     display_name: str
     icon: str  # Unicode emoji or icon identifier
     description: str
-    mode: str  # ExportMode value
+    mode: ExportMode
     format: str
     scale: float
     default_pattern: str
@@ -26,7 +26,7 @@ class ExportPreset:
     def get_settings_dict(self) -> dict[str, Any]:
         """Convert preset to settings dictionary."""
         settings = {
-            "mode": self.mode,
+            "mode": self.mode.value,
             "format": self.format,
             "scale_factor": self.scale,
             "pattern": self.default_pattern,
@@ -44,7 +44,7 @@ PRESETS: dict[str, ExportPreset] = {
         display_name="Individual Frames",
         icon="📁",
         description="Export frames as separate PNG files",
-        mode=ExportMode.INDIVIDUAL_FRAMES.value,
+        mode=ExportMode.INDIVIDUAL_FRAMES,
         format="PNG",
         scale=1.0,
         default_pattern="{name}_{index:03d}",
@@ -64,14 +64,14 @@ PRESETS: dict[str, ExportPreset] = {
         display_name="Sprite Sheet",
         icon="📋",
         description="Combine all frames into a single image",
-        mode=ExportMode.SPRITE_SHEET.value,
+        mode=ExportMode.SPRITE_SHEET,
         format="PNG",
         scale=1.0,
         default_pattern="{name}_sheet",
         tooltip="Ideal for web games, texture atlases, and reducing file count",
         use_cases=["Web games", "Texture atlases", "CSS sprites", "Unity animations"],
         sprite_sheet_layout=SpriteSheetLayout(
-            mode="auto", spacing=0, padding=0, background_mode="transparent"
+            mode=LayoutMode.AUTO, spacing=0, padding=0, background_mode=BackgroundMode.TRANSPARENT
         ),
         short_description="Optimized for game engines",
     ),
@@ -80,7 +80,7 @@ PRESETS: dict[str, ExportPreset] = {
         display_name="Selected Frames",
         icon="🎯",
         description="Export only specific frames you choose",
-        mode=ExportMode.SELECTED_FRAMES.value,
+        mode=ExportMode.SELECTED_FRAMES,
         format="PNG",
         scale=1.0,
         default_pattern="{name}_selected_{index:03d}",
@@ -93,7 +93,7 @@ PRESETS: dict[str, ExportPreset] = {
         display_name="Segments Per Row",
         icon="🎬",
         description="Export sprite sheet with each segment on its own row",
-        mode=ExportMode.SEGMENTS_SHEET.value,
+        mode=ExportMode.SEGMENTS_SHEET,
         format="PNG",
         scale=1.0,
         default_pattern="{name}_segments_sheet",
@@ -105,7 +105,10 @@ PRESETS: dict[str, ExportPreset] = {
             "State-based animations",
         ],
         sprite_sheet_layout=SpriteSheetLayout(
-            mode="segments_per_row", spacing=0, padding=0, background_mode="transparent"
+            mode=LayoutMode.SEGMENTS_PER_ROW,
+            spacing=0,
+            padding=0,
+            background_mode=BackgroundMode.TRANSPARENT,
         ),
         short_description="One row per animation",
     ),
