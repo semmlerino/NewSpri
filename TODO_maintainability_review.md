@@ -10,16 +10,9 @@ Last updated: 2026-02-17
 - **Stale test reference**: Fixed `_debounce_timer` → `_preview_timer` in `test_export_integrated_workflow.py`.
 - **File I/O exception catches narrowed**: `sprite_file_ops.py` (`OSError`), `animation_segment_manager.py` (`OSError`/`JSONDecodeError`/`ValueError`/`KeyError`), `frame_exporter.py` (`OSError`). Remaining broad catches in detection/extraction/controller are intentional boundary catches for complex numpy/PIL operations.
 - **Dead code cleanup**: `animation_segment_widget.py` deleted. Legacy compat layers removed in prior commits. Remaining: 3 test-only settings methods (`save_extraction_settings`, `save_display_settings`, `save_animation_settings`) — low priority.
-
-## Remaining (worth doing)
-
-### 1. Unify styling system
-Two overlapping systems: `Config.Styles` (used in 6 files) and `StyleManager` in `utils/styles.py`, plus inline styles in UI files. Pick one and migrate the other.
-
-### 2. Strengthen shallow export tests
-- `tests/ui/test_export_dialog.py` — assertion-light
-- `tests/unit/test_export_wizard_workflow.py` — tests callability, not outcomes
-- Add behavior tests for current-frame export semantics and `ExportConfig` translation
+- **Styling unified**: Migrated all `Config.Styles` constants to `StyleManager` static methods. Deleted `Config.Styles` class. All styling now flows through `utils/styles.py`.
+- **Export tests strengthened**: Wizard navigation tests verify step index. Config preparation tests verify field values (not just `hasattr`). Added tests for selected-frames and current-frame export modes.
+- **Pre-existing test failures fixed**: `test_segment_creation_workflow` (signal not connected), `test_segment_preview_after_grid_refresh` (missing sync call), `test_file_operations` exception types (matched to narrowed catches).
 
 ## Deferred (not worth the churn for project scale)
 
