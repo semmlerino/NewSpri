@@ -691,19 +691,6 @@ class AnimationGridView(QWidget):
     # PUBLIC SEGMENT MANIPULATION API
     # ============================================================================
 
-    def rename_segment(self, old_name: str, new_name: str) -> bool:
-        """Rename an animation segment.
-
-        Args:
-            old_name: Current name of segment
-            new_name: New name for segment
-
-        Returns:
-            True if renamed successfully, False if old_name not found or new_name exists
-        """
-        # Keep legacy API but delegate to validate-first path.
-        return self.commit_rename(old_name, new_name)
-
     def has_segment(self, segment_name: str) -> bool:
         """
         Check if a segment with the given name exists.

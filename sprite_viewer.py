@@ -865,24 +865,13 @@ class SpriteViewer(QMainWindow):
         self._frame_extractor.set_frame_size(width, height)
         self._update_frame_slicing()
 
-    def _on_extraction_mode_changed(self, mode: ExtractionMode | str):
+    def _on_extraction_mode_changed(self, mode: ExtractionMode):
         """Handle extraction mode change (grid vs CCL)."""
         if not self._sprite_model.original_sprite_sheet:
             return
 
-        # Accept either enum payload (preferred) or legacy string payload.
-        if isinstance(mode, ExtractionMode):
-            mode_enum = mode
-        else:
-            try:
-                mode_enum = ExtractionMode(mode)
-            except ValueError:
-                if self._status_manager is not None:
-                    self._status_manager.show_message(f"Unknown extraction mode: {mode}")
-                return
-
         # Update sprite model extraction mode
-        success = self._sprite_model.set_extraction_mode(mode_enum)
+        success = self._sprite_model.set_extraction_mode(mode)
 
         if not success:
             # Revert UI radio button to current model mode without re-triggering
@@ -901,7 +890,7 @@ class SpriteViewer(QMainWindow):
         self._update_frame_slicing()
 
         # Update status
-        mode_name = "CCL" if mode_enum is ExtractionMode.CCL else "Grid"
+        mode_name = "CCL" if mode is ExtractionMode.CCL else "Grid"
         if self._status_manager is not None:
             self._status_manager.show_message(f"Switched to {mode_name} extraction mode")
 
@@ -1150,34 +1139,25 @@ class SpriteViewer(QMainWindow):
     # ============================================================================
 
     def _on_export_frames_requested(self) -> None:
-        """Show export dialog for exporting frames and animation segments."""
-        if not self._export_coordinator.validate_export():
-            return
-
-        dialog = ExportDialog(
-            self,
-            frame_count=len(self._sprite_model.sprite_frames),
-            current_frame=self._sprite_model.current_frame,
-            segment_manager=self._segment_manager,
-        )
-        dialog.set_sprites(self._sprite_model.sprite_frames)
-        dialog.exportRequested.connect(self._export_coordinator.handle_export_request)
-        dialog.exec()
+        """Show export dialog for exporting all frames and animation segments."""
+        self._show_export_dialog(self._sprite_model.sprite_frames, self._sprite_model.current_frame)
 
     def _on_export_current_frame_requested(self) -> None:
         """Export only the current frame."""
+        current_idx = self._sprite_model.current_frame
+        self._show_export_dialog([self._sprite_model.sprite_frames[current_idx]], 0)
+
+    def _show_export_dialog(self, sprites: list, current_frame: int) -> None:
+        """Show export dialog with the given sprites."""
         if not self._export_coordinator.validate_export():
             return
-
-        current_idx = self._sprite_model.current_frame
-        current_sprite = self._sprite_model.sprite_frames[current_idx]
         dialog = ExportDialog(
             self,
-            frame_count=1,
-            current_frame=0,
+            frame_count=len(sprites),
+            current_frame=current_frame,
             segment_manager=self._segment_manager,
         )
-        dialog.set_sprites([current_sprite])
+        dialog.set_sprites(sprites)
         dialog.exportRequested.connect(self._export_coordinator.handle_export_request)
         dialog.exec()
 

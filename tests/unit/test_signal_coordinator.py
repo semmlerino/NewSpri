@@ -98,7 +98,6 @@ def mock_frame_extractor():
     """Mock FrameExtractor with all required signals and buttons."""
     extractor = MagicMock()
     extractor.settingsChanged = create_mock_signal()
-    extractor.modeChanged = create_mock_signal()
     extractor.modeChangedEnum = create_mock_signal()
 
     # Mock auto-detection buttons

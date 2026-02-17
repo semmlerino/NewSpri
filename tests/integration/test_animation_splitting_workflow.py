@@ -347,9 +347,9 @@ class TestAnimationSplittingErrorHandling:
         # The rename should be rejected or handled gracefully
         # (Implementation depends on specific UI behavior)
         original_count = len(animation_grid.get_segments())
-        
+
         # Simulate renaming attempt
-        animation_grid.rename_segment("Duplicate_Name", "Duplicate_Name")
+        animation_grid.commit_rename("Duplicate_Name", "Duplicate_Name")
         
         # Should still have same number of segments
         assert len(animation_grid.get_segments()) == original_count

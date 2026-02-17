@@ -31,8 +31,7 @@ class FrameExtractor(QGroupBox):
 
     settingsChanged = Signal()
     presetSelected = Signal(int, int)
-    modeChanged = Signal(str)  # "grid" or "ccl"
-    modeChangedEnum = Signal(object)  # ExtractionMode enum (preferred API)
+    modeChangedEnum = Signal(object)  # ExtractionMode enum
 
     def __init__(self):
         super().__init__("Frame Extraction")
@@ -300,7 +299,6 @@ class FrameExtractor(QGroupBox):
                 font-style: italic;
             }}
         """)
-        self.modeChanged.emit(mode.value)
         self.modeChangedEnum.emit(mode)
 
     def _set_grid_controls_enabled(self, enabled: bool):

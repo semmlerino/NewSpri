@@ -184,7 +184,7 @@ class AnimationSegmentController(QObject):
                             isinstance(has_old_segment_result, bool) and has_old_segment_result
                         )
                     if has_old_segment:
-                        self._grid_view.rename_segment(original_name, new_name)
+                        self._grid_view.commit_rename(original_name, new_name)
                     self._sync_segment_to_grid(new_name, fallback_segment=segment)
 
                 # Add to preview panel with new name
