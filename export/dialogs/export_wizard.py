@@ -4,6 +4,7 @@ Simplified two-step wizard with live preview functionality.
 """
 
 import logging
+from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import Signal
@@ -12,7 +13,14 @@ from PySide6.QtWidgets import QDialog, QMessageBox, QVBoxLayout
 
 from config import Config
 
-from ..core.frame_exporter import ExportMode
+from ..core.frame_exporter import (
+    BackgroundMode,
+    ExportConfig,
+    ExportFormat,
+    ExportMode,
+    LayoutMode,
+    SpriteSheetLayout,
+)
 from .base.wizard_base import WizardWidget
 from .modern_settings_preview import ModernExportSettings
 from .type_selection import ExportTypeStepSimple as ExportTypeStep
@@ -27,7 +35,7 @@ class ExportDialog(QDialog):
     """
 
     # Signals
-    exportRequested = Signal(dict)  # Emitted when export is requested (for compatibility)
+    exportRequested = Signal(object)  # Emitted when export is requested
 
     def __init__(
         self,
@@ -111,7 +119,6 @@ class ExportDialog(QDialog):
         """Handle wizard completion - emit export request and close."""
         logger.debug("_on_wizard_finished called")
 
-        # Extract data from wizard steps
         preset = data.get("step_0", {}).get("preset")
         settings = data.get("step_1", {})
 
@@ -119,55 +126,72 @@ class ExportDialog(QDialog):
             QMessageBox.warning(self, "Export Error", "No export type selected.")
             return
 
-        # Prepare export configuration
         export_config = self._prepare_export_config(preset, settings)
-
-        # Include selected_indices for 'selected' mode
-        if preset.mode == ExportMode.SELECTED_FRAMES.value:
-            export_config["selected_indices"] = settings.get("selected_indices", [])
-
-        # Emit exportRequested for coordinator to handle export execution
         self.exportRequested.emit(export_config)
-
-        # Close dialog - coordinator will handle export and show progress
         self.accept()
 
-    def _prepare_export_config(self, preset, settings) -> dict[str, Any]:
-        """Prepare export configuration from settings."""
-        config = {
-            "output_dir": settings.get("output_dir", ""),
-            "format": settings.get("format", "PNG"),
-            "scale": settings.get("scale", 1.0),
-            "scale_factor": settings.get("scale", 1.0),  # Export handler expects scale_factor
-            "pattern": settings.get("pattern", Config.Export.DEFAULT_PATTERN),
-            "quality": settings.get("quality", 95),
-            "background_mode": settings.get("background_mode", "transparent"),
-            "background_color": settings.get("background_color", (255, 255, 255, 255)),
-            "mode": preset.mode,  # Add mode for export handler
-        }
+    def _prepare_export_config(self, preset, settings) -> ExportConfig:
+        """Prepare typed export configuration from wizard settings."""
+        format_str = settings.get("format", "PNG")
+        try:
+            export_format = ExportFormat.from_string(format_str)
+        except (ValueError, KeyError):
+            export_format = ExportFormat.PNG
 
-        # Add base_name for all export types
-        if preset.mode in (ExportMode.SPRITE_SHEET.value, ExportMode.SEGMENTS_SHEET.value):
-            # For sprite sheets, use single_filename as base_name
-            config["base_name"] = settings.get("single_filename", "spritesheet")
-            config.update(
-                {
-                    "layout_mode": settings.get("layout_mode", "auto"),
-                    "columns": settings.get("columns", 8),
-                    "rows": settings.get("rows", 8),
-                    "spacing": settings.get("spacing", 0),
-                    "padding": settings.get("padding", 0),
-                    "single_filename": settings.get("single_filename", "spritesheet"),
-                }
-            )
-            # Special handling for segments per row
-            if preset.mode == ExportMode.SEGMENTS_SHEET.value:
-                config["sprite_sheet_layout"] = preset.sprite_sheet_layout
+        scale = settings.get("scale", 1.0)
+
+        # Build sprite_sheet_layout for sheet modes
+        sprite_sheet_layout = None
+        if preset.mode in (ExportMode.SPRITE_SHEET, ExportMode.SEGMENTS_SHEET):
+            if preset.mode is ExportMode.SEGMENTS_SHEET:
+                sprite_sheet_layout = preset.sprite_sheet_layout
+            else:
+                layout_mode_str = settings.get("layout_mode", "auto")
+                try:
+                    layout_mode = LayoutMode(layout_mode_str)
+                except ValueError:
+                    layout_mode = LayoutMode.AUTO
+
+                bg_mode_str = settings.get("background_mode", "transparent")
+                try:
+                    bg_mode = BackgroundMode(bg_mode_str)
+                except ValueError:
+                    bg_mode = BackgroundMode.TRANSPARENT
+
+                sprite_sheet_layout = SpriteSheetLayout(
+                    mode=layout_mode,
+                    spacing=settings.get("spacing", 0),
+                    padding=settings.get("padding", 0),
+                    max_columns=settings.get("columns", 8) if layout_mode is LayoutMode.ROWS else None,
+                    max_rows=settings.get("rows", 8) if layout_mode is LayoutMode.COLUMNS else None,
+                    custom_columns=settings.get("columns", 8) if layout_mode is LayoutMode.CUSTOM else None,
+                    custom_rows=settings.get("rows", 8) if layout_mode is LayoutMode.CUSTOM else None,
+                    background_mode=bg_mode,
+                    background_color=settings.get("background_color", (255, 255, 255, 255)),
+                )
+
+        # Determine base_name
+        if preset.mode in (ExportMode.SPRITE_SHEET, ExportMode.SEGMENTS_SHEET):
+            base_name = settings.get("single_filename", "spritesheet")
         else:
-            # For individual/selected frames
-            config["base_name"] = settings.get("base_name", "frame")
+            base_name = settings.get("base_name", "frame")
 
-        return config
+        # Get selected indices
+        selected_indices = None
+        if preset.mode is ExportMode.SELECTED_FRAMES:
+            selected_indices = settings.get("selected_indices", [])
+
+        return ExportConfig(
+            output_dir=Path(settings.get("output_dir", "")),
+            base_name=base_name,
+            format=export_format,
+            mode=preset.mode,
+            scale_factor=float(scale),
+            pattern=settings.get("pattern", Config.Export.DEFAULT_PATTERN),
+            preset_name=preset.name,
+            sprite_sheet_layout=sprite_sheet_layout,
+            selected_indices=selected_indices,
+        )
 
     def _center_on_screen(self):
         """Center the dialog on screen."""

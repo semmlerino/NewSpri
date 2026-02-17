@@ -10,6 +10,7 @@ Part of safe refactoring phase to reduce god class responsibilities.
 """
 
 import time
+from dataclasses import replace
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox
@@ -381,8 +382,8 @@ class AnimationSegmentController(QObject):
         coordinator = self._export_coordinator
         if coordinator is not None:
             dialog.exportRequested.connect(
-                lambda settings: coordinator.handle_export_request(
-                    {**settings, "base_name": f"{settings['base_name']}_{segment.name}"},
+                lambda config: coordinator.handle_export_request(
+                    replace(config, base_name=f"{config.base_name}_{segment.name}"),
                     frames=segment_frames,
                 )
             )
