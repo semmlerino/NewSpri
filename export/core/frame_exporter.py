@@ -429,20 +429,24 @@ class ExportWorker(QThread):
 
         if layout.mode is LayoutMode.CUSTOM:
             # Use exact user-specified dimensions (validated in __post_init__)
-            assert layout.custom_columns is not None
-            assert layout.custom_rows is not None
-            cols = layout.custom_columns
-            rows = layout.custom_rows
+            effective_cols = layout.get_effective_columns(frame_count)
+            effective_rows = layout.get_effective_rows(frame_count)
+            assert effective_cols is not None
+            assert effective_rows is not None
+            cols = effective_cols
+            rows = effective_rows
 
         elif layout.mode is LayoutMode.ROWS:
             # Prioritize horizontal layout with max columns constraint
-            max_cols = layout.max_columns or Config.Export.DEFAULT_MAX_COLUMNS
+            max_cols = (
+                layout.get_effective_columns(frame_count) or Config.Export.DEFAULT_MAX_COLUMNS
+            )
             cols = min(max_cols, frame_count)
             rows = math.ceil(frame_count / cols)
 
         elif layout.mode is LayoutMode.COLUMNS:
             # Prioritize vertical layout with max rows constraint
-            max_rows = layout.max_rows or Config.Export.DEFAULT_MAX_ROWS
+            max_rows = layout.get_effective_rows(frame_count) or Config.Export.DEFAULT_MAX_ROWS
             rows = min(max_rows, frame_count)
             cols = math.ceil(frame_count / rows)
 

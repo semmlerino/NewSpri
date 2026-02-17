@@ -611,10 +611,6 @@ class SpriteModel(QObject):
         """Get vertical spacing between frames."""
         return self._spacing_y
 
-    def get_all_frames(self) -> list[QPixmap]:
-        """Get all extracted frames (convenience method for animation splitting)."""
-        return self._sprite_frames
-
     @property
     def original_sprite_sheet(self) -> QPixmap | None:
         """Get original sprite sheet pixmap."""

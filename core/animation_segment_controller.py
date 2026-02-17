@@ -230,7 +230,7 @@ class AnimationSegmentController(QObject):
         """Add segment to preview panel if available and frames exist."""
         if not self._segment_preview or not self._sprite_model:
             return
-        frames = self._sprite_model.get_all_frames()
+        frames = self._sprite_model.sprite_frames
         if not frames:
             return
         if not self._segment_preview.has_frames():
@@ -361,7 +361,7 @@ class AnimationSegmentController(QObject):
             )
             return
 
-        all_frames = self._sprite_model.get_all_frames()
+        all_frames = self._sprite_model.sprite_frames
         segment_frames = self._segment_manager.extract_frames_for_segment(segment.name, all_frames)
 
         if not segment_frames:
@@ -399,7 +399,7 @@ class AnimationSegmentController(QObject):
         if not self._grid_view or not self._sprite_model:
             return
 
-        frames = self._sprite_model.get_all_frames()
+        frames = self._sprite_model.sprite_frames
 
         if frames:
             self._grid_view.set_frames(frames)

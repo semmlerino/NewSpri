@@ -253,23 +253,22 @@ class TestAnimationSegmentController(unittest.TestCase):
         frames = [Mock() for _ in range(10)]
         segment_frames = frames[0:5]
         
-        self.mock_sprite_model.get_all_frames.return_value = frames
-        
+        self.mock_sprite_model.sprite_frames = frames
+
         # Mock segment manager for this test
         mock_segment_manager = Mock()
         mock_segment_manager.extract_frames_for_segment.return_value = segment_frames
         self.controller._segment_manager = mock_segment_manager
-        
+
         # Mock dialog
         mock_dialog = Mock()
         mock_dialog.exec.return_value = 1  # QDialog.Accepted
         mock_dialog_class.return_value = mock_dialog
-        
+
         # Act
         self.controller.export_segment(segment, Mock())
-        
+
         # Assert
-        self.mock_sprite_model.get_all_frames.assert_called_once()
         mock_segment_manager.extract_frames_for_segment.assert_called_once_with(
             "TestSegment", frames
         )
@@ -284,8 +283,8 @@ class TestAnimationSegmentController(unittest.TestCase):
         """Test export with no frames available."""
         # Arrange
         segment = AnimationSegment("TestSegment", 0, 4)
-        self.mock_sprite_model.get_all_frames.return_value = []
-        
+        self.mock_sprite_model.sprite_frames = []
+
         # Mock segment manager for this test
         mock_segment_manager = Mock()
         mock_segment_manager.extract_frames_for_segment.return_value = []
@@ -309,7 +308,7 @@ class TestAnimationSegmentController(unittest.TestCase):
         # Arrange
         with tempfile.NamedTemporaryFile(suffix=".png") as tmp:
             frames = [Mock() for _ in range(5)]
-            self.mock_sprite_model.get_all_frames.return_value = frames
+            self.mock_sprite_model.sprite_frames = frames
             self.mock_sprite_model.file_path = tmp.name
 
             # Act
@@ -323,7 +322,7 @@ class TestAnimationSegmentController(unittest.TestCase):
     def test_update_grid_view_frames_no_frames(self):
         """Test updating grid view with no frames."""
         # Arrange
-        self.mock_sprite_model.get_all_frames.return_value = []
+        self.mock_sprite_model.sprite_frames = []
         self.mock_sprite_model.file_path = ""
 
         # Act
@@ -337,7 +336,7 @@ class TestAnimationSegmentController(unittest.TestCase):
         # Arrange
         with tempfile.NamedTemporaryFile(suffix=".png") as tmp:
             self.mock_sprite_model.file_path = tmp.name
-            self.mock_sprite_model.get_all_frames.return_value = [Mock()]
+            self.mock_sprite_model.sprite_frames = [Mock()]
 
             # Act
             self.controller.on_tab_changed(1)  # Animation splitting tab

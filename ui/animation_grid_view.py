@@ -434,12 +434,9 @@ class AnimationGridView(QWidget):
             # Frame is part of a segment - show segment-specific actions
             segment_menu = menu.addMenu(f"Segment: {segment.name}")
 
-            # Export segment options
-            export_frames_action = segment_menu.addAction("Export as Individual Frames...")
-            export_frames_action.triggered.connect(lambda: self.exportRequested.emit(segment.name))
-
-            export_sheet_action = segment_menu.addAction("Export as Sprite Sheet...")
-            export_sheet_action.triggered.connect(lambda: self.exportRequested.emit(segment.name))
+            # Export segment option
+            export_action = segment_menu.addAction("Export Segment...")
+            export_action.triggered.connect(lambda: self.exportRequested.emit(segment.name))
 
             segment_menu.addSeparator()
 

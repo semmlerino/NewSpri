@@ -83,11 +83,11 @@ class AutoDetectionController(QObject):
             self.statusUpdate.emit(detected_info, 5000)  # 5 seconds
 
             # Update comprehensive button to show success
-            self._update_comprehensive_button_success()
+            self.buttonConfidenceUpdate.emit("comprehensive", "success", "Auto-detection completed")
         else:
             # Auto-detection failed, using defaults
             self.statusUpdate.emit("Auto-detection failed, using default settings", 3000)
-            self._update_comprehensive_button_default()
+            self.buttonConfidenceUpdate.emit("comprehensive", "reset", "")
 
         return True
 
@@ -329,14 +329,6 @@ class AutoDetectionController(QObject):
 
         dialog.setDetailedText("\n".join(result.messages))
         dialog.exec()
-
-    def _update_comprehensive_button_success(self):
-        """Signal to update comprehensive button for success state."""
-        self.buttonConfidenceUpdate.emit("comprehensive", "success", "Auto-detection completed")
-
-    def _update_comprehensive_button_default(self):
-        """Signal to update comprehensive button to default state."""
-        self.buttonConfidenceUpdate.emit("comprehensive", "reset", "")
 
     # ============================================================================
     # PROPERTIES

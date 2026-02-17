@@ -85,7 +85,7 @@ class SimpleExportOption(QFrame):
         super().mousePressEvent(event)
 
 
-class ExportTypeStepSimple(WizardStep):
+class ExportTypeStep(WizardStep):
     """
     Simplified export type selection step.
     Clean, focused interface without clutter.
@@ -111,7 +111,7 @@ class ExportTypeStepSimple(WizardStep):
 
     def _setup_ui(self):
         """Set up the simplified UI."""
-        logger.debug("ExportTypeStepSimple._setup_ui called")
+        logger.debug("ExportTypeStep._setup_ui called")
         logger.debug("Frame count: %d", self.frame_count)
         logger.debug("Segment manager available: %s", self.segment_manager is not None)
 

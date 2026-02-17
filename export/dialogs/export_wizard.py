@@ -23,7 +23,7 @@ from ..core.frame_exporter import (
 )
 from .base.wizard_base import WizardWidget
 from .modern_settings_preview import ModernExportSettings
-from .type_selection import ExportTypeStepSimple as ExportTypeStep
+from .type_selection import ExportTypeStep
 
 logger = logging.getLogger(__name__)
 

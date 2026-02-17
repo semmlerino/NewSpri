@@ -290,14 +290,9 @@ class SegmentPreviewItem(QFrame):
 
         menu = QMenu(self)
 
-        # Export actions
-        export_menu = menu.addMenu("Export Segment")
-
-        export_frames_action = export_menu.addAction("Export as Individual Frames...")
-        export_frames_action.triggered.connect(lambda: self.exportRequested.emit(self.segment_name))
-
-        export_sheet_action = export_menu.addAction("Export as Sprite Sheet...")
-        export_sheet_action.triggered.connect(lambda: self.exportRequested.emit(self.segment_name))
+        # Export action
+        export_action = menu.addAction("Export Segment...")
+        export_action.triggered.connect(lambda: self.exportRequested.emit(self.segment_name))
 
         menu.addSeparator()
 
