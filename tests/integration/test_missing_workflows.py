@@ -126,7 +126,7 @@ class TestSegmentRenameWorkflow:
         grid_view.add_segment(segment2)
         
         # Try to rename to existing name
-        grid_view.rename_segment("Segment1", "Segment2")
+        grid_view.commit_rename("Segment1", "Segment2")
         
         # Original names should be preserved (duplicate rejected)
         assert "Segment1" in grid_view._segments
