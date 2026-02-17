@@ -162,10 +162,16 @@ class ExportDialog(QDialog):
                     mode=layout_mode,
                     spacing=settings.get("spacing", 0),
                     padding=settings.get("padding", 0),
-                    max_columns=settings.get("columns", 8) if layout_mode is LayoutMode.ROWS else None,
+                    max_columns=settings.get("columns", 8)
+                    if layout_mode is LayoutMode.ROWS
+                    else None,
                     max_rows=settings.get("rows", 8) if layout_mode is LayoutMode.COLUMNS else None,
-                    custom_columns=settings.get("columns", 8) if layout_mode is LayoutMode.CUSTOM else None,
-                    custom_rows=settings.get("rows", 8) if layout_mode is LayoutMode.CUSTOM else None,
+                    custom_columns=settings.get("columns", 8)
+                    if layout_mode is LayoutMode.CUSTOM
+                    else None,
+                    custom_rows=settings.get("rows", 8)
+                    if layout_mode is LayoutMode.CUSTOM
+                    else None,
                     background_mode=bg_mode,
                     background_color=settings.get("background_color", (255, 255, 255, 255)),
                 )

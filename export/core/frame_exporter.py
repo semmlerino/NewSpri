@@ -168,7 +168,7 @@ class ExportFormat(Enum):
         return f".{self.value.lower()}"
 
     @classmethod
-    def from_string(cls, format_str: str) -> "ExportFormat":
+    def from_string(cls, format_str: str) -> ExportFormat:
         """Create from string representation."""
         return cls(format_str.upper())
 

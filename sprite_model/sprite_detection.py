@@ -895,12 +895,14 @@ def comprehensive_auto_detect(
             results.append("   → Using default margins (0, 0)")
             confidence_scores.append(0.3)
 
-        result.step_results.append(DetectionStepResult(
-            step_name="margins",
-            success=margin_success,
-            confidence=confidence_scores[-1],
-            description=margin_msg,
-        ))
+        result.step_results.append(
+            DetectionStepResult(
+                step_name="margins",
+                success=margin_success,
+                confidence=confidence_scores[-1],
+                description=margin_msg,
+            )
+        )
 
         # Step 2: Detect optimal frame size with multiple fallback strategies
         results.append("\n🔍 Step 2: Detecting frame size...")
@@ -916,13 +918,15 @@ def comprehensive_auto_detect(
                 result.frame_height = frame_height
                 results.append(f"   ✓ {content_msg}")
                 confidence_scores.append(0.95)  # Content-based detection is very reliable
-                result.step_results.append(DetectionStepResult(
-                    step_name="frame_size",
-                    success=True,
-                    confidence=confidence_scores[-1],
-                    description=content_msg,
-                    fallback_used=False,
-                ))
+                result.step_results.append(
+                    DetectionStepResult(
+                        step_name="frame_size",
+                        success=True,
+                        confidence=confidence_scores[-1],
+                        description=content_msg,
+                        fallback_used=False,
+                    )
+                )
             else:
                 results.append(f"   ⚠ Content-based detection failed: {content_msg}")
                 results.append("   → Falling back to rectangular detection...")
@@ -942,13 +946,15 @@ def comprehensive_auto_detect(
                             confidence_scores.append(0.8)
                         else:
                             confidence_scores.append(0.7)
-                        result.step_results.append(DetectionStepResult(
-                            step_name="frame_size",
-                            success=True,
-                            confidence=confidence_scores[-1],
-                            description=frame_msg,
-                            fallback_used=True,
-                        ))
+                        result.step_results.append(
+                            DetectionStepResult(
+                                step_name="frame_size",
+                                success=True,
+                                confidence=confidence_scores[-1],
+                                description=frame_msg,
+                                fallback_used=True,
+                            )
+                        )
                     else:
                         results.append(f"   ⚠ Rectangular detection failed: {frame_msg}")
                         results.append("   → Falling back to basic square detection...")
@@ -963,57 +969,67 @@ def comprehensive_auto_detect(
                                 result.frame_height = basic_height
                                 results.append(f"   ✓ Basic detection: {basic_msg}")
                                 confidence_scores.append(0.6)
-                                result.step_results.append(DetectionStepResult(
-                                    step_name="frame_size",
-                                    success=True,
-                                    confidence=confidence_scores[-1],
-                                    description=basic_msg,
-                                    fallback_used=True,
-                                ))
+                                result.step_results.append(
+                                    DetectionStepResult(
+                                        step_name="frame_size",
+                                        success=True,
+                                        confidence=confidence_scores[-1],
+                                        description=basic_msg,
+                                        fallback_used=True,
+                                    )
+                                )
                             else:
                                 results.append(f"   ✗ All frame detection failed: {basic_msg}")
                                 overall_success = False
                                 confidence_scores.append(0.1)
-                                result.step_results.append(DetectionStepResult(
-                                    step_name="frame_size",
-                                    success=False,
-                                    confidence=confidence_scores[-1],
-                                    description=basic_msg,
-                                    fallback_used=True,
-                                ))
+                                result.step_results.append(
+                                    DetectionStepResult(
+                                        step_name="frame_size",
+                                        success=False,
+                                        confidence=confidence_scores[-1],
+                                        description=basic_msg,
+                                        fallback_used=True,
+                                    )
+                                )
                         except Exception as e:
                             results.append(f"   ✗ Basic detection error: {e!s}")
                             overall_success = False
                             confidence_scores.append(0.1)
-                            result.step_results.append(DetectionStepResult(
-                                step_name="frame_size",
-                                success=False,
-                                confidence=confidence_scores[-1],
-                                description=str(e),
-                                fallback_used=True,
-                            ))
+                            result.step_results.append(
+                                DetectionStepResult(
+                                    step_name="frame_size",
+                                    success=False,
+                                    confidence=confidence_scores[-1],
+                                    description=str(e),
+                                    fallback_used=True,
+                                )
+                            )
                 except Exception as e:
                     results.append(f"   ✗ Rectangular detection error: {e!s}")
                     overall_success = False
                     confidence_scores.append(0.1)
-                    result.step_results.append(DetectionStepResult(
-                        step_name="frame_size",
-                        success=False,
-                        confidence=confidence_scores[-1],
-                        description=str(e),
-                        fallback_used=True,
-                    ))
+                    result.step_results.append(
+                        DetectionStepResult(
+                            step_name="frame_size",
+                            success=False,
+                            confidence=confidence_scores[-1],
+                            description=str(e),
+                            fallback_used=True,
+                        )
+                    )
         except Exception as e:
             results.append(f"   ✗ Content-based detection error: {e!s}")
             overall_success = False
             confidence_scores.append(0.1)
-            result.step_results.append(DetectionStepResult(
-                step_name="frame_size",
-                success=False,
-                confidence=confidence_scores[-1],
-                description=str(e),
-                fallback_used=True,
-            ))
+            result.step_results.append(
+                DetectionStepResult(
+                    step_name="frame_size",
+                    success=False,
+                    confidence=confidence_scores[-1],
+                    description=str(e),
+                    fallback_used=True,
+                )
+            )
 
         # Step 3: Detect spacing (only if frame size detection succeeded)
         if result.frame_width > 0 and result.frame_height > 0:
@@ -1039,45 +1055,53 @@ def comprehensive_auto_detect(
                         confidence_scores.append(0.7)
                     else:
                         confidence_scores.append(0.5)
-                    result.step_results.append(DetectionStepResult(
-                        step_name="spacing",
-                        success=True,
-                        confidence=confidence_scores[-1],
-                        description=spacing_msg,
-                    ))
+                    result.step_results.append(
+                        DetectionStepResult(
+                            step_name="spacing",
+                            success=True,
+                            confidence=confidence_scores[-1],
+                            description=spacing_msg,
+                        )
+                    )
                 else:
                     results.append(f"   ⚠ Spacing detection failed: {spacing_msg}")
                     results.append("   → Using default spacing (0, 0)")
                     result.spacing_x = 0
                     result.spacing_y = 0
                     confidence_scores.append(0.3)
-                    result.step_results.append(DetectionStepResult(
-                        step_name="spacing",
-                        success=False,
-                        confidence=confidence_scores[-1],
-                        description=spacing_msg,
-                    ))
+                    result.step_results.append(
+                        DetectionStepResult(
+                            step_name="spacing",
+                            success=False,
+                            confidence=confidence_scores[-1],
+                            description=spacing_msg,
+                        )
+                    )
             except Exception as e:
                 results.append(f"   ✗ Spacing detection error: {e!s}")
                 results.append("   → Using default spacing (0, 0)")
                 result.spacing_x = 0
                 result.spacing_y = 0
                 confidence_scores.append(0.2)
-                result.step_results.append(DetectionStepResult(
-                    step_name="spacing",
-                    success=False,
-                    confidence=confidence_scores[-1],
-                    description=str(e),
-                ))
+                result.step_results.append(
+                    DetectionStepResult(
+                        step_name="spacing",
+                        success=False,
+                        confidence=confidence_scores[-1],
+                        description=str(e),
+                    )
+                )
         else:
             results.append("\n⚠ Step 3: Skipped spacing detection (no valid frame size)")
             confidence_scores.append(0.1)
-            result.step_results.append(DetectionStepResult(
-                step_name="spacing",
-                success=False,
-                confidence=0.1,
-                description="Skipped - no valid frame size",
-            ))
+            result.step_results.append(
+                DetectionStepResult(
+                    step_name="spacing",
+                    success=False,
+                    confidence=0.1,
+                    description="Skipped - no valid frame size",
+                )
+            )
 
         # Step 4: Cross-validation and final verification
         results.append("\n🔍 Step 4: Cross-validation...")
@@ -1092,21 +1116,25 @@ def comprehensive_auto_detect(
             else:
                 results.append(f"   ⚠ {validation_msg}")
                 confidence_scores.append(0.4)
-            result.step_results.append(DetectionStepResult(
-                step_name="cross_validation",
-                success=validation_success,
-                confidence=confidence_scores[-1],
-                description=validation_msg,
-            ))
+            result.step_results.append(
+                DetectionStepResult(
+                    step_name="cross_validation",
+                    success=validation_success,
+                    confidence=confidence_scores[-1],
+                    description=validation_msg,
+                )
+            )
         except Exception as e:
             results.append(f"   ✗ Validation error: {e!s}")
             confidence_scores.append(0.3)
-            result.step_results.append(DetectionStepResult(
-                step_name="cross_validation",
-                success=False,
-                confidence=confidence_scores[-1],
-                description=str(e),
-            ))
+            result.step_results.append(
+                DetectionStepResult(
+                    step_name="cross_validation",
+                    success=False,
+                    confidence=confidence_scores[-1],
+                    description=str(e),
+                )
+            )
 
         # Step 5: Calculate overall confidence and summary
         overall_confidence = (

@@ -460,7 +460,7 @@ class SpriteModel(QObject):
             empty_result.messages = ["No sprite sheet loaded"]
             return False, empty_result
 
-        success, message, result = comprehensive_auto_detect(
+        success, _message, result = comprehensive_auto_detect(
             self._original_sprite_sheet, self._sprite_sheet_path
         )
 
