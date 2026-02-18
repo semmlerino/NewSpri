@@ -50,7 +50,7 @@ class CCLOperations:
 
     def extract_ccl_frames(
         self,
-        sprite_sheet: QPixmap,
+        sprite_sheet: QPixmap | None,
         sprite_sheet_path: str,
         ccl_available: bool,
         detect_sprites_ccl_enhanced: Callable[[str], dict | None],

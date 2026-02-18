@@ -178,14 +178,14 @@ class AnimationController(QObject):
     # TIMING CONFIGURATION
     # ============================================================================
 
-    def set_fps(self, fps: int) -> bool:
+    def set_fps(self, fps: int | float) -> bool:
         """
         Set animation frame rate with validation.
         Updates timer interval if currently playing.
         Returns success status.
         """
-        # Validate input type
-        if fps is None or not isinstance(fps, (int, float)):
+        # Validate input type — defensive for untyped callers (Qt signals, etc.)
+        if fps is None or not isinstance(fps, (int, float)):  # pyright: ignore[reportUnnecessaryComparison,reportUnnecessaryIsInstance]
             self.errorOccurred.emit(f"FPS must be a number, received: {type(fps).__name__}")
             return False
 

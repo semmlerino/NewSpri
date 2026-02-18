@@ -377,7 +377,6 @@ class TestMultiWindowWorkflow:
 
         # Test settings dialog - skip if not implemented
         # Settings dialog might not exist in current implementation
-        pass
 
         # Test opening export dialog
         # Export dialog can be created directly

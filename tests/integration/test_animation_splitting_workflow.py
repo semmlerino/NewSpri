@@ -379,7 +379,7 @@ class TestAnimationSplittingPerformance:
         assert len(animation_grid._thumbnails) == large_frame_count
 
         # Test selection on large dataset
-        animation_grid._selected_frames.update(range(0, 50))  # Select first 50 frames
+        animation_grid._selected_frames.update(range(50))  # Select first 50 frames
         animation_grid._update_selection_display()
 
         # Should handle large selections without performance issues

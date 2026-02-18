@@ -21,12 +21,12 @@ try:
 
     PYSIDE6_AVAILABLE = True
     if not TYPE_CHECKING:
-        QPixmap = _QPixmapRuntime  # type: ignore[misc]
+        QPixmap = _QPixmapRuntime
 except ImportError:
     PYSIDE6_AVAILABLE = False
     if not TYPE_CHECKING:
         # Minimal QPixmap stub for when PySide6 unavailable
-        class QPixmap:  # type: ignore[no-redef]
+        class QPixmap:
             def __init__(self, *args):
                 self._null = True
 
@@ -51,7 +51,6 @@ class FileValidator:
 
     def __init__(self):
         """Initialize file validator."""
-        pass
 
     def validate_file_path(self, file_path: str) -> tuple[bool, str]:
         """
@@ -138,7 +137,6 @@ class MetadataExtractor:
 
     def __init__(self):
         """Initialize metadata extractor."""
-        pass
 
     def extract_file_metadata(self, file_path: str, pixmap: QPixmap) -> dict[str, Any]:
         """

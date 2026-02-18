@@ -393,7 +393,7 @@ class TestRecoveryScenarios:
         frames = [Mock(), Mock(), Mock()]
         model.sprite_frames = frames
         # Configure the mock to return proper boolean for empty check
-        model.configure_mock(**{"sprite_frames": frames})
+        model.configure_mock(sprite_frames=frames)
 
         # Add required model properties
         model.fps = 30

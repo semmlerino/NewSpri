@@ -201,12 +201,12 @@ def test_signal_documentation():
         (ExportDialog, ["exportRequested"]),  # Should have this signal
     ]
 
-    missing_docs = []
-
-    for component_class, expected_signals in components:
-        for signal_name in expected_signals:
-            if not hasattr(component_class, signal_name):
-                missing_docs.append(f"{component_class.__name__}.{signal_name}")
+    missing_docs = [
+        f"{component_class.__name__}.{signal_name}"
+        for component_class, expected_signals in components
+        for signal_name in expected_signals
+        if not hasattr(component_class, signal_name)
+    ]
 
     # This helps identify missing signals
     if missing_docs:

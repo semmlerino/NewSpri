@@ -781,8 +781,10 @@ class _PreviewGenerator:
             and self._parent._current_preset.mode is ExportMode.SELECTED_FRAMES
             and "frame_list" in self._parent._settings_widgets
         ):
-            for item in self._parent._settings_widgets["frame_list"].selectedItems():
-                selected_indices.append(item.data(Qt.ItemDataRole.UserRole))
+            selected_indices.extend(
+                item.data(Qt.ItemDataRole.UserRole)
+                for item in self._parent._settings_widgets["frame_list"].selectedItems()
+            )
         else:
             selected_indices = list(range(len(self._parent._sprites)))
 
@@ -851,7 +853,6 @@ class ModernExportSettings(WizardStep):
 
         # Declare dynamic widget attributes (set by helper builders during _setup_for_preset)
         # These are typed without None since they're always set before use
-        # pyright: ignore[reportUninitializedInstanceVariable]
         self.sheet_filename: QLineEdit
         self.layout_tabs: QTabWidget
         self.manual_controls: QWidget
@@ -1314,9 +1315,9 @@ class ModernExportSettings(WizardStep):
             parts.append(f"📁 {output}")
 
         # Format and scale
-        format = self.format_combo.currentText()
+        fmt = self.format_combo.currentText()
         scale = self.scale_group.checkedId() if self.scale_group.checkedButton() else 1
-        parts.append(f"{format} @ {scale}x")
+        parts.append(f"{fmt} @ {scale}x")
 
         # Mode specific
         if self._current_preset:
@@ -1324,7 +1325,7 @@ class ModernExportSettings(WizardStep):
                 w = self._settings_widgets.get("sheet_filename")
                 filename = w.text() if w is not None else ""
                 if filename:
-                    parts.append(f"→ {filename}.{format.lower()}")
+                    parts.append(f"→ {filename}.{fmt.lower()}")
             elif self._current_preset.mode is ExportMode.SELECTED_FRAMES:
                 count = len(self.frame_list.selectedItems()) if hasattr(self, "frame_list") else 0
                 parts.append(f"({count} frames)")
@@ -1445,8 +1446,10 @@ class ModernExportSettings(WizardStep):
                 # Selected frames
                 selected_indices = []
                 if hasattr(self, "frame_list"):
-                    for item in self.frame_list.selectedItems():
-                        selected_indices.append(item.data(Qt.ItemDataRole.UserRole))
+                    selected_indices.extend(
+                        item.data(Qt.ItemDataRole.UserRole)
+                        for item in self.frame_list.selectedItems()
+                    )
                 data["selected_indices"] = selected_indices
 
                 # Get base name with proper fallback

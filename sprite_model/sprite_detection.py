@@ -696,7 +696,7 @@ def _detect_horizontal_spacing(
     best_score_x = 0
     alpha_threshold = Config.FrameExtraction.MARGIN_DETECTION_ALPHA_THRESHOLD
 
-    for test_spacing in range(0, 11):
+    for test_spacing in range(11):
         score = 0
         positions_checked = 0
 
@@ -781,7 +781,7 @@ def _detect_vertical_spacing(
     best_score_y = 0
     alpha_threshold = Config.FrameExtraction.MARGIN_DETECTION_ALPHA_THRESHOLD
 
-    for test_spacing in range(0, 11):
+    for test_spacing in range(11):
         score = 0
         positions_checked = 0
 

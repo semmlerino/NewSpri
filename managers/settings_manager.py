@@ -186,10 +186,7 @@ class SettingsManager(QObject):
 
     def cleanup_recent_files(self) -> None:
         """Remove non-existent files from recent files list."""
-        valid_files = []
-        for filepath in self._recent_files:
-            if Path(filepath).exists():
-                valid_files.append(filepath)
+        valid_files = [f for f in self._recent_files if Path(f).exists()]
 
         if len(valid_files) != len(self._recent_files):
             self._recent_files = valid_files

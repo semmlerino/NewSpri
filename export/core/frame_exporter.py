@@ -100,9 +100,10 @@ class SpriteSheetLayout:
                     f"Custom rows must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}"
                 )
 
-        # Validate background color (RGBA tuple)
+        # Validate background color (RGBA tuple) — isinstance is defensive for runtime callers
         if not (
-            isinstance(self.background_color, (tuple, list)) and len(self.background_color) == 4
+            isinstance(self.background_color, (tuple, list))  # pyright: ignore[reportUnnecessaryIsInstance]
+            and len(self.background_color) == 4
         ):
             raise ValueError("Background color must be an RGBA tuple with 4 values")
         for value in self.background_color:

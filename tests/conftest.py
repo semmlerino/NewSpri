@@ -577,10 +577,7 @@ def real_signal_tester(qapp):
             if not spy:
                 return []
 
-            emissions = []
-            for i in range(spy.count()):
-                emissions.append(self.get_signal_args(name, i))
-            return emissions
+            return [self.get_signal_args(name, i) for i in range(spy.count())]
 
         def wait_for_signal(self, name, timeout=1000):
             """Wait for signal emission and return success."""
@@ -1249,20 +1246,18 @@ def menu_test_helper(qapp):
             for menu_action in menubar.actions():
                 menu = menu_action.menu()
                 if menu:
-                    actions = []
-                    for action in menu.actions():
-                        if not action.isSeparator():
-                            actions.append(
-                                {
-                                    "text": action.text(),
-                                    "shortcut": action.shortcut().toString()
-                                    if hasattr(action, "shortcut")
-                                    else "",
-                                    "checkable": action.isCheckable(),
-                                    "has_submenu": action.menu() is not None,
-                                }
-                            )
-                    structure[menu_action.text()] = actions
+                    structure[menu_action.text()] = [
+                        {
+                            "text": action.text(),
+                            "shortcut": action.shortcut().toString()
+                            if hasattr(action, "shortcut")
+                            else "",
+                            "checkable": action.isCheckable(),
+                            "has_submenu": action.menu() is not None,
+                        }
+                        for action in menu.actions()
+                        if not action.isSeparator()
+                    ]
             return structure
 
     return MenuTestHelper(qapp)

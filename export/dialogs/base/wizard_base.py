@@ -52,11 +52,9 @@ class WizardStep(QWidget):
 
     def on_entering(self):
         """Called when entering this step. Override for setup."""
-        pass
 
     def on_leaving(self):
         """Called when leaving this step. Override for cleanup."""
-        pass
 
 
 class WizardWidget(QWidget):

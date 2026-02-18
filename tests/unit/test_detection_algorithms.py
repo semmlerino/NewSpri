@@ -459,21 +459,21 @@ class TestSpacingDetector:
         spacing = 2
 
         # Frame 1: x=0-19
-        for x in range(0, frame_width):
-            for y in range(0, 30):
+        for x in range(frame_width):
+            for y in range(30):
                 image.setPixel(x, y, 0xFF000000)
 
         # Gap: x=20-21 (2px)
         # Frame 2: x=22-41
         for x in range(frame_width + spacing, (frame_width + spacing) + frame_width):
-            for y in range(0, 30):
+            for y in range(30):
                 image.setPixel(x, y, 0xFF000000)
 
         # Frame 3: x=44-63
         for x in range(
             (frame_width + spacing) * 2 + frame_width, (frame_width + spacing) * 2 + frame_width * 2
         ):
-            for y in range(0, 30):
+            for y in range(30):
                 if x < 100:  # Stay within bounds
                     image.setPixel(x, y, 0xFF000000)
 
@@ -495,18 +495,18 @@ class TestSpacingDetector:
         spacing = 2
 
         # Frame 1: y=0-19
-        for x in range(0, 30):
-            for y in range(0, frame_height):
+        for x in range(30):
+            for y in range(frame_height):
                 image.setPixel(x, y, 0xFF000000)
 
         # Gap: y=20-21 (2px)
         # Frame 2: y=22-41
-        for x in range(0, 30):
+        for x in range(30):
             for y in range(frame_height + spacing, (frame_height + spacing) + frame_height):
                 image.setPixel(x, y, 0xFF000000)
 
         # Frame 3: y=44-63
-        for x in range(0, 30):
+        for x in range(30):
             for y in range(
                 (frame_height + spacing) * 2 + frame_height,
                 (frame_height + spacing) * 2 + frame_height * 2,

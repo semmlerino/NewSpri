@@ -248,7 +248,7 @@ class TestCCLDetectionFailures:
         # but frame count would be 0, so let's verify behavior
         # The implementation behavior: empty bounds means no frames extracted
         # which may or may not be considered "success" - document actual behavior
-        pass  # Actual behavior depends on implementation
+        # Actual behavior depends on implementation
 
 
 # ============================================================================
