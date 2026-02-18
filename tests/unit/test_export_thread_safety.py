@@ -164,11 +164,6 @@ class TestExportWorkerCancellation:
 class TestConcurrentExportPrevention:
     """Tests for preventing concurrent exports."""
 
-    def test_is_exporting_initially_false(self, qapp) -> None:
-        """Exporter should not be exporting initially."""
-        exporter = get_frame_exporter()
-        assert exporter.is_exporting() is False
-
     def test_export_sets_exporting_state(
         self, qapp, sample_pixmaps: list[QPixmap], export_dir: Path
     ) -> None:

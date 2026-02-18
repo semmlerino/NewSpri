@@ -248,7 +248,7 @@ class AnimationSegmentController(QObject):
         # Guard: manager emits segmentRemoved during rename which would delete from grid
         self._renaming = True
         try:
-            success, error = self._segment_manager.rename_segment(old_name, new_name)
+            success, error = self._segment_manager.update_segment(old_name, new_name=new_name)
         finally:
             self._renaming = False
 

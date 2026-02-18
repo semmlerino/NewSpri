@@ -478,5 +478,5 @@ class TestEdgeCases:
         animation_controller.start_animation()
 
         # The model handles loop logic, controller just passes it through
-        assert animation_controller.loop_enabled is False
+        assert animation_controller._loop_enabled is False
 

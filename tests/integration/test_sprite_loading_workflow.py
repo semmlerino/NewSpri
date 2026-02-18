@@ -77,34 +77,6 @@ class TestSpriteLoadingWorkflow:
         assert animation_controller._is_playing
     
     @pytest.mark.integration
-    def test_auto_detection_workflow(self, qapp, sample_sprite_paths):
-        """Test auto-detection workflow integration."""
-        sprite_model = SpriteModel()
-
-        # Mock frame extractor for auto-detection (single-step constructor DI)
-        mock_frame_extractor = Mock()
-        auto_detection_controller = AutoDetectionController(
-            sprite_model=sprite_model,
-            frame_extractor=mock_frame_extractor,
-        )
-
-        # Load a sprite sheet
-        test_path = sample_sprite_paths.get("archer_idle")
-        if test_path and test_path.exists():
-            success, _ = sprite_model.load_sprite_sheet(str(test_path))
-            assert success
-
-            # Trigger auto-detection - may or may not find valid settings
-            detection_result = auto_detection_controller.handle_new_sprite_sheet_loaded()
-
-            # Verify detection returned a boolean result
-            assert isinstance(detection_result, bool)
-
-            # If detection succeeded, verify frame settings look reasonable
-            if detection_result and sprite_model._frame_width > 0:
-                assert sprite_model._frame_height > 0
-    
-    @pytest.mark.integration
     @pytest.mark.slow
     def test_large_sprite_sheet_handling(self, qapp):
         """Test handling of large sprite sheets."""
@@ -259,29 +231,6 @@ class TestComponentInteraction:
         assert not animation_controller._is_playing
     
     @pytest.mark.integration
-    def test_detection_model_interaction(self, qapp):
-        """Test interaction between detection controller and sprite model."""
-        sprite_model = SpriteModel()
-
-        # Mock frame extractor (single-step constructor DI)
-        mock_frame_extractor = Mock()
-        auto_detection_controller = AutoDetectionController(
-            sprite_model=sprite_model,
-            frame_extractor=mock_frame_extractor,
-        )
-        
-        # Load test sprite
-        test_pixmap = QPixmap(256, 256)
-        test_pixmap.fill()
-        sprite_model._original_sprite_sheet = test_pixmap
-        
-        # Trigger detection workflow
-        success = auto_detection_controller.handle_new_sprite_sheet_loaded()
-        
-        # Verify interaction completed
-        assert isinstance(success, bool)  # Should return boolean result
-    
-    @pytest.mark.integration
     def test_full_component_stack_interaction(self, qapp, mock_pixmap):
         """Test full component stack working together."""
         # Create all components
@@ -365,7 +314,7 @@ class TestRealComponentIntegration:
         
         # Test animation is actually running
         assert real_sprite_system.animation_controller.is_playing
-        assert real_sprite_system.animation_controller.is_active
+        assert real_sprite_system.animation_controller._is_active
     
     @pytest.mark.integration
     def test_real_image_processing_workflow(self, real_sprite_system, real_image_factory):

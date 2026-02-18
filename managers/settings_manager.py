@@ -12,7 +12,7 @@ from pathlib import Path
 from typing import Any
 
 from PySide6.QtCore import QByteArray, QObject, QSettings, QTimer, Signal
-from PySide6.QtWidgets import QMainWindow, QSplitter
+from PySide6.QtWidgets import QMainWindow
 
 from config import Config
 
@@ -139,24 +139,6 @@ class SettingsManager(QObject):
             restored = True
 
         return restored
-
-    def save_splitter_state(self, splitter: QSplitter, key: str = "window/splitter_state") -> None:
-        """Save splitter state."""
-        self.set_value(key, splitter.saveState())
-
-    def restore_splitter_state(
-        self, splitter: QSplitter, key: str = "window/splitter_state"
-    ) -> bool:
-        """
-        Restore splitter state.
-
-        Returns:
-            True if state was restored, False otherwise
-        """
-        state = self.get_value(key)
-        if state and isinstance(state, QByteArray):
-            return splitter.restoreState(state)
-        return False
 
     # Recent files management
     def add_recent_file(self, filepath: str) -> None:

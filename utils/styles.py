@@ -951,11 +951,6 @@ class StyleManager:
         return f"color: {cls.Colors.TEXT_MUTED}; font-size: 10pt;"
 
     @classmethod
-    def help_label(cls) -> str:
-        """Help label style."""
-        return "color: #888; font-style: italic; padding: 10px;"
-
-    @classmethod
     def speed_label(cls) -> str:
         """Speed label style."""
         return "font-weight: bold;"

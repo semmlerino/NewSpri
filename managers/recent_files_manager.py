@@ -186,14 +186,6 @@ class RecentFilesManager(QObject):
         """
         self._settings.add_recent_file(filepath)
 
-    def get_recent_files_count(self) -> int:
-        """Get the number of recent files."""
-        return len(self._settings.get_recent_files())
-
-    def has_recent_files(self) -> bool:
-        """Check if there are any recent files."""
-        return self.get_recent_files_count() > 0
-
 
 # Singleton implementation (thread-safe double-checked locking)
 _recent_files_instance: RecentFilesManager | None = None

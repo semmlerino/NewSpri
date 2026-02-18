@@ -22,7 +22,7 @@ import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPixmap
 
-from export.core.export_presets import ExportPreset, get_preset, get_all_presets
+from export.core.export_presets import ExportPreset, get_preset
 from export.core.frame_exporter import ExportFormat, ExportMode, LayoutMode, SpriteSheetLayout
 from export.dialogs.base.wizard_base import WizardStep, WizardWidget
 from export.dialogs.export_wizard import ExportDialog
@@ -217,73 +217,6 @@ class TestExportPreset:
         assert preset.display_name == "Test Preset"
         assert preset.mode == ExportMode.INDIVIDUAL_FRAMES
         assert preset.format == "PNG"
-
-    def test_export_preset_get_settings_dict(self, qapp) -> None:
-        """ExportPreset get_settings_dict should return correct dict."""
-        preset = ExportPreset(
-            name="test",
-            display_name="Test",
-            icon="🎯",
-            description="Test",
-            mode=ExportMode.SPRITE_SHEET,
-            format="PNG",
-            scale=2.0,
-            default_pattern="{base}",
-            tooltip="Test",
-            use_cases=[]
-        )
-
-        settings = preset.get_settings_dict()
-
-        assert settings['mode'] == "sheet"
-        assert settings['format'] == "PNG"
-        assert settings['scale_factor'] == 2.0
-        assert settings['preset_name'] == "test"
-
-    def test_export_preset_with_sprite_sheet_layout(self, qapp) -> None:
-        """ExportPreset should include sprite sheet layout when set."""
-        layout = SpriteSheetLayout(mode=LayoutMode.ROWS, max_columns=4)
-        preset = ExportPreset(
-            name="sheet_test",
-            display_name="Sheet Test",
-            icon="📋",
-            description="Test",
-            mode=ExportMode.SPRITE_SHEET,
-            format="PNG",
-            scale=1.0,
-            default_pattern="{base}",
-            tooltip="Test",
-            use_cases=[],
-            sprite_sheet_layout=layout
-        )
-
-        settings = preset.get_settings_dict()
-
-        assert 'sprite_sheet_layout' in settings
-        assert settings['sprite_sheet_layout'] == layout
-
-    def test_get_preset_returns_preset(self, qapp) -> None:
-        """get_preset should return a preset by name."""
-        # Assuming 'individual_frames' is a default preset
-        all_presets = get_all_presets()
-
-        if all_presets:
-            first_preset = all_presets[0]
-            preset = get_preset(first_preset.name)
-
-            assert preset is not None
-            assert preset.name == first_preset.name
-
-    def test_get_all_presets_returns_list(self, qapp) -> None:
-        """get_all_presets should return a list of presets."""
-        presets = get_all_presets()
-
-        assert isinstance(presets, list)
-        # Should have at least one preset
-        assert len(presets) >= 1
-        # Each item should be an ExportPreset
-        for preset in presets:
-            assert isinstance(preset, ExportPreset)
 
 
 # ============================================================================

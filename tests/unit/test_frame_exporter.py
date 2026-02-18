@@ -102,25 +102,7 @@ class TestFrameExporter:
         exporter1 = get_frame_exporter()
         exporter2 = get_frame_exporter()
         assert exporter1 is exporter2
-    
-    def test_supported_formats(self):
-        """Test getting supported export formats."""
-        exporter = FrameExporter()
-        formats = exporter.get_supported_formats()
-        
-        assert "PNG" in formats
-        assert "JPG" in formats
-        assert "BMP" in formats
-    
-    def test_supported_modes(self):
-        """Test getting supported export modes."""
-        exporter = FrameExporter()
-        modes = exporter.get_supported_modes()
-        
-        assert "individual" in modes
-        assert "sheet" in modes
-        # Note: 'selected' mode was consolidated into 'individual' with frame filtering
-    
+
     def test_export_frames_validation(self):
         """Test export_frames validation."""
         exporter = FrameExporter()
@@ -158,15 +140,6 @@ class TestFrameExporter:
 
         mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
         mock_worker.start.assert_called_once()
-    
-    def test_is_exporting_state(self):
-        """Test is_exporting state tracking."""
-        exporter = FrameExporter()
-        
-        # Initially not exporting
-        assert not exporter.is_exporting()
-        
-        # Would need to mock worker thread to test during export
 
 
 class TestExportWorker:

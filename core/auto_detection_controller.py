@@ -10,7 +10,6 @@ import logging
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox
 
-from config import Config
 from sprite_model.sprite_detection import DetectionResult
 from utils.ui_common import parse_detection_tuple
 
@@ -55,86 +54,6 @@ class AutoDetectionController(QObject):
 
         # Workflow state
         self._workflow_state = "idle"
-
-    # ============================================================================
-    # NEW SPRITE SHEET WORKFLOW
-    # ============================================================================
-
-    def handle_new_sprite_sheet_loaded(self) -> bool:
-        """
-        Handle new sprite sheet loading with proper auto-detection workflow.
-        Returns True if auto-detection was run, False otherwise.
-        """
-        if not self._sprite_model or not self._sprite_model.original_sprite_sheet:
-            return False
-
-        # Always run auto-detection for new sprite sheets
-        self._reset_settings_for_new_sheet()
-
-        # Run comprehensive auto-detection silently (no dialog)
-        success = self._run_silent_comprehensive_detection()
-
-        if success:
-            # Update UI with detected values
-            self._emit_detected_settings()
-
-            # Show brief status notification
-            detected_info = self._create_detection_summary()
-            self.statusUpdate.emit(detected_info, 5000)  # 5 seconds
-
-            # Update comprehensive button to show success
-            self.buttonConfidenceUpdate.emit("comprehensive", "success", "Auto-detection completed")
-        else:
-            # Auto-detection failed, using defaults
-            self.statusUpdate.emit("Auto-detection failed, using default settings", 3000)
-            self.buttonConfidenceUpdate.emit("comprehensive", "reset", "")
-
-        return True
-
-    def _reset_settings_for_new_sheet(self):
-        """Reset frame extraction settings to defaults for new sprite sheet."""
-        # Reset to default frame size
-        default_width = Config.FrameExtraction.DEFAULT_FRAME_WIDTH
-        default_height = Config.FrameExtraction.DEFAULT_FRAME_HEIGHT
-
-        # Update model with defaults via public API
-        if self._sprite_model:
-            self._sprite_model.set_frame_settings(
-                width=default_width,
-                height=default_height,
-                offset_x=0,
-                offset_y=0,
-                spacing_x=0,
-                spacing_y=0,
-            )
-
-        # Reset button styles
-        self.buttonConfidenceUpdate.emit("frame", "reset", "")
-        self.buttonConfidenceUpdate.emit("margins", "reset", "")
-        self.buttonConfidenceUpdate.emit("spacing", "reset", "")
-
-    def _run_silent_comprehensive_detection(self) -> bool:
-        """Run comprehensive auto-detection without user dialogs."""
-        if not self._sprite_model:
-            return False
-
-        try:
-            self._workflow_state = "working"
-            success, result = self._sprite_model.comprehensive_auto_detect()
-
-            if success:
-                # Parse and update button confidence from result
-                self._update_button_confidence_from_result(result)
-                self._workflow_state = "completed"
-            else:
-                self._workflow_state = "failed"
-
-            return success
-
-        except Exception:
-            logger.exception("Auto-detection failed with unexpected error")
-            self._workflow_state = "failed"
-            return False
 
     # ============================================================================
     # MANUAL AUTO-DETECTION WORKFLOWS
@@ -329,20 +248,6 @@ class AutoDetectionController(QObject):
 
         dialog.setDetailedText("\n".join(result.messages))
         dialog.exec()
-
-    # ============================================================================
-    # PROPERTIES
-    # ============================================================================
-
-    @property
-    def workflow_state(self) -> str:
-        """Get current workflow state."""
-        return self._workflow_state
-
-    @property
-    def is_working(self) -> bool:
-        """Check if currently running a detection workflow."""
-        return self._workflow_state == "working"
 
 
 # Export for easy importing

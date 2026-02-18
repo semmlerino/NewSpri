@@ -280,7 +280,7 @@ class TestSyncAfterRename:
         assert "OldName" in grid_view._segments
 
         # Rename in manager
-        success = segment_manager.rename_segment("OldName", "NewName")
+        success, _ = segment_manager.update_segment("OldName", new_name="NewName")
         assert success
 
         # Sync
@@ -302,7 +302,7 @@ class TestSyncAfterRename:
         grid_view.sync_segments_with_manager(segment_manager)
 
         # Rename
-        segment_manager.rename_segment("Original", "Renamed")
+        segment_manager.update_segment("Original", new_name="Renamed")
         grid_view.sync_segments_with_manager(segment_manager)
 
         # Properties preserved

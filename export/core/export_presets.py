@@ -1,7 +1,6 @@
 """Export Presets System - predefined export configurations."""
 
 from dataclasses import dataclass
-from typing import Any
 
 from .frame_exporter import BackgroundMode, ExportMode, LayoutMode, SpriteSheetLayout
 
@@ -22,19 +21,6 @@ class ExportPreset:
     use_cases: list[str]  # Examples of when to use this preset
     sprite_sheet_layout: SpriteSheetLayout | None = None
     short_description: str | None = None
-
-    def get_settings_dict(self) -> dict[str, Any]:
-        """Convert preset to settings dictionary."""
-        settings = {
-            "mode": self.mode.value,
-            "format": self.format,
-            "scale_factor": self.scale,
-            "pattern": self.default_pattern,
-            "preset_name": self.name,
-        }
-        if self.sprite_sheet_layout is not None:
-            settings["sprite_sheet_layout"] = self.sprite_sheet_layout
-        return settings
 
 
 # All available presets keyed by name
@@ -118,8 +104,3 @@ PRESETS: dict[str, ExportPreset] = {
 def get_preset(name: str) -> ExportPreset | None:
     """Get a preset by name."""
     return PRESETS.get(name)
-
-
-def get_all_presets() -> list[ExportPreset]:
-    """Get all available presets."""
-    return list(PRESETS.values())

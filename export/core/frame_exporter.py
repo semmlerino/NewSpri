@@ -867,18 +867,6 @@ class FrameExporter(QObject):
             self._worker.quit()
             self._worker.wait()
 
-    def is_exporting(self) -> bool:
-        """Check if export is in progress."""
-        return self._worker is not None and self._worker.isRunning()
-
-    def get_supported_formats(self) -> list[str]:
-        """Get list of supported export formats."""
-        return [fmt.value for fmt in ExportFormat]
-
-    def get_supported_modes(self) -> list[str]:
-        """Get list of supported export modes."""
-        return [mode.value for mode in ExportMode]
-
     def _on_progress(self, current: int, total: int, message: str):
         """Handle progress updates from worker."""
         self.exportProgress.emit(current, total, message)

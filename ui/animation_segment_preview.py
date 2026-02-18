@@ -608,27 +608,6 @@ class AnimationSegmentPreview(QWidget):
             if not self._preview_items:
                 self.empty_label.show()
 
-    def update_segment(self, name: str, new_name: str | None = None, color: QColor | None = None):
-        """Update an existing segment."""
-        if name in self._preview_items and new_name and new_name != name:
-            # Handle rename by recreating (simpler than updating internals)
-            preview_item = self._preview_items[name]
-            # Store current state
-            was_playing = preview_item._is_playing
-            frames = preview_item._frames
-
-            # Remove old
-            self.remove_segment(name)
-
-            # Add new
-            if color is None:
-                color = preview_item.segment_color
-            self.add_segment(new_name, 0, len(frames) - 1, color)
-
-            # Restore playback state
-            if was_playing and new_name in self._preview_items:
-                self._preview_items[new_name].set_playing(True)
-
     def clear_segments(self):
         """Clear all segment previews."""
         for name in list(self._preview_items.keys()):

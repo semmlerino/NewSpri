@@ -120,17 +120,7 @@ class TestSpriteCanvasZoom:
 
 class TestSpriteCanvasDisplay:
     """Test display options."""
-    
-    @pytest.mark.ui
-    def test_toggle_checkerboard(self, qapp):
-        """Test toggling checkerboard background."""
-        canvas = SpriteCanvas()
-        initial_state = canvas._show_checkerboard
-        
-        canvas.set_background_mode(not initial_state)
-        
-        assert canvas._show_checkerboard != initial_state
-    
+
     @pytest.mark.ui
     def test_toggle_grid(self, qapp):
         """Test toggling grid overlay."""

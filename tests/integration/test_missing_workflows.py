@@ -179,8 +179,8 @@ class TestRecentFilesWorkflow:
         recent_manager = viewer._recent_files
         # The RecentFilesManager uses _settings.get_recent_files() internally
         # We can check if it has recent files and get the count
-        assert recent_manager.has_recent_files()
-        assert recent_manager.get_recent_files_count() >= 3
+        assert len(recent_manager._settings.get_recent_files()) > 0
+        assert len(recent_manager._settings.get_recent_files()) >= 3
         
         # To actually verify the files, we need to use the settings manager
         from managers.settings_manager import get_settings_manager

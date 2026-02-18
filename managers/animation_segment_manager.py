@@ -354,19 +354,6 @@ class AnimationSegmentManager(QObject):
 
         return True, ""
 
-    def rename_segment(self, old_name: str, new_name: str) -> tuple[bool, str]:
-        """
-        Rename an animation segment.
-
-        Args:
-            old_name: Current name of the segment
-            new_name: New name for the segment
-
-        Returns:
-            Tuple of (success, error_message)
-        """
-        return self.update_segment(old_name, new_name=new_name)
-
     def set_bounce_mode(self, segment_name: str, bounce_mode: bool) -> tuple[bool, str]:
         """
         Set bounce mode for a segment.

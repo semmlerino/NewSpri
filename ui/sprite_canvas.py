@@ -142,13 +142,6 @@ class SpriteCanvas(QLabel):
         """Get current zoom factor."""
         return self._zoom_factor
 
-    def set_background_mode(self, checkerboard: bool, color: QColor | None = None):
-        """Set background display mode."""
-        self._show_checkerboard = checkerboard
-        if color is not None:
-            self._bg_color = color
-        self.update()
-
     def set_grid_overlay(self, show: bool, size: int = Config.Canvas.DEFAULT_GRID_SIZE):
         """Toggle grid overlay."""
         self._show_grid = show

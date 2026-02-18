@@ -21,7 +21,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from PySide6.QtCore import QByteArray
-from PySide6.QtWidgets import QMainWindow, QSplitter
+from PySide6.QtWidgets import QMainWindow
 
 from managers.settings_manager import (
     SettingsManager,
@@ -268,49 +268,6 @@ class TestWindowGeometry:
 
 
 # ============================================================================
-# Splitter State Tests
-# ============================================================================
-
-
-class TestSplitterState:
-    """Tests for splitter state save/restore."""
-
-    def test_save_splitter_state(
-        self, qapp, settings_manager: SettingsManager
-    ) -> None:
-        """save_splitter_state should save state to specified key."""
-        splitter = QSplitter()
-
-        settings_manager.save_splitter_state(splitter, 'test/splitter')
-
-        state = settings_manager.get_value('test/splitter')
-        assert state is not None
-        assert isinstance(state, QByteArray)
-
-    def test_restore_splitter_state_returns_true_on_success(
-        self, qapp, settings_manager: SettingsManager
-    ) -> None:
-        """restore_splitter_state should return True when state exists."""
-        splitter = QSplitter()
-        settings_manager.save_splitter_state(splitter, 'test/splitter')
-
-        new_splitter = QSplitter()
-        result = settings_manager.restore_splitter_state(new_splitter, 'test/splitter')
-
-        assert result is True
-
-    def test_restore_splitter_state_returns_false_without_saved(
-        self, qapp, settings_manager: SettingsManager
-    ) -> None:
-        """restore_splitter_state should return False when no state saved."""
-        splitter = QSplitter()
-
-        result = settings_manager.restore_splitter_state(splitter, 'nonexistent/splitter')
-
-        assert result is False
-
-
-# ============================================================================
 # Recent Files Management Tests
 # ============================================================================
 
@@ -514,17 +471,6 @@ class TestEdgeCases:
 
         window = QMainWindow()
         result = settings_manager.restore_window_geometry(window)
-
-        assert result is False
-
-    def test_restore_splitter_with_non_qbytearray_fails_gracefully(
-        self, qapp, settings_manager: SettingsManager
-    ) -> None:
-        """restore_splitter_state should handle non-QByteArray values."""
-        settings_manager._settings.setValue('window/splitter', 'not a byte array')
-
-        splitter = QSplitter()
-        result = settings_manager.restore_splitter_state(splitter, 'window/splitter')
 
         assert result is False
 

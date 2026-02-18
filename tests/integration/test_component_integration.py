@@ -306,10 +306,9 @@ class TestManagerIntegration:
         # Check menu updated
         # The menu is managed by MenuManager, not directly accessible
         # Just verify files were added to recent files manager
-        assert recent_files.has_recent_files()
+        assert len(recent_files._settings.get_recent_files()) > 0
         # Recent files might already have entries, so check it increased
-        count_after = recent_files.get_recent_files_count()
-        assert count_after >= len(test_files)
+        assert len(recent_files._settings.get_recent_files()) >= len(test_files)
     
 
 

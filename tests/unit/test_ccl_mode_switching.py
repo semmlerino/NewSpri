@@ -170,7 +170,7 @@ class TestCCLDetectionFailures:
         # Ensure we're starting fresh - clear any cached CCL data
         loaded_model._ccl_operations.clear_ccl_data()
         original_mode = loaded_model.get_extraction_mode()
-        original_frames = loaded_model.total_frames
+        original_frames = loaded_model.frame_count
 
         # Now try to switch to CCL with failing detection
         def failing_detect_sprites(path: str):
@@ -181,14 +181,14 @@ class TestCCLDetectionFailures:
 
         assert result is False
         assert loaded_model.get_extraction_mode() == original_mode
-        assert loaded_model.total_frames == original_frames
+        assert loaded_model.frame_count == original_frames
 
     def test_ccl_auto_detection_returns_failure(self, loaded_model: SpriteModel) -> None:
         """CCL detection returning success=False should fail gracefully."""
         # Ensure we're starting fresh - clear any cached CCL data
         loaded_model._ccl_operations.clear_ccl_data()
         original_mode = loaded_model.get_extraction_mode()
-        original_frames = loaded_model.total_frames
+        original_frames = loaded_model.frame_count
 
         # Now try to switch to CCL with failing detection
         def failing_detect_sprites(path: str):
@@ -199,14 +199,14 @@ class TestCCLDetectionFailures:
 
         assert result is False
         assert loaded_model.get_extraction_mode() == original_mode
-        assert loaded_model.total_frames == original_frames
+        assert loaded_model.frame_count == original_frames
 
     def test_ccl_auto_detection_raises_exception(self, loaded_model: SpriteModel) -> None:
         """CCL detection raising exception should be caught and fail gracefully."""
         # Ensure we're starting fresh - clear any cached CCL data
         loaded_model._ccl_operations.clear_ccl_data()
         original_mode = loaded_model.get_extraction_mode()
-        original_frames = loaded_model.total_frames
+        original_frames = loaded_model.frame_count
 
         # Now try to switch to CCL with failing detection
         def failing_detect_sprites(path: str):
@@ -217,7 +217,7 @@ class TestCCLDetectionFailures:
 
         assert result is False
         assert loaded_model.get_extraction_mode() == original_mode
-        assert loaded_model.total_frames == original_frames
+        assert loaded_model.frame_count == original_frames
 
     def test_ccl_auto_detection_empty_bounds(self, loaded_model: SpriteModel) -> None:
         """CCL detection returning empty bounds list should fail."""
@@ -248,14 +248,14 @@ class TestFrameCountSync:
         """Switching to CCL should update frame count to match CCL bounds."""
         mock_detect_sprites, mock_detect_background = mock_ccl_detection
 
-        initial_frame_count = loaded_model.total_frames
+        initial_frame_count = loaded_model.frame_count
 
         with patch("sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites), \
              patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background):
             loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
         # CCL mock returns 3 bounds, so should have 3 frames
-        assert loaded_model.total_frames == 3
+        assert loaded_model.frame_count == 3
 
     def test_grid_mode_restores_original_frame_count(
         self, loaded_model: SpriteModel, mock_ccl_detection
@@ -263,7 +263,7 @@ class TestFrameCountSync:
         """Switching back to grid should restore original frame count."""
         mock_detect_sprites, mock_detect_background = mock_ccl_detection
 
-        initial_frame_count = loaded_model.total_frames
+        initial_frame_count = loaded_model.frame_count
 
         # Switch to CCL
         with patch("sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites), \
@@ -273,7 +273,7 @@ class TestFrameCountSync:
         # Switch back to grid
         loaded_model.set_extraction_mode(ExtractionMode.GRID)
 
-        assert loaded_model.total_frames == initial_frame_count
+        assert loaded_model.frame_count == initial_frame_count
 
 
 # ============================================================================
@@ -351,7 +351,7 @@ class TestBoundsValidation:
             loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
         # Only valid bounds should produce frames
-        assert loaded_model.total_frames == 2
+        assert loaded_model.frame_count == 2
 
     def test_negative_bounds_filtered(self, loaded_model: SpriteModel) -> None:
         """Bounds with negative coordinates should be filtered."""
@@ -372,7 +372,7 @@ class TestBoundsValidation:
              patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background):
             loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
-        assert loaded_model.total_frames == 1
+        assert loaded_model.frame_count == 1
 
 
 # ============================================================================
@@ -464,7 +464,7 @@ class TestStateConsistency:
         # Clear CCL data to start fresh
         loaded_model._ccl_operations.clear_ccl_data()
         original_mode = loaded_model.get_extraction_mode()
-        original_frames = loaded_model.total_frames
+        original_frames = loaded_model.frame_count
 
         def failing_detect_sprites(path: str):
             return None  # Simulate failure
@@ -474,7 +474,7 @@ class TestStateConsistency:
 
         assert result is False
         assert loaded_model.get_extraction_mode() == original_mode
-        assert loaded_model.total_frames == original_frames
+        assert loaded_model.frame_count == original_frames
 
     def test_sprite_frames_list_not_left_empty(
         self, loaded_model: SpriteModel, mock_ccl_detection

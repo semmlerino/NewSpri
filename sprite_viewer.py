@@ -320,7 +320,7 @@ class SpriteViewer(QMainWindow):
 
     def _setup_window(self):
         """Set up main window properties."""
-        self.setWindowTitle("Python Sprite Viewer")
+        self.setWindowTitle(Config.App.WINDOW_TITLE)
         self.setMinimumSize(Config.UI.MIN_WINDOW_WIDTH, Config.UI.MIN_WINDOW_HEIGHT)
         self.setAcceptDrops(True)
 
@@ -1049,9 +1049,9 @@ class SpriteViewer(QMainWindow):
 
     def _show_about(self):
         """Show about dialog."""
-        about_text = """
-<h3>Python Sprite Viewer</h3>
-<p>Version 2.0</p>
+        about_text = f"""
+<h3>{Config.App.APP_NAME}</h3>
+<p>Version {Config.App.APP_VERSION}</p>
 <p>A modern sprite sheet animation viewer.</p>
 <p>Features:</p>
 <ul>

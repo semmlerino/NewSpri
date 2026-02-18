@@ -218,60 +218,9 @@ class EnhancedStatusBar(QStatusBar):
             self._mouse_label.setText("Mouse: -")
             self._mouse_label.setToolTip("Mouse position not available")
 
-    # Convenience methods for common status updates
-    def show_loading_message(self, filename: str) -> None:
-        """Show loading message for a file."""
-        self.show_message(f"Loading: {filename}...", 0)
-
-    def show_loaded_message(self, filename: str) -> None:
-        """Show successful load message."""
-        self.show_message(f"Loaded: {filename}", 3000)
-
-    def show_error_message(self, error: str) -> None:
-        """Show error message."""
-        self.show_message(f"Error: {error}", 5000)
-
     def show_welcome_message(self) -> None:
         """Show welcome message."""
         self.show_permanent_message(Config.App.WELCOME_MESSAGE)
-
-    def show_ready_message(self) -> None:
-        """Show ready message."""
-        self.show_permanent_message(Config.App.READY_MESSAGE)
-
-    # State management methods
-    def update_sprite_loaded_state(
-        self, width: int, height: int, frame_count: int, mode: str
-    ) -> None:
-        """
-        Update status bar for loaded sprite state.
-
-        Args:
-            width: Sprite width
-            height: Sprite height
-            frame_count: Number of frames
-            mode: Extraction mode
-        """
-        self.update_sprite_size(width, height)
-        self.update_frame_info(1, frame_count)
-        self.update_extraction_mode(mode)
-
-    def update_animation_state(self, current_frame: int, total_frames: int, fps: int) -> None:
-        """
-        Update status bar for animation state.
-
-        Args:
-            current_frame: Current frame (1-based)
-            total_frames: Total frames
-            fps: Current FPS
-        """
-        self.update_frame_info(current_frame, total_frames)
-        self.update_fps(fps)
-
-    def reset_for_no_sprite(self) -> None:
-        """Reset status bar when no sprite is loaded."""
-        self._reset_to_defaults()
-        self.show_welcome_message()
 
 
 class StatusBarManager(QObject):
@@ -284,15 +233,6 @@ class StatusBarManager(QObject):
     def __init__(self, status_bar: EnhancedStatusBar):
         super().__init__()
         self._status_bar = status_bar
-
-    def update_extraction_mode(self, mode: str) -> None:
-        """Update extraction mode."""
-        self._status_bar.update_extraction_mode(mode)
-
-    def update_sprite_info(self, width: int, height: int, frame_count: int) -> None:
-        """Update sprite information."""
-        self._status_bar.update_sprite_size(width, height)
-        # Note: frame_count update requires current frame which comes from model signals
 
     def show_message(self, message: str, timeout: int = 5000) -> None:
         """Show a status message. Delegates to wrapped status bar."""

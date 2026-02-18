@@ -368,12 +368,10 @@ class ExportConfig:
     DEFAULT_SPRITE_SPACING = 0  # Pixels between sprites
     MIN_SPRITE_SPACING = 0  # Minimum spacing allowed
     MAX_SPRITE_SPACING = 50  # Maximum spacing allowed
-    SPRITE_SPACING_STEP = 1  # Increment step for UI controls
 
     DEFAULT_SHEET_PADDING = 0  # Padding around entire sheet
     MIN_SHEET_PADDING = 0  # Minimum padding allowed
     MAX_SHEET_PADDING = 100  # Maximum padding allowed
-    SHEET_PADDING_STEP = 5  # Increment step for UI controls
 
     # Grid configuration constraints
     DEFAULT_MAX_COLUMNS = 10  # Default max columns for 'rows' mode

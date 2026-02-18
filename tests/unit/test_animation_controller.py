@@ -95,16 +95,6 @@ class TestAnimationControllerTiming:
         # Allow small rounding differences
         assert abs(calculated_interval - expected_interval) <= 1
     
-    def test_timer_precision_tracking(self, animation_controller):
-        """Test timer precision tracking."""
-        animation_controller.set_fps(30)
-        
-        # Timer precision should be calculated
-        precision = animation_controller.get_timing_precision()
-        assert precision >= 0
-        assert precision <= 1000  # Should not exceed 1 second
-
-
 class TestAnimationControllerPlayback:
     """Test animation playback control."""
     

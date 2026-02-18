@@ -552,8 +552,6 @@ class TestAutoDetectionController:
             frame_extractor=mock_extractor,
         )
         assert controller is not None
-        assert controller.workflow_state == "idle"
-        assert not controller.is_working
 
     def test_controller_signals_exist(self, qapp):
         """Test all required signals are defined."""
@@ -574,10 +572,6 @@ class TestAutoDetectionController:
         assert hasattr(controller, 'buttonConfidenceUpdate')
         assert hasattr(controller, 'statusUpdate')
 
-        # Check state properties
-        assert hasattr(controller, 'workflow_state')
-        assert hasattr(controller, 'is_working')
-
     def test_controller_stores_dependencies(self, qapp):
         """Test controller properly stores dependencies at construction."""
         mock_sprite_model = Mock()
@@ -590,56 +584,6 @@ class TestAutoDetectionController:
 
         assert controller._sprite_model == mock_sprite_model
         assert controller._frame_extractor == mock_frame_extractor
-
-    def test_handle_new_sprite_sheet_no_original(self, qapp):
-        """Test new sprite sheet handling when model has no original sprite sheet."""
-        mock_model = Mock()
-        mock_model.original_sprite_sheet = None
-
-        controller = AutoDetectionController(
-            sprite_model=mock_model,
-            frame_extractor=Mock(),
-        )
-
-        result = controller.handle_new_sprite_sheet_loaded()
-
-        assert not result  # Should return False when no original sprite sheet
-
-    def test_handle_new_sprite_sheet_success(self, qapp):
-        """Test successful new sprite sheet handling."""
-        # Create mock sprite model with required attributes
-        mock_sprite_model = Mock()
-        mock_sprite_model.original_sprite_sheet = QPixmap(100, 100)
-        _mock_result = DetectionResult()
-        _mock_result.success = True
-        _mock_result.messages = ["Test report"]
-        _mock_result.confidence = 0.9
-        mock_sprite_model.comprehensive_auto_detect.return_value = (True, _mock_result)
-
-        # Mock attributes that get set
-        mock_sprite_model.frame_width = 32
-        mock_sprite_model.frame_height = 32
-        mock_sprite_model.offset_x = 0
-        mock_sprite_model.offset_y = 0
-        mock_sprite_model.spacing_x = 0
-        mock_sprite_model.spacing_y = 0
-
-        controller = AutoDetectionController(
-            sprite_model=mock_sprite_model,
-            frame_extractor=Mock(),
-        )
-
-        # Test signals
-        status_spy = QSignalSpy(controller.statusUpdate)
-        frame_spy = QSignalSpy(controller.frameSettingsDetected)
-        button_spy = QSignalSpy(controller.buttonConfidenceUpdate)
-
-        result = controller.handle_new_sprite_sheet_loaded()
-
-        assert result
-        assert status_spy.count() > 0
-        assert frame_spy.count() > 0
-        assert button_spy.count() > 0
 
     def test_run_frame_detection_no_original(self, qapp):
         """Test frame detection without original sprite sheet."""
@@ -729,22 +673,6 @@ class TestAutoDetectionController:
         assert spacing_spy.at(0)[1] == 2  # spacing_y
         assert button_spy.count() >= 1
     
-    def test_workflow_state_management(self, qapp):
-        """Test workflow state transitions."""
-        controller = AutoDetectionController(
-            sprite_model=Mock(),
-            frame_extractor=Mock(),
-        )
-
-        # Test state transitions via direct assignment (signal was removed)
-        controller._workflow_state = "working"
-        assert controller.workflow_state == "working"
-        assert controller.is_working
-
-        controller._workflow_state = "completed"
-        assert controller.workflow_state == "completed"
-        assert not controller.is_working
-
     def test_detection_summary_creation(self, qapp):
         """Test creation of detection summary."""
         # Mock sprite model with detected values

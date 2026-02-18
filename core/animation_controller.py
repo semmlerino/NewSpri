@@ -90,9 +90,6 @@ class AnimationController(QObject):
         # Connect to Model signals
         self._connect_model_signals()
 
-        # Connect to View signals
-        self._connect_view_signals()
-
         # Initialize state from model
         self._sync_state_from_model()
 
@@ -271,13 +268,6 @@ class AnimationController(QObject):
         interval_ms = self._calculate_timer_interval()
         return Config.Animation.TIMER_BASE / interval_ms if interval_ms > 0 else 0.0
 
-    def get_timing_precision(self) -> float:
-        """
-        Get timing precision indicator.
-        Returns difference between target and actual FPS.
-        """
-        return abs(self._timer_precision)
-
     # ============================================================================
     # TIMER EVENT HANDLING
     # ============================================================================
@@ -321,13 +311,6 @@ class AnimationController(QObject):
         self._sprite_model.frameChanged.connect(self._on_model_frame_changed)
         self._sprite_model.errorOccurred.connect(self._on_model_error)
 
-    def _connect_view_signals(self) -> None:
-        """
-        Connect to SpriteViewer signals for user interaction.
-        Sets up bidirectional communication between View and Controller.
-        """
-        pass
-
     def _sync_state_from_model(self) -> None:
         """
         Synchronize controller state with model state.
@@ -345,11 +328,6 @@ class AnimationController(QObject):
             self._current_fps = Config.Animation.DEFAULT_FPS
             self.errorOccurred.emit("Invalid FPS in model, reset to default")
 
-        # Log successful synchronization
-        self.statusChanged.emit(
-            f"Controller synced: {self._current_fps} FPS, loop {'enabled' if self._loop_enabled else 'disabled'}"
-        )
-
     def _sync_state_to_model(self) -> None:
         """
         Synchronize controller state changes to model.
@@ -361,8 +339,6 @@ class AnimationController(QObject):
         # Update model with controller settings
         self._sprite_model.set_fps(self._current_fps)
         self._sprite_model.set_loop_enabled(self._loop_enabled)
-
-        self.statusChanged.emit("Model updated with controller settings")
 
     # ============================================================================
     # MODEL EVENT HANDLERS
@@ -443,11 +419,6 @@ class AnimationController(QObject):
     # ============================================================================
 
     @property
-    def is_active(self) -> bool:
-        """Check if controller is initialized and active."""
-        return self._is_active
-
-    @property
     def is_playing(self) -> bool:
         """Check if animation is currently playing."""
         return self._is_playing
@@ -456,24 +427,6 @@ class AnimationController(QObject):
     def current_fps(self) -> int:
         """Get current animation FPS setting."""
         return self._current_fps
-
-    @property
-    def loop_enabled(self) -> bool:
-        """Get current loop mode setting."""
-        return self._loop_enabled
-
-    def get_status_info(self) -> dict:
-        """Get controller status information."""
-        return {
-            "is_active": self._is_active,
-            "is_playing": self._is_playing,
-            "current_fps": self._current_fps,
-            "actual_fps": self.get_actual_fps(),
-            "loop_enabled": self._loop_enabled,
-            "timer_interval_ms": self._calculate_timer_interval(),
-            "has_model": self._sprite_model is not None,
-            "has_view": self._sprite_viewer is not None,
-        }
 
 
 # Export for easy importing
