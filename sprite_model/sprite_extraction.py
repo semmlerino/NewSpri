@@ -570,6 +570,9 @@ def _merge_nearby_components(
     """
     Merge sprite components that are close to each other (multi-part sprites).
 
+    Uses union-find for transitive closure so chains like A-B-C are fully merged
+    even when A and C are not directly within threshold of each other.
+
     Args:
         sprite_bounds: List of (x, y, width, height) tuples
         threshold: Maximum distance for merging sprites
@@ -582,52 +585,61 @@ def _merge_nearby_components(
         debug_log = []
 
     if threshold <= 0:
-        debug_log.append(f"   🚫 Merging disabled (threshold: {threshold})")
+        debug_log.append(f"   Merging disabled (threshold: {threshold})")
         return sprite_bounds
 
-    merged = []
-    used = set()
-    merge_count = 0
+    n = len(sprite_bounds)
 
-    for i, (x1, y1, w1, h1) in enumerate(sprite_bounds):
-        if i in used:
-            continue
+    # Union-find with path compression
+    parent = list(range(n))
 
-        # Start a new merge group with this sprite
-        merge_group = [(x1, y1, w1, h1)]
-        used.add(i)
+    def find(i: int) -> int:
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]  # path compression (halving)
+            i = parent[i]
+        return i
 
-        # Find nearby sprites to merge
-        for j, (x2, y2, w2, h2) in enumerate(sprite_bounds):
-            if j in used:
-                continue
+    def union(i: int, j: int) -> None:
+        ri, rj = find(i), find(j)
+        if ri != rj:
+            parent[ri] = rj
 
-            # Check distance between sprite centers
-            center1_x, center1_y = x1 + w1 // 2, y1 + h1 // 2
-            center2_x, center2_y = x2 + w2 // 2, y2 + h2 // 2
-            distance = ((center1_x - center2_x) ** 2 + (center1_y - center2_y) ** 2) ** 0.5
+    # Precompute centers
+    centers = [(x + w // 2, y + h // 2) for x, y, w, h in sprite_bounds]
 
+    # Union every pair within threshold distance
+    for i in range(n):
+        cx1, cy1 = centers[i]
+        for j in range(i + 1, n):
+            cx2, cy2 = centers[j]
+            distance = ((cx1 - cx2) ** 2 + (cy1 - cy2) ** 2) ** 0.5
             if distance <= threshold:
-                merge_group.append((x2, y2, w2, h2))
-                used.add(j)
+                union(i, j)
 
-        # Create merged bounding box for this group
-        if merge_group:
-            min_x = min(x for x, _y, _w, _h in merge_group)
-            min_y = min(y for _x, y, _w, _h in merge_group)
-            max_x = max(x + w for x, _y, w, _h in merge_group)
-            max_y = max(y + h for _x, y, _w, h in merge_group)
-            merged_bounds = (min_x, min_y, max_x - min_x, max_y - min_y)
-            merged.append(merged_bounds)
+    # Collect groups by root
+    groups: dict[int, list[tuple[int, int, int, int]]] = {}
+    for i, sprite in enumerate(sprite_bounds):
+        root = find(i)
+        groups.setdefault(root, []).append(sprite)
 
-            if len(merge_group) > 1:
-                merge_count += 1
-                debug_log.append(
-                    f"      ✅ Group {i + 1}: {len(merge_group)} parts → ({min_x}, {min_y}) {max_x - min_x}×{max_y - min_y}"
-                )
+    # Merge bounding boxes within each group
+    merged = []
+    merge_count = 0
+    for group_sprites in groups.values():
+        min_x = min(x for x, _y, _w, _h in group_sprites)
+        min_y = min(y for _x, y, _w, _h in group_sprites)
+        max_x = max(x + w for x, _y, w, _h in group_sprites)
+        max_y = max(y + h for _x, y, _w, h in group_sprites)
+        merged.append((min_x, min_y, max_x - min_x, max_y - min_y))
+
+        if len(group_sprites) > 1:
+            merge_count += 1
+            debug_log.append(
+                f"      Group: {len(group_sprites)} parts -> ({min_x}, {min_y}) {max_x - min_x}x{max_y - min_y}"
+            )
 
     debug_log.append(
-        f"   🔀 Merging complete: {merge_count} groups merged, {len(merged)} final sprites"
+        f"   Merging complete: {merge_count} groups merged, {len(merged)} final sprites"
     )
     return merged
 

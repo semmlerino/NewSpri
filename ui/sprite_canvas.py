@@ -48,12 +48,16 @@ class SpriteCanvas(QLabel):
         self._checkerboard_cache: QPixmap | None = None
         self._checkerboard_cache_size: tuple[int, int] = (0, 0)
 
+        # Cached padded pixmap (invalidated when source pixmap changes)
+        self._cached_padded_pixmap: QPixmap | None = None
+
         # Enable mouse tracking for pan and coordinate tracking
         self.setMouseTracking(True)
 
     def set_pixmap(self, pixmap: QPixmap, auto_fit=None):
         """Set the sprite pixmap to display."""
         self._pixmap = pixmap
+        self._cached_padded_pixmap = None  # Invalidate cached padded pixmap
 
         # Auto-fit if enabled in config (can be overridden by parameter)
         if auto_fit is None:
@@ -172,13 +176,16 @@ class SpriteCanvas(QLabel):
 
         # Draw sprite if available
         if self._pixmap and not self._pixmap.isNull():
-            # Create a temporary pixmap with 1px border to prevent edge cutoff
-            temp_pixmap = QPixmap(self._pixmap.width() + 2, self._pixmap.height() + 2)
-            temp_pixmap.fill(Qt.GlobalColor.transparent)
-
-            temp_painter = QPainter(temp_pixmap)
-            temp_painter.drawPixmap(1, 1, self._pixmap)
-            temp_painter.end()
+            # Use cached padded pixmap (1px border prevents edge cutoff); rebuild only on pixmap change
+            if self._cached_padded_pixmap is None:
+                self._cached_padded_pixmap = QPixmap(
+                    self._pixmap.width() + 2, self._pixmap.height() + 2
+                )
+                self._cached_padded_pixmap.fill(Qt.GlobalColor.transparent)
+                temp_painter = QPainter(self._cached_padded_pixmap)
+                temp_painter.drawPixmap(1, 1, self._pixmap)
+                temp_painter.end()
+            temp_pixmap = self._cached_padded_pixmap
 
             # Scale the temporary pixmap
             scaled_size = temp_pixmap.size() * self._zoom_factor
@@ -266,11 +273,13 @@ class SpriteCanvas(QLabel):
 
     def _draw_grid(self, painter: QPainter, sprite_rect: QRect):
         """Draw grid overlay on sprite."""
+        grid_size = self._grid_size * self._zoom_factor
+        if grid_size < 1.0:
+            return
+
         pen = QPen(Config.Drawing.GRID_COLOR)
         pen.setWidth(Config.Drawing.GRID_PEN_WIDTH)
         painter.setPen(pen)
-
-        grid_size = self._grid_size * self._zoom_factor
 
         # Vertical lines
         x = sprite_rect.left()

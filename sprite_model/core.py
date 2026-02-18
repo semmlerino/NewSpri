@@ -103,6 +103,7 @@ class SpriteModel(QObject):
                 # Clear previous frames and reset animation
                 self._sprite_frames.clear()
                 self._animation_state.reset_state()
+                self._ccl_operations.clear_ccl_data()
 
                 # Emit dataLoaded signal for compatibility
                 self.dataLoaded.emit(file_path)
@@ -475,31 +476,24 @@ class SpriteModel(QObject):
             self.configurationChanged.emit()
 
             # Auto-extract frames using grid mode (since we detected grid parameters)
-            # Save current extraction mode
-            original_mode = self._ccl_operations.get_extraction_mode()
-
-            # Temporarily switch to grid mode for testing detected parameters
+            # Switch to grid mode for extraction with detected parameters
             self.set_extraction_mode(ExtractionMode.GRID)
 
-            try:
-                extract_success, extract_msg, _count = self.extract_frames(
-                    self._frame_width,
-                    self._frame_height,
-                    self._offset_x,
-                    self._offset_y,
-                    self._spacing_x,
-                    self._spacing_y,
-                )
+            extract_success, extract_msg, _count = self.extract_frames(
+                self._frame_width,
+                self._frame_height,
+                self._offset_x,
+                self._offset_y,
+                self._spacing_x,
+                self._spacing_y,
+            )
 
-                if extract_success:
-                    result.messages.append(extract_msg)
-                    return True, result
-                else:
-                    result.messages.append(f"Extraction failed: {extract_msg}")
-                    return False, result
-            finally:
-                # Always restore original mode
-                self.set_extraction_mode(original_mode)
+            if extract_success:
+                result.messages.append(extract_msg)
+                return True, result
+            else:
+                result.messages.append(f"Extraction failed: {extract_msg}")
+                return False, result
 
         return False, result
 

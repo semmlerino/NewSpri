@@ -5,6 +5,7 @@ Consolidates export logic that was previously split between SpriteViewer
 and AnimationSegmentController.
 """
 
+import contextlib
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
@@ -141,6 +142,16 @@ class ExportCoordinator(QObject):
         self._progress_dialog = ExportProgressDialog(
             export_type=export_type, total_frames=frame_count, parent=self._parent_widget
         )
+
+        # Disconnect-before-connect: the exporter is a singleton, so previous export
+        # calls may have left stale connections if cleanup failed.  Disconnecting first
+        # guarantees exactly one connection per export operation.
+        for slot, signal in (
+            (self._on_export_finished, self._exporter.exportFinished),
+            (self._on_export_error, self._exporter.exportError),
+        ):
+            with contextlib.suppress(RuntimeError, TypeError):
+                signal.disconnect(slot)
 
         # Connect exporter signals
         self._exporter.exportProgress.connect(self._progress_dialog.update_progress)

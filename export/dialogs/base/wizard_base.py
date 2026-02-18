@@ -4,6 +4,7 @@ Provides a clean wizard interface for multi-step processes.
 Part of Export Dialog Usability Improvements.
 """
 
+import logging
 from typing import Any
 
 from PySide6.QtCore import Signal
@@ -19,6 +20,8 @@ from PySide6.QtWidgets import (
 )
 
 from utils.styles import StyleManager
+
+logger = logging.getLogger(__name__)
 
 
 class WizardStep(QWidget):
@@ -286,13 +289,20 @@ class WizardWidget(QWidget):
 
     def _on_finish(self):
         """Handle wizard completion."""
-        # Collect all data
-        all_data = {}
-        for _, step in enumerate(self.steps):
+        # Collect all data, warning on key collisions between steps
+        all_data: dict[str, Any] = {}
+        for step_index, step in enumerate(self.steps):
             step_data = step.get_data()
-            all_data.update(step_data)
+            for key, value in step_data.items():
+                if key in all_data:
+                    logger.warning(
+                        "Key collision in wizard data: '%s' from step %d overwrites earlier value",
+                        key,
+                        step_index,
+                    )
+                all_data[key] = value
 
-        # Also include the accumulated wizard data
+        # Also include the accumulated wizard data (keyed by step name, no collision risk)
         all_data.update(self._wizard_data)
 
         self.wizardFinished.emit(all_data)

@@ -9,6 +9,7 @@ separation of concerns and testability.
 Part of safe refactoring phase to reduce god class responsibilities.
 """
 
+import re
 import time
 from dataclasses import replace
 
@@ -68,6 +69,10 @@ class AnimationSegmentController(QObject):
 
         # Guard flag: suppress _on_manager_segment_removed during rename
         self._renaming = False
+
+        # Staleness tracking for on_tab_changed: avoid redundant full resyncs
+        self._last_sync_frame_count: int = -1
+        self._last_sync_sprite_path: str = ""
 
         # Configuration
         self.MAX_NAME_RETRY_ATTEMPTS = 10
@@ -156,15 +161,18 @@ class AnimationSegmentController(QObject):
 
     def _resolve_name_conflict(self, segment, original_name: str) -> tuple[bool, str | None]:
         """Generate unique name variants until one succeeds. Returns (success, final_name)."""
-        base_name = original_name.split("_")[0] if "_" in original_name else original_name
+        # Strip only a previously-appended numeric suffix (_\d+) to preserve semantic names
+        # e.g. "Walk_Left_1234" -> "Walk_Left", but "Walk_Left" stays "Walk_Left"
+        base_name = re.sub(r"_\d+$", "", original_name)
         retry_count = 0
 
         while retry_count < self.MAX_NAME_RETRY_ATTEMPTS:
             retry_count += 1
 
-            # Generate new unique name with timestamp
+            # Generate new unique name with timestamp + retry count to avoid collisions
+            # within the same tight loop (timestamp alone is stable across retries)
             timestamp = int(time.time() * 1000) % 10000
-            new_name = f"{base_name}_{timestamp}"
+            new_name = f"{base_name}_{timestamp + retry_count}"
 
             success, _error = self._segment_manager.add_segment(
                 new_name,
@@ -440,8 +448,35 @@ class AnimationSegmentController(QObject):
         self.sync_segments_from_manager()
 
     def on_tab_changed(self, index: int) -> None:
-        """Handle tab change event to refresh grid view."""
-        if index == 1 and self._grid_view:
+        """Handle tab change event to refresh grid view.
+
+        Only performs a full clear+resync when the underlying frame data has
+        actually changed (different sprite sheet or different frame count).
+        This prevents destroying in-progress segment preview playback on every
+        tab switch.
+        """
+        if index != 1 or not self._grid_view:
+            return
+
+        current_frame_count = (
+            len(self._sprite_model.sprite_frames)
+            if self._sprite_model and self._sprite_model.sprite_frames
+            else 0
+        )
+        current_sprite_path = (
+            self._sprite_model.file_path
+            if self._sprite_model and hasattr(self._sprite_model, "file_path")
+            else ""
+        )
+
+        frame_data_changed = (
+            current_frame_count != self._last_sync_frame_count
+            or current_sprite_path != self._last_sync_sprite_path
+        )
+
+        if frame_data_changed:
+            self._last_sync_frame_count = current_frame_count
+            self._last_sync_sprite_path = current_sprite_path
             self.update_grid_view_frames()
             self.sync_segments_from_manager()
 

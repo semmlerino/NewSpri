@@ -5,6 +5,7 @@ Part of Animation Splitting Feature implementation.
 """
 
 import contextlib
+import dataclasses
 import json
 import logging
 import os
@@ -69,7 +70,9 @@ class AnimationSegment:
         # Convert frame_holds keys from strings to ints (JSON serializes dict keys as strings)
         if isinstance(data.get("frame_holds"), dict):
             data["frame_holds"] = {int(k): v for k, v in data["frame_holds"].items()}
-        return cls(**data)
+        # Filter to known fields so unexpected JSON keys don't cause TypeError
+        valid_fields = {f.name for f in dataclasses.fields(cls)}
+        return cls(**{k: v for k, v in data.items() if k in valid_fields})
 
     def validate(self, max_frames: int | None = None) -> tuple[bool, str]:
         """
@@ -593,7 +596,7 @@ class AnimationSegmentManager(QObject):
 
             return True, ""
 
-        except (OSError, json.JSONDecodeError, ValueError, KeyError) as e:
+        except (OSError, json.JSONDecodeError, ValueError, KeyError, TypeError) as e:
             return False, f"Failed to load segments: {e!s}"
 
     def _load_segments_for_sprite(self):

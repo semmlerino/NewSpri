@@ -209,6 +209,7 @@ class SpriteViewer(QMainWindow):
 
         # Set up canvas zoom label connection and grid state
         self._grid_enabled = False
+        self._loading_in_progress = False
 
         # Initialize controllers with all dependencies (single-step init)
         self._animation_controller = AnimationController(
@@ -643,56 +644,62 @@ class SpriteViewer(QMainWindow):
         Returns:
             True if loading succeeded
         """
-        # Check if loading a new sprite would clear existing segments
-        current_path = self._sprite_model.file_path
-        if current_path and current_path != file_path:
-            existing_segments = self._segment_manager.get_all_segments()
-            if existing_segments:
-                reply = QMessageBox.question(
-                    self,
-                    "Clear Segments?",
-                    f"Loading a new sprite will clear {len(existing_segments)} existing segment(s).\n\nContinue?",
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                )
-                if reply != QMessageBox.StandardButton.Yes:
-                    return False
-
-        # Try to load via sprite model
-        success, error_message = self._sprite_model.load_sprite_sheet(file_path)
-
-        if not success:
-            QMessageBox.critical(self, "Load Error", error_message)
+        if self._loading_in_progress:
             return False
+        self._loading_in_progress = True
+        try:
+            # Check if loading a new sprite would clear existing segments
+            current_path = self._sprite_model.file_path
+            if current_path and current_path != file_path:
+                existing_segments = self._segment_manager.get_all_segments()
+                if existing_segments:
+                    reply = QMessageBox.question(
+                        self,
+                        "Clear Segments?",
+                        f"Loading a new sprite will clear {len(existing_segments)} existing segment(s).\n\nContinue?",
+                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                    )
+                    if reply != QMessageBox.StandardButton.Yes:
+                        return False
 
-        # Add to recent files on successful load
-        self._recent_files.add_file_to_recent(file_path)
+            # Try to load via sprite model
+            success, error_message = self._sprite_model.load_sprite_sheet(file_path)
 
-        # Update action states
-        self._update_has_frames_actions()
+            if not success:
+                QMessageBox.critical(self, "Load Error", error_message)
+                return False
 
-        # Update display first (fast)
-        self._canvas.update()
-        self._info_label.setText(self._sprite_model.sprite_info)
+            # Add to recent files on successful load
+            self._recent_files.add_file_to_recent(file_path)
 
-        # Trigger appropriate detection based on current extraction mode
-        current_mode = self._frame_extractor.get_extraction_mode()
-        if current_mode is ExtractionMode.CCL:
-            # For CCL mode, try direct CCL extraction without grid auto-detection
-            if self._status_manager is not None:
-                self._status_manager.show_message("Running CCL extraction...")
-            self._update_frame_slicing()  # This will trigger CCL extraction
-        else:
-            # For grid mode, run comprehensive grid auto-detection
-            # Use wait cursor to indicate processing
-            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-            QApplication.processEvents()
-            try:
-                if self._auto_detection_controller:
-                    self._auto_detection_controller.run_comprehensive_detection_with_dialog()
-            finally:
-                QApplication.restoreOverrideCursor()
+            # Update action states
+            self._update_has_frames_actions()
 
-        return True
+            # Update display first (fast)
+            self._canvas.update()
+            self._info_label.setText(self._sprite_model.sprite_info)
+
+            # Trigger appropriate detection based on current extraction mode
+            current_mode = self._frame_extractor.get_extraction_mode()
+            if current_mode is ExtractionMode.CCL:
+                # For CCL mode, try direct CCL extraction without grid auto-detection
+                if self._status_manager is not None:
+                    self._status_manager.show_message("Running CCL extraction...")
+                self._update_frame_slicing()  # This will trigger CCL extraction
+            else:
+                # For grid mode, run comprehensive grid auto-detection
+                # Use wait cursor to indicate processing
+                QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+                QApplication.processEvents()
+                try:
+                    if self._auto_detection_controller:
+                        self._auto_detection_controller.run_comprehensive_detection_with_dialog()
+                finally:
+                    QApplication.restoreOverrideCursor()
+
+            return True
+        finally:
+            self._loading_in_progress = False
 
     # ============================================================================
     # VIEW OPERATIONS
@@ -965,7 +972,11 @@ class SpriteViewer(QMainWindow):
     def dragLeaveEvent(self, event):
         """Handle drag leave event."""
         self._canvas.setStyleSheet(StyleManager.canvas_normal())
-        self._show_welcome_message()
+        if self._sprite_model.is_loaded:
+            self._info_label.setText(self._sprite_model.sprite_info)
+        else:
+            self._show_welcome_message()
+        event.accept()
 
     def dropEvent(self, event: QDropEvent):
         """Handle drop event."""
@@ -1145,7 +1156,10 @@ class SpriteViewer(QMainWindow):
     def _on_export_current_frame_requested(self) -> None:
         """Export only the current frame."""
         current_idx = self._sprite_model.current_frame
-        self._show_export_dialog([self._sprite_model.sprite_frames[current_idx]], 0)
+        frames = self._sprite_model.sprite_frames
+        if not frames or current_idx >= len(frames):
+            return
+        self._show_export_dialog([frames[current_idx]], 0)
 
     def _show_export_dialog(self, sprites: list, current_frame: int) -> None:
         """Show export dialog with the given sprites."""
@@ -1165,6 +1179,10 @@ class SpriteViewer(QMainWindow):
         """Handle close event."""
         # Save settings
         self._settings_manager.save_window_geometry(self)
+
+        # Stop segment preview timers before signal disconnects
+        if hasattr(self, "_segment_preview") and self._segment_preview:
+            self._segment_preview.clear_segments()
 
         # Clean up signal coordinator
         if self._signal_coordinator:

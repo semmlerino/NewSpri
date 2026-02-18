@@ -84,6 +84,10 @@ class AnimationController(QObject):
         # Timer precision tracking (for get_actual_fps)
         self._timer_precision: float = 0.0
 
+        # Guard flag: True while _on_timer_timeout is driving a frame advance.
+        # Used by _on_model_frame_changed to avoid double-emitting frameAdvanced.
+        self._timer_driving_frame: bool = False
+
         # Connect timer
         self._animation_timer.timeout.connect(self._on_timer_timeout)
 
@@ -280,8 +284,14 @@ class AnimationController(QObject):
             return
 
         try:
-            # Advance frame using model logic
-            frame_index, should_continue = self._sprite_model.next_frame()
+            # Set guard so _on_model_frame_changed knows this is timer-driven
+            # and skips its own frameAdvanced emit to prevent double-firing.
+            self._timer_driving_frame = True
+            try:
+                # Advance frame using model logic
+                frame_index, should_continue = self._sprite_model.next_frame()
+            finally:
+                self._timer_driving_frame = False
 
             # Emit frame advanced signal
             self.frameAdvanced.emit(frame_index)
@@ -397,7 +407,13 @@ class AnimationController(QObject):
                 f"Animation paused - manual frame change to {current_frame + 1}/{total_frames}"
             )
 
-        # Emit frame advanced signal for UI synchronization
+        # Skip frameAdvanced here when the timer is already driving the frame change:
+        # _on_timer_timeout emits frameAdvanced after next_frame() returns, so emitting
+        # it again here would cause every animated frame to fire the signal twice.
+        if self._timer_driving_frame:
+            return
+
+        # Emit frame advanced signal for UI synchronization (manual / non-timer path)
         self.frameAdvanced.emit(current_frame)
 
     def _on_model_error(self, error_message: str) -> None:

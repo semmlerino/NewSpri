@@ -541,11 +541,8 @@ class _PreviewGenerator:
             rows = math.ceil(len(self._parent._sprites) / cols)
 
         # Get spacing
-        spacing = (
-            self._parent._settings_widgets.get("spacing", QSlider()).value()
-            if "spacing" in self._parent._settings_widgets
-            else 0
-        )
+        spacing_widget = self._parent._settings_widgets.get("spacing")
+        spacing = spacing_widget.value() if spacing_widget is not None else 0
 
         # Calculate size
         if self._parent._sprites:
@@ -561,11 +558,8 @@ class _PreviewGenerator:
         pixmap = QPixmap(sheet_w, sheet_h)
 
         # Background
-        bg_index = (
-            self._parent._settings_widgets.get("background", QComboBox()).currentIndex()
-            if "background" in self._parent._settings_widgets
-            else 0
-        )
+        bg_widget = self._parent._settings_widgets.get("background")
+        bg_index = bg_widget.currentIndex() if bg_widget is not None else 0
         if bg_index == 0:  # Transparent
             pixmap.fill(Qt.GlobalColor.transparent)
         elif bg_index == 1:  # White
@@ -673,11 +667,8 @@ class _PreviewGenerator:
         logger.debug("Preview layout will be %d rows x %d cols", rows, cols)
 
         # Get spacing
-        spacing = (
-            self._parent._settings_widgets.get("spacing", QSlider()).value()
-            if "spacing" in self._parent._settings_widgets
-            else 0
-        )
+        spacing_widget = self._parent._settings_widgets.get("spacing")
+        spacing = spacing_widget.value() if spacing_widget is not None else 0
 
         # Calculate size
         if self._parent._sprites:
@@ -715,11 +706,8 @@ class _PreviewGenerator:
         pixmap = QPixmap(sheet_w, sheet_h)
 
         # Background
-        bg_index = (
-            self._parent._settings_widgets.get("background", QComboBox()).currentIndex()
-            if "background" in self._parent._settings_widgets
-            else 0
-        )
+        bg_widget = self._parent._settings_widgets.get("background")
+        bg_index = bg_widget.currentIndex() if bg_widget is not None else 0
         if bg_index == 0:  # Transparent
             pixmap.fill(Qt.GlobalColor.transparent)
         elif bg_index == 1:  # White
@@ -1252,12 +1240,15 @@ class ModernExportSettings(WizardStep):
 
         if self._current_preset:
             if self._current_preset.mode is ExportMode.SPRITE_SHEET:
-                valid &= bool(self._settings_widgets.get("sheet_filename", QLineEdit()).text())
+                w = self._settings_widgets.get("sheet_filename")
+                valid &= bool(w.text() if w is not None else "")
             elif self._current_preset.mode is ExportMode.INDIVIDUAL_FRAMES:
-                valid &= bool(self._settings_widgets.get("base_name", QLineEdit()).text())
+                w = self._settings_widgets.get("base_name")
+                valid &= bool(w.text() if w is not None else "")
             elif self._current_preset.mode is ExportMode.SELECTED_FRAMES:
                 valid &= len(self.frame_list.selectedItems()) > 0
-                valid &= bool(self._settings_widgets.get("selected_base_name", QLineEdit()).text())
+                w = self._settings_widgets.get("selected_base_name")
+                valid &= bool(w.text() if w is not None else "")
 
         self.export_btn.setEnabled(valid)
         self.stepValidated.emit(valid)
@@ -1330,7 +1321,8 @@ class ModernExportSettings(WizardStep):
         # Mode specific
         if self._current_preset:
             if self._current_preset.mode is ExportMode.SPRITE_SHEET:
-                filename = self._settings_widgets.get("sheet_filename", QLineEdit()).text()
+                w = self._settings_widgets.get("sheet_filename")
+                filename = w.text() if w is not None else ""
                 if filename:
                     parts.append(f"→ {filename}.{format.lower()}")
             elif self._current_preset.mode is ExportMode.SELECTED_FRAMES:
@@ -1399,9 +1391,8 @@ class ModernExportSettings(WizardStep):
 
         if self._current_preset:
             if self._current_preset.mode is ExportMode.SPRITE_SHEET:
-                data["single_filename"] = self._settings_widgets.get(
-                    "sheet_filename", QLineEdit()
-                ).text()
+                w = self._settings_widgets.get("sheet_filename")
+                data["single_filename"] = w.text() if w is not None else ""
 
                 # Layout settings
                 layout_mode = "auto"
@@ -1418,10 +1409,12 @@ class ModernExportSettings(WizardStep):
                 data["rows"] = self.rows_spin.value()
 
                 # Style settings
-                data["spacing"] = self._settings_widgets.get("spacing", QSlider()).value()
+                spacing_widget = self._settings_widgets.get("spacing")
+                data["spacing"] = spacing_widget.value() if spacing_widget is not None else 0
                 data["padding"] = 0
 
-                bg_index = self._settings_widgets.get("background", QComboBox()).currentIndex()
+                bg_widget = self._settings_widgets.get("background")
+                bg_index = bg_widget.currentIndex() if bg_widget is not None else 0
                 if bg_index == 0:
                     data["background_mode"] = "transparent"
                 elif bg_index == 1:

@@ -7,6 +7,7 @@ Part of Phase 4: Frame Export System implementation.
 from __future__ import annotations
 
 import logging
+import re
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
@@ -130,6 +131,9 @@ class SpriteSheetLayout:
         """Estimate sprite sheet dimensions with current layout settings."""
         import math
 
+        if frame_count <= 0:
+            return (2 * self.padding, 2 * self.padding)
+
         if self.mode is LayoutMode.CUSTOM:
             # custom_columns and custom_rows validated in __post_init__
             assert self.custom_columns is not None
@@ -224,7 +228,7 @@ class ExportTask:
             mode: Export mode
             scale_factor: Scale factor for output (1.0 = original size)
             pattern: Naming pattern for individual frames
-            selected_indices: Indices of selected frames (for filtering)
+            selected_indices: Unused — frame filtering is done before ExportTask is created
             sprite_sheet_layout: Layout configuration for sprite sheet export
             segment_info: List of segment dictionaries with 'name', 'start_frame', 'end_frame'
         """
@@ -235,7 +239,6 @@ class ExportTask:
         self.mode = mode
         self.scale_factor = scale_factor
         self.pattern = pattern
-        self.selected_indices = selected_indices or []
         self.sprite_sheet_layout = sprite_sheet_layout or SpriteSheetLayout()
         self.segment_info = segment_info or []
 
@@ -333,15 +336,22 @@ class ExportWorker(QThread):
                 failed_frames.append(filename)
                 self.error.emit(f"Failed to export {filename}")
 
-        # Report failure if any frames failed to export
+        # Report result — partial success if some frames exported, total failure if none
         if failed_frames:
             failed_summary = ", ".join(failed_frames[:3])
             if len(failed_frames) > 3:
                 failed_summary += f" (and {len(failed_frames) - 3} more)"
-            self.finished.emit(
-                False,
-                f"Export failed: {len(failed_frames)} of {total_frames} frames failed ({failed_summary})",
-            )
+            if exported_count > 0:
+                self.finished.emit(
+                    True,
+                    f"Partial export: {exported_count} of {total_frames} frames exported; "
+                    f"{len(failed_frames)} failed ({failed_summary})",
+                )
+            else:
+                self.finished.emit(
+                    False,
+                    f"Export failed: {len(failed_frames)} of {total_frames} frames failed ({failed_summary})",
+                )
         else:
             self.finished.emit(True, f"Successfully exported {exported_count} frames")
 
@@ -394,17 +404,23 @@ class ExportWorker(QThread):
             )
 
         # Create sprite sheet with background
-        sprite_sheet = self._create_background_sheet(sheet_width, sheet_height, layout)
+        sprite_sheet = self._create_background_sheet(
+            sheet_width, sheet_height, layout, self.task.format
+        )
 
         # Draw frames onto sprite sheet with spacing
         if layout.mode is LayoutMode.SEGMENTS_PER_ROW and self.task.segment_info:
-            self._draw_sprites_segments_per_row(
+            draw_ok = self._draw_sprites_segments_per_row(
                 sprite_sheet, cols, rows, frame_width, frame_height, layout
             )
         else:
-            self._draw_sprites_with_layout(
+            draw_ok = self._draw_sprites_with_layout(
                 sprite_sheet, cols, rows, frame_width, frame_height, layout
             )
+
+        if not draw_ok:
+            # Draw method detected cancellation; finished already emitted
+            return
 
         self.progress.emit(2, 3, "Saving sprite sheet...")
 
@@ -559,14 +575,26 @@ class ExportWorker(QThread):
         return sheet_width, sheet_height
 
     def _create_background_sheet(
-        self, width: int, height: int, layout: SpriteSheetLayout
+        self,
+        width: int,
+        height: int,
+        layout: SpriteSheetLayout,
+        export_format: ExportFormat | None = None,
     ) -> QImage:
-        """Create sprite sheet with the specified background (thread-safe QImage)."""
+        """Create sprite sheet with the specified background (thread-safe QImage).
+
+        When export_format is JPG and the background would be transparent,
+        white is used instead because JPG has no alpha channel.
+        """
         # Use QImage instead of QPixmap for thread-safety
         sprite_sheet = QImage(width, height, QImage.Format.Format_ARGB32)
 
         if layout.background_mode is BackgroundMode.TRANSPARENT:
-            sprite_sheet.fill(QColor(0, 0, 0, 0))  # Fully transparent
+            if export_format is ExportFormat.JPG:
+                # JPG cannot represent transparency; use white to avoid black output
+                sprite_sheet.fill(QColor(255, 255, 255, 255))
+            else:
+                sprite_sheet.fill(QColor(0, 0, 0, 0))  # Fully transparent
 
         elif layout.background_mode is BackgroundMode.SOLID:
             r, g, b, a = layout.background_color
@@ -605,8 +633,11 @@ class ExportWorker(QThread):
         frame_width: int,
         frame_height: int,
         layout: SpriteSheetLayout,
-    ) -> None:
-        """Draw all frames onto the sprite sheet with proper spacing and layout."""
+    ) -> bool:
+        """Draw all frames onto the sprite sheet with proper spacing and layout.
+
+        Returns True on success, False if cancelled (caller must emit finished).
+        """
         painter = QPainter(sprite_sheet)
 
         # Enable high-quality rendering if configured
@@ -618,7 +649,7 @@ class ExportWorker(QThread):
             if self._cancelled:
                 painter.end()
                 self.finished.emit(False, "Export cancelled")
-                return
+                return False
 
             # Calculate grid position
             row = i // cols
@@ -636,6 +667,7 @@ class ExportWorker(QThread):
                 painter.drawImage(x, y, frame)
 
         painter.end()
+        return True
 
     def _calculate_segments_per_row_layout(self) -> tuple[int, int]:
         """Calculate layout for segments per row mode."""
@@ -668,9 +700,11 @@ class ExportWorker(QThread):
         frame_width: int,
         frame_height: int,
         layout: SpriteSheetLayout,
-    ) -> None:
-        """Draw sprites with each segment on its own row."""
+    ) -> bool:
+        """Draw sprites with each segment on its own row.
 
+        Returns True on success, False if cancelled (caller must emit finished).
+        """
         painter = QPainter(sprite_sheet)
 
         # Enable high-quality rendering if configured
@@ -692,7 +726,7 @@ class ExportWorker(QThread):
                 if self._cancelled:
                     painter.end()
                     self.finished.emit(False, "Export cancelled")
-                    return
+                    return False
 
                 frame = self.task.frames[frame_idx]
 
@@ -712,11 +746,12 @@ class ExportWorker(QThread):
             logger.debug("Drew %d frames for segment '%s'", frames_drawn, segment["name"])
 
         painter.end()
+        return True
 
     def _scale_image(self, image: QImage, scale_factor: float) -> QImage:
         """Scale an image by the given factor (thread-safe)."""
-        new_width = int(image.width() * scale_factor)
-        new_height = int(image.height() * scale_factor)
+        new_width = max(1, int(image.width() * scale_factor))
+        new_height = max(1, int(image.height() * scale_factor))
         return image.scaled(
             new_width,
             new_height,
@@ -820,6 +855,9 @@ class FrameExporter(QObject):
         if pattern is None:
             pattern = Config.Export.DEFAULT_PATTERN
 
+        # Sanitize base_name to remove characters illegal in file paths
+        base_name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", base_name)
+
         # Convert QPixmap frames to QImage for thread-safe processing
         # QPixmap is NOT thread-safe and must only be used from the main GUI thread
         # QImage IS thread-safe and can be safely used in worker threads
@@ -864,8 +902,8 @@ class FrameExporter(QObject):
         """Cancel the current export operation."""
         if self._worker and self._worker.isRunning():
             self._worker.cancel()
-            self._worker.quit()
-            self._worker.wait()
+            if not self._worker.wait(5000):
+                self._worker.terminate()
 
     def _on_progress(self, current: int, total: int, message: str):
         """Handle progress updates from worker."""
@@ -873,6 +911,8 @@ class FrameExporter(QObject):
 
     def _on_finished(self, success: bool, message: str):
         """Handle export completion."""
+        if self._worker is not None:
+            self._worker.wait(5000)  # Ensure thread has fully stopped before releasing reference
         self._worker = None
         self._current_task = None
         self.exportFinished.emit(success, message)

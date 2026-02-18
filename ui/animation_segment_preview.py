@@ -209,6 +209,9 @@ class SegmentPreviewItem(QFrame):
 
     def _update_frame(self):
         """Update to next frame in animation."""
+        if len(self._frames) <= 1:
+            return
+
         # Check if we're holding the current frame
         if self._current_frame in self._frame_holds:
             if self._hold_counter < self._frame_holds[self._current_frame]:
@@ -245,7 +248,8 @@ class SegmentPreviewItem(QFrame):
         if self._is_playing:
             self.play_button.setText("⏸")
             self.play_button.setStyleSheet(StyleManager.button_warning())
-            self._timer.start()
+            if len(self._frames) > 1:
+                self._timer.start()
         else:
             self.play_button.setText("▶")
             self.play_button.setStyleSheet(StyleManager.button_success())
