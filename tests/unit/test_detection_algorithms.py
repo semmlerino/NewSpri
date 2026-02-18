@@ -27,9 +27,8 @@ from sprite_model.sprite_detection import (
     DetectionResult,
     DetectionStepResult,
     _calculate_common_dimensions,
-    _detect_horizontal_spacing,
     _detect_raw_margins,
-    _detect_vertical_spacing,
+    _detect_spacing_1d,
     _has_content_in_region,
     _score_frame_candidate,
     _validate_margins,
@@ -477,7 +476,17 @@ class TestSpacingDetector:
                 if x < 100:  # Stay within bounds
                     image.setPixel(x, y, 0xFF000000)
 
-        detected_spacing, score = _detect_horizontal_spacing(image, frame_width, 30, 0, 0, 100)
+        detected_spacing, score = _detect_spacing_1d(
+            image,
+            frame_size=frame_width,
+            frame_cross=30,
+            offset_main=0,
+            offset_cross=0,
+            available=100,
+            pixel_fn=lambda main, cross: image.pixel(main, cross),
+            image_main_size=image.width(),
+            image_cross_size=image.height(),
+        )
 
         # Should detect some spacing (algorithm might not get exact value)
         assert detected_spacing >= 0
@@ -514,7 +523,17 @@ class TestSpacingDetector:
                 if y < 100:  # Stay within bounds
                     image.setPixel(x, y, 0xFF000000)
 
-        detected_spacing, score = _detect_vertical_spacing(image, 30, frame_height, 0, 0, 100)
+        detected_spacing, score = _detect_spacing_1d(
+            image,
+            frame_size=frame_height,
+            frame_cross=30,
+            offset_main=0,
+            offset_cross=0,
+            available=100,
+            pixel_fn=lambda main, cross: image.pixel(cross, main),
+            image_main_size=image.height(),
+            image_cross_size=image.width(),
+        )
 
         # Should detect some spacing (algorithm might not get exact value)
         assert detected_spacing >= 0

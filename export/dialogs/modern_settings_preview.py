@@ -6,7 +6,7 @@ Redesigned for better usability and modern aesthetics.
 import logging
 import math
 import os
-from typing import Any
+from typing import Any, cast
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPixmap
@@ -40,7 +40,7 @@ from utils.styles import StyleManager
 
 from ..core.export_presets import ExportPreset
 from ..core.frame_exporter import ExportMode
-from ..dialogs.base.wizard_base import WizardStep
+from ..dialogs.base.wizard_base import WizardStep, WizardWidget
 
 logger = logging.getLogger(__name__)
 
@@ -134,7 +134,7 @@ class CompactLivePreview(QGraphicsView):
         self._zoom_level = 1.0
 
 
-class _SheetSettingsBuilder:
+class _SheetSettingsPanel:
     """Helper class to build sheet settings widget for sprite sheet export."""
 
     def __init__(self, parent: "ModernExportSettings"):
@@ -295,7 +295,7 @@ class _SheetSettingsBuilder:
         return widget
 
 
-class _IndividualSettingsBuilder:
+class _IndividualSettingsPanel:
     """Helper class to build individual frames settings widget."""
 
     def __init__(self, parent: "ModernExportSettings"):
@@ -333,7 +333,7 @@ class _IndividualSettingsBuilder:
 
         for i, pattern in enumerate(patterns):
             # Generate initial display text
-            display_text = self._generate_pattern_display(pattern, "frame")
+            display_text = self._parent._generate_pattern_display(pattern, "frame")
             radio = QRadioButton(display_text)
             if i == 0:
                 radio.setChecked(True)
@@ -351,28 +351,6 @@ class _IndividualSettingsBuilder:
 
         return widget
 
-    def _generate_pattern_display(self, pattern: str, base_name: str) -> str:
-        """Generate display text for a pattern with the given base name."""
-
-        # Get format extension
-        format_ext = (
-            self._parent.format_combo.currentText().lower()
-            if hasattr(self._parent, "format_combo")
-            else "png"
-        )
-
-        # Replace placeholders
-        if pattern == "{name}_{index:03d}":
-            result = f"{base_name}_001.{format_ext}"
-        elif pattern == "{name}-{index}":
-            result = f"{base_name}-1.{format_ext}"
-        elif pattern == "{name}{index}":
-            result = f"{base_name}1.{format_ext}"
-        else:
-            result = f"{base_name}.{format_ext}"
-
-        return result
-
     def _on_base_name_changed(self, text: str):
         """Handle base name change - update pattern displays."""
 
@@ -383,10 +361,10 @@ class _IndividualSettingsBuilder:
         # Update pattern radio button displays
         base_name = text if text else "frame"
         try:
-            for _, radio in enumerate(self._parent._pattern_radios):
+            for radio in self._parent._pattern_radios:
                 pattern = radio.property("pattern")
                 if pattern:
-                    new_display = self._generate_pattern_display(pattern, base_name)
+                    new_display = self._parent._generate_pattern_display(pattern, base_name)
                     radio.setText(new_display)
         except Exception as e:
             logger.warning("Error updating pattern displays: %s", e)
@@ -395,7 +373,7 @@ class _IndividualSettingsBuilder:
         self._parent._on_setting_changed()
 
 
-class _SelectedSettingsBuilder:
+class _SelectedSettingsPanel:
     """Helper class to build selected frames settings widget."""
 
     def __init__(self, parent: "ModernExportSettings"):
@@ -516,16 +494,8 @@ class _PreviewGenerator:
                 # Continue with regular sheet preview below
 
         # Get layout settings
-        layout_mode = "auto"
+        layout_mode = self._parent._get_layout_mode()
         cols = rows = 8
-
-        if "layout_mode" in self._parent._settings_widgets:
-            mode_group = self._parent._settings_widgets["layout_mode"]
-            modes = ["auto", "columns", "rows", "square"]
-            for i, mode in enumerate(modes):
-                if mode_group.button(i) and mode_group.button(i).isChecked():
-                    layout_mode = mode
-                    break
 
         if layout_mode == "columns":
             cols = self._parent.cols_spin.value()
@@ -556,16 +526,7 @@ class _PreviewGenerator:
 
         # Create pixmap
         pixmap = QPixmap(sheet_w, sheet_h)
-
-        # Background
-        bg_widget = self._parent._settings_widgets.get("background")
-        bg_index = bg_widget.currentIndex() if bg_widget is not None else 0
-        if bg_index == 0:  # Transparent
-            pixmap.fill(Qt.GlobalColor.transparent)
-        elif bg_index == 1:  # White
-            pixmap.fill(Qt.GlobalColor.white)
-        elif bg_index == 2:  # Black
-            pixmap.fill(Qt.GlobalColor.black)
+        self._fill_background(pixmap)
 
         # Draw sprites
         painter = QPainter(pixmap)
@@ -597,28 +558,14 @@ class _PreviewGenerator:
 
         if not self._parent._sprites or not self._parent._segment_manager:
             logger.debug("No sprites or segment manager, showing placeholder")
-            # Show placeholder if no segments available
-            pixmap = QPixmap(400, 200)
-            pixmap.fill(Qt.GlobalColor.white)
-
-            painter = QPainter(pixmap)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-            # Draw placeholder text
-            font = QFont("Segoe UI", 12)
-            painter.setFont(font)
-            painter.setPen(QColor(108, 117, 125))
-
-            text = (
+            placeholder_text = (
                 "No animation segments available"
                 if not self._parent._segment_manager
                 else "Loading segments preview..."
             )
-            painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, text)
-
-            painter.end()
-            self._parent._update_preview_info("Segments Per Row: No segments defined")
-            return pixmap
+            return self._placeholder_pixmap(
+                placeholder_text, "Segments Per Row: No segments defined"
+            )
 
         # Get all segments
         segments = (
@@ -635,23 +582,9 @@ class _PreviewGenerator:
 
         if not segments:
             logger.debug("No segments found, showing placeholder")
-            # No segments, show placeholder
-            pixmap = QPixmap(400, 200)
-            pixmap.fill(Qt.GlobalColor.white)
-
-            painter = QPainter(pixmap)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-            font = QFont("Segoe UI", 12)
-            painter.setFont(font)
-            painter.setPen(QColor(108, 117, 125))
-            painter.drawText(
-                pixmap.rect(), Qt.AlignmentFlag.AlignCenter, "No animation segments defined"
+            return self._placeholder_pixmap(
+                "No animation segments defined", "Segments Per Row: No segments"
             )
-
-            painter.end()
-            self._parent._update_preview_info("Segments Per Row: No segments")
-            return pixmap
 
         # Calculate layout for segments
         try:
@@ -704,23 +637,13 @@ class _PreviewGenerator:
 
         # Create pixmap
         pixmap = QPixmap(sheet_w, sheet_h)
-
-        # Background
-        bg_widget = self._parent._settings_widgets.get("background")
-        bg_index = bg_widget.currentIndex() if bg_widget is not None else 0
-        if bg_index == 0:  # Transparent
-            pixmap.fill(Qt.GlobalColor.transparent)
-        elif bg_index == 1:  # White
-            pixmap.fill(Qt.GlobalColor.white)
-        elif bg_index == 2:  # Black
-            pixmap.fill(Qt.GlobalColor.black)
+        self._fill_background(pixmap)
 
         # Draw segments
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         for row_idx, segment in enumerate(segments):
-            frames_drawn = 0
             # Draw frames for this segment
             for frame_idx in range(segment.start_frame, segment.end_frame + 1):
                 if frame_idx < len(self._parent._sprites):
@@ -738,7 +661,6 @@ class _PreviewGenerator:
                         painter.drawPixmap(x, y, scaled_sprite)
                     else:
                         painter.drawPixmap(x, y, self._parent._sprites[frame_idx])
-                    frames_drawn += 1
 
         painter.end()
 
@@ -823,6 +745,33 @@ class _PreviewGenerator:
 
         return pixmap
 
+    def _fill_background(self, pixmap: QPixmap) -> None:
+        """Fill pixmap background based on the current background combo selection."""
+        bg_widget = self._parent._settings_widgets.get("background")
+        bg_index = bg_widget.currentIndex() if bg_widget is not None else 0
+        if bg_index == 0:  # Transparent
+            pixmap.fill(Qt.GlobalColor.transparent)
+        elif bg_index == 1:  # White
+            pixmap.fill(Qt.GlobalColor.white)
+        elif bg_index == 2:  # Black
+            pixmap.fill(Qt.GlobalColor.black)
+
+    def _placeholder_pixmap(self, text: str, info: str) -> QPixmap:
+        """Create a 400x200 placeholder pixmap with centered text and update preview info."""
+        pixmap = QPixmap(400, 200)
+        pixmap.fill(Qt.GlobalColor.white)
+
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        font = QFont("Segoe UI", 12)
+        painter.setFont(font)
+        painter.setPen(QColor(108, 117, 125))
+        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, text)
+        painter.end()
+
+        self._parent._update_preview_info(info)
+        return pixmap
+
 
 class ModernExportSettings(WizardStep):
     """
@@ -845,6 +794,9 @@ class ModernExportSettings(WizardStep):
         self._current_preset: ExportPreset | None = None
         self._settings_widgets: dict[str, Any] = {}
         self._pattern_radios: list[QRadioButton] = []  # Track pattern radio buttons for updates
+
+        # Preview generator (stored once, reused for each preview update)
+        self._preview_generator = _PreviewGenerator(self)
 
         # Preview debounce
         self._preview_timer = QTimer()
@@ -1003,7 +955,7 @@ class ModernExportSettings(WizardStep):
         format_layout.addWidget(scale_label)
 
         self.scale_group = QButtonGroup()
-        for _, scale in enumerate([1, 2, 4]):
+        for scale in [1, 2, 4]:
             btn = QPushButton(f"{scale}x")
             btn.setCheckable(True)
             btn.setFixedSize(40, 28)
@@ -1140,18 +1092,18 @@ class ModernExportSettings(WizardStep):
 
     def _create_sheet_settings(self) -> QWidget:
         """Create sprite sheet specific settings."""
-        builder = _SheetSettingsBuilder(self)
-        return builder.build()
+        panel = _SheetSettingsPanel(self)
+        return panel.build()
 
     def _create_individual_settings(self) -> QWidget:
         """Create individual frames settings."""
-        builder = _IndividualSettingsBuilder(self)
-        return builder.build()
+        panel = _IndividualSettingsPanel(self)
+        return panel.build()
 
     def _create_selected_settings(self) -> QWidget:
         """Create selected frames settings."""
-        builder = _SelectedSettingsBuilder(self)
-        return builder.build()
+        panel = _SelectedSettingsPanel(self)
+        return panel.build()
 
     # Event handlers
     def _browse_output(self):
@@ -1186,7 +1138,7 @@ class ModernExportSettings(WizardStep):
             ):
                 base_name = self.base_name.text() if self.base_name.text() else "frame"
 
-                for _, radio in enumerate(self._pattern_radios):
+                for radio in self._pattern_radios:
                     pattern = radio.property("pattern")
                     if pattern:
                         new_display = self._generate_pattern_display(pattern, base_name)
@@ -1283,15 +1235,25 @@ class ModernExportSettings(WizardStep):
         logger.debug("Generated preview pixmap size: %dx%d", pixmap.width(), pixmap.height())
         self.preview_view.update_preview(pixmap, {})
 
+    def _get_layout_mode(self) -> str:
+        """Return the currently selected layout mode string."""
+        layout_mode = "auto"
+        if "layout_mode" in self._settings_widgets:
+            mode_group = self._settings_widgets["layout_mode"]
+            modes = ["auto", "columns", "rows", "square"]
+            for i, mode in enumerate(modes):
+                if mode_group.button(i) and mode_group.button(i).isChecked():
+                    layout_mode = mode
+                    break
+        return layout_mode
+
     def _generate_sheet_preview(self) -> QPixmap:
         """Generate sprite sheet preview."""
-        generator = _PreviewGenerator(self)
-        return generator.generate_sheet_preview()
+        return self._preview_generator.generate_sheet_preview()
 
     def _generate_frames_preview(self) -> QPixmap:
         """Generate individual frames preview."""
-        generator = _PreviewGenerator(self)
-        return generator.generate_frames_preview()
+        return self._preview_generator.generate_frames_preview()
 
     def _update_preview_info(self, text: str):
         """Update preview info overlay."""
@@ -1341,13 +1303,8 @@ class ModernExportSettings(WizardStep):
         while wizard and not hasattr(wizard, "get_wizard_data"):
             wizard = wizard.parent()
 
-        if wizard and hasattr(wizard, "get_wizard_data"):
-            # Use getattr to safely access the method
-            get_wizard_data = getattr(wizard, "get_wizard_data", None)
-            if get_wizard_data is None:
-                logger.debug("get_wizard_data method not found")
-                return
-            wizard_data = get_wizard_data()
+        if wizard:
+            wizard_data = cast("WizardWidget", wizard).get_wizard_data()
             logger.debug("Wizard data keys: %s", list(wizard_data.keys()))
 
             step_0_data = wizard_data.get("step_0", {})
@@ -1396,16 +1353,7 @@ class ModernExportSettings(WizardStep):
                 data["single_filename"] = w.text() if w is not None else ""
 
                 # Layout settings
-                layout_mode = "auto"
-                if "layout_mode" in self._settings_widgets:
-                    mode_group = self._settings_widgets["layout_mode"]
-                    modes = ["auto", "columns", "rows", "square"]
-                    for i, mode in enumerate(modes):
-                        if mode_group.button(i) and mode_group.button(i).isChecked():
-                            layout_mode = mode
-                            break
-
-                data["layout_mode"] = layout_mode
+                data["layout_mode"] = self._get_layout_mode()
                 data["columns"] = self.cols_spin.value()
                 data["rows"] = self.rows_spin.value()
 
@@ -1473,5 +1421,19 @@ class ModernExportSettings(WizardStep):
 
     def _generate_pattern_display(self, pattern: str, base_name: str) -> str:
         """Generate display text for a pattern with the given base name."""
-        builder = _IndividualSettingsBuilder(self)
-        return builder._generate_pattern_display(pattern, base_name)
+        # Get format extension
+        format_ext = (
+            self.format_combo.currentText().lower() if hasattr(self, "format_combo") else "png"
+        )
+
+        # Replace placeholders
+        if pattern == "{name}_{index:03d}":
+            result = f"{base_name}_001.{format_ext}"
+        elif pattern == "{name}-{index}":
+            result = f"{base_name}-1.{format_ext}"
+        elif pattern == "{name}{index}":
+            result = f"{base_name}1.{format_ext}"
+        else:
+            result = f"{base_name}.{format_ext}"
+
+        return result

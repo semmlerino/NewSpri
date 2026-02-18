@@ -19,6 +19,28 @@ from PySide6.QtGui import QPixmap
 
 from config import Config
 
+# ---------------------------------------------------------------------------
+# Confidence score constants
+# ---------------------------------------------------------------------------
+_CONFIDENCE_HIGH = 0.9
+_CONFIDENCE_CONTENT = 0.95
+_CONFIDENCE_MEDIUM = 0.7
+_CONFIDENCE_FALLBACK = 0.6
+_CONFIDENCE_LOW = 0.3
+_CONFIDENCE_FAILED = 0.1
+_CONFIDENCE_ERROR = 0.2
+
+
+def _confidence_label(confidence: float) -> str:
+    """Return a human-readable label for a confidence score in [0.0, 1.0]."""
+    if confidence >= 0.8:
+        return "high"
+    if confidence >= 0.6:
+        return "medium"
+    if confidence > 0.0:
+        return "low"
+    return "failed"
+
 
 @dataclass
 class DetectionStepResult:
@@ -33,13 +55,7 @@ class DetectionStepResult:
     @property
     def confidence_level(self) -> str:
         """Get human-readable confidence level."""
-        if self.confidence >= 0.8:
-            return "high"
-        if self.confidence >= 0.6:
-            return "medium"
-        if self.confidence > 0.0:
-            return "low"
-        return "failed"
+        return _confidence_label(self.confidence)
 
 
 class DetectionResult:
@@ -70,13 +86,7 @@ class DetectionResult:
     @property
     def confidence_level(self) -> str:
         """Get human-readable confidence level."""
-        if self._confidence >= 0.8:
-            return "high"
-        if self._confidence >= 0.6:
-            return "medium"
-        if self._confidence > 0.0:
-            return "low"
-        return "failed"
+        return _confidence_label(self._confidence)
 
 
 # ============================================================================
@@ -134,6 +144,32 @@ def detect_margins(
         return False, 0, 0, f"Error detecting margins: {e!s}"
 
 
+def _scan_margin(image, outer_range, inner_range_fn, pixel_fn, alpha_threshold: int) -> int:
+    """
+    Scan from an edge inward, counting transparent slices until content is found.
+
+    Args:
+        image: QImage to analyze
+        outer_range: Iterable of the primary axis coordinates (the axis being measured)
+        inner_range_fn: Callable(outer_coord) -> iterable of secondary axis coords to sample
+        pixel_fn: Callable(outer_coord, inner_coord) -> pixel value from image
+        alpha_threshold: Minimum alpha to treat as content
+
+    Returns:
+        Number of empty (fully-transparent) slices counted from the edge
+    """
+    margin = 0
+    for outer in outer_range:
+        has_content = any(
+            ((pixel_fn(outer, inner) >> 24) & 0xFF) > alpha_threshold
+            for inner in inner_range_fn(outer)
+        )
+        if has_content:
+            break
+        margin += 1
+    return margin
+
+
 def _detect_raw_margins(image) -> tuple[int, int, int, int]:
     """
     Detect raw margin measurements from image edges.
@@ -148,61 +184,34 @@ def _detect_raw_margins(image) -> tuple[int, int, int, int]:
     height = image.height()
     alpha_threshold = Config.FrameExtraction.MARGIN_DETECTION_ALPHA_THRESHOLD
 
-    # Detect left margin
-    left_margin = 0
-    for x in range(width):
-        has_content = False
-        for y in range(height):
-            pixel = image.pixel(x, y)
-            alpha = (pixel >> 24) & 0xFF
-            if alpha > alpha_threshold:
-                has_content = True
-                break
-        if has_content:
-            break
-        left_margin += 1
-
-    # Detect right margin
-    right_margin = 0
-    for x in range(width - 1, -1, -1):
-        has_content = False
-        for y in range(height):
-            pixel = image.pixel(x, y)
-            alpha = (pixel >> 24) & 0xFF
-            if alpha > alpha_threshold:
-                has_content = True
-                break
-        if has_content:
-            break
-        right_margin += 1
-
-    # Detect top margin
-    top_margin = 0
-    for y in range(height):
-        has_content = False
-        for x in range(width):
-            pixel = image.pixel(x, y)
-            alpha = (pixel >> 24) & 0xFF
-            if alpha > alpha_threshold:
-                has_content = True
-                break
-        if has_content:
-            break
-        top_margin += 1
-
-    # Detect bottom margin
-    bottom_margin = 0
-    for y in range(height - 1, -1, -1):
-        has_content = False
-        for x in range(width):
-            pixel = image.pixel(x, y)
-            alpha = (pixel >> 24) & 0xFF
-            if alpha > alpha_threshold:
-                has_content = True
-                break
-        if has_content:
-            break
-        bottom_margin += 1
+    left_margin = _scan_margin(
+        image,
+        range(width),
+        lambda x: range(height),
+        lambda x, y: image.pixel(x, y),
+        alpha_threshold,
+    )
+    right_margin = _scan_margin(
+        image,
+        range(width - 1, -1, -1),
+        lambda x: range(height),
+        lambda x, y: image.pixel(x, y),
+        alpha_threshold,
+    )
+    top_margin = _scan_margin(
+        image,
+        range(height),
+        lambda y: range(width),
+        lambda y, x: image.pixel(x, y),
+        alpha_threshold,
+    )
+    bottom_margin = _scan_margin(
+        image,
+        range(height - 1, -1, -1),
+        lambda y: range(width),
+        lambda y, x: image.pixel(x, y),
+        alpha_threshold,
+    )
 
     return left_margin, right_margin, top_margin, bottom_margin
 
@@ -426,8 +435,6 @@ def detect_content_based(sprite_sheet: QPixmap) -> tuple[bool, int, int, str]:
     try:
         # Convert to QImage for pixel analysis
         image = sprite_sheet.toImage()
-        image.width()
-        image.height()
 
         # Find content boundaries by analyzing transparency
         content_bounds = _analyze_content_boundaries(image)
@@ -648,13 +655,29 @@ def detect_spacing(
         best_score_y = 0
 
         # Horizontal spacing detection
-        best_spacing_x, best_score_x = _detect_horizontal_spacing(
-            image, frame_width, frame_height, offset_x, offset_y, available_width
+        best_spacing_x, best_score_x = _detect_spacing_1d(
+            image,
+            frame_size=frame_width,
+            frame_cross=frame_height,
+            offset_main=offset_x,
+            offset_cross=offset_y,
+            available=available_width,
+            pixel_fn=lambda main, cross: image.pixel(main, cross),
+            image_main_size=image.width(),
+            image_cross_size=image.height(),
         )
 
         # Vertical spacing detection
-        best_spacing_y, best_score_y = _detect_vertical_spacing(
-            image, frame_width, frame_height, offset_x, offset_y, available_height
+        best_spacing_y, best_score_y = _detect_spacing_1d(
+            image,
+            frame_size=frame_height,
+            frame_cross=frame_width,
+            offset_main=offset_y,
+            offset_cross=offset_x,
+            available=available_height,
+            pixel_fn=lambda main, cross: image.pixel(cross, main),
+            image_main_size=image.height(),
+            image_cross_size=image.width(),
         )
 
         # Calculate confidence based on consistency scores
@@ -677,75 +700,89 @@ def detect_spacing(
         return False, 0, 0, f"Error in enhanced spacing detection: {e!s}"
 
 
-def _detect_horizontal_spacing(
-    image, frame_width: int, frame_height: int, offset_x: int, offset_y: int, available_width: int
+def _detect_spacing_1d(
+    image,
+    frame_size: int,
+    frame_cross: int,
+    offset_main: int,
+    offset_cross: int,
+    available: int,
+    pixel_fn,
+    image_main_size: int,
+    image_cross_size: int,
 ) -> tuple[int, float]:
     """
-    Detect horizontal spacing between frames.
+    Detect spacing between frames along one axis.
+
+    The "main" axis is the one being measured (horizontal for X, vertical for Y).
+    The "cross" axis is the perpendicular one.  Callers swap the arguments to
+    reuse this function for both directions.
 
     Args:
         image: QImage to analyze
-        frame_width, frame_height: Frame dimensions
-        offset_x, offset_y: Margin offsets
-        available_width: Available width after margins
+        frame_size: Frame extent along the main axis
+        frame_cross: Frame extent along the cross axis
+        offset_main: Margin offset along the main axis
+        offset_cross: Margin offset along the cross axis
+        available: Available pixels along the main axis after the margin
+        pixel_fn: Callable(main_coord, cross_coord) -> QImage pixel value
+        image_main_size: Image size along the main axis
+        image_cross_size: Image size along the cross axis
 
     Returns:
         Tuple of (best_spacing, best_score)
     """
-    best_spacing_x = 0
-    best_score_x = 0
+    best_spacing = 0
+    best_score = 0.0
     alpha_threshold = Config.FrameExtraction.MARGIN_DETECTION_ALPHA_THRESHOLD
 
     for test_spacing in range(11):
-        score = 0
-        positions_checked = 0
-
-        # Guard against division by zero
-        if frame_width <= 0:
+        if frame_size <= 0:
             continue
 
-        # Calculate how many frames we could check with this spacing
-        frames_per_row = (
-            (available_width + test_spacing) // (frame_width + test_spacing)
+        frames_per_strip = (
+            (available + test_spacing) // (frame_size + test_spacing)
             if test_spacing > 0
-            else available_width // frame_width
+            else available // frame_size
         )
-        positions_to_check = min(3, frames_per_row - 1)  # Check up to 3 gap positions
+        positions_to_check = min(3, frames_per_strip - 1)
 
         if positions_to_check <= 0:
             continue
 
-        for position in range(positions_to_check):
-            x_gap_start = offset_x + (position + 1) * frame_width + position * test_spacing
-            x_gap_end = x_gap_start + test_spacing
-            x_next_frame = x_gap_end
+        score = 0
+        positions_checked = 0
 
-            # Check bounds
-            if x_next_frame + frame_width > image.width():
+        for position in range(positions_to_check):
+            gap_start = offset_main + (position + 1) * frame_size + position * test_spacing
+            gap_end = gap_start + test_spacing
+            next_frame = gap_end
+
+            if next_frame + frame_size > image_main_size:
                 break
 
             positions_checked += 1
 
-            # Check if gap is empty (for non-zero spacing)
+            # Check that the gap strip is empty
             gap_valid = True
             if test_spacing > 0:
-                for y in range(offset_y, min(offset_y + frame_height, image.height()), 5):
-                    for x in range(x_gap_start, x_gap_end):
-                        if x < image.width():
-                            pixel = image.pixel(x, y)
-                            alpha = (pixel >> 24) & 0xFF
+                for cross in range(
+                    offset_cross, min(offset_cross + frame_cross, image_cross_size), 5
+                ):
+                    for main in range(gap_start, gap_end):
+                        if main < image_main_size:
+                            alpha = (pixel_fn(main, cross) >> 24) & 0xFF
                             if alpha > alpha_threshold:
                                 gap_valid = False
                                 break
                     if not gap_valid:
                         break
 
-            # Check if frame exists at expected position
+            # Check that the next frame position contains content
             frame_exists = False
             if gap_valid:
-                for y in range(offset_y, min(offset_y + 20, image.height()), 5):
-                    pixel = image.pixel(x_next_frame, y)
-                    alpha = (pixel >> 24) & 0xFF
+                for cross in range(offset_cross, min(offset_cross + 20, image_cross_size), 5):
+                    alpha = (pixel_fn(next_frame, cross) >> 24) & 0xFF
                     if alpha > alpha_threshold:
                         frame_exists = True
                         break
@@ -753,103 +790,40 @@ def _detect_horizontal_spacing(
             if gap_valid and frame_exists:
                 score += 1
 
-        # Calculate consistency score
-        consistency = score / positions_checked if positions_checked > 0 else 0
-        if consistency > best_score_x:
-            best_score_x = consistency
-            best_spacing_x = test_spacing
+        consistency = score / positions_checked if positions_checked > 0 else 0.0
+        if consistency > best_score:
+            best_score = consistency
+            best_spacing = test_spacing
 
-    return best_spacing_x, best_score_x
-
-
-def _detect_vertical_spacing(
-    image, frame_width: int, frame_height: int, offset_x: int, offset_y: int, available_height: int
-) -> tuple[int, float]:
-    """
-    Detect vertical spacing between frames.
-
-    Args:
-        image: QImage to analyze
-        frame_width, frame_height: Frame dimensions
-        offset_x, offset_y: Margin offsets
-        available_height: Available height after margins
-
-    Returns:
-        Tuple of (best_spacing, best_score)
-    """
-    best_spacing_y = 0
-    best_score_y = 0
-    alpha_threshold = Config.FrameExtraction.MARGIN_DETECTION_ALPHA_THRESHOLD
-
-    for test_spacing in range(11):
-        score = 0
-        positions_checked = 0
-
-        # Guard against division by zero
-        if frame_height <= 0:
-            continue
-
-        # Calculate how many frames we could check with this spacing
-        frames_per_col = (
-            (available_height + test_spacing) // (frame_height + test_spacing)
-            if test_spacing > 0
-            else available_height // frame_height
-        )
-        positions_to_check = min(3, frames_per_col - 1)  # Check up to 3 gap positions
-
-        if positions_to_check <= 0:
-            continue
-
-        for position in range(positions_to_check):
-            y_gap_start = offset_y + (position + 1) * frame_height + position * test_spacing
-            y_gap_end = y_gap_start + test_spacing
-            y_next_frame = y_gap_end
-
-            # Check bounds
-            if y_next_frame + frame_height > image.height():
-                break
-
-            positions_checked += 1
-
-            # Check if gap is empty (for non-zero spacing)
-            gap_valid = True
-            if test_spacing > 0:
-                for x in range(offset_x, min(offset_x + frame_width, image.width()), 5):
-                    for y in range(y_gap_start, y_gap_end):
-                        if y < image.height():
-                            pixel = image.pixel(x, y)
-                            alpha = (pixel >> 24) & 0xFF
-                            if alpha > alpha_threshold:
-                                gap_valid = False
-                                break
-                    if not gap_valid:
-                        break
-
-            # Check if frame exists at expected position
-            frame_exists = False
-            if gap_valid:
-                for x in range(offset_x, min(offset_x + 20, image.width()), 5):
-                    pixel = image.pixel(x, y_next_frame)
-                    alpha = (pixel >> 24) & 0xFF
-                    if alpha > alpha_threshold:
-                        frame_exists = True
-                        break
-
-            if gap_valid and frame_exists:
-                score += 1
-
-        # Calculate consistency score
-        consistency = score / positions_checked if positions_checked > 0 else 0
-        if consistency > best_score_y:
-            best_score_y = consistency
-            best_spacing_y = test_spacing
-
-    return best_spacing_y, best_score_y
+    return best_spacing, best_score
 
 
 # ============================================================================
 # Comprehensive Auto-Detection Coordinator
 # ============================================================================
+
+
+def _record_step(
+    result: "DetectionResult",
+    results: list,
+    confidence_scores: list,
+    step_name: str,
+    success: bool,
+    confidence: float,
+    description: str,
+    fallback_used: bool = False,
+) -> None:
+    """Append a DetectionStepResult and its confidence score to the accumulators."""
+    confidence_scores.append(confidence)
+    result.step_results.append(
+        DetectionStepResult(
+            step_name=step_name,
+            success=success,
+            confidence=confidence,
+            description=description,
+            fallback_used=fallback_used,
+        )
+    )
 
 
 def comprehensive_auto_detect(
@@ -870,8 +844,8 @@ def comprehensive_auto_detect(
         return False, "No sprite sheet provided", DetectionResult()
 
     result = DetectionResult()
-    results = []
-    confidence_scores = []
+    results: list[str] = []
+    confidence_scores: list[float] = []
     overall_success = True
 
     try:
@@ -889,146 +863,76 @@ def comprehensive_auto_detect(
 
         if margin_success:
             results.append(f"   ✓ {margin_msg}")
-            confidence_scores.append(0.9)  # Margin detection is usually reliable
+            margin_conf = _CONFIDENCE_HIGH  # Margin detection is usually reliable
         else:
             results.append(f"   ⚠ Margin detection failed: {margin_msg}")
             results.append("   → Using default margins (0, 0)")
-            confidence_scores.append(0.3)
+            margin_conf = _CONFIDENCE_LOW
 
-        result.step_results.append(
-            DetectionStepResult(
-                step_name="margins",
-                success=margin_success,
-                confidence=confidence_scores[-1],
-                description=margin_msg,
-            )
+        _record_step(
+            result, results, confidence_scores, "margins", margin_success, margin_conf, margin_msg
         )
 
         # Step 2: Detect optimal frame size with multiple fallback strategies
         results.append("\n🔍 Step 2: Detecting frame size...")
 
-        # Try content-based detection first
-        try:
-            content_success, frame_width, frame_height, content_msg = detect_content_based(
-                sprite_sheet
-            )
+        # Each entry: (display_name, callable, success_confidence, is_fallback)
+        frame_strategies = [
+            (
+                "Content-based",
+                lambda: detect_content_based(sprite_sheet),
+                _CONFIDENCE_CONTENT,
+                False,
+            ),
+            (
+                "Rectangular",
+                lambda: detect_rectangular_frames(sprite_sheet),
+                _CONFIDENCE_MEDIUM,
+                True,
+            ),
+            ("Basic square", lambda: detect_frame_size(sprite_sheet), _CONFIDENCE_FALLBACK, True),
+        ]
 
-            if content_success:
-                result.frame_width = frame_width
-                result.frame_height = frame_height
-                results.append(f"   ✓ {content_msg}")
-                confidence_scores.append(0.95)  # Content-based detection is very reliable
-                result.step_results.append(
-                    DetectionStepResult(
-                        step_name="frame_size",
-                        success=True,
-                        confidence=confidence_scores[-1],
-                        description=content_msg,
-                        fallback_used=False,
+        frame_detected = False
+        for strategy_name, strategy_fn, strategy_conf, is_fallback in frame_strategies:
+            try:
+                fs, fw, fh, msg = strategy_fn()
+                if fs:
+                    result.frame_width = fw
+                    result.frame_height = fh
+                    results.append(f"   ✓ {msg}")
+                    _record_step(
+                        result,
+                        results,
+                        confidence_scores,
+                        "frame_size",
+                        True,
+                        strategy_conf,
+                        msg,
+                        fallback_used=is_fallback,
                     )
-                )
-            else:
-                results.append(f"   ⚠ Content-based detection failed: {content_msg}")
-                results.append("   → Falling back to rectangular detection...")
+                    frame_detected = True
+                    break
+                else:
+                    results.append(f"   ⚠ {strategy_name} detection failed: {msg}")
+                    if is_fallback:
+                        results.append("   → Trying next strategy...")
+            except Exception as e:
+                results.append(f"   ✗ {strategy_name} detection error: {e!s}")
 
-                # Fall back to rectangular detection
-                try:
-                    rect_success, frame_width, frame_height, frame_msg = detect_rectangular_frames(
-                        sprite_sheet
-                    )
-
-                    if rect_success:
-                        result.frame_width = frame_width
-                        result.frame_height = frame_height
-                        results.append(f"   ✓ {frame_msg}")
-                        # Extract confidence from message if available
-                        if "score:" in frame_msg:
-                            confidence_scores.append(0.8)
-                        else:
-                            confidence_scores.append(0.7)
-                        result.step_results.append(
-                            DetectionStepResult(
-                                step_name="frame_size",
-                                success=True,
-                                confidence=confidence_scores[-1],
-                                description=frame_msg,
-                                fallback_used=True,
-                            )
-                        )
-                    else:
-                        results.append(f"   ⚠ Rectangular detection failed: {frame_msg}")
-                        results.append("   → Falling back to basic square detection...")
-
-                        # Try basic square detection as final fallback
-                        try:
-                            basic_success, basic_width, basic_height, basic_msg = detect_frame_size(
-                                sprite_sheet
-                            )
-                            if basic_success:
-                                result.frame_width = basic_width
-                                result.frame_height = basic_height
-                                results.append(f"   ✓ Basic detection: {basic_msg}")
-                                confidence_scores.append(0.6)
-                                result.step_results.append(
-                                    DetectionStepResult(
-                                        step_name="frame_size",
-                                        success=True,
-                                        confidence=confidence_scores[-1],
-                                        description=basic_msg,
-                                        fallback_used=True,
-                                    )
-                                )
-                            else:
-                                results.append(f"   ✗ All frame detection failed: {basic_msg}")
-                                overall_success = False
-                                confidence_scores.append(0.1)
-                                result.step_results.append(
-                                    DetectionStepResult(
-                                        step_name="frame_size",
-                                        success=False,
-                                        confidence=confidence_scores[-1],
-                                        description=basic_msg,
-                                        fallback_used=True,
-                                    )
-                                )
-                        except Exception as e:
-                            results.append(f"   ✗ Basic detection error: {e!s}")
-                            overall_success = False
-                            confidence_scores.append(0.1)
-                            result.step_results.append(
-                                DetectionStepResult(
-                                    step_name="frame_size",
-                                    success=False,
-                                    confidence=confidence_scores[-1],
-                                    description=str(e),
-                                    fallback_used=True,
-                                )
-                            )
-                except Exception as e:
-                    results.append(f"   ✗ Rectangular detection error: {e!s}")
-                    overall_success = False
-                    confidence_scores.append(0.1)
-                    result.step_results.append(
-                        DetectionStepResult(
-                            step_name="frame_size",
-                            success=False,
-                            confidence=confidence_scores[-1],
-                            description=str(e),
-                            fallback_used=True,
-                        )
-                    )
-        except Exception as e:
-            results.append(f"   ✗ Content-based detection error: {e!s}")
+        if not frame_detected:
+            last_msg = results[-1] if results else "All frame detection strategies failed"
+            results.append("   ✗ All frame detection strategies exhausted")
             overall_success = False
-            confidence_scores.append(0.1)
-            result.step_results.append(
-                DetectionStepResult(
-                    step_name="frame_size",
-                    success=False,
-                    confidence=confidence_scores[-1],
-                    description=str(e),
-                    fallback_used=True,
-                )
+            _record_step(
+                result,
+                results,
+                confidence_scores,
+                "frame_size",
+                False,
+                _CONFIDENCE_FAILED,
+                last_msg,
+                fallback_used=True,
             )
 
         # Step 3: Detect spacing (only if frame size detection succeeded)
@@ -1048,59 +952,54 @@ def comprehensive_auto_detect(
                     result.spacing_x = spacing_x
                     result.spacing_y = spacing_y
                     results.append(f"   ✓ {spacing_msg}")
-                    # Extract confidence from message
+                    # Map the textual confidence label back to a numeric score
                     if "confidence: high" in spacing_msg:
-                        confidence_scores.append(0.9)
+                        spacing_conf: float = _CONFIDENCE_HIGH
                     elif "confidence: medium" in spacing_msg:
-                        confidence_scores.append(0.7)
+                        spacing_conf = _CONFIDENCE_MEDIUM
                     else:
-                        confidence_scores.append(0.5)
-                    result.step_results.append(
-                        DetectionStepResult(
-                            step_name="spacing",
-                            success=True,
-                            confidence=confidence_scores[-1],
-                            description=spacing_msg,
-                        )
+                        spacing_conf = 0.5
+                    _record_step(
+                        result,
+                        results,
+                        confidence_scores,
+                        "spacing",
+                        True,
+                        spacing_conf,
+                        spacing_msg,
                     )
                 else:
                     results.append(f"   ⚠ Spacing detection failed: {spacing_msg}")
                     results.append("   → Using default spacing (0, 0)")
                     result.spacing_x = 0
                     result.spacing_y = 0
-                    confidence_scores.append(0.3)
-                    result.step_results.append(
-                        DetectionStepResult(
-                            step_name="spacing",
-                            success=False,
-                            confidence=confidence_scores[-1],
-                            description=spacing_msg,
-                        )
+                    _record_step(
+                        result,
+                        results,
+                        confidence_scores,
+                        "spacing",
+                        False,
+                        _CONFIDENCE_LOW,
+                        spacing_msg,
                     )
             except Exception as e:
                 results.append(f"   ✗ Spacing detection error: {e!s}")
                 results.append("   → Using default spacing (0, 0)")
                 result.spacing_x = 0
                 result.spacing_y = 0
-                confidence_scores.append(0.2)
-                result.step_results.append(
-                    DetectionStepResult(
-                        step_name="spacing",
-                        success=False,
-                        confidence=confidence_scores[-1],
-                        description=str(e),
-                    )
+                _record_step(
+                    result, results, confidence_scores, "spacing", False, _CONFIDENCE_ERROR, str(e)
                 )
         else:
             results.append("\n⚠ Step 3: Skipped spacing detection (no valid frame size)")
-            confidence_scores.append(0.1)
-            result.step_results.append(
-                DetectionStepResult(
-                    step_name="spacing",
-                    success=False,
-                    confidence=0.1,
-                    description="Skipped - no valid frame size",
-                )
+            _record_step(
+                result,
+                results,
+                confidence_scores,
+                "spacing",
+                False,
+                _CONFIDENCE_FAILED,
+                "Skipped - no valid frame size",
             )
 
         # Step 4: Cross-validation and final verification
@@ -1112,41 +1011,36 @@ def comprehensive_auto_detect(
 
             if validation_success:
                 results.append(f"   ✓ {validation_msg}")
-                confidence_scores.append(0.8)
+                val_conf: float = 0.8
             else:
                 results.append(f"   ⚠ {validation_msg}")
-                confidence_scores.append(0.4)
-            result.step_results.append(
-                DetectionStepResult(
-                    step_name="cross_validation",
-                    success=validation_success,
-                    confidence=confidence_scores[-1],
-                    description=validation_msg,
-                )
+                val_conf = 0.4
+            _record_step(
+                result,
+                results,
+                confidence_scores,
+                "cross_validation",
+                validation_success,
+                val_conf,
+                validation_msg,
             )
         except Exception as e:
             results.append(f"   ✗ Validation error: {e!s}")
-            confidence_scores.append(0.3)
-            result.step_results.append(
-                DetectionStepResult(
-                    step_name="cross_validation",
-                    success=False,
-                    confidence=confidence_scores[-1],
-                    description=str(e),
-                )
+            _record_step(
+                result,
+                results,
+                confidence_scores,
+                "cross_validation",
+                False,
+                _CONFIDENCE_LOW,
+                str(e),
             )
 
         # Step 5: Calculate overall confidence and summary
         overall_confidence = (
             sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
         )
-        confidence_text = (
-            "high"
-            if overall_confidence >= 0.8
-            else "medium"
-            if overall_confidence >= 0.6
-            else "low"
-        )
+        confidence_text = _confidence_label(overall_confidence)
 
         results.append("\n📊 Overall Result:")
         results.append(f"   • Frame Size: {result.frame_width}×{result.frame_height}")

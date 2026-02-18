@@ -177,6 +177,8 @@ class SpriteViewer(QMainWindow):
         Qt.Key.Key_End: "End",
         Qt.Key.Key_Plus: "+",
         Qt.Key.Key_Minus: "-",
+        Qt.Key.Key_BracketLeft: "[",
+        Qt.Key.Key_BracketRight: "]",
     }
 
     def __init__(self):
@@ -737,31 +739,26 @@ class SpriteViewer(QMainWindow):
         if self._status_manager is not None:
             self._status_manager.show_message("Animation restarted")
 
-    def _decrease_animation_speed(self):
-        """Decrease animation speed by one step."""
+    def _step_animation_speed(self, increase: bool):
+        """Step animation speed up or down by one entry in SPEED_STEPS."""
         if not self._animation_controller:
             return
         current_fps = self._animation_controller.current_fps
         speed_steps = Config.Animation.SPEED_STEPS
-        for i in range(len(speed_steps) - 1, -1, -1):
-            if current_fps > speed_steps[i]:
-                self._animation_controller.set_fps(speed_steps[i])
-                return
-        if current_fps > speed_steps[0]:
-            self._animation_controller.set_fps(speed_steps[0])
+        if increase:
+            target = next((s for s in speed_steps if current_fps < s), None)
+        else:
+            target = next((s for s in reversed(speed_steps) if current_fps > s), None)
+        if target is not None:
+            self._animation_controller.set_fps(target)
+
+    def _decrease_animation_speed(self):
+        """Decrease animation speed by one step."""
+        self._step_animation_speed(increase=False)
 
     def _increase_animation_speed(self):
         """Increase animation speed by one step."""
-        if not self._animation_controller:
-            return
-        current_fps = self._animation_controller.current_fps
-        speed_steps = Config.Animation.SPEED_STEPS
-        for i in range(len(speed_steps)):
-            if current_fps < speed_steps[i]:
-                self._animation_controller.set_fps(speed_steps[i])
-                return
-        if current_fps < speed_steps[-1]:
-            self._animation_controller.set_fps(speed_steps[-1])
+        self._step_animation_speed(increase=True)
 
     # ============================================================================
     # SIGNAL HANDLERS
@@ -783,7 +780,9 @@ class SpriteViewer(QMainWindow):
         has_frames = total_frames > 0
         at_start = frame_index == 0
         at_end = frame_index >= total_frames - 1 if total_frames > 0 else True
-        self._playback_controls.update_button_states(has_frames, at_start, at_end)
+        self._playback_controls.update_button_states(
+            has_frames=has_frames, at_start=at_start, at_end=at_end
+        )
 
     def _on_sprite_loaded(self, file_path: str):
         """Handle sprite loaded."""
@@ -807,19 +806,23 @@ class SpriteViewer(QMainWindow):
 
     def _on_playback_started(self):
         """Handle playback start."""
-        self._playback_controls.update_button_states(False, True, True)
+        self._playback_controls.update_button_states(has_frames=False, at_start=True, at_end=True)
 
     def _on_playback_paused(self):
         """Handle playback pause."""
-        self._playback_controls.update_button_states(True, True, True)
+        self._playback_controls.update_button_states(has_frames=True, at_start=True, at_end=True)
+
+    def _on_playback_ended(self):
+        """Shared handler for playback stop and completion."""
+        self._playback_controls.update_button_states(has_frames=True, at_start=True, at_end=False)
 
     def _on_playback_stopped(self):
         """Handle playback stop."""
-        self._playback_controls.update_button_states(True, True, False)
+        self._on_playback_ended()
 
     def _on_playback_completed(self):
         """Handle playback completion."""
-        self._playback_controls.update_button_states(True, True, False)
+        self._on_playback_ended()
 
     def _on_animation_error(self, error_message: str):
         """Handle animation controller error."""
@@ -829,10 +832,14 @@ class SpriteViewer(QMainWindow):
         """Update playback controls after extraction completion."""
         if frame_count > 0:
             self._playback_controls.set_frame_range(frame_count - 1)
-            self._playback_controls.update_button_states(True, True, False)
+            self._playback_controls.update_button_states(
+                has_frames=True, at_start=True, at_end=False
+            )
         else:
             self._playback_controls.set_frame_range(0)
-            self._playback_controls.update_button_states(False, False, False)
+            self._playback_controls.update_button_states(
+                has_frames=False, at_start=False, at_end=False
+            )
 
     def _on_extraction_completed(self, frame_count: int):
         """Handle extraction completion."""
@@ -1098,23 +1105,12 @@ class SpriteViewer(QMainWindow):
                 parts.append("Alt")
             parts.append(self.KEY_MAPPING[qt_key])
             key_sequence_str = "+".join(parts)
-        elif Qt.Key.Key_A <= key <= Qt.Key.Key_Z:
-            # Handle single letter keys specially - QKeySequence may not format them correctly
+        elif (Qt.Key.Key_A <= key <= Qt.Key.Key_Z) or (Qt.Key.Key_0 <= key <= Qt.Key.Key_9):
+            # Handle single letter/digit keys - QKeySequence may not format them correctly
             if modifiers == Qt.KeyboardModifier.NoModifier:
-                # For single letters with no modifiers, use the letter directly
+                # For single letters/digits with no modifiers, use the character directly
                 key_sequence_str = chr(key)
-            # else let QKeySequence handle modified letters (Ctrl+A, etc.)
-        elif Qt.Key.Key_0 <= key <= Qt.Key.Key_9:
-            # Handle single digit keys specially
-            if modifiers == Qt.KeyboardModifier.NoModifier:
-                # For single digits with no modifiers, use the digit directly
-                key_sequence_str = chr(key)
-            # else let QKeySequence handle modified digits (Alt+1, etc.)
-        elif key == Qt.Key.Key_BracketLeft:
-            # Handle bracket keys specially
-            key_sequence_str = "["
-        elif key == Qt.Key.Key_BracketRight:
-            key_sequence_str = "]"
+            # else let QKeySequence handle modified keys (Ctrl+A, Alt+1, etc.)
         else:
             # Let parent handle other keys
             super().keyPressEvent(event)
@@ -1136,13 +1132,12 @@ class SpriteViewer(QMainWindow):
         Returns:
             True if shortcut was handled
         """
-        # Find action with matching shortcut
-        for action_id, (shortcut_key, _) in SHORTCUTS.items():
-            if shortcut_key == key_sequence and action_id in self._actions:
-                action = self._actions[action_id]
-                if action.isEnabled():
-                    action.trigger()
-                    return True
+        action_id = self._shortcut_to_action.get(key_sequence)
+        if action_id is not None and action_id in self._actions:
+            action = self._actions[action_id]
+            if action.isEnabled():
+                action.trigger()
+                return True
         return False
 
     # ============================================================================

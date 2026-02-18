@@ -7,6 +7,7 @@ Part of Phase 4: Frame Export System implementation.
 from __future__ import annotations
 
 import logging
+import math
 import re
 from dataclasses import dataclass
 from enum import Enum
@@ -110,7 +111,7 @@ class SpriteSheetLayout:
             if not (0 <= value <= 255):
                 raise ValueError("Background color values must be between 0 and 255")
 
-    def get_effective_columns(self, frame_count: int) -> int | None:
+    def get_effective_columns(self) -> int | None:
         """Get effective max columns for layout calculation."""
         if self.mode is LayoutMode.CUSTOM:
             return self.custom_columns
@@ -118,7 +119,7 @@ class SpriteSheetLayout:
             return self.max_columns or Config.Export.DEFAULT_MAX_COLUMNS
         return None
 
-    def get_effective_rows(self, frame_count: int) -> int | None:
+    def get_effective_rows(self) -> int | None:
         """Get effective max rows for layout calculation."""
         if self.mode is LayoutMode.CUSTOM:
             return self.custom_rows
@@ -130,8 +131,6 @@ class SpriteSheetLayout:
         self, frame_width: int, frame_height: int, frame_count: int
     ) -> tuple[int, int]:
         """Estimate sprite sheet dimensions with current layout settings."""
-        import math
-
         if frame_count <= 0:
             return (2 * self.padding, 2 * self.padding)
 
@@ -214,7 +213,6 @@ class ExportTask:
         mode: ExportMode,
         scale_factor: float = 1.0,
         pattern: str = "{name}_{index:03d}",
-        selected_indices: list[int] | None = None,
         sprite_sheet_layout: SpriteSheetLayout | None = None,
         segment_info: list[dict[str, Any]] | None = None,
     ):
@@ -229,7 +227,6 @@ class ExportTask:
             mode: Export mode
             scale_factor: Scale factor for output (1.0 = original size)
             pattern: Naming pattern for individual frames
-            selected_indices: Unused — frame filtering is done before ExportTask is created
             sprite_sheet_layout: Layout configuration for sprite sheet export
             segment_info: List of segment dictionaries with 'name', 'start_frame', 'end_frame'
         """
@@ -367,6 +364,9 @@ class ExportWorker(QThread):
         # Get layout configuration
         layout = self.task.sprite_sheet_layout
         frame_count = len(self.task.frames)
+        is_segments_mode = layout.mode is LayoutMode.SEGMENTS_PER_ROW and bool(
+            self.task.segment_info
+        )
 
         # Validate segment_info for segments_per_row mode
         if layout.mode is LayoutMode.SEGMENTS_PER_ROW:
@@ -393,7 +393,7 @@ class ExportWorker(QThread):
         self.progress.emit(1, 3, f"Creating sprite sheet ({cols}x{rows})...")
 
         # Calculate sprite sheet dimensions with spacing and padding
-        if layout.mode is LayoutMode.SEGMENTS_PER_ROW and self.task.segment_info:
+        if is_segments_mode:
             # For segments per row, calculate dimensions based on actual segment layouts
             sheet_width, sheet_height = self._calculate_segments_sheet_dimensions(
                 frame_width, frame_height, layout
@@ -410,7 +410,7 @@ class ExportWorker(QThread):
         )
 
         # Draw frames onto sprite sheet with spacing
-        if layout.mode is LayoutMode.SEGMENTS_PER_ROW and self.task.segment_info:
+        if is_segments_mode:
             draw_ok = self._draw_sprites_segments_per_row(
                 sprite_sheet, cols, rows, frame_width, frame_height, layout
             )
@@ -442,12 +442,10 @@ class ExportWorker(QThread):
         self, layout: SpriteSheetLayout, frame_count: int
     ) -> tuple[int, int]:
         """Calculate optimal grid dimensions based on layout configuration."""
-        import math
-
         if layout.mode is LayoutMode.CUSTOM:
             # Use exact user-specified dimensions (validated in __post_init__)
-            effective_cols = layout.get_effective_columns(frame_count)
-            effective_rows = layout.get_effective_rows(frame_count)
+            effective_cols = layout.get_effective_columns()
+            effective_rows = layout.get_effective_rows()
             assert effective_cols is not None
             assert effective_rows is not None
             cols = effective_cols
@@ -455,15 +453,13 @@ class ExportWorker(QThread):
 
         elif layout.mode is LayoutMode.ROWS:
             # Prioritize horizontal layout with max columns constraint
-            max_cols = (
-                layout.get_effective_columns(frame_count) or Config.Export.DEFAULT_MAX_COLUMNS
-            )
+            max_cols = layout.get_effective_columns() or Config.Export.DEFAULT_MAX_COLUMNS
             cols = min(max_cols, frame_count)
             rows = math.ceil(frame_count / cols)
 
         elif layout.mode is LayoutMode.COLUMNS:
             # Prioritize vertical layout with max rows constraint
-            max_rows = layout.get_effective_rows(frame_count) or Config.Export.DEFAULT_MAX_ROWS
+            max_rows = layout.get_effective_rows() or Config.Export.DEFAULT_MAX_ROWS
             rows = min(max_rows, frame_count)
             cols = math.ceil(frame_count / rows)
 
@@ -493,8 +489,6 @@ class ExportWorker(QThread):
         self, frame_count: int, layout: SpriteSheetLayout
     ) -> tuple[int, int]:
         """Calculate automatic layout using intelligent heuristics."""
-        import math
-
         if frame_count <= 1:
             return 1, 1
 
@@ -626,6 +620,14 @@ class ExportWorker(QThread):
 
         return sprite_sheet
 
+    def _begin_export_painter(self, target: QImage) -> QPainter:
+        """Create a QPainter for target with export render hints applied."""
+        painter = QPainter(target)
+        if Config.Export.ENABLE_ANTIALIASING:
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        return painter
+
     def _draw_sprites_with_layout(
         self,
         sprite_sheet: QImage,
@@ -639,12 +641,7 @@ class ExportWorker(QThread):
 
         Returns True on success, False if cancelled (caller must emit finished).
         """
-        painter = QPainter(sprite_sheet)
-
-        # Enable high-quality rendering if configured
-        if Config.Export.ENABLE_ANTIALIASING:
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        painter = self._begin_export_painter(sprite_sheet)
 
         for i, frame in enumerate(self.task.frames):
             if self._cancelled:
@@ -660,12 +657,7 @@ class ExportWorker(QThread):
             x = layout.padding + (col * (frame_width + layout.spacing))
             y = layout.padding + (row * (frame_height + layout.spacing))
 
-            # Scale and draw frame
-            if self.task.scale_factor != 1.0:
-                scaled_frame = self._scale_image(frame, self.task.scale_factor)
-                painter.drawImage(x, y, scaled_frame)
-            else:
-                painter.drawImage(x, y, frame)
+            self._draw_frame(painter, frame, x, y)
 
         painter.end()
         return True
@@ -675,8 +667,6 @@ class ExportWorker(QThread):
 
         if not self.task.segment_info:
             # No segments, fall back to square layout
-            import math
-
             frame_count = len(self.task.frames)
             cols = math.ceil(math.sqrt(frame_count))
             rows = math.ceil(frame_count / cols)
@@ -706,12 +696,7 @@ class ExportWorker(QThread):
 
         Returns True on success, False if cancelled (caller must emit finished).
         """
-        painter = QPainter(sprite_sheet)
-
-        # Enable high-quality rendering if configured
-        if Config.Export.ENABLE_ANTIALIASING:
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        painter = self._begin_export_painter(sprite_sheet)
 
         # Draw each segment on its own row
         for row_idx, segment in enumerate(self.task.segment_info):
@@ -735,19 +720,20 @@ class ExportWorker(QThread):
                 x = layout.padding + (col_idx * (frame_width + layout.spacing))
                 y = layout.padding + (row_idx * (frame_height + layout.spacing))
 
-                # Scale and draw frame
-                if self.task.scale_factor != 1.0:
-                    scaled_frame = self._scale_image(frame, self.task.scale_factor)
-                    painter.drawImage(x, y, scaled_frame)
-                else:
-                    painter.drawImage(x, y, frame)
-
+                self._draw_frame(painter, frame, x, y)
                 frames_drawn += 1
 
             logger.debug("Drew %d frames for segment '%s'", frames_drawn, segment["name"])
 
         painter.end()
         return True
+
+    def _draw_frame(self, painter: QPainter, frame: QImage, x: int, y: int) -> None:
+        """Scale (if needed) and draw a single frame onto painter at (x, y)."""
+        if self.task.scale_factor != 1.0:
+            painter.drawImage(x, y, self._scale_image(frame, self.task.scale_factor))
+        else:
+            painter.drawImage(x, y, frame)
 
     def _scale_image(self, image: QImage, scale_factor: float) -> QImage:
         """Scale an image by the given factor (thread-safe)."""
@@ -805,7 +791,7 @@ class FrameExporter(QObject):
             mode: Export mode (individual, sheet, selected, segments_sheet)
             scale_factor: Scale factor for output
             pattern: Naming pattern for individual frames
-            selected_indices: Frame indices for selected export
+            selected_indices: Frame indices for selected export (unused by ExportTask; filtering done before calling)
             sprite_sheet_layout: Layout configuration for sprite sheet export
             segment_info: List of segment dictionaries with 'name', 'start_frame', 'end_frame'
 
@@ -880,7 +866,6 @@ class FrameExporter(QObject):
                 mode=export_mode,
                 scale_factor=scale_factor,
                 pattern=pattern,
-                selected_indices=selected_indices,
                 sprite_sheet_layout=sprite_sheet_layout,
                 segment_info=segment_info,
             )
