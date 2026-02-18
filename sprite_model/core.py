@@ -460,18 +460,12 @@ class SpriteModel(QObject):
 
         if success and result:
             # Update internal state from result
-            if hasattr(result, "frame_width"):
-                self._frame_width = result.frame_width
-            if hasattr(result, "frame_height"):
-                self._frame_height = result.frame_height
-            if hasattr(result, "offset_x"):
-                self._offset_x = result.offset_x
-            if hasattr(result, "offset_y"):
-                self._offset_y = result.offset_y
-            if hasattr(result, "spacing_x"):
-                self._spacing_x = result.spacing_x
-            if hasattr(result, "spacing_y"):
-                self._spacing_y = result.spacing_y
+            self._frame_width = result.frame_width
+            self._frame_height = result.frame_height
+            self._offset_x = result.offset_x
+            self._offset_y = result.offset_y
+            self._spacing_x = result.spacing_x
+            self._spacing_y = result.spacing_y
 
             self.configurationChanged.emit()
 

@@ -290,8 +290,6 @@ class SegmentPreviewItem(QFrame):
 
     def _show_context_menu(self, pos):
         """Show context menu for segment actions."""
-        from PySide6.QtWidgets import QMenu
-
         menu = QMenu(self)
 
         # Export action

@@ -10,7 +10,6 @@ Part of safe refactoring phase to reduce god class responsibilities.
 """
 
 import re
-import time
 from dataclasses import replace
 
 from PySide6.QtCore import QObject, Signal
@@ -131,14 +130,8 @@ class AnimationSegmentController(QObject):
 
         if not success:
             # Clean up optimistic grid state if any callers pre-added a segment.
-            if self._grid_view:
-                has_segment = getattr(self._grid_view, "has_segment", None)
-                if callable(has_segment):
-                    has_segment_result = has_segment(original_name)
-                    if isinstance(has_segment_result, bool) and has_segment_result:
-                        self._grid_view.delete_segment(original_name)
-                else:
-                    self._grid_view.delete_segment(original_name)
+            if self._grid_view and self._grid_has_segment(original_name):
+                self._grid_view.delete_segment(original_name)
             error_msg = f"{error}\n\nPlease try a different name."
             return False, error_msg
 
@@ -169,10 +162,7 @@ class AnimationSegmentController(QObject):
         while retry_count < self.MAX_NAME_RETRY_ATTEMPTS:
             retry_count += 1
 
-            # Generate new unique name with timestamp + retry count to avoid collisions
-            # within the same tight loop (timestamp alone is stable across retries)
-            timestamp = int(time.time() * 1000) % 10000
-            new_name = f"{base_name}_{timestamp + retry_count}"
+            new_name = f"{base_name}_{retry_count}"
 
             success, _error = self._segment_manager.add_segment(
                 new_name,
@@ -185,14 +175,7 @@ class AnimationSegmentController(QObject):
             if success:
                 # Update segment name in grid view
                 if self._grid_view:
-                    has_segment = getattr(self._grid_view, "has_segment", None)
-                    has_old_segment = False
-                    if callable(has_segment):
-                        has_old_segment_result = has_segment(original_name)
-                        has_old_segment = (
-                            isinstance(has_old_segment_result, bool) and has_old_segment_result
-                        )
-                    if has_old_segment:
+                    if self._grid_has_segment(original_name):
                         self._grid_view.commit_rename(original_name, new_name)
                     self._sync_segment_to_grid(new_name, fallback_segment=segment)
 
@@ -214,17 +197,24 @@ class AnimationSegmentController(QObject):
         if not self._grid_view:
             return
 
-        has_segment = getattr(self._grid_view, "has_segment", None)
-        if callable(has_segment):
-            has_segment_result = has_segment(segment_name)
-            if isinstance(has_segment_result, bool) and has_segment_result:
-                return
+        if self._grid_has_segment(segment_name):
+            return
 
         segment = self._segment_manager.get_segment(segment_name) if self._segment_manager else None
         if segment is None:
             segment = fallback_segment
         if segment is not None:
             self._grid_view.add_segment(segment)
+
+    def _grid_has_segment(self, segment_name: str) -> bool:
+        """Return True if the grid view reports that it contains the named segment."""
+        if not self._grid_view:
+            return False
+        has_segment = getattr(self._grid_view, "has_segment", None)
+        if callable(has_segment):
+            result = has_segment(segment_name)
+            return isinstance(result, bool) and result
+        return False
 
     def _add_segment_to_preview(
         self,

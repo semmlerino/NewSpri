@@ -48,6 +48,10 @@ class CCLOperations:
         # Mode state
         self._extraction_mode: ExtractionMode = ExtractionMode.CCL  # CCL is now the default
 
+        # Last extraction results
+        self._last_extracted_frames: list[QPixmap] = []
+        self._last_extracted_info: str = ""
+
     def extract_ccl_frames(
         self,
         sprite_sheet: QPixmap | None,
@@ -377,8 +381,8 @@ class CCLOperations:
 
     def get_last_extracted_frames(self) -> list[QPixmap]:
         """Get the frames from the last CCL extraction."""
-        return getattr(self, "_last_extracted_frames", [])
+        return self._last_extracted_frames
 
     def get_last_extracted_info(self) -> str:
         """Get the info from the last CCL extraction."""
-        return getattr(self, "_last_extracted_info", "")
+        return self._last_extracted_info

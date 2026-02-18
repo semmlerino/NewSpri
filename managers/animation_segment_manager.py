@@ -462,10 +462,13 @@ class AnimationSegmentManager(QObject):
 
         return all_frames[start : end + 1]
 
-    def _get_segments_file_path(self) -> str:
-        """Get the file path for saving segments (new format with extension)."""
+    def _get_segments_dir(self) -> Path | None:
+        """Return the .sprite_segments directory path, creating it if needed.
+
+        Returns None if no sprite context is set or directory creation fails.
+        """
         if not self._sprite_sheet_path:
-            return ""
+            return None
 
         sprite_path = Path(self._sprite_sheet_path)
         segments_dir = sprite_path.parent / ".sprite_segments"
@@ -473,8 +476,17 @@ class AnimationSegmentManager(QObject):
             segments_dir.mkdir(exist_ok=True)
         except OSError as e:
             logger.warning("Failed to create segments directory: %s", e)
+            return None
+
+        return segments_dir
+
+    def _get_segments_file_path(self) -> str:
+        """Get the file path for saving segments (new format with extension)."""
+        segments_dir = self._get_segments_dir()
+        if segments_dir is None:
             return ""
 
+        sprite_path = Path(self._sprite_sheet_path)
         # New format: {stem}_{ext}_segments.json (e.g., hero_png_segments.json)
         ext = sprite_path.suffix.lstrip(".")
         segments_file = segments_dir / f"{sprite_path.stem}_{ext}_segments.json"
@@ -482,17 +494,11 @@ class AnimationSegmentManager(QObject):
 
     def _get_legacy_segments_file_path(self) -> str:
         """Get the legacy file path for segments (old format without extension)."""
-        if not self._sprite_sheet_path:
+        segments_dir = self._get_segments_dir()
+        if segments_dir is None:
             return ""
 
         sprite_path = Path(self._sprite_sheet_path)
-        segments_dir = sprite_path.parent / ".sprite_segments"
-        try:
-            segments_dir.mkdir(exist_ok=True)
-        except OSError as e:
-            logger.warning("Failed to create segments directory: %s", e)
-            return ""
-
         # Legacy format: {stem}_segments.json
         segments_file = segments_dir / f"{sprite_path.stem}_segments.json"
         return str(segments_file)

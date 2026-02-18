@@ -24,6 +24,12 @@ from config import Config
 
 logger = logging.getLogger(__name__)
 
+# Method name constants used in detection result dicts
+_METHOD_BEST_EFFORT = "best_effort"
+_METHOD_FALLBACK = "fallback"
+_METHOD_MODE = "mode"
+_METHOD_MEDIAN = "median"
+
 # ============================================================================
 # Data Structures
 # ============================================================================
@@ -343,14 +349,14 @@ def _detect_color_key_mask(
 
         if best_result is not None:
             mask, bg_color, tolerance = best_result
-            debug_log.append(f"   ✅ Selected color key: {bg_color} with tolerance {tolerance}")
+            debug_log.append(f"   [OK] Selected color key: {bg_color} with tolerance {tolerance}")
             logger.debug("Selected color key %s with tolerance %d", bg_color, tolerance)
             return best_result
 
         return None
 
     except Exception as e:
-        debug_log.append(f"   ❌ Color key detection error: {e}")
+        debug_log.append(f"   [ERROR] Color key detection error: {e}")
         return None
 
 
@@ -394,7 +400,7 @@ def _test_color_key_background(
             score = background_percentage + component_bonus
 
             debug_log.append(
-                f"   🧪 Testing {background_color} (tol={tolerance}): {background_percentage:.1f}% bg, {num_components} comp, score: {score:.1f}"
+                f"   [TEST] Testing {background_color} (tol={tolerance}): {background_percentage:.1f}% bg, {num_components} comp, score: {score:.1f}"
             )
             logger.debug(
                 "Testing color key %s (tol=%d): %.1f%% bg, %d comp, score: %.1f",
@@ -410,7 +416,7 @@ def _test_color_key_background(
         return None
 
     except Exception as e:
-        debug_log.append(f"   ❌ Color key test error: {e}")
+        debug_log.append(f"   [ERROR] Color key test error: {e}")
         return None
 
 
@@ -528,7 +534,7 @@ def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
 
         small_sprites = [(w, h) for w, h in zip(widths, heights, strict=False) if w < 24 or h < 24]
 
-        is_irregular_collection = len(sprite_bounds) > 50 and (
+        skip_merging = len(sprite_bounds) > 50 and (
             size_diversity > 10
             or (size_range_w > min(widths) * 3 or size_range_h > min(heights) * 3)
             or len(small_sprites) > 20
@@ -536,10 +542,10 @@ def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
         )
 
         debug_log.append(
-            f"Analysis: {len(sprite_bounds)} sprites, diversity={size_diversity:.1f}, irregular={is_irregular_collection}"
+            f"Analysis: {len(sprite_bounds)} sprites, diversity={size_diversity:.1f}, irregular={skip_merging}"
         )
 
-        if is_irregular_collection:
+        if skip_merging:
             debug_log.append("Irregular collection - disabling sprite merging")
             merged_bounds = sprite_bounds
         else:
@@ -727,94 +733,123 @@ def _analyze_ccl_results(
 
     # Fallback: Handle irregular sprite sheets
     if len(sprite_bounds) >= 4:
-        # Find most common sprite size
-        size_frequency = {}
-        for w, h in zip(widths, heights, strict=False):
-            size_key = (w, h)
-            size_frequency[size_key] = size_frequency.get(size_key, 0) + 1
-
-        most_common_size = max(size_frequency.items(), key=lambda x: x[1])
-        (common_width, common_height), frequency = most_common_size
-
-        min_threshold = 0.02
-        common_percentage = frequency / len(sprite_bounds)
-
-        if common_percentage >= min_threshold:
-            sorted_sizes = sorted(size_frequency.items(), key=lambda x: x[1], reverse=True)
-            top_3_sizes = sorted_sizes[:3]
-
-            size_range_w = max(widths) - min(widths)
-            size_range_h = max(heights) - min(heights)
-            size_diversity = (width_std + height_std) / 2
-
-            small_sprites = [
-                (w, h) for w, h in zip(widths, heights, strict=False) if w < 24 or h < 24
-            ]
-            medium_sprites = [
-                (w, h)
-                for w, h in zip(widths, heights, strict=False)
-                if 24 <= w <= 64 and 24 <= h <= 64
-            ]
-
-            is_irregular_collection = (
-                len(sprite_bounds) > 50
-                and size_diversity > 10
-                and (size_range_w > min(widths) * 3 or size_range_h > min(heights) * 3)
-                and len(small_sprites) > 5
-                and len(medium_sprites) > 5
-            )
-
-            if is_irregular_collection:
-                char_sprites = [
-                    (w, h)
-                    for w, h in zip(widths, heights, strict=False)
-                    if 20 <= w <= 80 and 20 <= h <= 80
-                ]
-                if len(char_sprites) >= 10:
-                    chosen_width = int(np.median([w for w, _h in char_sprites]))
-                    chosen_height = int(np.median([h for _w, h in char_sprites]))
-                    chosen_method = "best_effort_warning"
-                else:
-                    chosen_width, chosen_height = 48, 48
-                    chosen_method = "fallback_warning"
-            else:
-                median_width = int(np.median(widths))
-                median_height = int(np.median(heights))
-                if (
-                    abs(median_width - common_width) <= 10
-                    and abs(median_height - common_height) <= 10
-                ):
-                    chosen_width, chosen_height = common_width, common_height
-                    chosen_method = "mode"
-                else:
-                    chosen_width, chosen_height = median_width, median_height
-                    chosen_method = "median"
-
-            debug_log.append(
-                f"Irregular: {chosen_width}x{chosen_height} ({chosen_method}), {len(sprite_bounds)} sprites"
-            )
-
-            return {
-                "success": True,
-                "frame_width": chosen_width,
-                "frame_height": chosen_height,
-                "offset_x": 0,
-                "offset_y": 0,
-                "spacing_x": 0,
-                "spacing_y": 0,
-                "sprite_count": len(sprite_bounds),
-                "confidence": "low" if is_irregular_collection else "medium",
-                "method": f"ccl_enhanced_{chosen_method.replace('-', '_')}",
-                "note": f"{'IRREGULAR COLLECTION' if is_irregular_collection else 'RPG sprite sheet'}: {chosen_method} size",
-                "irregular_collection": is_irregular_collection,
-                "ccl_sprite_bounds": sprite_bounds,
-                "size_alternatives": {
-                    "mode": (common_width, common_height),
-                    "median": (int(np.median(widths)), int(np.median(heights))),
-                    "average": (avg_width, avg_height),
-                    "top_sizes": top_3_sizes[:3],
-                },
-            }
+        result = _analyze_irregular_sprites(
+            sprite_bounds, widths, heights, avg_width, avg_height, debug_log
+        )
+        if result is not None:
+            return result
 
     debug_log.append("CCL Failed: layout too irregular or insufficient sprites")
     return {"success": False, "method": "ccl_enhanced"}
+
+
+def _analyze_irregular_sprites(
+    sprite_bounds: list[tuple[int, int, int, int]],
+    widths: list[int],
+    heights: list[int],
+    avg_width: int,
+    avg_height: int,
+    debug_log: list[str],
+) -> dict | None:
+    """
+    Analyze sprites that didn't pass the uniform-size check.
+
+    Attempts to pick a representative frame size from the distribution of sprite
+    sizes, returning a result dict on success or None when the data is too sparse.
+
+    Args:
+        sprite_bounds: List of (x, y, width, height) tuples for all sprites
+        widths: Pre-computed list of sprite widths (same order as sprite_bounds)
+        heights: Pre-computed list of sprite heights (same order as sprite_bounds)
+        avg_width: Integer mean of widths
+        avg_height: Integer mean of heights
+        debug_log: List to append debug messages to
+
+    Returns:
+        Result dict with the same keys as _analyze_ccl_results returns on success,
+        or None if the data does not meet the minimum threshold.
+    """
+    width_std = float(np.std(widths))
+    height_std = float(np.std(heights))
+
+    # Find most common sprite size
+    size_frequency: dict[tuple[int, int], int] = {}
+    for w, h in zip(widths, heights, strict=False):
+        size_key = (w, h)
+        size_frequency[size_key] = size_frequency.get(size_key, 0) + 1
+
+    most_common_size = max(size_frequency.items(), key=lambda x: x[1])
+    (common_width, common_height), frequency = most_common_size
+
+    min_threshold = 0.02
+    common_percentage = frequency / len(sprite_bounds)
+
+    if common_percentage < min_threshold:
+        return None
+
+    sorted_sizes = sorted(size_frequency.items(), key=lambda x: x[1], reverse=True)
+    top_3_sizes = sorted_sizes[:3]
+
+    size_range_w = max(widths) - min(widths)
+    size_range_h = max(heights) - min(heights)
+    size_diversity = (width_std + height_std) / 2
+
+    small_sprites = [(w, h) for w, h in zip(widths, heights, strict=False) if w < 24 or h < 24]
+    medium_sprites = [
+        (w, h) for w, h in zip(widths, heights, strict=False) if 24 <= w <= 64 and 24 <= h <= 64
+    ]
+
+    is_irregular_collection = (
+        len(sprite_bounds) > 50
+        and size_diversity > 10
+        and (size_range_w > min(widths) * 3 or size_range_h > min(heights) * 3)
+        and len(small_sprites) > 5
+        and len(medium_sprites) > 5
+    )
+
+    if is_irregular_collection:
+        char_sprites = [
+            (w, h) for w, h in zip(widths, heights, strict=False) if 20 <= w <= 80 and 20 <= h <= 80
+        ]
+        if len(char_sprites) >= 10:
+            chosen_width = int(np.median([w for w, _h in char_sprites]))
+            chosen_height = int(np.median([h for _w, h in char_sprites]))
+            chosen_method = _METHOD_BEST_EFFORT
+        else:
+            chosen_width, chosen_height = 48, 48
+            chosen_method = _METHOD_FALLBACK
+    else:
+        median_width = int(np.median(widths))
+        median_height = int(np.median(heights))
+        if abs(median_width - common_width) <= 10 and abs(median_height - common_height) <= 10:
+            chosen_width, chosen_height = common_width, common_height
+            chosen_method = _METHOD_MODE
+        else:
+            chosen_width, chosen_height = median_width, median_height
+            chosen_method = _METHOD_MEDIAN
+
+    debug_log.append(
+        f"Irregular: {chosen_width}x{chosen_height} ({chosen_method}), {len(sprite_bounds)} sprites"
+    )
+
+    return {
+        "success": True,
+        "frame_width": chosen_width,
+        "frame_height": chosen_height,
+        "offset_x": 0,
+        "offset_y": 0,
+        "spacing_x": 0,
+        "spacing_y": 0,
+        "sprite_count": len(sprite_bounds),
+        "confidence": "low" if is_irregular_collection else "medium",
+        "method": f"ccl_enhanced_{chosen_method}",
+        "note": f"{'IRREGULAR COLLECTION' if is_irregular_collection else 'RPG sprite sheet'}: {chosen_method} size",
+        "irregular_collection": is_irregular_collection,
+        "ccl_sprite_bounds": sprite_bounds,
+        "size_alternatives": {
+            "mode": (common_width, common_height),
+            "median": (int(np.median(widths)), int(np.median(heights))),
+            "average": (avg_width, avg_height),
+            "top_sizes": top_3_sizes[:3],
+        },
+    }
