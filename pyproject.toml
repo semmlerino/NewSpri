@@ -106,7 +106,6 @@ include = [
     "export",
     "managers",
     "sprite_model",
-    "tests",
     "ui",
     "utils",
 ]
@@ -135,6 +134,7 @@ reportDuplicateImport = true
 reportUnnecessaryCast = true
 reportUnnecessaryIsInstance = true
 reportUnnecessaryComparison = true
+reportMissingParameterType = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

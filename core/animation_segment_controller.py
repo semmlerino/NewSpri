@@ -11,11 +11,19 @@ Part of safe refactoring phase to reduce god class responsibilities.
 
 import re
 from dataclasses import replace
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QMessageBox
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QMessageBox, QTabWidget, QWidget
 
-from managers import AnimationSegmentManager
+from managers import AnimationSegment, AnimationSegmentManager
+
+if TYPE_CHECKING:
+    from core.export_coordinator import ExportCoordinator
+    from sprite_model import SpriteModel
+    from ui import AnimationGridView
+    from ui.animation_segment_preview import AnimationSegmentPreview
 
 
 class AnimationSegmentController(QObject):
@@ -37,12 +45,12 @@ class AnimationSegmentController(QObject):
     def __init__(
         self,
         segment_manager: AnimationSegmentManager,
-        grid_view,
-        sprite_model,
-        tab_widget,
-        segment_preview,
-        export_coordinator=None,
-        parent=None,
+        grid_view: "AnimationGridView | None",
+        sprite_model: "SpriteModel",
+        tab_widget: QTabWidget,
+        segment_preview: "AnimationSegmentPreview",
+        export_coordinator: "ExportCoordinator | None" = None,
+        parent: QWidget | None = None,
     ):
         """
         Initialize animation segment controller with all dependencies.
@@ -103,7 +111,7 @@ class AnimationSegmentController(QObject):
     # SEGMENT CREATION
     # ============================================================================
 
-    def create_segment(self, segment) -> tuple[bool, str]:
+    def create_segment(self, segment: AnimationSegment) -> tuple[bool, str]:
         """Create a new segment with automatic name conflict resolution. Returns (success, message)."""
         original_name = segment.name
 
@@ -152,7 +160,9 @@ class AnimationSegmentController(QObject):
 
         return True, message
 
-    def _resolve_name_conflict(self, segment, original_name: str) -> tuple[bool, str | None]:
+    def _resolve_name_conflict(
+        self, segment: AnimationSegment, original_name: str
+    ) -> tuple[bool, str | None]:
         """Generate unique name variants until one succeeds. Returns (success, final_name)."""
         # Strip only a previously-appended numeric suffix (_\d+) to preserve semantic names
         # e.g. "Walk_Left_1234" -> "Walk_Left", but "Walk_Left" stays "Walk_Left"
@@ -192,7 +202,9 @@ class AnimationSegmentController(QObject):
 
         return False, None
 
-    def _sync_segment_to_grid(self, segment_name: str, fallback_segment=None) -> None:
+    def _sync_segment_to_grid(
+        self, segment_name: str, fallback_segment: AnimationSegment | None = None
+    ) -> None:
         """Ensure grid contains a segment that exists in manager state."""
         if not self._grid_view:
             return
@@ -221,7 +233,7 @@ class AnimationSegmentController(QObject):
         name: str,
         start_frame: int,
         end_frame: int,
-        color,
+        color: QColor,
         bounce_mode: bool,
         frame_holds: dict[int, int] | None,
     ) -> None:
@@ -290,7 +302,7 @@ class AnimationSegmentController(QObject):
 
         return False, f"Failed to delete segment '{segment_name}'"
 
-    def select_segment(self, segment) -> None:
+    def select_segment(self, segment: AnimationSegment) -> None:
         """Handle segment selection (without switching views)."""
         message = (
             f"Selected segment '{segment.name}' "
@@ -299,7 +311,7 @@ class AnimationSegmentController(QObject):
         )
         self.statusMessage.emit(message)
 
-    def preview_segment(self, segment) -> None:
+    def preview_segment(self, segment: AnimationSegment) -> None:
         """Preview a segment by showing its start frame."""
         if self._sprite_model:
             self._sprite_model.set_current_frame(segment.start_frame)
@@ -351,7 +363,9 @@ class AnimationSegmentController(QObject):
         if segment:
             self.export_segment(segment, self._tab_widget or self._grid_view)
 
-    def export_segment(self, segment, parent_widget=None) -> None:
+    def export_segment(
+        self, segment: AnimationSegment, parent_widget: QWidget | None = None
+    ) -> None:
         """Export a specific animation segment."""
         if not self._sprite_model or not self._segment_manager:
             QMessageBox.warning(

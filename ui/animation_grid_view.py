@@ -6,7 +6,7 @@ Part of Animation Splitting Feature implementation.
 
 import copy
 
-from PySide6.QtCore import QPoint, Qt, Signal
+from PySide6.QtCore import QPoint, QPointF, Qt, Signal
 from PySide6.QtGui import QColor, QMouseEvent, QPixmap
 from PySide6.QtWidgets import (
     QGridLayout,
@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
 )
 
 from config import Config
-from managers import AnimationSegment
+from managers import AnimationSegment, AnimationSegmentManager
 from utils.sprite_rendering import create_padded_pixmap
 from utils.styles import StyleManager
 
@@ -215,7 +215,7 @@ class AnimationGridView(QWidget):
         # Just set up the grid area, no segment panel needed
         self._setup_grid_area(layout)
 
-    def _setup_grid_area(self, parent_layout):
+    def _setup_grid_area(self, parent_layout: QVBoxLayout):
         """Set up the main grid area."""
         # Controls
         controls_layout = QHBoxLayout()
@@ -605,7 +605,7 @@ class AnimationGridView(QWidget):
         self._segments[segment.name] = segment
         self._update_segment_visualization()
 
-    def sync_segments_with_manager(self, segment_manager):
+    def sync_segments_with_manager(self, segment_manager: AnimationSegmentManager | None):
         """Synchronize local segments with segment manager to prevent conflicts."""
         if not segment_manager:
             return
@@ -753,7 +753,7 @@ class AnimationGridView(QWidget):
 
         super().mouseReleaseEvent(event)
 
-    def _get_frame_at_position(self, position) -> int | None:
+    def _get_frame_at_position(self, position: QPointF) -> int | None:
         """Get the frame index at the given position."""
         # Find which thumbnail widget is at this position
         widget = self.childAt(position.toPoint())

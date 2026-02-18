@@ -9,7 +9,15 @@ import sys
 from collections.abc import Callable
 
 from PySide6.QtCore import QMimeData, Qt, QTimer
-from PySide6.QtGui import QAction, QDragEnterEvent, QDropEvent, QKeySequence
+from PySide6.QtGui import (
+    QAction,
+    QCloseEvent,
+    QDragEnterEvent,
+    QDragLeaveEvent,
+    QDropEvent,
+    QKeyEvent,
+    QKeySequence,
+)
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
@@ -976,7 +984,7 @@ class SpriteViewer(QMainWindow):
             event.acceptProposedAction()
             self._canvas.setStyleSheet(StyleManager.canvas_drag_hover())
 
-    def dragLeaveEvent(self, event):
+    def dragLeaveEvent(self, event: QDragLeaveEvent):
         """Handle drag leave event."""
         self._canvas.setStyleSheet(StyleManager.canvas_normal())
         if self._sprite_model.is_loaded:
@@ -1081,14 +1089,14 @@ class SpriteViewer(QMainWindow):
         """
         QMessageBox.about(self, "About Sprite Viewer", about_text)
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event: QKeyEvent):
         """Handle keyboard shortcuts."""
         key = event.key()
         modifiers = event.modifiers()
 
         # Build key sequence using Qt's built-in functionality
         q_key_sequence = QKeySequence(
-            key | modifiers.value if hasattr(modifiers, "value") else int(modifiers)
+            key | (modifiers.value if hasattr(modifiers, "value") else int(modifiers.value))
         )
         key_sequence_str = q_key_sequence.toString()
 
@@ -1170,7 +1178,7 @@ class SpriteViewer(QMainWindow):
         dialog.exportRequested.connect(self._export_coordinator.handle_export_request)
         dialog.exec()
 
-    def closeEvent(self, event):
+    def closeEvent(self, event: QCloseEvent):
         """Handle close event."""
         # Save settings
         self._settings_manager.save_window_geometry(self)

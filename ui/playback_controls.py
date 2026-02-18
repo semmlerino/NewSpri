@@ -100,7 +100,7 @@ class PlaybackControls(QFrame):
         self.loop_checkbox.toggled.connect(self.loopToggled)
         layout.addWidget(self.loop_checkbox)
 
-    def _on_fps_changed(self, value):
+    def _on_fps_changed(self, value: int):
         self.fps_value.setText(f"{value}")
         self.fpsChanged.emit(value)
 

@@ -5,14 +5,18 @@ Simplified two-step wizard with live preview functionality.
 
 import logging
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import Signal
-from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QDialog, QMessageBox, QVBoxLayout
+from PySide6.QtGui import QPixmap, QShowEvent
+from PySide6.QtWidgets import QDialog, QMessageBox, QVBoxLayout, QWidget
+
+if TYPE_CHECKING:
+    from managers.animation_segment_manager import AnimationSegmentManager
 
 from config import Config
 
+from ..core.export_presets import ExportPreset
 from ..core.frame_exporter import (
     BackgroundMode,
     ExportConfig,
@@ -39,11 +43,11 @@ class ExportDialog(QDialog):
 
     def __init__(
         self,
-        parent=None,
+        parent: QWidget | None = None,
         frame_count: int = 0,
         current_frame: int = 0,
         sprites: list[QPixmap] | None = None,
-        segment_manager=None,
+        segment_manager: "AnimationSegmentManager | None" = None,
     ):
         super().__init__(parent)
 
@@ -130,7 +134,9 @@ class ExportDialog(QDialog):
         self.exportRequested.emit(export_config)
         self.accept()
 
-    def _prepare_export_config(self, preset, settings) -> ExportConfig:
+    def _prepare_export_config(
+        self, preset: ExportPreset, settings: dict[str, Any]
+    ) -> ExportConfig:
         """Prepare typed export configuration from wizard settings."""
         format_str = settings.get("format", "PNG")
         try:
@@ -211,7 +217,7 @@ class ExportDialog(QDialog):
             dialog_rect.moveCenter(center_point)
             self.move(dialog_rect.topLeft())
 
-    def showEvent(self, event):
+    def showEvent(self, event: QShowEvent):
         """Handle dialog show event."""
         super().showEvent(event)
         # Ensure wizard starts at first step

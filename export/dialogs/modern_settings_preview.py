@@ -6,11 +6,15 @@ Redesigned for better usability and modern aesthetics.
 import logging
 import math
 import os
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
+
+if TYPE_CHECKING:
+    from managers.animation_segment_manager import AnimationSegmentManager
 
 from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPixmap
+from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPixmap, QWheelEvent
 from PySide6.QtWidgets import (
+    QAbstractButton,
     QButtonGroup,
     QComboBox,
     QFrame,
@@ -48,7 +52,7 @@ logger = logging.getLogger(__name__)
 class CompactLivePreview(QGraphicsView):
     """Modern preview widget with integrated controls."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
         self.setRenderHint(QPainter.RenderHint.Antialiasing)
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
@@ -80,7 +84,7 @@ class CompactLivePreview(QGraphicsView):
         painter.end()
         return QBrush(pixmap)
 
-    def wheelEvent(self, event):
+    def wheelEvent(self, event: QWheelEvent):
         """Smooth zoom with mouse wheel."""
         zoom_in = 1.1
         zoom_out = 1 / zoom_in
@@ -783,8 +787,8 @@ class ModernExportSettings(WizardStep):
         frame_count: int = 0,
         current_frame: int = 0,
         sprites: list[QPixmap] | None = None,
-        segment_manager=None,
-        parent=None,
+        segment_manager: "AnimationSegmentManager | None" = None,
+        parent: QWidget | None = None,
     ):
         super().__init__(title="Export Settings", subtitle="Configure your export", parent=parent)
         self.frame_count = frame_count
@@ -1170,7 +1174,7 @@ class ModernExportSettings(WizardStep):
         else:
             self._transparency_warning.hide()
 
-    def _on_scale_changed(self, button):
+    def _on_scale_changed(self, button: QAbstractButton):
         """Handle scale change."""
         self._on_setting_changed()
 
@@ -1277,7 +1281,7 @@ class ModernExportSettings(WizardStep):
             parts.append(f"📁 {output}")
 
         # Format and scale
-        fmt = self.format_combo.currentText()
+        fmt: str = self.format_combo.currentText()
         scale = self.scale_group.checkedId() if self.scale_group.checkedButton() else 1
         parts.append(f"{fmt} @ {scale}x")
 

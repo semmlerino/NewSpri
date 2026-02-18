@@ -4,10 +4,13 @@ Clean, simple export type selection without clutter.
 """
 
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from managers.animation_segment_manager import AnimationSegmentManager
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QMouseEvent
 from PySide6.QtWidgets import QButtonGroup, QFrame, QLabel, QRadioButton, QVBoxLayout, QWidget
 
 from utils.styles import StyleManager
@@ -23,7 +26,7 @@ class SimpleExportOption(QFrame):
 
     clicked = Signal()
 
-    def __init__(self, preset: ExportPreset, parent=None):
+    def __init__(self, preset: ExportPreset, parent: QWidget | None = None):
         super().__init__(parent)
         self.preset = preset
         self._is_selected = False
@@ -78,7 +81,7 @@ class SimpleExportOption(QFrame):
             self._radio_button.setChecked(selected)
         self._update_style()
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QMouseEvent):
         """Handle mouse press to select option."""
         if event.button() == Qt.MouseButton.LeftButton:
             self.clicked.emit()
@@ -94,7 +97,12 @@ class ExportTypeStep(WizardStep):
     # Signal emitted when a preset is selected
     presetSelected = Signal(ExportPreset)
 
-    def __init__(self, frame_count: int = 0, parent=None, segment_manager=None):
+    def __init__(
+        self,
+        frame_count: int = 0,
+        parent: QWidget | None = None,
+        segment_manager: "AnimationSegmentManager | None" = None,
+    ):
         super().__init__(
             title="Choose Export Type",
             subtitle="Select how you want to export your sprite frames",

@@ -4,7 +4,7 @@ Simple progress dialog for export operations.
 """
 
 from PySide6.QtCore import Signal
-from PySide6.QtWidgets import QDialog, QLabel, QProgressBar, QPushButton, QVBoxLayout
+from PySide6.QtWidgets import QDialog, QLabel, QProgressBar, QPushButton, QVBoxLayout, QWidget
 
 
 class ExportProgressDialog(QDialog):
@@ -12,7 +12,7 @@ class ExportProgressDialog(QDialog):
 
     cancelled = Signal()
 
-    def __init__(self, export_type: str, total_frames: int, parent=None):
+    def __init__(self, export_type: str, total_frames: int, parent: QWidget | None = None):
         super().__init__(parent)
 
         self.total_frames = total_frames

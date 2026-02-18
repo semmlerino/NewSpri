@@ -683,7 +683,7 @@ def _analyze_ccl_results(
         centers_x = [x + w // 2 for x, _y, w, _h in sprite_bounds]
         centers_y = [y + h // 2 for _x, y, _w, h in sprite_bounds]
 
-        def group_positions(positions, tolerance=15):
+        def group_positions(positions: list[int], tolerance: int = 15) -> list[int]:
             if not positions:
                 return []
             sorted_pos = sorted(set(positions))

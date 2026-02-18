@@ -6,12 +6,17 @@ Extracted from sprite_viewer.py to reduce complexity and improve maintainability
 """
 
 import logging
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox
 
 from sprite_model.sprite_detection import DetectionResult
 from utils.ui_common import parse_detection_tuple
+
+if TYPE_CHECKING:
+    from sprite_model import SpriteModel
+    from ui import FrameExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +43,7 @@ class AutoDetectionController(QObject):
     buttonConfidenceUpdate = Signal(str, str, str)  # button_type, confidence, message
     statusUpdate = Signal(str, int)  # message, timeout_ms
 
-    def __init__(self, sprite_model, frame_extractor):
+    def __init__(self, sprite_model: "SpriteModel", frame_extractor: "FrameExtractor"):
         """
         Initialize controller with required dependencies.
 

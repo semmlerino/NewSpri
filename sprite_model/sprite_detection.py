@@ -13,9 +13,10 @@ Consolidated from sprite_model/detection/ subpackage.
 """
 
 import math
+from collections.abc import Callable
 from dataclasses import dataclass
 
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QImage, QPixmap
 
 from config import Config
 
@@ -144,7 +145,13 @@ def detect_margins(
         return False, 0, 0, f"Error detecting margins: {e!s}"
 
 
-def _scan_margin(image, outer_range, inner_range_fn, pixel_fn, alpha_threshold: int) -> int:
+def _scan_margin(
+    image: QImage,
+    outer_range: range,
+    inner_range_fn: Callable[[int], range],
+    pixel_fn: Callable[[int, int], int],
+    alpha_threshold: int,
+) -> int:
     """
     Scan from an edge inward, counting transparent slices until content is found.
 
@@ -170,7 +177,7 @@ def _scan_margin(image, outer_range, inner_range_fn, pixel_fn, alpha_threshold: 
     return margin
 
 
-def _detect_raw_margins(image) -> tuple[int, int, int, int]:
+def _detect_raw_margins(image: QImage) -> tuple[int, int, int, int]:
     """
     Detect raw margin measurements from image edges.
 
@@ -521,7 +528,7 @@ def _score_frame_candidate(
     return score
 
 
-def _analyze_content_boundaries(image) -> list[tuple[int, int, int, int]]:
+def _analyze_content_boundaries(image: QImage) -> list[tuple[int, int, int, int]]:
     """
     Analyze image to find content boundaries (sprites).
 
@@ -562,7 +569,7 @@ def _analyze_content_boundaries(image) -> list[tuple[int, int, int, int]]:
 
 
 def _has_content_in_region(
-    image, x: int, y: int, width: int, height: int, alpha_threshold: int
+    image: QImage, x: int, y: int, width: int, height: int, alpha_threshold: int
 ) -> bool:
     """
     Check if a region contains non-transparent content.
@@ -701,13 +708,13 @@ def detect_spacing(
 
 
 def _detect_spacing_1d(
-    image,
+    image: QImage,
     frame_size: int,
     frame_cross: int,
     offset_main: int,
     offset_cross: int,
     available: int,
-    pixel_fn,
+    pixel_fn: Callable[[int, int], int],
     image_main_size: int,
     image_cross_size: int,
 ) -> tuple[int, float]:

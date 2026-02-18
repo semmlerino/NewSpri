@@ -6,7 +6,7 @@ Part of Animation Segment System Enhancement.
 
 import contextlib
 
-from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtCore import QPoint, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QKeySequence, QPixmap, QShortcut
 from PySide6.QtWidgets import (
     QCheckBox,
@@ -288,7 +288,7 @@ class SegmentPreviewItem(QFrame):
         with contextlib.suppress(RuntimeError, TypeError):
             self.customContextMenuRequested.disconnect(self._show_context_menu)
 
-    def _show_context_menu(self, pos):
+    def _show_context_menu(self, pos: QPoint):
         """Show context menu for segment actions."""
         menu = QMenu(self)
 

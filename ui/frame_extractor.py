@@ -7,6 +7,7 @@ Part of Python Sprite Viewer - Phase 5: UI Component Extraction.
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
+    QAbstractButton,
     QButtonGroup,
     QCheckBox,
     QGridLayout,
@@ -258,7 +259,7 @@ class FrameExtractor(QGroupBox):
         # Set initial state for auto-detect default mode (disable grid controls)
         self._set_grid_controls_enabled(False)
 
-    def _on_mode_changed(self, button):
+    def _on_mode_changed(self, button: QAbstractButton):
         """Handle extraction mode change."""
         if button == self.grid_mode_btn:
             mode = ExtractionMode.GRID

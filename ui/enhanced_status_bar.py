@@ -20,7 +20,7 @@ class EnhancedStatusBar(QStatusBar):
     Layout: [Status Message] | Frame: 3/16 | Size: 32×32 px | Mode: Grid | Zoom: 150% | FPS: 12 | Mouse: (128, 64)
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
 
         # Status message timer for temporary messages

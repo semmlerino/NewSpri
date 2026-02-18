@@ -5,8 +5,19 @@ Custom canvas widget for displaying sprites with zoom and pan capabilities.
 Part of Python Sprite Viewer - Phase 5: UI Component Extraction.
 """
 
-from PySide6.QtCore import QRect, Qt, Signal
-from PySide6.QtGui import QColor, QFont, QPainter, QPen, QPixmap
+from typing import Any
+
+from PySide6.QtCore import QPoint, QRect, Qt, Signal
+from PySide6.QtGui import (
+    QColor,
+    QFont,
+    QMouseEvent,
+    QPainter,
+    QPaintEvent,
+    QPen,
+    QPixmap,
+    QWheelEvent,
+)
 from PySide6.QtWidgets import QLabel
 
 from config import Config
@@ -54,7 +65,7 @@ class SpriteCanvas(QLabel):
         # Enable mouse tracking for pan and coordinate tracking
         self.setMouseTracking(True)
 
-    def set_pixmap(self, pixmap: QPixmap, auto_fit=None):
+    def set_pixmap(self, pixmap: QPixmap, auto_fit: bool | None = None):
         """Set the sprite pixmap to display."""
         self._pixmap = pixmap
         self._cached_padded_pixmap = None  # Invalidate cached padded pixmap
@@ -68,7 +79,7 @@ class SpriteCanvas(QLabel):
         else:
             self.update()
 
-    def update(self, *args, **kwargs):
+    def update(self, *args: Any, **kwargs: Any):
         """Standard update - just trigger repaint without fetching frame."""
         super().update(*args, **kwargs)
 
@@ -126,7 +137,7 @@ class SpriteCanvas(QLabel):
         self.update()
         self.zoomChanged.emit(self._zoom_factor)
 
-    def _calculate_fit_zoom(self, margin=None):
+    def _calculate_fit_zoom(self, margin: float | None = None):
         """Calculate zoom factor to fit sprite in window."""
         if not self._pixmap or self._pixmap.isNull():
             return 1.0
@@ -152,7 +163,7 @@ class SpriteCanvas(QLabel):
         self._grid_size = size
         self.update()
 
-    def paintEvent(self, event):
+    def paintEvent(self, event: QPaintEvent):
         """Custom paint event for rendering sprite with background and overlays."""
         painter = QPainter(self)
         # Use antialiasing to prevent edge cutoff
@@ -293,13 +304,13 @@ class SpriteCanvas(QLabel):
             painter.drawLine(sprite_rect.left(), int(y), sprite_rect.right(), int(y))
             y += grid_size
 
-    def mousePressEvent(self, event):
+    def mousePressEvent(self, event: QMouseEvent):
         """Handle mouse press for panning."""
         if event.button() == Qt.MouseButton.LeftButton:
             self._last_pan_point = event.position().toPoint()
             self.setCursor(Qt.CursorShape.ClosedHandCursor)
 
-    def mouseMoveEvent(self, event):
+    def mouseMoveEvent(self, event: QMouseEvent):
         """Handle mouse move for panning and coordinate tracking."""
         mouse_pos = event.position().toPoint()
 
@@ -316,13 +327,13 @@ class SpriteCanvas(QLabel):
         if sprite_coords:
             self.mouseMoved.emit(sprite_coords[0], sprite_coords[1])
 
-    def mouseReleaseEvent(self, event):
+    def mouseReleaseEvent(self, event: QMouseEvent):
         """Handle mouse release."""
         if event.button() == Qt.MouseButton.LeftButton:
             self._last_pan_point = None
             self.setCursor(Qt.CursorShape.OpenHandCursor)
 
-    def wheelEvent(self, event):
+    def wheelEvent(self, event: QWheelEvent):
         """Handle mouse wheel for zooming."""
         delta = event.angleDelta().y()
         zoom_in = delta > 0
@@ -340,7 +351,7 @@ class SpriteCanvas(QLabel):
         # Emit zoom change signal
         self.zoomChanged.emit(self._zoom_factor)
 
-    def _screen_to_sprite_coords(self, screen_pos):
+    def _screen_to_sprite_coords(self, screen_pos: QPoint):
         """
         Convert screen coordinates to sprite coordinates.
 
