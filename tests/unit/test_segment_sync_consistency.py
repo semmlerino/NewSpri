@@ -14,19 +14,13 @@ Covers:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
 from unittest.mock import MagicMock
 
 import pytest
-
 from PySide6.QtGui import QColor
 
 from managers import AnimationSegment, AnimationSegmentManager
 from ui.animation_grid_view import AnimationGridView
-
-if TYPE_CHECKING:
-    from PySide6.QtWidgets import QApplication
-
 
 # Mark all tests in this module as requiring Qt
 pytestmark = pytest.mark.requires_qt
@@ -92,8 +86,10 @@ class TestSyncAfterLoad:
         assert len(grid_view._segments) == 0
 
     def test_sync_populates_grid_from_manager(
-        self, segment_manager: AnimationSegmentManager, grid_view: AnimationGridView,
-        sample_segments: list[dict]
+        self,
+        segment_manager: AnimationSegmentManager,
+        grid_view: AnimationGridView,
+        sample_segments: list[dict],
     ) -> None:
         """Syncing should populate grid view with all manager segments."""
         # Add segments to manager
@@ -217,8 +213,10 @@ class TestSyncAfterDelete:
         assert "ToDelete" not in grid_view._segments
 
     def test_delete_multiple_then_sync(
-        self, segment_manager: AnimationSegmentManager, grid_view: AnimationGridView,
-        sample_segments: list[dict]
+        self,
+        segment_manager: AnimationSegmentManager,
+        grid_view: AnimationGridView,
+        sample_segments: list[dict],
     ) -> None:
         """Deleting multiple segments then syncing should remove all from grid."""
         # Add all segments
@@ -242,8 +240,10 @@ class TestSyncAfterDelete:
         assert "Idle" in grid_view._segments
 
     def test_clear_manager_then_sync(
-        self, segment_manager: AnimationSegmentManager, grid_view: AnimationGridView,
-        sample_segments: list[dict]
+        self,
+        segment_manager: AnimationSegmentManager,
+        grid_view: AnimationGridView,
+        sample_segments: list[dict],
     ) -> None:
         """Clearing all segments from manager then syncing should empty grid."""
         # Add all segments
@@ -400,9 +400,7 @@ class TestBidirectionalConsistency:
         assert "ManagerSeg" in grid_view._segments
         assert "GridSeg" not in grid_view._segments
 
-    def test_sync_with_none_manager_is_safe(
-        self, grid_view: AnimationGridView
-    ) -> None:
+    def test_sync_with_none_manager_is_safe(self, grid_view: AnimationGridView) -> None:
         """Syncing with None manager should be safe no-op."""
         # Add segment to grid
         grid_view._segments["Test"] = AnimationSegment("Test", 0, 3, color_rgb=(255, 0, 0))

@@ -15,11 +15,8 @@ Covers:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
 
 import pytest
-
 from PySide6.QtCore import QByteArray
 from PySide6.QtWidgets import QMainWindow
 
@@ -28,10 +25,6 @@ from managers.settings_manager import (
     get_settings_manager,
     reset_settings_manager,
 )
-
-if TYPE_CHECKING:
-    pass
-
 
 # Mark all tests in this module as requiring Qt
 pytestmark = pytest.mark.requires_qt
@@ -69,10 +62,10 @@ def temp_settings_file(tmp_path: Path) -> Path:
 def sample_settings_dict() -> dict:
     """Sample settings dictionary for import/export testing."""
     return {
-        'extraction/last_width': 64,
-        'extraction/last_height': 48,
-        'display/grid_visible': True,
-        'animation/last_fps': 24,
+        "extraction/last_width": 64,
+        "extraction/last_height": 48,
+        "display/grid_visible": True,
+        "animation/last_fps": 24,
     }
 
 
@@ -130,60 +123,50 @@ class TestGetSetValue:
         self, settings_manager: SettingsManager
     ) -> None:
         """get_value should return default for missing keys."""
-        value = settings_manager.get_value('nonexistent/key', 'default')
+        value = settings_manager.get_value("nonexistent/key", "default")
 
-        assert value == 'default'
+        assert value == "default"
 
-    def test_get_value_uses_config_defaults(
-        self, settings_manager: SettingsManager
-    ) -> None:
+    def test_get_value_uses_config_defaults(self, settings_manager: SettingsManager) -> None:
         """get_value should use Config.Settings.DEFAULTS when no default provided."""
         from config import Config
 
         # Clear the value first
-        settings_manager._settings.remove('extraction/last_width')
+        settings_manager._settings.remove("extraction/last_width")
 
-        value = settings_manager.get_value('extraction/last_width')
+        value = settings_manager.get_value("extraction/last_width")
 
-        assert value == Config.Settings.DEFAULTS['extraction/last_width']
+        assert value == Config.Settings.DEFAULTS["extraction/last_width"]
 
-    def test_set_value_stores_value(
-        self, settings_manager: SettingsManager
-    ) -> None:
+    def test_set_value_stores_value(self, settings_manager: SettingsManager) -> None:
         """set_value should store the value."""
-        settings_manager.set_value('test/key', 42)
+        settings_manager.set_value("test/key", 42)
 
-        value = settings_manager.get_value('test/key')
+        value = settings_manager.get_value("test/key")
 
         assert value == 42
 
-    def test_set_value_emits_signal(
-        self, settings_manager: SettingsManager, qtbot
-    ) -> None:
+    def test_set_value_emits_signal(self, settings_manager: SettingsManager, qtbot) -> None:
         """set_value should emit settingsChanged signal."""
         with qtbot.waitSignal(settings_manager.settingsChanged, timeout=1000) as blocker:
-            settings_manager.set_value('test/signal', 'value')
+            settings_manager.set_value("test/signal", "value")
 
         key, value = blocker.args
-        assert key == 'test/signal'
-        assert value == 'value'
+        assert key == "test/signal"
+        assert value == "value"
 
-    def test_set_value_auto_save_triggers_timer(
-        self, settings_manager: SettingsManager
-    ) -> None:
+    def test_set_value_auto_save_triggers_timer(self, settings_manager: SettingsManager) -> None:
         """set_value with auto_save should start the autosave timer."""
-        settings_manager.set_value('test/auto', 'value', auto_save=True)
+        settings_manager.set_value("test/auto", "value", auto_save=True)
 
         assert settings_manager._autosave_timer.isActive()
 
-    def test_set_value_no_auto_save_skips_timer(
-        self, settings_manager: SettingsManager
-    ) -> None:
+    def test_set_value_no_auto_save_skips_timer(self, settings_manager: SettingsManager) -> None:
         """set_value with auto_save=False should not start timer."""
-        settings_manager.set_value('test/no_auto', 'value', auto_save=False)
+        settings_manager.set_value("test/no_auto", "value", auto_save=False)
 
         # Timer should not have been started for this value
-        assert 'test/no_auto' not in settings_manager._pending_changes
+        assert "test/no_auto" not in settings_manager._pending_changes
 
 
 # ============================================================================
@@ -194,21 +177,17 @@ class TestGetSetValue:
 class TestAutoSaveTimer:
     """Tests for auto-save timer behavior."""
 
-    def test_auto_save_clears_pending_changes(
-        self, settings_manager: SettingsManager
-    ) -> None:
+    def test_auto_save_clears_pending_changes(self, settings_manager: SettingsManager) -> None:
         """_auto_save should clear pending changes."""
-        settings_manager._pending_changes['test'] = 'value'
+        settings_manager._pending_changes["test"] = "value"
 
         settings_manager._auto_save()
 
         assert len(settings_manager._pending_changes) == 0
 
-    def test_sync_stops_timer_and_clears_pending(
-        self, settings_manager: SettingsManager
-    ) -> None:
+    def test_sync_stops_timer_and_clears_pending(self, settings_manager: SettingsManager) -> None:
         """sync should stop timer and clear pending changes."""
-        settings_manager.set_value('test/sync', 'value')
+        settings_manager.set_value("test/sync", "value")
         assert settings_manager._autosave_timer.isActive()
 
         settings_manager.sync()
@@ -225,17 +204,15 @@ class TestAutoSaveTimer:
 class TestWindowGeometry:
     """Tests for window geometry save/restore."""
 
-    def test_save_window_geometry(
-        self, qapp, settings_manager: SettingsManager
-    ) -> None:
+    def test_save_window_geometry(self, qapp, settings_manager: SettingsManager) -> None:
         """save_window_geometry should save both geometry and state."""
         window = QMainWindow()
         window.resize(800, 600)
 
         settings_manager.save_window_geometry(window)
 
-        geometry = settings_manager.get_value('window/geometry')
-        state = settings_manager.get_value('window/state')
+        geometry = settings_manager.get_value("window/geometry")
+        state = settings_manager.get_value("window/state")
 
         assert geometry is not None
         assert state is not None
@@ -275,9 +252,7 @@ class TestWindowGeometry:
 class TestRecentFilesManagement:
     """Tests for recent files management."""
 
-    def test_add_recent_file(
-        self, settings_manager: SettingsManager, tmp_path: Path
-    ) -> None:
+    def test_add_recent_file(self, settings_manager: SettingsManager, tmp_path: Path) -> None:
         """add_recent_file should add file to beginning of list."""
         filepath = str(tmp_path / "test.png")
 
@@ -349,9 +324,7 @@ class TestRecentFilesManagement:
         # Original should be unchanged
         assert len(settings_manager.get_recent_files()) == 1
 
-    def test_clear_recent_files(
-        self, settings_manager: SettingsManager, tmp_path: Path
-    ) -> None:
+    def test_clear_recent_files(self, settings_manager: SettingsManager, tmp_path: Path) -> None:
         """clear_recent_files should remove all recent files."""
         settings_manager.add_recent_file(str(tmp_path / "test.png"))
 
@@ -359,9 +332,7 @@ class TestRecentFilesManagement:
 
         assert len(settings_manager.get_recent_files()) == 0
 
-    def test_remove_recent_file(
-        self, settings_manager: SettingsManager, tmp_path: Path
-    ) -> None:
+    def test_remove_recent_file(self, settings_manager: SettingsManager, tmp_path: Path) -> None:
         """remove_recent_file should remove specific file."""
         file1 = str(tmp_path / "file1.png")
         file2 = str(tmp_path / "file2.png")
@@ -408,10 +379,10 @@ class TestSignalEmission:
         received = []
         settings_manager.settingsChanged.connect(lambda k, v: received.append((k, v)))
 
-        settings_manager.set_value('test/signal', 123)
+        settings_manager.set_value("test/signal", 123)
 
         assert len(received) == 1
-        assert received[0] == ('test/signal', 123)
+        assert received[0] == ("test/signal", 123)
 
     def test_recent_files_changed_on_add(
         self, settings_manager: SettingsManager, tmp_path: Path, qtbot
@@ -456,29 +427,27 @@ class TestEdgeCases:
         from config import Config
 
         # Ensure the value is not set
-        settings_manager._settings.remove('animation/loop_mode')
+        settings_manager._settings.remove("animation/loop_mode")
 
-        value = settings_manager.get_value('animation/loop_mode')
+        value = settings_manager.get_value("animation/loop_mode")
 
-        assert value == Config.Settings.DEFAULTS['animation/loop_mode']
+        assert value == Config.Settings.DEFAULTS["animation/loop_mode"]
 
     def test_restore_geometry_with_non_qbytearray_fails_gracefully(
         self, qapp, settings_manager: SettingsManager
     ) -> None:
         """restore_window_geometry should handle non-QByteArray values."""
         # Set invalid geometry value
-        settings_manager._settings.setValue('window/geometry', 'not a byte array')
+        settings_manager._settings.setValue("window/geometry", "not a byte array")
 
         window = QMainWindow()
         result = settings_manager.restore_window_geometry(window)
 
         assert result is False
 
-    def test_load_recent_files_handles_non_list(
-        self, settings_manager: SettingsManager
-    ) -> None:
+    def test_load_recent_files_handles_non_list(self, settings_manager: SettingsManager) -> None:
         """_load_recent_files should handle non-list values."""
-        settings_manager._settings.setValue('recent/files', 'not a list')
+        settings_manager._settings.setValue("recent/files", "not a list")
 
         settings_manager._load_recent_files()
 
@@ -497,11 +466,9 @@ class TestEdgeCases:
         # Original file should still be there
         assert len(settings_manager.get_recent_files()) == 1
 
-    def test_multiple_sync_calls_safe(
-        self, settings_manager: SettingsManager
-    ) -> None:
+    def test_multiple_sync_calls_safe(self, settings_manager: SettingsManager) -> None:
         """Multiple sync calls should be safe."""
-        settings_manager.set_value('test/key', 'value')
+        settings_manager.set_value("test/key", "value")
 
         # Multiple syncs should not raise
         settings_manager.sync()
@@ -509,4 +476,4 @@ class TestEdgeCases:
         settings_manager.sync()
 
         # Value should still be retrievable
-        assert settings_manager.get_value('test/key') == 'value'
+        assert settings_manager.get_value("test/key") == "value"

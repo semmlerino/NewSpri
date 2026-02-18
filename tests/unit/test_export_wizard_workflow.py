@@ -14,22 +14,15 @@ Covers:
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
-
-from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPixmap
 
-from export.core.export_presets import ExportPreset, get_preset
-from export.core.frame_exporter import ExportFormat, ExportMode, LayoutMode, SpriteSheetLayout
+from export.core.export_presets import ExportPreset
+from export.core.frame_exporter import ExportFormat, ExportMode, LayoutMode
 from export.dialogs.base.wizard_base import WizardStep, WizardWidget
 from export.dialogs.export_wizard import ExportDialog
-
-if TYPE_CHECKING:
-    pass
-
 
 # Mark all tests in this module as requiring Qt
 pytestmark = pytest.mark.requires_qt
@@ -92,9 +85,9 @@ class TestWizardStep:
         """WizardStep set_data should store data."""
         step = WizardStep(title="Test")
 
-        step.set_data({'key': 'value'})
+        step.set_data({"key": "value"})
 
-        assert step.get_data() == {'key': 'value'}
+        assert step.get_data() == {"key": "value"}
 
     def test_wizard_step_on_entering_callable(self, qapp) -> None:
         """WizardStep on_entering should be callable."""
@@ -114,8 +107,8 @@ class TestWizardStep:
         """WizardStep should have expected signals."""
         step = WizardStep(title="Test")
 
-        assert hasattr(step, 'stepValidated')
-        assert hasattr(step, 'dataChanged')
+        assert hasattr(step, "stepValidated")
+        assert hasattr(step, "dataChanged")
 
 
 # ============================================================================
@@ -130,8 +123,8 @@ class TestWizardWidget:
         """WizardWidget should initialize correctly."""
         wizard = WizardWidget()
 
-        assert hasattr(wizard, 'wizardFinished')
-        assert hasattr(wizard, 'wizardCancelled')
+        assert hasattr(wizard, "wizardFinished")
+        assert hasattr(wizard, "wizardCancelled")
 
     def test_wizard_widget_add_step(self, qapp) -> None:
         """WizardWidget should add steps correctly."""
@@ -172,7 +165,7 @@ class TestWizardWidget:
         """WizardWidget should collect data from all steps."""
         wizard = WizardWidget()
         step1 = WizardStep(title="Step 1")
-        step1.set_data({'key1': 'value1'})
+        step1.set_data({"key1": "value1"})
 
         wizard.add_step(step1)
 
@@ -210,7 +203,7 @@ class TestExportPreset:
             scale=1.0,
             default_pattern="{base}_{index}",
             tooltip="Test tooltip",
-            use_cases=["Testing"]
+            use_cases=["Testing"],
         )
 
         assert preset.name == "test"
@@ -227,76 +220,49 @@ class TestExportPreset:
 class TestExportDialog:
     """Tests for ExportDialog initialization and workflow."""
 
-    def test_export_dialog_initialization(
-        self, qapp, sample_sprites: list[QPixmap]
-    ) -> None:
+    def test_export_dialog_initialization(self, qapp, sample_sprites: list[QPixmap]) -> None:
         """ExportDialog should initialize with required parameters."""
         dialog = ExportDialog(
-            parent=None,
-            frame_count=len(sample_sprites),
-            current_frame=0,
-            sprites=sample_sprites
+            parent=None, frame_count=len(sample_sprites), current_frame=0, sprites=sample_sprites
         )
 
         assert dialog.frame_count == len(sample_sprites)
         assert dialog.current_frame == 0
         assert dialog.sprites == sample_sprites
 
-    def test_export_dialog_has_wizard(
-        self, qapp, sample_sprites: list[QPixmap]
-    ) -> None:
+    def test_export_dialog_has_wizard(self, qapp, sample_sprites: list[QPixmap]) -> None:
         """ExportDialog should have wizard widget."""
         dialog = ExportDialog(
-            parent=None,
-            frame_count=len(sample_sprites),
-            current_frame=0,
-            sprites=sample_sprites
+            parent=None, frame_count=len(sample_sprites), current_frame=0, sprites=sample_sprites
         )
 
-        assert hasattr(dialog, 'wizard')
+        assert hasattr(dialog, "wizard")
         assert isinstance(dialog.wizard, WizardWidget)
 
-    def test_export_dialog_has_steps(
-        self, qapp, sample_sprites: list[QPixmap]
-    ) -> None:
+    def test_export_dialog_has_steps(self, qapp, sample_sprites: list[QPixmap]) -> None:
         """ExportDialog should have type and settings steps."""
         dialog = ExportDialog(
-            parent=None,
-            frame_count=len(sample_sprites),
-            current_frame=0,
-            sprites=sample_sprites
+            parent=None, frame_count=len(sample_sprites), current_frame=0, sprites=sample_sprites
         )
 
-        assert hasattr(dialog, 'type_step')
-        assert hasattr(dialog, 'settings_preview_step')
+        assert hasattr(dialog, "type_step")
+        assert hasattr(dialog, "settings_preview_step")
 
-    def test_export_dialog_set_sprites(
-        self, qapp, sample_sprites: list[QPixmap]
-    ) -> None:
+    def test_export_dialog_set_sprites(self, qapp, sample_sprites: list[QPixmap]) -> None:
         """ExportDialog set_sprites should update sprites."""
-        dialog = ExportDialog(
-            parent=None,
-            frame_count=4,
-            current_frame=0,
-            sprites=[]
-        )
+        dialog = ExportDialog(parent=None, frame_count=4, current_frame=0, sprites=[])
 
         dialog.set_sprites(sample_sprites)
 
         assert dialog.sprites == sample_sprites
 
-    def test_export_dialog_has_signals(
-        self, qapp, sample_sprites: list[QPixmap]
-    ) -> None:
+    def test_export_dialog_has_signals(self, qapp, sample_sprites: list[QPixmap]) -> None:
         """ExportDialog should have expected signals."""
         dialog = ExportDialog(
-            parent=None,
-            frame_count=len(sample_sprites),
-            current_frame=0,
-            sprites=sample_sprites
+            parent=None, frame_count=len(sample_sprites), current_frame=0, sprites=sample_sprites
         )
 
-        assert hasattr(dialog, 'exportRequested')
+        assert hasattr(dialog, "exportRequested")
 
     def test_export_dialog_with_segment_manager(
         self, qapp, sample_sprites: list[QPixmap], mock_segment_manager: MagicMock
@@ -307,20 +273,15 @@ class TestExportDialog:
             frame_count=len(sample_sprites),
             current_frame=0,
             sprites=sample_sprites,
-            segment_manager=mock_segment_manager
+            segment_manager=mock_segment_manager,
         )
 
         assert dialog.segment_manager is mock_segment_manager
 
-    def test_export_dialog_modal(
-        self, qapp, sample_sprites: list[QPixmap]
-    ) -> None:
+    def test_export_dialog_modal(self, qapp, sample_sprites: list[QPixmap]) -> None:
         """ExportDialog should be modal."""
         dialog = ExportDialog(
-            parent=None,
-            frame_count=len(sample_sprites),
-            current_frame=0,
-            sprites=sample_sprites
+            parent=None, frame_count=len(sample_sprites), current_frame=0, sprites=sample_sprites
         )
 
         assert dialog.isModal()
@@ -334,15 +295,10 @@ class TestExportDialog:
 class TestExportConfigPreparation:
     """Tests for export configuration preparation."""
 
-    def test_prepare_export_config_basic(
-        self, qapp, sample_sprites: list[QPixmap]
-    ) -> None:
+    def test_prepare_export_config_basic(self, qapp, sample_sprites: list[QPixmap]) -> None:
         """_prepare_export_config should create valid config."""
         dialog = ExportDialog(
-            parent=None,
-            frame_count=len(sample_sprites),
-            current_frame=0,
-            sprites=sample_sprites
+            parent=None, frame_count=len(sample_sprites), current_frame=0, sprites=sample_sprites
         )
 
         preset = ExportPreset(
@@ -355,33 +311,28 @@ class TestExportConfigPreparation:
             scale=1.0,
             default_pattern="{base}_{index}",
             tooltip="Test",
-            use_cases=[]
+            use_cases=[],
         )
 
         settings = {
-            'output_dir': '/tmp/export',
-            'format': 'PNG',
-            'scale': 1.0,
-            'base_name': 'frame'
+            "output_dir": "/tmp/export",
+            "format": "PNG",
+            "scale": 1.0,
+            "base_name": "frame",
         }
 
         config = dialog._prepare_export_config(preset, settings)
 
-        assert config.output_dir == Path('/tmp/export')
+        assert config.output_dir == Path("/tmp/export")
         assert config.format == ExportFormat.PNG
         assert config.mode == ExportMode.INDIVIDUAL_FRAMES
-        assert config.base_name == 'frame'
+        assert config.base_name == "frame"
         assert config.scale_factor == 1.0
 
-    def test_prepare_export_config_sheet_mode(
-        self, qapp, sample_sprites: list[QPixmap]
-    ) -> None:
+    def test_prepare_export_config_sheet_mode(self, qapp, sample_sprites: list[QPixmap]) -> None:
         """_prepare_export_config should handle sheet mode."""
         dialog = ExportDialog(
-            parent=None,
-            frame_count=len(sample_sprites),
-            current_frame=0,
-            sprites=sample_sprites
+            parent=None, frame_count=len(sample_sprites), current_frame=0, sprites=sample_sprites
         )
 
         preset = ExportPreset(
@@ -394,17 +345,17 @@ class TestExportConfigPreparation:
             scale=1.0,
             default_pattern="{base}",
             tooltip="Test",
-            use_cases=[]
+            use_cases=[],
         )
 
         settings = {
-            'output_dir': '/tmp/export',
-            'format': 'PNG',
-            'scale': 1.0,
-            'single_filename': 'spritesheet',
-            'layout_mode': 'auto',
-            'columns': 4,
-            'rows': 2
+            "output_dir": "/tmp/export",
+            "format": "PNG",
+            "scale": 1.0,
+            "single_filename": "spritesheet",
+            "layout_mode": "auto",
+            "columns": 4,
+            "rows": 2,
         }
 
         config = dialog._prepare_export_config(preset, settings)
@@ -412,17 +363,14 @@ class TestExportConfigPreparation:
         assert config.mode == ExportMode.SPRITE_SHEET
         assert config.sprite_sheet_layout is not None
         assert config.sprite_sheet_layout.mode == LayoutMode.AUTO
-        assert config.base_name == 'spritesheet'
+        assert config.base_name == "spritesheet"
 
     def test_prepare_export_config_includes_scale_factor(
         self, qapp, sample_sprites: list[QPixmap]
     ) -> None:
         """_prepare_export_config should include scale_factor."""
         dialog = ExportDialog(
-            parent=None,
-            frame_count=len(sample_sprites),
-            current_frame=0,
-            sprites=sample_sprites
+            parent=None, frame_count=len(sample_sprites), current_frame=0, sprites=sample_sprites
         )
 
         preset = ExportPreset(
@@ -435,14 +383,14 @@ class TestExportConfigPreparation:
             scale=2.0,
             default_pattern="{base}",
             tooltip="Test",
-            use_cases=[]
+            use_cases=[],
         )
 
-        settings = {'scale': 2.0, 'output_dir': '/tmp'}
+        settings = {"scale": 2.0, "output_dir": "/tmp"}
 
         config = dialog._prepare_export_config(preset, settings)
 
-        assert hasattr(config, 'scale_factor')
+        assert hasattr(config, "scale_factor")
         assert config.scale_factor == 2.0
 
     def test_prepare_export_config_selected_frames(
@@ -450,10 +398,7 @@ class TestExportConfigPreparation:
     ) -> None:
         """_prepare_export_config should handle selected frames mode."""
         dialog = ExportDialog(
-            parent=None,
-            frame_count=len(sample_sprites),
-            current_frame=0,
-            sprites=sample_sprites
+            parent=None, frame_count=len(sample_sprites), current_frame=0, sprites=sample_sprites
         )
 
         preset = ExportPreset(
@@ -466,15 +411,15 @@ class TestExportConfigPreparation:
             scale=1.0,
             default_pattern="{base}_{index}",
             tooltip="Test",
-            use_cases=[]
+            use_cases=[],
         )
 
         settings = {
-            'output_dir': '/tmp/export',
-            'format': 'PNG',
-            'scale': 1.0,
-            'base_name': 'frame',
-            'selected_indices': [0, 2, 5],
+            "output_dir": "/tmp/export",
+            "format": "PNG",
+            "scale": 1.0,
+            "base_name": "frame",
+            "selected_indices": [0, 2, 5],
         }
 
         config = dialog._prepare_export_config(preset, settings)
@@ -482,15 +427,10 @@ class TestExportConfigPreparation:
         assert config.mode == ExportMode.SELECTED_FRAMES
         assert config.selected_indices == [0, 2, 5]
 
-    def test_prepare_export_config_current_frame(
-        self, qapp, sample_sprites: list[QPixmap]
-    ) -> None:
+    def test_prepare_export_config_current_frame(self, qapp, sample_sprites: list[QPixmap]) -> None:
         """_prepare_export_config should handle current-frame mode."""
         dialog = ExportDialog(
-            parent=None,
-            frame_count=len(sample_sprites),
-            current_frame=3,
-            sprites=sample_sprites
+            parent=None, frame_count=len(sample_sprites), current_frame=3, sprites=sample_sprites
         )
 
         preset = ExportPreset(
@@ -503,20 +443,20 @@ class TestExportConfigPreparation:
             scale=1.0,
             default_pattern="{base}",
             tooltip="Test",
-            use_cases=[]
+            use_cases=[],
         )
 
         settings = {
-            'output_dir': '/tmp/export',
-            'format': 'PNG',
-            'scale': 1.0,
-            'base_name': 'current_frame',
+            "output_dir": "/tmp/export",
+            "format": "PNG",
+            "scale": 1.0,
+            "base_name": "current_frame",
         }
 
         config = dialog._prepare_export_config(preset, settings)
 
         assert config.mode == ExportMode.INDIVIDUAL_FRAMES
-        assert config.base_name == 'current_frame'
+        assert config.base_name == "current_frame"
         assert config.sprite_sheet_layout is None
         assert config.selected_indices is None
 
@@ -529,17 +469,12 @@ class TestExportConfigPreparation:
 class TestWizardNavigation:
     """Tests for wizard step navigation."""
 
-    def test_wizard_starts_at_first_step(
-        self, qapp, sample_sprites: list[QPixmap]
-    ) -> None:
+    def test_wizard_starts_at_first_step(self, qapp, sample_sprites: list[QPixmap]) -> None:
         """ExportDialog should start wizard at first step on show."""
         from PySide6.QtGui import QShowEvent
 
         dialog = ExportDialog(
-            parent=None,
-            frame_count=len(sample_sprites),
-            current_frame=0,
-            sprites=sample_sprites
+            parent=None, frame_count=len(sample_sprites), current_frame=0, sprites=sample_sprites
         )
 
         # Simulate showEvent with proper event type
@@ -588,24 +523,14 @@ class TestEdgeCases:
 
     def test_export_dialog_empty_sprites(self, qapp) -> None:
         """ExportDialog should handle empty sprites list."""
-        dialog = ExportDialog(
-            parent=None,
-            frame_count=0,
-            current_frame=0,
-            sprites=[]
-        )
+        dialog = ExportDialog(parent=None, frame_count=0, current_frame=0, sprites=[])
 
         assert dialog.sprites == []
         assert dialog.frame_count == 0
 
     def test_export_dialog_none_sprites(self, qapp) -> None:
         """ExportDialog should handle None sprites."""
-        dialog = ExportDialog(
-            parent=None,
-            frame_count=0,
-            current_frame=0,
-            sprites=None
-        )
+        dialog = ExportDialog(parent=None, frame_count=0, current_frame=0, sprites=None)
 
         assert dialog.sprites == []
 
@@ -624,16 +549,9 @@ class TestEdgeCases:
         data = wizard.get_wizard_data()
         assert isinstance(data, dict)
 
-    def test_set_sprites_with_none(
-        self, qapp, sample_sprites: list[QPixmap]
-    ) -> None:
+    def test_set_sprites_with_none(self, qapp, sample_sprites: list[QPixmap]) -> None:
         """set_sprites with None should use empty list."""
-        dialog = ExportDialog(
-            parent=None,
-            frame_count=4,
-            current_frame=0,
-            sprites=sample_sprites
-        )
+        dialog = ExportDialog(parent=None, frame_count=4, current_frame=0, sprites=sample_sprites)
 
         dialog.set_sprites(None)
 
@@ -651,7 +569,7 @@ class TestEdgeCases:
             scale=1.0,
             default_pattern="{base}",
             tooltip="Test",
-            use_cases=[]
+            use_cases=[],
             # short_description not provided
         )
 
@@ -672,10 +590,7 @@ class TestIntegration:
         """Test complete wizard workflow from creation to config."""
         # Create dialog
         dialog = ExportDialog(
-            parent=None,
-            frame_count=len(sample_sprites),
-            current_frame=0,
-            sprites=sample_sprites
+            parent=None, frame_count=len(sample_sprites), current_frame=0, sprites=sample_sprites
         )
 
         # Verify structure
@@ -686,15 +601,10 @@ class TestIntegration:
         # Type step should be able to validate
         assert isinstance(dialog.type_step.validate(), bool)
 
-    def test_wizard_data_collection(
-        self, qapp, sample_sprites: list[QPixmap]
-    ) -> None:
+    def test_wizard_data_collection(self, qapp, sample_sprites: list[QPixmap]) -> None:
         """Wizard should collect data from all steps."""
         dialog = ExportDialog(
-            parent=None,
-            frame_count=len(sample_sprites),
-            current_frame=0,
-            sprites=sample_sprites
+            parent=None, frame_count=len(sample_sprites), current_frame=0, sprites=sample_sprites
         )
 
         # Navigate forward to trigger step_0 data collection
@@ -704,17 +614,12 @@ class TestIntegration:
         data = dialog.wizard.get_wizard_data()
 
         assert isinstance(data, dict)
-        assert 'step_0' in data
+        assert "step_0" in data
 
-    def test_export_requested_signal_type(
-        self, qapp, sample_sprites: list[QPixmap]
-    ) -> None:
+    def test_export_requested_signal_type(self, qapp, sample_sprites: list[QPixmap]) -> None:
         """exportRequested signal should be properly typed."""
         dialog = ExportDialog(
-            parent=None,
-            frame_count=len(sample_sprites),
-            current_frame=0,
-            sprites=sample_sprites
+            parent=None, frame_count=len(sample_sprites), current_frame=0, sprites=sample_sprites
         )
 
         # Signal should exist and be connectable
@@ -722,4 +627,4 @@ class TestIntegration:
         dialog.exportRequested.connect(lambda cfg: received.append(cfg))
 
         # Verify connection was successful (signal exists)
-        assert hasattr(dialog, 'exportRequested')
+        assert hasattr(dialog, "exportRequested")

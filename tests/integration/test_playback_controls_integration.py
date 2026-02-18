@@ -13,8 +13,8 @@ from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtTest import QSignalSpy
 from PySide6.QtWidgets import QApplication
 
-from sprite_viewer import SpriteViewer
 from sprite_model.extraction_mode import ExtractionMode
+from sprite_viewer import SpriteViewer
 
 
 class TestPlaybackControlsIntegration:
@@ -37,7 +37,7 @@ class TestPlaybackControlsIntegration:
         painter.end()
 
         # Save and load properly
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             sprite_sheet.save(tmp.name)
             tmp_path = tmp.name
 
@@ -258,6 +258,7 @@ class TestPlaybackControlsIntegration:
         """Helper to create keyboard events."""
         from PySide6.QtCore import QEvent
         from PySide6.QtGui import QKeyEvent
+
         return QKeyEvent(QEvent.KeyPress, key, modifiers)
 
 
@@ -280,7 +281,7 @@ class TestPlaybackControlsErrorHandling:
             painter.fillRect(i * 36 + 2, 2, 32, 32, color)
         painter.end()
 
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             sprite_sheet.save(tmp.name)
             tmp_path = tmp.name
 
@@ -314,7 +315,7 @@ class TestPlaybackControlsErrorHandling:
             painter.fillRect(i * 36 + 2, 2, 32, 32, Qt.red)
         painter.end()
 
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             sprite_sheet.save(tmp.name)
             tmp_path = tmp.name
 

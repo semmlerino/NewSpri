@@ -6,15 +6,17 @@ to ensure the dialog is always cleaned up properly.
 """
 
 from pathlib import Path
-from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
-from PySide6.QtCore import QObject
 from PySide6.QtGui import QImage
 
 from core.export_coordinator import ExportCoordinator
-from export.core.frame_exporter import ExportConfig, ExportFormat, ExportMode, SpriteSheetLayout, LayoutMode
+from export.core.frame_exporter import (
+    ExportConfig,
+    ExportFormat,
+    ExportMode,
+)
 
 
 @pytest.fixture
@@ -74,9 +76,7 @@ def basic_settings() -> ExportConfig:
 # -------------------------------------------------------------------------
 
 
-def test_validate_mode_preconditions_segments_no_manager(
-    mock_sprite_model, mock_exporter
-):
+def test_validate_mode_preconditions_segments_no_manager(mock_sprite_model, mock_exporter):
     """segments_sheet mode with no segment_manager returns error."""
     coordinator = ExportCoordinator(mock_sprite_model, None, mock_exporter)
 
@@ -94,9 +94,7 @@ def test_validate_mode_preconditions_segments_no_manager(
     assert message == "Segment manager not available."
 
 
-def test_validate_mode_preconditions_segments_no_segments(
-    mock_sprite_model, mock_exporter
-):
+def test_validate_mode_preconditions_segments_no_segments(mock_sprite_model, mock_exporter):
     """segments_sheet mode with no segments returns error."""
     manager = MagicMock()
     manager.get_all_segments.return_value = []
@@ -137,9 +135,7 @@ def test_validate_mode_preconditions_selected_empty_indices(
     assert valid is True
 
 
-def test_validate_mode_preconditions_selected_invalid_indices(
-    mock_sprite_model, mock_exporter
-):
+def test_validate_mode_preconditions_selected_invalid_indices(mock_sprite_model, mock_exporter):
     """Mode with all invalid selected_indices returns error."""
     coordinator = ExportCoordinator(mock_sprite_model, None, mock_exporter)
 
@@ -159,9 +155,7 @@ def test_validate_mode_preconditions_selected_invalid_indices(
     assert message == "No valid frames selected for export."
 
 
-def test_validate_mode_preconditions_selected_some_valid_indices(
-    mock_sprite_model, mock_exporter
-):
+def test_validate_mode_preconditions_selected_some_valid_indices(mock_sprite_model, mock_exporter):
     """Mode with some valid selected_indices succeeds."""
     coordinator = ExportCoordinator(mock_sprite_model, None, mock_exporter)
 
@@ -433,9 +427,7 @@ def test_export_segments_per_row_calls_exporter(
 
 
 @patch("core.export_coordinator.ExportProgressDialog")
-def test_export_frames_with_selected_indices(
-    mock_dialog_class, mock_sprite_model, mock_exporter
-):
+def test_export_frames_with_selected_indices(mock_dialog_class, mock_sprite_model, mock_exporter):
     """_export_frames handles selected_indices correctly."""
     mock_dialog = MagicMock()
     mock_dialog.cancelled = MagicMock()

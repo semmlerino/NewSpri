@@ -3,15 +3,16 @@ Integration tests for state consistency across components.
 Verifies that state stays synchronized across the application.
 """
 
-import pytest
-import tempfile
 import os
+import tempfile
+
+import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap, QColor, QPainter
+from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtWidgets import QApplication
 
-from sprite_viewer import SpriteViewer
 from sprite_model.extraction_mode import ExtractionMode
+from sprite_viewer import SpriteViewer
 
 
 class TestStateConsistency:
@@ -33,7 +34,7 @@ class TestStateConsistency:
             painter.fillRect(i * 36 + 2, 2, 32, 32, color)
         painter.end()
 
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             sprite_sheet.save(tmp.name)
             tmp_path = tmp.name
 
@@ -197,5 +198,5 @@ class TestStateConsistency:
         assert canvas._zoom_factor == initial_zoom
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

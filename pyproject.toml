@@ -34,7 +34,6 @@ exclude = [
     "venv",
     ".venv",
     "archive",
-    "tests",
     "tools",
     "web_backend",
     "web_frontend",
@@ -71,6 +70,19 @@ ignore = [
 [tool.ruff.lint.isort]
 known-first-party = ["config", "coordinators", "core", "export", "managers", "sprite_model", "ui", "utils", "tools"]
 
+[tool.ruff.lint.per-file-ignores]
+"tests/**/conftest.py" = ["F401", "F811"]  # fixture re-exports and redefinitions
+"tests/fixtures/*.py" = ["F401"]           # shared fixture modules
+"tests/**" = [
+    "E402",    # late imports (after sys.path manipulation)
+    "E712",    # == True/False (explicit in assertions)
+    "F841",    # unused variables (side-effect objects, spies)
+    "RUF059",  # unused unpacked variables (partial tuple unpacking)
+    "SIM105",  # contextlib.suppress (readability preference)
+    "SIM221",  # expr-or-not-expr
+    "TC003",   # typing-only imports (not worth in tests)
+]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
@@ -87,6 +99,7 @@ include = [
     "export",
     "managers",
     "sprite_model",
+    "tests",
     "ui",
     "utils",
 ]

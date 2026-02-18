@@ -12,19 +12,11 @@ Covers:
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
-from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QApplication
-
 from core.animation_controller import AnimationController
-
-if TYPE_CHECKING:
-    from sprite_model import SpriteModel
-
 
 # Mark all tests in this module as requiring Qt
 pytestmark = pytest.mark.requires_qt
@@ -38,11 +30,22 @@ pytestmark = pytest.mark.requires_qt
 @pytest.fixture
 def mock_sprite_model() -> MagicMock:
     """Create a mock SpriteModel with basic functionality."""
-    model = MagicMock(spec=['sprite_frames', 'next_frame', 'first_frame',
-                           'current_frame_index', 'fps', 'loop_enabled',
-                           'set_fps', 'set_loop_enabled',
-                           'frameChanged', 'dataLoaded',
-                           'extractionCompleted', 'errorOccurred'])
+    model = MagicMock(
+        spec=[
+            "sprite_frames",
+            "next_frame",
+            "first_frame",
+            "current_frame_index",
+            "fps",
+            "loop_enabled",
+            "set_fps",
+            "set_loop_enabled",
+            "frameChanged",
+            "dataLoaded",
+            "extractionCompleted",
+            "errorOccurred",
+        ]
+    )
     model.sprite_frames = [MagicMock() for _ in range(8)]  # 8 mock frames
     model.current_frame_index = 0
     model.next_frame = MagicMock(return_value=(1, True))  # Next frame, should continue
@@ -76,7 +79,9 @@ def mock_sprite_viewer() -> MagicMock:
 
 
 @pytest.fixture
-def animation_controller(qapp, mock_sprite_model: MagicMock, mock_sprite_viewer: MagicMock) -> AnimationController:
+def animation_controller(
+    qapp, mock_sprite_model: MagicMock, mock_sprite_viewer: MagicMock
+) -> AnimationController:
     """Create an AnimationController with mock model and viewer."""
     return AnimationController(
         sprite_model=mock_sprite_model,
@@ -180,9 +185,7 @@ class TestTimerTimeout:
 class TestSignalOrdering:
     """Tests for correct signal emission ordering."""
 
-    def test_start_animation_signal_order(
-        self, animation_controller: AnimationController
-    ) -> None:
+    def test_start_animation_signal_order(self, animation_controller: AnimationController) -> None:
         """Start animation should emit signals in correct order."""
         signal_order = []
 
@@ -192,46 +195,30 @@ class TestSignalOrdering:
         animation_controller.playbackStateChanged.connect(
             lambda state: signal_order.append(f"playbackStateChanged({state})")
         )
-        animation_controller.statusChanged.connect(
-            lambda msg: signal_order.append("statusChanged")
-        )
+        animation_controller.statusChanged.connect(lambda msg: signal_order.append("statusChanged"))
 
         animation_controller.start_animation()
 
         # Verify signal order
-        assert signal_order == [
-            "animationStarted",
-            "playbackStateChanged(True)",
-            "statusChanged"
-        ]
+        assert signal_order == ["animationStarted", "playbackStateChanged(True)", "statusChanged"]
 
-    def test_pause_animation_signal_order(
-        self, animation_controller: AnimationController
-    ) -> None:
+    def test_pause_animation_signal_order(self, animation_controller: AnimationController) -> None:
         """Pause animation should emit signals in correct order."""
         # Start first
         animation_controller.start_animation()
 
         signal_order = []
 
-        animation_controller.animationPaused.connect(
-            lambda: signal_order.append("animationPaused")
-        )
+        animation_controller.animationPaused.connect(lambda: signal_order.append("animationPaused"))
         animation_controller.playbackStateChanged.connect(
             lambda state: signal_order.append(f"playbackStateChanged({state})")
         )
-        animation_controller.statusChanged.connect(
-            lambda msg: signal_order.append("statusChanged")
-        )
+        animation_controller.statusChanged.connect(lambda msg: signal_order.append("statusChanged"))
 
         animation_controller.pause_animation()
 
         # Verify signal order
-        assert signal_order == [
-            "animationPaused",
-            "playbackStateChanged(False)",
-            "statusChanged"
-        ]
+        assert signal_order == ["animationPaused", "playbackStateChanged(False)", "statusChanged"]
 
 
 # ============================================================================
@@ -242,9 +229,7 @@ class TestSignalOrdering:
 class TestFPSChanges:
     """Tests for FPS changes during playback."""
 
-    def test_fps_change_during_playback(
-        self, animation_controller: AnimationController
-    ) -> None:
+    def test_fps_change_during_playback(self, animation_controller: AnimationController) -> None:
         """FPS change during playback should update timer interval immediately."""
         # Start at default FPS
         animation_controller.start_animation()
@@ -259,9 +244,7 @@ class TestFPSChanges:
         # 30 FPS = ~33ms interval
         assert new_interval == pytest.approx(1000 / 30, abs=2)
 
-    def test_fps_change_when_not_playing(
-        self, animation_controller: AnimationController
-    ) -> None:
+    def test_fps_change_when_not_playing(self, animation_controller: AnimationController) -> None:
         """FPS change when not playing should update stored FPS."""
         animation_controller.set_fps(24)
 
@@ -274,9 +257,7 @@ class TestFPSChanges:
         # 24 FPS = ~42ms interval
         assert interval == pytest.approx(1000 / 24, abs=2)
 
-    def test_rapid_fps_changes(
-        self, animation_controller: AnimationController
-    ) -> None:
+    def test_rapid_fps_changes(self, animation_controller: AnimationController) -> None:
         """Multiple rapid FPS changes should result in correct final value."""
         animation_controller.start_animation()
 
@@ -300,18 +281,14 @@ class TestFPSChanges:
 class TestStateConsistency:
     """Tests for state consistency."""
 
-    def test_is_playing_state_after_start(
-        self, animation_controller: AnimationController
-    ) -> None:
+    def test_is_playing_state_after_start(self, animation_controller: AnimationController) -> None:
         """After start: is_playing should be True and timer active."""
         animation_controller.start_animation()
 
         assert animation_controller.is_playing is True
         assert animation_controller._animation_timer.isActive() is True
 
-    def test_is_playing_state_after_pause(
-        self, animation_controller: AnimationController
-    ) -> None:
+    def test_is_playing_state_after_pause(self, animation_controller: AnimationController) -> None:
         """After pause: is_playing should be False and timer inactive."""
         animation_controller.start_animation()
         animation_controller.pause_animation()
@@ -437,9 +414,7 @@ class TestEdgeCases:
         assert result is False
         assert not controller.is_playing
 
-    def test_multiple_start_calls(
-        self, animation_controller: AnimationController
-    ) -> None:
+    def test_multiple_start_calls(self, animation_controller: AnimationController) -> None:
         """Multiple start calls should be safe."""
         result1 = animation_controller.start_animation()
         result2 = animation_controller.start_animation()
@@ -448,9 +423,7 @@ class TestEdgeCases:
         # Second start may return True (already playing) or restart
         assert animation_controller.is_playing is True
 
-    def test_fps_bounds(
-        self, animation_controller: AnimationController
-    ) -> None:
+    def test_fps_bounds(self, animation_controller: AnimationController) -> None:
         """FPS should accept valid values and reject out-of-range values."""
         from config import Config
 
@@ -479,4 +452,3 @@ class TestEdgeCases:
 
         # The model handles loop logic, controller just passes it through
         assert animation_controller._loop_enabled is False
-

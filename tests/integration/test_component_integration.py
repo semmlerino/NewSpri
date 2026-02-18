@@ -7,27 +7,27 @@ import pytest
 
 # Mark all tests as integration tests (most create full SpriteViewer instances)
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
-from unittest.mock import Mock, patch, MagicMock
-from PySide6.QtCore import Qt, QTimer, Signal
-from PySide6.QtGui import QPixmap, QColor
+from unittest.mock import Mock
+
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import QApplication
 
-from sprite_viewer import SpriteViewer
-from sprite_model import SpriteModel
-from sprite_model.extraction_mode import ExtractionMode
 from core.animation_controller import AnimationController
 from core.auto_detection_controller import AutoDetectionController
-from ui.sprite_canvas import SpriteCanvas
-from ui.playback_controls import PlaybackControls
-from ui.frame_extractor import FrameExtractor
-from managers import RecentFilesManager
 from export import ExportDialog
 from export.core.frame_exporter import FrameExporter
+from sprite_model import SpriteModel
+from sprite_model.extraction_mode import ExtractionMode
+from sprite_viewer import SpriteViewer
+from ui.frame_extractor import FrameExtractor
+from ui.playback_controls import PlaybackControls
+from ui.sprite_canvas import SpriteCanvas
 
 
 class TestModelViewControllerIntegration:
     """Test MVC component integration."""
-    
+
     @pytest.mark.integration
     def test_model_view_sync(self, qtbot):
         """Test that model changes properly update all views."""
@@ -35,24 +35,25 @@ class TestModelViewControllerIntegration:
         model = SpriteModel()
         canvas = SpriteCanvas()
         playback = PlaybackControls()
-        
+
         qtbot.addWidget(canvas)
         qtbot.addWidget(playback)
-        
+
         # Connect model to views
         # Canvas doesn't have set_current_frame, just update it
         model.frameChanged.connect(lambda idx, count: canvas.update())
         # Connect to playback controls - use set_current_frame
         model.frameChanged.connect(lambda idx, count: playback.set_current_frame(idx))
         model.dataLoaded.connect(lambda _path: canvas.update())
-        
+
         # Create a sprite sheet with 10 frames (5x2 grid)
         # Add gaps between sprites for CCL compatibility
         sprite_sheet = QPixmap(180, 74)  # 5 sprites x 36 pixels (32+4 gap), 2 rows x 37 pixels
         sprite_sheet.fill(Qt.transparent)  # Use transparent background for CCL
-        
+
         # Draw colored rectangles as frames with gaps
         from PySide6.QtGui import QPainter
+
         painter = QPainter(sprite_sheet)
         for i in range(10):
             col = i % 5
@@ -62,17 +63,18 @@ class TestModelViewControllerIntegration:
             color = QColor.fromHsv(i * 36, 200, 200)
             painter.fillRect(x, y, 32, 32, color)
         painter.end()
-        
+
         # Save to temp file and load it
         import tempfile
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             sprite_sheet.save(tmp.name)
             tmp_path = tmp.name
-        
+
         # Load the sprite sheet
         success, msg = model.load_sprite_sheet(tmp_path)
         assert success, f"Failed to load sprite sheet: {msg}"
-        
+
         # The default mode is now CCL, which should work with our gapped sprites
         # If CCL doesn't detect 10 frames, fall back to grid mode
         if len(model.sprite_frames) != 10:
@@ -83,42 +85,44 @@ class TestModelViewControllerIntegration:
             assert count == 10, f"Expected 10 frames, got {count}"
         else:
             # CCL worked, we should have 10 frames
-            assert len(model.sprite_frames) == 10, f"Expected 10 frames, got {len(model.sprite_frames)}"
-        
+            assert len(model.sprite_frames) == 10, (
+                f"Expected 10 frames, got {len(model.sprite_frames)}"
+            )
+
         # Clean up temp file
         import os
+
         os.unlink(tmp_path)
-        
+
         # Verify views updated
         # Canvas receives pixmap from controller (MVC pattern)
         if model.sprite_frames:
             pixmap = model.current_frame_pixmap
             if pixmap and not pixmap.isNull():
                 canvas.set_pixmap(pixmap, auto_fit=False)
-        
+
         # Now check if canvas has a pixmap
         assert canvas._pixmap is not None or model.current_frame_pixmap is not None
-        
+
         # Update playback controls with frame count
         playback.set_frame_range(9)  # 0-indexed for 10 frames
-        
+
         # PlaybackControls doesn't have a frame label - that's in the status bar
         # Just verify playback controls received the frame count
         assert playback.frame_slider.maximum() == 9  # 0-indexed for 10 frames
-        
+
         # Change frame
         model.set_current_frame(5)
-        
+
         # Verify synchronization
         # Canvas doesn't track current frame internally, it gets it from the model
         assert model.current_frame == 5
         # Frame display is in status bar, not playback controls
         assert playback.frame_slider.value() == 5
-    
+
     @pytest.mark.integration
     def test_controller_coordination(self, qtbot):
         """Test coordination between different controllers."""
-        from unittest.mock import Mock
 
         model = SpriteModel()
         mock_viewer = Mock()
@@ -132,14 +136,15 @@ class TestModelViewControllerIntegration:
             sprite_model=model,
             frame_extractor=mock_extractor,
         )
-        
+
         # Create a sprite sheet with 16 frames (4x4 grid)
         # Add gaps between sprites for CCL compatibility
         sprite_sheet = QPixmap(144, 144)  # 4x4 grid with gaps
         sprite_sheet.fill(Qt.transparent)
-        
+
         # Draw colored rectangles as frames with gaps
         from PySide6.QtGui import QPainter
+
         painter = QPainter(sprite_sheet)
         for i in range(16):
             col = i % 4
@@ -149,17 +154,18 @@ class TestModelViewControllerIntegration:
             color = QColor.fromHsv(i * 22, 200, 200)
             painter.fillRect(x, y, 32, 32, color)
         painter.end()
-        
+
         # Save to temp file and load it
         import tempfile
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             sprite_sheet.save(tmp.name)
             tmp_path = tmp.name
-        
+
         # Load and extract frames
         success, msg = model.load_sprite_sheet(tmp_path)
         assert success
-        
+
         # The default mode is now CCL, which should work with our gapped sprites
         # If CCL doesn't detect 16 frames, fall back to grid mode
         if len(model.sprite_frames) != 16:
@@ -171,11 +177,12 @@ class TestModelViewControllerIntegration:
         else:
             # CCL worked, we should have 16 frames
             assert len(model.sprite_frames) == 16
-        
+
         # Clean up temp file
         import os
+
         os.unlink(tmp_path)
-        
+
         # Test animation controller
         animation_controller.start_animation()
         assert animation_controller.is_playing is True
@@ -185,15 +192,15 @@ class TestModelViewControllerIntegration:
         with qtbot.waitSignal(animation_controller.frameAdvanced, timeout=500):
             pass  # Wait for at least one frame advance
         assert model.current_frame != initial_frame
-        
+
         animation_controller.stop_animation()
-        
+
         # Test detection controller
         # Auto-detection should have run when sprite was loaded
         # Just verify the controller was initialized properly
         assert detection_controller._sprite_model == model
         assert detection_controller._frame_extractor == mock_extractor
-    
+
     @pytest.mark.integration
     def test_signal_propagation_chain(self, qtbot):
         """Test complex signal propagation chains."""
@@ -202,114 +209,111 @@ class TestModelViewControllerIntegration:
         canvas = SpriteCanvas()
         playback = PlaybackControls()
         extractor = FrameExtractor()
-        
+
         qtbot.addWidget(canvas)
         qtbot.addWidget(playback)
         qtbot.addWidget(extractor)
-        
+
         # Set up signal connections
         model.frameChanged.connect(lambda idx, count: canvas.update())
         model.frameChanged.connect(lambda idx, count: playback.set_current_frame(idx))
-        
+
         # Canvas zoom signal
         zoom_signals = []
         canvas.zoomChanged.connect(lambda zoom: zoom_signals.append(zoom))
-        
+
         # Extractor doesn't have settingsChanged, use extraction completed
         extraction_signals = []
-        if hasattr(extractor, 'extractionCompleted'):
+        if hasattr(extractor, "extractionCompleted"):
             extractor.extractionCompleted.connect(lambda: extraction_signals.append(True))
-        
+
         # Test signal chain
-        signal_received = {'frame': False, 'zoom': False, 'extraction': False}
-        
+        signal_received = {"frame": False, "zoom": False, "extraction": False}
+
         def on_frame_change(current, total):
-            signal_received['frame'] = True
-        
+            signal_received["frame"] = True
+
         def on_zoom_change(zoom):
-            signal_received['zoom'] = True
-        
+            signal_received["zoom"] = True
+
         def on_extraction_change():
-            signal_received['extraction'] = True
-        
+            signal_received["extraction"] = True
+
         # Connect test receivers
         model.frameChanged.connect(on_frame_change)
         canvas.zoomChanged.connect(on_zoom_change)
         extractor.settingsChanged.connect(on_extraction_change)
-        
+
         # Create a sprite sheet and load it to get frames
         sprite_sheet = QPixmap(64, 64)
         sprite_sheet.fill(Qt.blue)
-        
+
         # Save to temp file and load it
         import tempfile
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             sprite_sheet.save(tmp.name)
             tmp_path = tmp.name
-        
+
         # Load the sprite sheet which should emit signals
         success, msg = model.load_sprite_sheet(tmp_path)
         assert success, f"Failed to load sprite: {msg}"
-        
+
         # Clean up temp file
         import os
+
         os.unlink(tmp_path)
-        
+
         # The test is really about signal propagation, not frame loading
         # Test the signals we can easily trigger
         canvas.set_zoom(2.0)
         extractor.width_spin.setValue(64)
-        
+
         # Verify the signals we tested
-        assert signal_received['zoom'], "Zoom signal should work"
-        assert signal_received['extraction'], "Extraction signal should work"
+        assert signal_received["zoom"], "Zoom signal should work"
+        assert signal_received["extraction"], "Extraction signal should work"
         # Frame signal is tested in other tests, here we just verify zoom and extraction work
 
 
 class TestManagerIntegration:
     """Test integration of manager components."""
-    
+
     @pytest.mark.integration
     def test_status_manager_integration(self, qtbot):
         """Test StatusManager integrates with all components."""
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
-        
+
         status = viewer._status_manager
-        
+
         # Test that status manager exists and has the right methods
-        assert hasattr(status, 'show_message')
-        assert hasattr(status, 'update_mouse_position')
+        assert hasattr(status, "show_message")
+        assert hasattr(status, "update_mouse_position")
 
         # Test basic functionality
         status.show_message("Test message")
         status.update_mouse_position(100, 200)
-    
+
     @pytest.mark.integration
     def test_recent_files_integration(self, qtbot):
         """Test RecentFilesManager integration with menu system."""
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
-        
+
         recent_files = viewer._recent_files
-        
+
         # Add some files
-        test_files = [
-            "/path/to/sprite1.png",
-            "/path/to/sprite2.png",
-            "/path/to/sprite3.png"
-        ]
-        
+        test_files = ["/path/to/sprite1.png", "/path/to/sprite2.png", "/path/to/sprite3.png"]
+
         for file_path in test_files:
             recent_files.add_file_to_recent(file_path)
-        
+
         # Check menu updated
         # The menu is managed by MenuManager, not directly accessible
         # Just verify files were added to recent files manager
         assert len(recent_files._settings.get_recent_files()) > 0
         # Recent files might already have entries, so check it increased
         assert len(recent_files._settings.get_recent_files()) >= len(test_files)
-    
 
 
 class TestExportSystemIntegration:
@@ -327,10 +331,7 @@ class TestExportSystemIntegration:
 
         # Create export dialog with current API
         dialog = ExportDialog(
-            parent=None,
-            frame_count=len(sprites),
-            current_frame=2,
-            sprites=sprites
+            parent=None, frame_count=len(sprites), current_frame=2, sprites=sprites
         )
         qtbot.addWidget(dialog)
 
@@ -355,10 +356,10 @@ class TestExportSystemIntegration:
             sprites.append(pixmap)
 
         # Track export completion
-        export_finished = {'success': None}
+        export_finished = {"success": None}
 
         def on_finished(success):
-            export_finished['success'] = success
+            export_finished["success"] = success
 
         exporter.exportFinished.connect(on_finished)
 
@@ -368,13 +369,13 @@ class TestExportSystemIntegration:
             output_dir=str(tmp_path),
             base_name="test",
             format="PNG",
-            mode="individual"
+            mode="individual",
         )
 
         assert success, "Export should start successfully"
 
         # Wait for async export to complete
-        qtbot.waitUntil(lambda: export_finished['success'] is not None, timeout=5000)
+        qtbot.waitUntil(lambda: export_finished["success"] is not None, timeout=5000)
 
         # Verify files created
         exported_files = list(tmp_path.glob("*.png"))
@@ -388,7 +389,6 @@ class TestUIComponentIntegration:
     @pytest.mark.integration
     def test_canvas_playback_integration(self, qtbot):
         """Test canvas and playback controls work together."""
-        from unittest.mock import Mock
 
         model = SpriteModel()
         canvas = SpriteCanvas()
@@ -415,6 +415,7 @@ class TestUIComponentIntegration:
         sprite_sheet.fill(Qt.transparent)
 
         from PySide6.QtGui import QPainter
+
         painter = QPainter(sprite_sheet)
         for i in range(8):
             color = QColor.fromHsv(i * 45, 200, 200)
@@ -423,7 +424,8 @@ class TestUIComponentIntegration:
 
         # Save to temp file and load
         import tempfile
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             sprite_sheet.save(tmp.name)
             tmp_path = tmp.name
 
@@ -437,6 +439,7 @@ class TestUIComponentIntegration:
 
         # Clean up temp file
         import os
+
         os.unlink(tmp_path)
 
         # Test playback control - use public API
@@ -462,10 +465,9 @@ class TestUIComponentIntegration:
         settings_received = []
 
         def on_settings_change():
-            settings_received.append({
-                'width': extractor.width_spin.value(),
-                'height': extractor.height_spin.value()
-            })
+            settings_received.append(
+                {"width": extractor.width_spin.value(), "height": extractor.height_spin.value()}
+            )
 
         extractor.settingsChanged.connect(on_settings_change)
 
@@ -476,8 +478,8 @@ class TestUIComponentIntegration:
         # Verify signals were emitted
         assert len(settings_received) >= 1
         # Last settings should have 64x64
-        assert settings_received[-1]['width'] == 64
-        assert settings_received[-1]['height'] == 64
+        assert settings_received[-1]["width"] == 64
+        assert settings_received[-1]["height"] == 64
 
 
 class TestCrossComponentCommunication:
@@ -495,19 +497,21 @@ class TestCrossComponentCommunication:
         def track_signal(name):
             def handler(*args):
                 signals_fired.append(name)
+
             return handler
 
         # Monitor key signals
-        viewer._sprite_model.frameChanged.connect(track_signal('model.frameChanged'))
-        viewer._canvas.zoomChanged.connect(track_signal('canvas.zoomChanged'))
-        viewer._animation_controller.animationStarted.connect(track_signal('controller.started'))
-        viewer._frame_extractor.settingsChanged.connect(track_signal('extractor.changed'))
+        viewer._sprite_model.frameChanged.connect(track_signal("model.frameChanged"))
+        viewer._canvas.zoomChanged.connect(track_signal("canvas.zoomChanged"))
+        viewer._animation_controller.animationStarted.connect(track_signal("controller.started"))
+        viewer._frame_extractor.settingsChanged.connect(track_signal("extractor.changed"))
 
         # Create and load a proper sprite sheet
         sprite_sheet = QPixmap(160, 32)
         sprite_sheet.fill(Qt.transparent)
 
         from PySide6.QtGui import QPainter
+
         painter = QPainter(sprite_sheet)
         for i in range(5):
             color = QColor.fromHsv(i * 72, 200, 200)
@@ -516,7 +520,8 @@ class TestCrossComponentCommunication:
 
         # Save to temp file and load
         import tempfile
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             sprite_sheet.save(tmp.name)
             tmp_path = tmp.name
 
@@ -529,6 +534,7 @@ class TestCrossComponentCommunication:
 
         # Clean up temp file
         import os
+
         os.unlink(tmp_path)
 
         # Now trigger actions that cascade signals
@@ -539,8 +545,8 @@ class TestCrossComponentCommunication:
         viewer._frame_extractor.width_spin.setValue(48)
 
         # Verify signals were fired
-        assert 'canvas.zoomChanged' in signals_fired
-        assert 'extractor.changed' in signals_fired
+        assert "canvas.zoomChanged" in signals_fired
+        assert "extractor.changed" in signals_fired
 
     @pytest.mark.integration
     def test_error_propagation(self, qtbot):
@@ -588,6 +594,7 @@ class TestPerformanceIntegration:
         sprite_sheet.fill(Qt.transparent)
 
         from PySide6.QtGui import QPainter
+
         painter = QPainter(sprite_sheet)
         for i in range(cols * rows):
             col = i % cols
@@ -600,7 +607,8 @@ class TestPerformanceIntegration:
 
         # Save and load
         import tempfile
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             sprite_sheet.save(tmp.name)
             tmp_path = tmp.name
 
@@ -610,6 +618,7 @@ class TestPerformanceIntegration:
 
         # Clean up
         import os
+
         os.unlink(tmp_path)
 
         assert success, "Should load large sprite sheet"
@@ -638,6 +647,7 @@ class TestPerformanceIntegration:
         sprite_sheet.fill(Qt.transparent)
 
         from PySide6.QtGui import QPainter
+
         painter = QPainter(sprite_sheet)
         for i in range(50):
             col = i % 10
@@ -647,7 +657,8 @@ class TestPerformanceIntegration:
         painter.end()
 
         import tempfile
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             sprite_sheet.save(tmp.name)
             tmp_path = tmp.name
 
@@ -659,6 +670,7 @@ class TestPerformanceIntegration:
             viewer._sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
 
         import os
+
         os.unlink(tmp_path)
 
         # Skip if no frames were loaded

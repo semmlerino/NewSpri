@@ -18,9 +18,9 @@ def reset_singletons():
     RecentFilesManager) still use the singleton pattern.
     """
     # Import reset functions for utility singletons
-    from managers.settings_manager import reset_settings_manager
-    from managers.recent_files_manager import reset_recent_files_manager
     from export.core.frame_exporter import reset_frame_exporter
+    from managers.recent_files_manager import reset_recent_files_manager
+    from managers.settings_manager import reset_settings_manager
 
     # Reset utility managers
     reset_settings_manager()

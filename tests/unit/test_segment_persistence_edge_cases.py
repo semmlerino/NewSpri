@@ -10,23 +10,14 @@ Covers:
 
 from __future__ import annotations
 
-import contextlib
 import json
-import os
-import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch, mock_open
+from unittest.mock import patch
 
 import pytest
-
 from PySide6.QtGui import QColor
 
-from managers import AnimationSegment, AnimationSegmentManager
-
-if TYPE_CHECKING:
-    from pathlib import Path as PathType
-
+from managers import AnimationSegmentManager
 
 # ============================================================================
 # Fixtures
@@ -40,7 +31,9 @@ def segment_manager() -> AnimationSegmentManager:
 
 
 @pytest.fixture
-def configured_manager(segment_manager: AnimationSegmentManager, tmp_path: Path) -> AnimationSegmentManager:
+def configured_manager(
+    segment_manager: AnimationSegmentManager, tmp_path: Path
+) -> AnimationSegmentManager:
     """Create a manager with sprite context set."""
     sprite_path = tmp_path / "test_sprite.png"
     sprite_path.touch()  # Create empty file
@@ -88,7 +81,7 @@ class TestSaveSegmentsAtomicWrite:
         """Mock disk full during json.dump - verify graceful failure."""
         file_path = tmp_path / "segments.json"
 
-        with patch("json.dump", side_effect=IOError("No space left on device")):
+        with patch("json.dump", side_effect=OSError("No space left on device")):
             success, error = manager_with_segments.save_segments_to_file(str(file_path))
 
         assert success is False
@@ -211,10 +204,25 @@ class TestLoadSegmentsEdgeCases:
         data = {
             "segments": [
                 {"name": "Good1", "start_frame": 0, "end_frame": 2, "color_rgb": [255, 0, 0]},
-                {"name": "Bad1", "start_frame": 100, "end_frame": 105, "color_rgb": [0, 255, 0]},  # Beyond max
-                {"name": "Bad2", "start_frame": 5, "end_frame": 3, "color_rgb": [0, 0, 255]},  # End < start
+                {
+                    "name": "Bad1",
+                    "start_frame": 100,
+                    "end_frame": 105,
+                    "color_rgb": [0, 255, 0],
+                },  # Beyond max
+                {
+                    "name": "Bad2",
+                    "start_frame": 5,
+                    "end_frame": 3,
+                    "color_rgb": [0, 0, 255],
+                },  # End < start
                 {"name": "Good2", "start_frame": 3, "end_frame": 5, "color_rgb": [255, 255, 0]},
-                {"name": "Bad3", "start_frame": -1, "end_frame": 2, "color_rgb": [255, 0, 255]},  # Negative start
+                {
+                    "name": "Bad3",
+                    "start_frame": -1,
+                    "end_frame": 2,
+                    "color_rgb": [255, 0, 255],
+                },  # Negative start
             ]
         }
         file_path.write_text(json.dumps(data))
@@ -325,9 +333,7 @@ class TestFindOverlappingSegment:
         # [3-4] should NOT overlap with [5-5]
         assert configured_manager._find_overlapping_segment(3, 4) is None
 
-    def test_no_segments_no_overlap(
-        self, configured_manager: AnimationSegmentManager
-    ) -> None:
+    def test_no_segments_no_overlap(self, configured_manager: AnimationSegmentManager) -> None:
         """Empty segments list should return None."""
         overlap = configured_manager._find_overlapping_segment(0, 5)
 
@@ -344,9 +350,7 @@ class TestFindOverlappingSegment:
 
         assert overlap == "Outer"
 
-    def test_partial_overlap_from_start(
-        self, configured_manager: AnimationSegmentManager
-    ) -> None:
+    def test_partial_overlap_from_start(self, configured_manager: AnimationSegmentManager) -> None:
         """Partial overlap starting before existing segment."""
         configured_manager.add_segment("Middle", 3, 7, QColor(255, 0, 0))
 
@@ -355,9 +359,7 @@ class TestFindOverlappingSegment:
 
         assert overlap == "Middle"
 
-    def test_partial_overlap_from_end(
-        self, configured_manager: AnimationSegmentManager
-    ) -> None:
+    def test_partial_overlap_from_end(self, configured_manager: AnimationSegmentManager) -> None:
         """Partial overlap extending beyond existing segment."""
         configured_manager.add_segment("Middle", 3, 7, QColor(255, 0, 0))
 
@@ -398,9 +400,7 @@ class TestSetFrameHoldsValidation:
         assert success is True
         assert error == ""
 
-    def test_frame_hold_one_past_end(
-        self, manager_with_segments: AnimationSegmentManager
-    ) -> None:
+    def test_frame_hold_one_past_end(self, manager_with_segments: AnimationSegmentManager) -> None:
         """Hold at frame_count (one past last valid) should fail."""
         # Walk is [0-3], frame_count=4, so index 4 is invalid
         success, error = manager_with_segments.set_frame_holds("Walk", {4: 2})
@@ -427,9 +427,7 @@ class TestSetFrameHoldsValidation:
         assert success is False
         assert "Frame index -1 is out of range" in error
 
-    def test_frame_hold_zero_duration(
-        self, manager_with_segments: AnimationSegmentManager
-    ) -> None:
+    def test_frame_hold_zero_duration(self, manager_with_segments: AnimationSegmentManager) -> None:
         """Zero duration hold - document current behavior (accepted)."""
         success, error = manager_with_segments.set_frame_holds("Walk", {0: 0})
 
@@ -468,9 +466,7 @@ class TestSetFrameHoldsValidation:
         assert success is False
         assert "Segment 'NoSuchSegment' not found" in error
 
-    def test_frame_holds_empty_dict(
-        self, manager_with_segments: AnimationSegmentManager
-    ) -> None:
+    def test_frame_holds_empty_dict(self, manager_with_segments: AnimationSegmentManager) -> None:
         """Empty frame_holds dict should succeed and clear holds."""
         # First set some holds
         manager_with_segments.set_frame_holds("Walk", {0: 2, 1: 3})
@@ -524,10 +520,7 @@ class TestSaveLoadRoundTrip:
 
         # Create new manager and load
         new_manager = AnimationSegmentManager()
-        new_manager.set_sprite_context(
-            manager_with_segments._sprite_sheet_path,
-            frame_count=10
-        )
+        new_manager.set_sprite_context(manager_with_segments._sprite_sheet_path, frame_count=10)
         success, error = new_manager.load_segments_from_file(str(file_path))
 
         assert success is True

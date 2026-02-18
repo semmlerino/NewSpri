@@ -3,18 +3,17 @@ Integration tests for concurrent operations.
 Tests behavior when multiple operations happen simultaneously.
 """
 
-import pytest
-import tempfile
 import os
-from unittest.mock import Mock, patch, MagicMock
+import tempfile
+from unittest.mock import MagicMock, patch
+
+import pytest
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QPixmap, QColor, QPainter
+from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtWidgets import QApplication
 
-from sprite_viewer import SpriteViewer
-from sprite_model.core import SpriteModel
 from sprite_model.extraction_mode import ExtractionMode
-from core.animation_controller import AnimationController
+from sprite_viewer import SpriteViewer
 
 
 class TestConcurrentOperations:
@@ -36,7 +35,7 @@ class TestConcurrentOperations:
             painter.fillRect(i * 36 + 2, 2, 32, 32, color)
         painter.end()
 
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             sprite_sheet.save(tmp.name)
             tmp_path = tmp.name
 
@@ -71,18 +70,19 @@ class TestConcurrentOperations:
         assert viewer._animation_controller.is_playing
 
         # 2. Trigger export while playing (mock the dialog and export)
-        with patch('export.core.frame_exporter.ExportWorker') as mock_worker_class:
+        with patch("export.core.frame_exporter.ExportWorker") as mock_worker_class:
             mock_worker = MagicMock()
             mock_worker_class.return_value = mock_worker
 
             from export.core.frame_exporter import FrameExporter
+
             exporter = FrameExporter()
 
             # Export frames while animation is playing
             success = exporter.export_frames(
                 frames=viewer._sprite_model.sprite_frames,
                 output_dir=str(tmp_path),
-                base_name="test"
+                base_name="test",
             )
 
             # Export should succeed
@@ -112,7 +112,7 @@ class TestConcurrentOperations:
             painter.fillRect(i * 36 + 2, 2, 32, 32, QColor(255, 0, 0))
         painter.end()
 
-        with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
             sprite_sheet.save(tmp.name)
             tmp_path_file = tmp.name
 
@@ -183,19 +183,17 @@ class TestConcurrentOperations:
 
         # Set sprite context for segment manager (use unique name to avoid pollution)
         import uuid
+
         unique_sprite_name = f"test_sprite_{uuid.uuid4().hex[:8]}.png"
         segment_manager.set_sprite_context(
-            unique_sprite_name,
-            len(viewer._sprite_model.sprite_frames)
+            unique_sprite_name, len(viewer._sprite_model.sprite_frames)
         )
 
         # Create segment during playback using correct API (individual args, not object)
         from PySide6.QtGui import QColor
+
         success, message = segment_manager.add_segment(
-            name="DuringPlayback",
-            start_frame=0,
-            end_frame=2,
-            color=QColor(255, 0, 0)
+            name="DuringPlayback", start_frame=0, end_frame=2, color=QColor(255, 0, 0)
         )
         assert success, f"Should be able to create segment during playback: {message}"
 
@@ -207,5 +205,5 @@ class TestConcurrentOperations:
         QApplication.processEvents()
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

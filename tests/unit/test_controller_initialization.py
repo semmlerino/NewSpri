@@ -5,13 +5,11 @@ Tests that controllers are properly initialized via constructor dependency injec
 All dependencies must be provided at construction time.
 """
 
-import pytest
-from unittest.mock import Mock, MagicMock
+from unittest.mock import Mock
 
-from core.animation_segment_controller import AnimationSegmentController
 from core.animation_controller import AnimationController
+from core.animation_segment_controller import AnimationSegmentController
 from core.auto_detection_controller import AutoDetectionController
-from managers import AnimationSegmentManager
 
 
 class TestAnimationSegmentControllerInitialization:

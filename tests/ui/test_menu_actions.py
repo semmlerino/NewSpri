@@ -13,7 +13,6 @@ class TestMenuStructureSmoke:
 
     def test_expected_menus_exist(self, qtbot):
         """Smoke test: all expected menus exist."""
-        from sprite_viewer import SpriteViewer
 
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
@@ -25,5 +24,5 @@ class TestMenuStructureSmoke:
         assert "Help" in menu_names
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

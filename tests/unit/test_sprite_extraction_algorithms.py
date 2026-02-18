@@ -13,31 +13,21 @@ Covers:
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import TYPE_CHECKING
-
 import pytest
+from PySide6.QtGui import QColor, QPainter, QPixmap
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QImage, QPixmap, QPainter
-
-from sprite_model.sprite_extraction import (
-    GridConfig,
-    GridLayout,
-    extract_grid_frames,
-    validate_frame_settings,
-    calculate_grid_layout,
-)
 from sprite_model.sprite_detection import (
     DetectionResult,
-    detect_margins,
-    detect_frame_size,
     comprehensive_auto_detect,
+    detect_frame_size,
+    detect_margins,
 )
-
-if TYPE_CHECKING:
-    pass
-
+from sprite_model.sprite_extraction import (
+    GridConfig,
+    calculate_grid_layout,
+    extract_grid_frames,
+    validate_frame_settings,
+)
 
 # Mark all tests in this module as requiring Qt
 pytestmark = pytest.mark.requires_qt
@@ -56,8 +46,14 @@ def simple_grid_sprite_sheet(qapp) -> QPixmap:
 
     painter = QPainter(pixmap)
     colors = [
-        QColor(255, 0, 0), QColor(0, 255, 0), QColor(0, 0, 255), QColor(255, 255, 0),
-        QColor(255, 0, 255), QColor(0, 255, 255), QColor(128, 128, 128), QColor(255, 128, 0)
+        QColor(255, 0, 0),
+        QColor(0, 255, 0),
+        QColor(0, 0, 255),
+        QColor(255, 255, 0),
+        QColor(255, 0, 255),
+        QColor(0, 255, 255),
+        QColor(128, 128, 128),
+        QColor(255, 128, 0),
     ]
 
     for i, color in enumerate(colors):
@@ -154,10 +150,7 @@ class TestGridConfig:
 
     def test_grid_config_full_parameters(self, qapp) -> None:
         """GridConfig should accept all parameters."""
-        config = GridConfig(
-            width=64, height=48, offset_x=4, offset_y=8,
-            spacing_x=2, spacing_y=4
-        )
+        config = GridConfig(width=64, height=48, offset_x=4, offset_y=8, spacing_x=2, spacing_y=4)
 
         assert config.width == 64
         assert config.height == 48
@@ -175,9 +168,7 @@ class TestGridConfig:
 class TestValidateFrameSettings:
     """Tests for validate_frame_settings function."""
 
-    def test_valid_settings(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_valid_settings(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Valid settings should pass validation."""
         config = GridConfig(width=32, height=32)
 
@@ -186,9 +177,7 @@ class TestValidateFrameSettings:
         assert valid is True
         assert error_msg == ""
 
-    def test_zero_width_invalid(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_zero_width_invalid(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Zero width should fail validation."""
         config = GridConfig(width=0, height=32)
 
@@ -197,9 +186,7 @@ class TestValidateFrameSettings:
         assert valid is False
         assert "width" in error_msg.lower()
 
-    def test_zero_height_invalid(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_zero_height_invalid(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Zero height should fail validation."""
         config = GridConfig(width=32, height=0)
 
@@ -208,9 +195,7 @@ class TestValidateFrameSettings:
         assert valid is False
         assert "height" in error_msg.lower()
 
-    def test_negative_width_invalid(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_negative_width_invalid(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Negative width should fail validation."""
         config = GridConfig(width=-10, height=32)
 
@@ -219,9 +204,7 @@ class TestValidateFrameSettings:
         assert valid is False
         assert "width" in error_msg.lower()
 
-    def test_negative_offset_invalid(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_negative_offset_invalid(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Negative offset should fail validation."""
         config = GridConfig(width=32, height=32, offset_x=-5)
 
@@ -230,9 +213,7 @@ class TestValidateFrameSettings:
         assert valid is False
         assert "offset" in error_msg.lower()
 
-    def test_negative_spacing_invalid(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_negative_spacing_invalid(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Negative spacing should fail validation."""
         config = GridConfig(width=32, height=32, spacing_x=-1)
 
@@ -241,9 +222,7 @@ class TestValidateFrameSettings:
         assert valid is False
         assert "spacing" in error_msg.lower()
 
-    def test_frame_exceeds_sheet_width(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_frame_exceeds_sheet_width(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Frame wider than sheet should fail validation."""
         config = GridConfig(width=200, height=32)  # Sheet is 128 wide
 
@@ -252,9 +231,7 @@ class TestValidateFrameSettings:
         assert valid is False
         assert "exceeds" in error_msg.lower() or "width" in error_msg.lower()
 
-    def test_frame_exceeds_sheet_height(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_frame_exceeds_sheet_height(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Frame taller than sheet should fail validation."""
         config = GridConfig(width=32, height=100)  # Sheet is 64 tall
 
@@ -263,9 +240,7 @@ class TestValidateFrameSettings:
         assert valid is False
         assert "exceeds" in error_msg.lower() or "height" in error_msg.lower()
 
-    def test_offset_plus_frame_exceeds_sheet(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_offset_plus_frame_exceeds_sheet(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Offset + frame size exceeding sheet should fail validation."""
         config = GridConfig(width=32, height=32, offset_x=100)  # 100 + 32 > 128
 
@@ -282,9 +257,7 @@ class TestValidateFrameSettings:
 class TestCalculateGridLayout:
     """Tests for calculate_grid_layout function."""
 
-    def test_basic_layout_calculation(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_basic_layout_calculation(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Basic layout should calculate correctly."""
         config = GridConfig(width=32, height=32)
 
@@ -295,9 +268,7 @@ class TestCalculateGridLayout:
         assert layout.frames_per_col == 2
         assert layout.total_frames == 8
 
-    def test_layout_with_offset(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_layout_with_offset(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Layout with offset should reduce available frames."""
         # Sheet is 128x64, with offset 32,32 we have 96x32 remaining
         config = GridConfig(width=32, height=32, offset_x=32, offset_y=32)
@@ -309,9 +280,7 @@ class TestCalculateGridLayout:
         assert layout.frames_per_col == 1  # (64-32) // 32 = 1
         assert layout.total_frames == 3
 
-    def test_layout_with_spacing(
-        self, qapp
-    ) -> None:
+    def test_layout_with_spacing(self, qapp) -> None:
         """Layout with spacing should account for gaps."""
         # Create a sheet where spacing matters
         # 130 wide with 32px frames and 2px spacing: (130 + 2) / (32 + 2) = 3.88 = 3 frames
@@ -328,9 +297,7 @@ class TestCalculateGridLayout:
         assert layout.frames_per_row >= 3
         assert layout.frames_per_col >= 1
 
-    def test_layout_with_null_pixmap(
-        self, null_pixmap: QPixmap
-    ) -> None:
+    def test_layout_with_null_pixmap(self, null_pixmap: QPixmap) -> None:
         """Layout with null pixmap should return None."""
         config = GridConfig(width=32, height=32)
 
@@ -338,9 +305,7 @@ class TestCalculateGridLayout:
 
         assert layout is None
 
-    def test_layout_with_invalid_config(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_layout_with_invalid_config(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Layout with invalid config should return None."""
         config = GridConfig(width=0, height=32)  # Invalid width
 
@@ -357,96 +322,66 @@ class TestCalculateGridLayout:
 class TestExtractGridFrames:
     """Tests for extract_grid_frames function."""
 
-    def test_basic_extraction(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_basic_extraction(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Basic extraction should return correct number of frames."""
         config = GridConfig(width=32, height=32)
 
-        success, error_msg, frames, skipped = extract_grid_frames(
-            simple_grid_sprite_sheet, config
-        )
+        success, error_msg, frames, skipped = extract_grid_frames(simple_grid_sprite_sheet, config)
 
         assert success is True
         assert error_msg == ""
         assert len(frames) == 8  # 4x2 grid
         assert skipped == 0
 
-    def test_extraction_frame_dimensions(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_extraction_frame_dimensions(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Extracted frames should have correct dimensions."""
         config = GridConfig(width=32, height=32)
 
-        success, error_msg, frames, skipped = extract_grid_frames(
-            simple_grid_sprite_sheet, config
-        )
+        success, error_msg, frames, skipped = extract_grid_frames(simple_grid_sprite_sheet, config)
 
         assert success is True
         for frame in frames:
             assert frame.width() == 32
             assert frame.height() == 32
 
-    def test_extraction_with_offset(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_extraction_with_offset(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Extraction with offset should return fewer frames."""
         config = GridConfig(width=32, height=32, offset_x=32)
 
-        success, error_msg, frames, skipped = extract_grid_frames(
-            simple_grid_sprite_sheet, config
-        )
+        success, error_msg, frames, skipped = extract_grid_frames(simple_grid_sprite_sheet, config)
 
         assert success is True
         assert len(frames) == 6  # (128-32)/32 * 64/32 = 3*2 = 6
 
-    def test_extraction_with_spacing(
-        self, sprite_sheet_with_spacing: QPixmap
-    ) -> None:
+    def test_extraction_with_spacing(self, sprite_sheet_with_spacing: QPixmap) -> None:
         """Extraction with spacing should work correctly."""
-        config = GridConfig(
-            width=32, height=32,
-            offset_x=2, offset_y=2,
-            spacing_x=2, spacing_y=2
-        )
+        config = GridConfig(width=32, height=32, offset_x=2, offset_y=2, spacing_x=2, spacing_y=2)
 
-        success, error_msg, frames, skipped = extract_grid_frames(
-            sprite_sheet_with_spacing, config
-        )
+        success, error_msg, frames, skipped = extract_grid_frames(sprite_sheet_with_spacing, config)
 
         assert success is True
         assert len(frames) == 8  # 4x2 grid
 
-    def test_extraction_with_null_pixmap(
-        self, null_pixmap: QPixmap
-    ) -> None:
+    def test_extraction_with_null_pixmap(self, null_pixmap: QPixmap) -> None:
         """Extraction with null pixmap should fail gracefully."""
         config = GridConfig(width=32, height=32)
 
-        success, error_msg, frames, skipped = extract_grid_frames(
-            null_pixmap, config
-        )
+        success, error_msg, frames, skipped = extract_grid_frames(null_pixmap, config)
 
         assert success is False
         assert len(frames) == 0
         assert "No sprite sheet" in error_msg
 
-    def test_extraction_with_invalid_config(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_extraction_with_invalid_config(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Extraction with invalid config should fail gracefully."""
         config = GridConfig(width=0, height=32)
 
-        success, error_msg, frames, skipped = extract_grid_frames(
-            simple_grid_sprite_sheet, config
-        )
+        success, error_msg, frames, skipped = extract_grid_frames(simple_grid_sprite_sheet, config)
 
         assert success is False
         assert len(frames) == 0
 
-    def test_extraction_counts_skipped_frames(
-        self, qapp
-    ) -> None:
+    def test_extraction_counts_skipped_frames(self, qapp) -> None:
         """Extraction should count frames that don't fit."""
         # Create a sheet where last row doesn't fully fit
         pixmap = QPixmap(64, 48)  # Only fits 2x1 fully, partial for row 2
@@ -469,9 +404,7 @@ class TestExtractGridFrames:
 class TestDetectFrameSize:
     """Tests for detect_frame_size function."""
 
-    def test_detect_perfect_grid(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_detect_perfect_grid(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Detect frame size on perfect grid."""
         success, width, height, message = detect_frame_size(simple_grid_sprite_sheet)
 
@@ -480,9 +413,7 @@ class TestDetectFrameSize:
         assert width > 0
         assert height > 0
 
-    def test_detect_returns_square_for_square_common_sizes(
-        self, qapp
-    ) -> None:
+    def test_detect_returns_square_for_square_common_sizes(self, qapp) -> None:
         """Detection should return square dimensions for common sizes."""
         # Create a 64x64 sheet (should detect 32x32 or 16x16 or 64x64)
         pixmap = QPixmap(64, 64)
@@ -493,9 +424,7 @@ class TestDetectFrameSize:
         assert success is True
         assert width == height  # Square detection
 
-    def test_detect_with_null_pixmap(
-        self, null_pixmap: QPixmap
-    ) -> None:
+    def test_detect_with_null_pixmap(self, null_pixmap: QPixmap) -> None:
         """Detection should fail with null pixmap."""
         success, width, height, message = detect_frame_size(null_pixmap)
 
@@ -503,9 +432,7 @@ class TestDetectFrameSize:
         assert width == 0
         assert height == 0
 
-    def test_detect_unusual_dimensions(
-        self, qapp
-    ) -> None:
+    def test_detect_unusual_dimensions(self, qapp) -> None:
         """Detection should handle unusual dimensions."""
         # Create a 100x50 sheet (GCD = 50)
         pixmap = QPixmap(100, 50)
@@ -526,9 +453,7 @@ class TestDetectFrameSize:
 class TestDetectMargins:
     """Tests for detect_margins function."""
 
-    def test_detect_margins_with_content(
-        self, sprite_sheet_with_margins: QPixmap
-    ) -> None:
+    def test_detect_margins_with_content(self, sprite_sheet_with_margins: QPixmap) -> None:
         """Detect margins should find transparent borders."""
         success, offset_x, offset_y, message = detect_margins(sprite_sheet_with_margins)
 
@@ -537,9 +462,7 @@ class TestDetectMargins:
         assert offset_x >= 0
         assert offset_y >= 0
 
-    def test_detect_margins_no_margins(
-        self, qapp
-    ) -> None:
+    def test_detect_margins_no_margins(self, qapp) -> None:
         """Detect margins on image with no margins."""
         pixmap = QPixmap(64, 64)
         pixmap.fill(QColor(255, 0, 0))  # Fully opaque
@@ -550,9 +473,7 @@ class TestDetectMargins:
         assert offset_x == 0
         assert offset_y == 0
 
-    def test_detect_margins_null_pixmap(
-        self, null_pixmap: QPixmap
-    ) -> None:
+    def test_detect_margins_null_pixmap(self, null_pixmap: QPixmap) -> None:
         """Detect margins should fail with null pixmap."""
         success, offset_x, offset_y, message = detect_margins(null_pixmap)
 
@@ -567,9 +488,7 @@ class TestDetectMargins:
 class TestComprehensiveAutoDetect:
     """Tests for comprehensive_auto_detect function."""
 
-    def test_auto_detect_simple_grid(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_auto_detect_simple_grid(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Comprehensive detection on simple grid should succeed."""
         success, message, result = comprehensive_auto_detect(simple_grid_sprite_sheet)
 
@@ -579,32 +498,26 @@ class TestComprehensiveAutoDetect:
         assert result.frame_width >= 0
         assert result.frame_height >= 0
 
-    def test_auto_detect_returns_detection_result(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_auto_detect_returns_detection_result(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Comprehensive detection should return DetectionResult."""
         success, message, result = comprehensive_auto_detect(simple_grid_sprite_sheet)
 
         assert isinstance(result, DetectionResult)
-        assert hasattr(result, 'frame_width')
-        assert hasattr(result, 'frame_height')
-        assert hasattr(result, 'offset_x')
-        assert hasattr(result, 'offset_y')
-        assert hasattr(result, 'spacing_x')
-        assert hasattr(result, 'spacing_y')
+        assert hasattr(result, "frame_width")
+        assert hasattr(result, "frame_height")
+        assert hasattr(result, "offset_x")
+        assert hasattr(result, "offset_y")
+        assert hasattr(result, "spacing_x")
+        assert hasattr(result, "spacing_y")
 
-    def test_auto_detect_with_null_pixmap(
-        self, null_pixmap: QPixmap
-    ) -> None:
+    def test_auto_detect_with_null_pixmap(self, null_pixmap: QPixmap) -> None:
         """Comprehensive detection should fail with null pixmap."""
         success, message, result = comprehensive_auto_detect(null_pixmap)
 
         assert success is False
         assert "No sprite sheet" in message
 
-    def test_auto_detect_message_is_detailed(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_auto_detect_message_is_detailed(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Comprehensive detection should return detailed message."""
         success, message, result = comprehensive_auto_detect(simple_grid_sprite_sheet)
 
@@ -612,14 +525,12 @@ class TestComprehensiveAutoDetect:
         assert len(message) > 0
         assert "Step" in message or "detecting" in message.lower()
 
-    def test_auto_detect_confidence(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_auto_detect_confidence(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Comprehensive detection should set confidence."""
         success, message, result = comprehensive_auto_detect(simple_grid_sprite_sheet)
 
         # DetectionResult should have confidence attribute
-        assert hasattr(result, 'confidence')
+        assert hasattr(result, "confidence")
 
 
 # ============================================================================
@@ -675,6 +586,7 @@ class TestEdgeCases:
         pixmap.fill(QColor(255, 0, 0))
 
         from config import Config
+
         config = GridConfig(width=Config.FrameExtraction.MAX_FRAME_SIZE + 1, height=32)
 
         valid, error_msg = validate_frame_settings(pixmap, config)
@@ -717,9 +629,7 @@ class TestEdgeCases:
         assert frames[0].width() == 64
         assert frames[0].height() == 64
 
-    def test_grid_layout_available_dimensions(
-        self, simple_grid_sprite_sheet: QPixmap
-    ) -> None:
+    def test_grid_layout_available_dimensions(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """GridLayout should report available dimensions."""
         config = GridConfig(width=32, height=32, offset_x=10, offset_y=5)
 
@@ -727,4 +637,4 @@ class TestEdgeCases:
 
         assert layout is not None
         assert layout.available_width == 128 - 10  # 118
-        assert layout.available_height == 64 - 5   # 59
+        assert layout.available_height == 64 - 5  # 59

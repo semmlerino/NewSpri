@@ -12,31 +12,21 @@ Covers:
 
 from __future__ import annotations
 
-import time
 from pathlib import Path
-from typing import TYPE_CHECKING
-from unittest.mock import MagicMock, patch
 
 import pytest
-
-from PySide6.QtCore import QThread
-from PySide6.QtGui import QPixmap, QImage, QColor
+from PySide6.QtGui import QColor, QImage, QPixmap
 
 from export.core.frame_exporter import (
-    ExportWorker,
-    ExportTask,
-    ExportMode,
     ExportFormat,
-    FrameExporter,
+    ExportMode,
+    ExportTask,
+    ExportWorker,
     LayoutMode,
+    SpriteSheetLayout,
     get_frame_exporter,
     reset_frame_exporter,
-    SpriteSheetLayout,
 )
-
-if TYPE_CHECKING:
-    from PySide6.QtWidgets import QApplication
-
 
 # Mark all tests in this module as requiring Qt
 pytestmark = pytest.mark.requires_qt
@@ -115,18 +105,14 @@ def sheet_export_task(sample_frames: list[QImage], export_dir: Path) -> ExportTa
 class TestExportWorkerCancellation:
     """Tests for export worker cancellation behavior."""
 
-    def test_cancel_before_start(
-        self, qapp, basic_export_task: ExportTask
-    ) -> None:
+    def test_cancel_before_start(self, qapp, basic_export_task: ExportTask) -> None:
         """Cancellation before start should prevent export."""
         worker = ExportWorker(basic_export_task)
         worker.cancel()
 
         assert worker._cancelled is True
 
-    def test_cancel_flag_checked(
-        self, qapp, basic_export_task: ExportTask
-    ) -> None:
+    def test_cancel_flag_checked(self, qapp, basic_export_task: ExportTask) -> None:
         """Worker should check cancellation flag during export."""
         worker = ExportWorker(basic_export_task)
 
@@ -187,9 +173,7 @@ class TestConcurrentExportPrevention:
 class TestExportSignalSafety:
     """Tests for signal emission safety from worker thread."""
 
-    def test_progress_signal_emission(
-        self, qapp, basic_export_task: ExportTask, qtbot
-    ) -> None:
+    def test_progress_signal_emission(self, qapp, basic_export_task: ExportTask, qtbot) -> None:
         """Progress signals should be emitted safely."""
         worker = ExportWorker(basic_export_task)
 
@@ -203,9 +187,7 @@ class TestExportSignalSafety:
         # For 8 frames, we expect multiple progress updates
         assert len(progress_values) >= 1
 
-    def test_finished_signal_emission(
-        self, qapp, basic_export_task: ExportTask, qtbot
-    ) -> None:
+    def test_finished_signal_emission(self, qapp, basic_export_task: ExportTask, qtbot) -> None:
         """Finished signal should be emitted on completion."""
         worker = ExportWorker(basic_export_task)
 
@@ -220,9 +202,7 @@ class TestExportSignalSafety:
         success, message = finished_results[0]
         assert success is True
 
-    def test_error_on_empty_frames_task(
-        self, qapp, export_dir: Path, qtbot
-    ) -> None:
+    def test_error_on_empty_frames_task(self, qapp, export_dir: Path, qtbot) -> None:
         """ExportTask should raise ValueError for empty frames."""
         # Creating task with no frames should raise ValueError
         with pytest.raises(ValueError, match="No frames to export"):
@@ -329,9 +309,7 @@ class TestStateConsistency:
 
         assert exporter1 is not exporter2
 
-    def test_export_task_immutability(
-        self, qapp, basic_export_task: ExportTask
-    ) -> None:
+    def test_export_task_immutability(self, qapp, basic_export_task: ExportTask) -> None:
         """Export task should not be modified during export."""
         original_frame_count = len(basic_export_task.frames)
         original_base_name = basic_export_task.base_name
@@ -352,14 +330,15 @@ class TestStateConsistency:
 class TestExportFormats:
     """Tests for different export format handling."""
 
-    @pytest.mark.parametrize("format_str,expected_ext", [
-        ("PNG", ".png"),
-        ("JPG", ".jpg"),
-        ("BMP", ".bmp"),
-    ])
-    def test_export_format_extensions(
-        self, qapp, format_str: str, expected_ext: str
-    ) -> None:
+    @pytest.mark.parametrize(
+        "format_str,expected_ext",
+        [
+            ("PNG", ".png"),
+            ("JPG", ".jpg"),
+            ("BMP", ".bmp"),
+        ],
+    )
+    def test_export_format_extensions(self, qapp, format_str: str, expected_ext: str) -> None:
         """Export formats should have correct extensions."""
         fmt = ExportFormat.from_string(format_str)
         assert fmt.extension == expected_ext
@@ -411,9 +390,7 @@ class TestExportFormats:
 class TestScaleFactor:
     """Tests for scale factor application during export."""
 
-    def test_scale_factor_2x(
-        self, qapp, sample_frames: list[QImage], export_dir: Path
-    ) -> None:
+    def test_scale_factor_2x(self, qapp, sample_frames: list[QImage], export_dir: Path) -> None:
         """2x scale factor should double dimensions."""
         task = ExportTask(
             frames=sample_frames,
@@ -435,9 +412,7 @@ class TestScaleFactor:
         assert img.width() == 64
         assert img.height() == 64
 
-    def test_scale_factor_half(
-        self, qapp, sample_frames: list[QImage], export_dir: Path
-    ) -> None:
+    def test_scale_factor_half(self, qapp, sample_frames: list[QImage], export_dir: Path) -> None:
         """0.5x scale factor should halve dimensions."""
         task = ExportTask(
             frames=sample_frames,
@@ -505,7 +480,9 @@ class TestSpriteSheetLayout:
             format=ExportFormat.PNG,
             mode=ExportMode.SPRITE_SHEET,
             scale_factor=1.0,
-            sprite_sheet_layout=SpriteSheetLayout(mode=LayoutMode.ROWS, max_columns=4, spacing=0, padding=0),
+            sprite_sheet_layout=SpriteSheetLayout(
+                mode=LayoutMode.ROWS, max_columns=4, spacing=0, padding=0
+            ),
         )
         worker = ExportWorker(task)
         worker.run()

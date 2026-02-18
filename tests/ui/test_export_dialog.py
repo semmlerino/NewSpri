@@ -4,8 +4,6 @@ Tests meaningful export dialog behavior, not just widget existence.
 """
 
 import pytest
-from pathlib import Path
-from unittest.mock import MagicMock
 
 from export import ExportDialog
 
@@ -33,8 +31,8 @@ class TestExportDialog:
         dialog.exportRequested.connect(lambda s: signal_received.append(s))
 
         # Signal should be connectable without error
-        assert hasattr(dialog, 'exportRequested')
+        assert hasattr(dialog, "exportRequested")
 
 
-if __name__ == '__main__':
-    pytest.main([__file__, '-v'])
+if __name__ == "__main__":
+    pytest.main([__file__, "-v"])

@@ -8,16 +8,20 @@ import os
 import sys
 import tempfile
 import warnings
+from collections.abc import Generator
 from pathlib import Path
-from typing import Generator, Optional
-from unittest.mock import Mock, MagicMock
+from typing import Optional
+from unittest.mock import MagicMock, Mock
 
 import pytest
 
 # Import Qt mock fixtures
 from tests.fixtures.qt_mocks import (
-    mock_qmessagebox, auto_mock_qmessagebox, 
-    mock_qinputdialog, mock_qfiledialog, QtButtons
+    QtButtons,
+    auto_mock_qmessagebox,
+    mock_qfiledialog,
+    mock_qinputdialog,
+    mock_qmessagebox,
 )
 
 # Configure Qt environment BEFORE importing PySide6
@@ -34,31 +38,52 @@ warnings.filterwarnings("ignore", category=RuntimeWarning, module=".*qt.*")
 
 # Now safely import PySide6
 try:
-    from PySide6.QtWidgets import QApplication
-    from PySide6.QtGui import QPixmap, QImage
     from PySide6.QtCore import Qt
+    from PySide6.QtGui import QImage, QPixmap
     from PySide6.QtTest import QSignalSpy
+    from PySide6.QtWidgets import QApplication
+
     PYSIDE6_AVAILABLE = True
 except ImportError:
     PYSIDE6_AVAILABLE = False
+
     # Create mock classes for when PySide6 is not available
     class QApplication:
-        def __init__(self, args=None): pass
+        def __init__(self, args=None):
+            pass
+
         @staticmethod
-        def instance(): return None
-        def setAttribute(self, attr, value): pass
-        def setQuitOnLastWindowClosed(self, value): pass
-        def processEvents(self): pass
-        def quit(self): pass
-    
+        def instance():
+            return None
+
+        def setAttribute(self, attr, value):
+            pass
+
+        def setQuitOnLastWindowClosed(self, value):
+            pass
+
+        def processEvents(self):
+            pass
+
+        def quit(self):
+            pass
+
     class QPixmap:
-        def __init__(self, width=100, height=100): 
+        def __init__(self, width=100, height=100):
             self._width, self._height = width, height
-        def width(self): return self._width
-        def height(self): return self._height
-        def isNull(self): return False
-        def fill(self, color=None): pass
-    
+
+        def width(self):
+            return self._width
+
+        def height(self):
+            return self._height
+
+        def isNull(self):
+            return False
+
+        def fill(self, color=None):
+            pass
+
     class Qt:
         AA_DontShowIconsInMenus = 1
         AA_DontUseNativeMenuBar = 2
@@ -69,13 +94,18 @@ except ImportError:
         yellow = 7
         white = 8
         OpenHandCursor = 9
-    
+
     class QSignalSpy:
-        def __init__(self, signal): 
+        def __init__(self, signal):
             self.signal = signal
             self._calls = []
-        def __len__(self): return len(self._calls)
-        def __getitem__(self, index): return self._calls[index]
+
+        def __len__(self):
+            return len(self._calls)
+
+        def __getitem__(self, index):
+            return self._calls[index]
+
 
 # Add project root to Python path for imports
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -84,31 +114,35 @@ sys.path.insert(0, str(PROJECT_ROOT))
 # Import project modules for testing
 try:
     from config import Config
-    from sprite_model import SpriteModel
     from core.animation_controller import AnimationController
     from core.auto_detection_controller import AutoDetectionController
-except ImportError as e:
+    from sprite_model import SpriteModel
+except ImportError:
     # Create mock versions if imports fail
     class Config:
         class Canvas:
             MIN_WIDTH = 600
             MIN_HEIGHT = 400
+
         class Animation:
             DEFAULT_FPS = 10
-    
+
     class SpriteModel:
-        def __init__(self): pass
-    
+        def __init__(self):
+            pass
+
     class AnimationController:
-        def __init__(self): pass
-    
+        def __init__(self):
+            pass
+
     class AutoDetectionController:
-        def __init__(self): pass
+        def __init__(self):
+            pass
 
 
 # Import common fixtures from fixture modules
 try:
-    from tests.fixtures.common_fixtures import *
+    from tests.fixtures.common_fixtures import *  # noqa: F403
 except ImportError:
     pass  # Fixtures may not be available in all environments
 
@@ -116,6 +150,7 @@ except ImportError:
 # ============================================================================
 # APPLICATION FIXTURES
 # ============================================================================
+
 
 @pytest.fixture(scope="session")
 def qapp() -> Generator[QApplication, None, None]:
@@ -126,22 +161,22 @@ def qapp() -> Generator[QApplication, None, None]:
     if not PYSIDE6_AVAILABLE:
         yield QApplication()
         return
-    
+
     app = QApplication.instance()
     if app is None:
         app = QApplication(["pytest"])
-        
+
         # Configure application for testing
         app.setAttribute(Qt.AA_DontShowIconsInMenus, True)
         app.setAttribute(Qt.AA_DontUseNativeMenuBar, True)
         app.setAttribute(Qt.AA_DontUseNativeDialogs, True)
         app.setQuitOnLastWindowClosed(False)
-    
+
     # Suppress Qt debug output
     app.processEvents()
-    
+
     yield app
-    
+
     # Cleanup - process any remaining events
     if app:
         app.processEvents()
@@ -161,17 +196,18 @@ def sample_sprite_paths() -> dict:
     sprite_dir = PROJECT_ROOT / "spritetests"
     return {
         "archer_idle": sprite_dir / "Archer" / "Archer_Idle.png",
-        "archer_run": sprite_dir / "Archer_Run.png", 
+        "archer_run": sprite_dir / "Archer_Run.png",
         "lancer_idle": sprite_dir / "Lancer_Idle.png",
         "test_sheet": sprite_dir / "test_sprite_sheet.png",
         "test_rect_32x48": sprite_dir / "test_rect_32x48.png",
-        "debug_final": sprite_dir / "debug_final.png"
+        "debug_final": sprite_dir / "debug_final.png",
     }
 
 
 # ============================================================================
 # SPRITE AND IMAGE FIXTURES
 # ============================================================================
+
 
 @pytest.fixture
 def mock_pixmap() -> QPixmap:
@@ -185,11 +221,11 @@ def mock_pixmap() -> QPixmap:
 
 
 @pytest.fixture
-def test_sprite_sheet(sample_sprite_paths) -> Optional[QPixmap]:
+def test_sprite_sheet(sample_sprite_paths) -> QPixmap | None:
     """Load a real test sprite sheet if available."""
     if not PYSIDE6_AVAILABLE:
         return QPixmap(512, 512)
-    
+
     test_path = sample_sprite_paths["test_sheet"]
     if test_path.exists():
         return QPixmap(str(test_path))
@@ -202,19 +238,20 @@ def mock_sprite_frames() -> list[QPixmap]:
     frames = []
     if PYSIDE6_AVAILABLE:
         colors = [Qt.red, Qt.green, Qt.blue, Qt.yellow]
-        for i, color in enumerate(colors):
+        for _i, color in enumerate(colors):
             pixmap = QPixmap(64, 64)
             pixmap.fill(color)
             frames.append(pixmap)
     else:
         frames = [QPixmap(64, 64) for _ in range(4)]
-    
+
     return frames
 
 
 # ============================================================================
 # MODEL AND CONTROLLER FIXTURES
 # ============================================================================
+
 
 @pytest.fixture
 def sprite_model() -> SpriteModel:
@@ -252,13 +289,14 @@ def configured_sprite_model(sprite_model, mock_sprite_frames) -> SpriteModel:
     sprite_model._offset_y = 0
     sprite_model._spacing_x = 0
     sprite_model._spacing_y = 0
-    
+
     return sprite_model
 
 
 # ============================================================================
 # CONFIGURATION FIXTURES
 # ============================================================================
+
 
 @pytest.fixture
 def test_config() -> Config:
@@ -270,31 +308,32 @@ def test_config() -> Config:
 def mock_config():
     """Mock configuration for testing without affecting real config."""
     config_mock = Mock()
-    
+
     # Mock Canvas config
     config_mock.Canvas = Mock()
     config_mock.Canvas.MIN_WIDTH = 600
     config_mock.Canvas.MIN_HEIGHT = 400
     config_mock.Canvas.ZOOM_MIN = 0.1
     config_mock.Canvas.ZOOM_MAX = 10.0
-    
+
     # Mock Animation config
     config_mock.Animation = Mock()
     config_mock.Animation.DEFAULT_FPS = 10
     config_mock.Animation.MIN_FPS = 1
     config_mock.Animation.MAX_FPS = 60
-    
+
     # Mock FrameExtraction config
     config_mock.FrameExtraction = Mock()
     config_mock.FrameExtraction.DEFAULT_FRAME_WIDTH = 192
     config_mock.FrameExtraction.DEFAULT_FRAME_HEIGHT = 192
-    
+
     return config_mock
 
 
 # ============================================================================
 # UI FIXTURES
 # ============================================================================
+
 
 @pytest.fixture
 def mock_qt_signals():
@@ -305,20 +344,21 @@ def mock_qt_signals():
     signals.extractionCompleted = Mock()
     signals.playbackStateChanged = Mock()
     signals.errorOccurred = Mock()
-    
+
     # Add emit method to each signal
     for signal_name in dir(signals):
-        if not signal_name.startswith('_'):
+        if not signal_name.startswith("_"):
             signal = getattr(signals, signal_name)
             signal.emit = Mock()
             signal.connect = Mock()
-    
+
     return signals
 
 
 # ============================================================================
 # REAL QT EVENT HELPERS (Phase 1: Mock-to-Real Conversion)
 # ============================================================================
+
 
 @pytest.fixture
 def real_event_helpers(qapp):
@@ -328,51 +368,48 @@ def real_event_helpers(qapp):
     """
     if not PYSIDE6_AVAILABLE:
         return MagicMock()
-    
-    from PySide6.QtGui import QMouseEvent, QKeyEvent, QWheelEvent
-    from PySide6.QtCore import QPointF, QPoint, Qt
+
+    from PySide6.QtCore import QPoint, QPointF, Qt
+    from PySide6.QtGui import QKeyEvent, QMouseEvent, QWheelEvent
     from PySide6.QtTest import QTest
-    
+
     class RealEventHelpers:
         """Factory for creating real Qt events for testing."""
-        
+
         @staticmethod
         def create_mouse_press(x=10, y=10, button=Qt.LeftButton, modifiers=Qt.NoModifier):
             """Create real QMouseEvent for mouse press."""
             pos = QPointF(x, y)
             return QMouseEvent(
-                QMouseEvent.Type.MouseButtonPress,
-                pos, pos, pos, button, button, modifiers
+                QMouseEvent.Type.MouseButtonPress, pos, pos, pos, button, button, modifiers
             )
-        
+
         @staticmethod
         def create_mouse_move(x=15, y=15, buttons=Qt.LeftButton, modifiers=Qt.NoModifier):
             """Create real QMouseEvent for mouse move."""
             pos = QPointF(x, y)
             return QMouseEvent(
-                QMouseEvent.Type.MouseMove,
-                pos, pos, pos, Qt.NoButton, buttons, modifiers
+                QMouseEvent.Type.MouseMove, pos, pos, pos, Qt.NoButton, buttons, modifiers
             )
-        
+
         @staticmethod
         def create_mouse_release(x=15, y=15, button=Qt.LeftButton, modifiers=Qt.NoModifier):
             """Create real QMouseEvent for mouse release."""
             pos = QPointF(x, y)
             return QMouseEvent(
-                QMouseEvent.Type.MouseButtonRelease,
-                pos, pos, pos, button, Qt.NoButton, modifiers
+                QMouseEvent.Type.MouseButtonRelease, pos, pos, pos, button, Qt.NoButton, modifiers
             )
-        
+
         @staticmethod
         def create_key_press(key, modifiers=Qt.NoModifier, text=""):
             """Create real QKeyEvent for key press."""
             return QKeyEvent(QKeyEvent.Type.KeyPress, key, modifiers, text)
-        
+
         @staticmethod
         def create_key_release(key, modifiers=Qt.NoModifier, text=""):
             """Create real QKeyEvent for key release."""
             return QKeyEvent(QKeyEvent.Type.KeyRelease, key, modifiers, text)
-        
+
         @staticmethod
         def create_wheel_event(x=10, y=10, delta_x=0, delta_y=120, modifiers=Qt.NoModifier):
             """Create real QWheelEvent for wheel scrolling."""
@@ -381,10 +418,16 @@ def real_event_helpers(qapp):
             pixel_delta = QPoint(0, 0)
             angle_delta = QPoint(delta_x, delta_y)
             return QWheelEvent(
-                pos, global_pos, pixel_delta, angle_delta,
-                Qt.NoButton, modifiers, Qt.ScrollPhase.NoScrollPhase, False
+                pos,
+                global_pos,
+                pixel_delta,
+                angle_delta,
+                Qt.NoButton,
+                modifiers,
+                Qt.ScrollPhase.NoScrollPhase,
+                False,
             )
-        
+
         @staticmethod
         def simulate_real_drag(widget, start_pos, end_pos, qtbot, button=Qt.LeftButton):
             """
@@ -395,53 +438,53 @@ def real_event_helpers(qapp):
             qtbot.mouseMove(widget, end_pos)
             qtbot.mouseRelease(widget, button, Qt.NoModifier, end_pos)
             qapp.processEvents()  # Process real Qt events
-        
+
         @staticmethod
         def simulate_real_click(widget, pos, qtbot, button=Qt.LeftButton, modifiers=Qt.NoModifier):
             """Simulate a real mouse click using QTest."""
             qtbot.mouseClick(widget, button, modifiers, pos)
             qapp.processEvents()
-        
+
         @staticmethod
         def simulate_real_double_click(widget, pos, qtbot, button=Qt.LeftButton):
             """Simulate a real double-click using QTest."""
             qtbot.mouseDClick(widget, button, Qt.NoModifier, pos)
             qapp.processEvents()
-        
-        @staticmethod 
+
+        @staticmethod
         def simulate_real_key_sequence(widget, qtbot, key, modifiers=Qt.NoModifier):
             """Simulate real key press and release sequence."""
             qtbot.keyPress(widget, key, modifiers)
             qtbot.keyRelease(widget, key, modifiers)
             qapp.processEvents()
-        
+
         @staticmethod
         def calculate_manhattan_distance(start_pos, end_pos):
             """Calculate Manhattan distance between two points (useful for drag thresholds)."""
-            if hasattr(start_pos, 'manhattanLength'):
+            if hasattr(start_pos, "manhattanLength"):
                 return (end_pos - start_pos).manhattanLength()
             else:
                 # Fallback for QPoint/QPointF
                 dx = abs(end_pos.x() - start_pos.x())
                 dy = abs(end_pos.y() - start_pos.y())
                 return dx + dy
-        
+
         def create_modifier_combinations(self):
             """Get common modifier combinations for testing."""
             return {
-                'none': Qt.NoModifier,
-                'ctrl': Qt.ControlModifier,
-                'shift': Qt.ShiftModifier,
-                'alt': Qt.AltModifier,
-                'ctrl_shift': Qt.ControlModifier | Qt.ShiftModifier,
-                'ctrl_alt': Qt.ControlModifier | Qt.AltModifier,
-                'shift_alt': Qt.ShiftModifier | Qt.AltModifier
+                "none": Qt.NoModifier,
+                "ctrl": Qt.ControlModifier,
+                "shift": Qt.ShiftModifier,
+                "alt": Qt.AltModifier,
+                "ctrl_shift": Qt.ControlModifier | Qt.ShiftModifier,
+                "ctrl_alt": Qt.ControlModifier | Qt.AltModifier,
+                "shift_alt": Qt.ShiftModifier | Qt.AltModifier,
             }
-    
+
     return RealEventHelpers()
 
 
-@pytest.fixture  
+@pytest.fixture
 def real_signal_tester(qapp):
     """
     Enhanced signal testing with REAL Qt signal mechanisms.
@@ -449,49 +492,49 @@ def real_signal_tester(qapp):
     """
     if not PYSIDE6_AVAILABLE:
         return MagicMock()
-    
+
     from PySide6.QtTest import QSignalSpy
-    
+
     class RealSignalTester:
         """Utilities for testing real Qt signal connections and emissions."""
-        
+
         def __init__(self):
             self.spies = {}
             self._cleanup_list = []
-        
+
         def connect_spy(self, signal, name):
             """Connect QSignalSpy to real signal and store with name."""
             spy = QSignalSpy(signal)
             self.spies[name] = spy
             self._cleanup_list.append(spy)
             return spy
-        
+
         def verify_emission(self, name, count=1, timeout=1000):
             """Verify signal was emitted specified number of times."""
             spy = self.spies.get(name)
             if not spy:
                 return False
-            
+
             # Wait for emissions if needed
             if spy.count() < count and timeout > 0:
                 spy.wait(timeout)
-            
+
             return spy.count() == count
-        
+
         def verify_emission_range(self, name, min_count=1, max_count=None, timeout=1000):
             """Verify signal emission count is within range."""
             spy = self.spies.get(name)
             if not spy:
                 return False
-            
+
             if spy.count() < min_count and timeout > 0:
                 spy.wait(timeout)
-            
+
             actual_count = spy.count()
             if max_count is None:
                 return actual_count >= min_count
             return min_count <= actual_count <= max_count
-        
+
         def get_signal_args(self, name, emission_index=0):
             """
             Get real signal arguments from QSignalSpy.
@@ -500,7 +543,7 @@ def real_signal_tester(qapp):
             spy = self.spies.get(name)
             if not spy or spy.count() <= emission_index:
                 return []
-            
+
             # PySide6 QSignalSpy argument access varies by version
             try:
                 # Method 1: Direct indexing (newer PySide6)
@@ -513,38 +556,39 @@ def real_signal_tester(qapp):
                 try:
                     # Method 2: Using at() method
                     emission = spy.at(emission_index)
-                    if hasattr(emission, '__len__') and not isinstance(emission, str):
+                    if hasattr(emission, "__len__") and not isinstance(emission, str):
                         return list(emission)
                     else:
                         return [emission]
                 except (AttributeError, IndexError, TypeError) as e:
                     # All methods failed - this indicates a real problem
                     import warnings
+
                     warnings.warn(
                         f"QSignalSpy argument access failed for '{name}' at index {emission_index}: {e}. "
                         f"This may indicate a PySide6 version incompatibility.",
-                        stacklevel=2
+                        stacklevel=2,
                     )
                     return []
-        
+
         def get_all_emissions(self, name):
             """Get all emissions for a signal as list of argument lists."""
             spy = self.spies.get(name)
             if not spy:
                 return []
-            
+
             emissions = []
             for i in range(spy.count()):
                 emissions.append(self.get_signal_args(name, i))
             return emissions
-        
+
         def wait_for_signal(self, name, timeout=1000):
             """Wait for signal emission and return success."""
             spy = self.spies.get(name)
             if not spy:
                 return False
             return spy.wait(timeout)
-        
+
         def reset_spy(self, name):
             """Reset signal spy to clear previous emissions."""
             spy = self.spies.get(name)
@@ -553,12 +597,12 @@ def real_signal_tester(qapp):
                 del self.spies[name]
                 return None
             return None
-        
+
         def get_spy_count(self, name):
             """Get current emission count for named spy."""
             spy = self.spies.get(name)
             return spy.count() if spy else 0
-        
+
         def assert_signal_emitted(self, name, expected_count=1, timeout=1000):
             """Assert signal was emitted expected number of times."""
             if not self.verify_emission(name, expected_count, timeout):
@@ -566,18 +610,18 @@ def real_signal_tester(qapp):
                 raise AssertionError(
                     f"Signal '{name}' emitted {actual_count} times, expected {expected_count}"
                 )
-        
+
         def assert_signal_not_emitted(self, name):
             """Assert signal was not emitted."""
             count = self.get_spy_count(name)
             if count > 0:
                 raise AssertionError(f"Signal '{name}' unexpectedly emitted {count} times")
-        
+
         def cleanup(self):
             """Cleanup all signal spies."""
             self.spies.clear()
             self._cleanup_list.clear()
-    
+
     tester = RealSignalTester()
     yield tester
     tester.cleanup()
@@ -591,25 +635,20 @@ def ark_sprite_fixture():
     """
     ark_paths = [
         PROJECT_ROOT / "spritetests" / "Ark.png",
-        PROJECT_ROOT / "tests" / "fixtures" / "Ark.png", 
-        PROJECT_ROOT / "assets" / "Ark.png"
+        PROJECT_ROOT / "tests" / "fixtures" / "Ark.png",
+        PROJECT_ROOT / "assets" / "Ark.png",
     ]
-    
+
     for path in ark_paths:
         if path.exists():
             return {
-                'path': str(path),
-                'filename': 'Ark.png',
-                'exists': True,
-                'absolute_path': str(path.absolute())
+                "path": str(path),
+                "filename": "Ark.png",
+                "exists": True,
+                "absolute_path": str(path.absolute()),
             }
-    
-    return {
-        'path': None,
-        'filename': 'Ark.png', 
-        'exists': False,
-        'absolute_path': None
-    }
+
+    return {"path": None, "filename": "Ark.png", "exists": False, "absolute_path": None}
 
 
 @pytest.fixture
@@ -620,53 +659,71 @@ def real_image_factory(qapp):
     """
     if not PYSIDE6_AVAILABLE:
         return MagicMock()
-    
-    from PySide6.QtGui import QPixmap, QPainter, QColor, QFont
+
     from PySide6.QtCore import Qt
-    
+    from PySide6.QtGui import QColor, QFont, QPainter, QPixmap
+
     class RealImageFactory:
         """Factory for creating real test images and sprite sheets."""
-        
+
         @staticmethod
         def create_solid_color_frame(width=64, height=64, color=Qt.red):
             """Create a solid color frame."""
             pixmap = QPixmap(width, height)
             pixmap.fill(color)
             return pixmap
-        
+
         @staticmethod
-        def create_numbered_frame(width=64, height=64, number=0, bg_color=Qt.red, text_color=Qt.white):
+        def create_numbered_frame(
+            width=64, height=64, number=0, bg_color=Qt.red, text_color=Qt.white
+        ):
             """Create a frame with a number overlay for identification."""
             pixmap = QPixmap(width, height)
             pixmap.fill(bg_color)
-            
+
             painter = QPainter(pixmap)
             painter.setPen(text_color)
             font = QFont()
             font.setPointSize(max(8, min(width, height) // 8))
             painter.setFont(font)
-            
+
             # Center the text
             text = str(number)
             text_rect = painter.fontMetrics().boundingRect(text)
             x = (width - text_rect.width()) // 2
             y = (height + text_rect.height()) // 2
-            
+
             painter.drawText(x, y, text)
             painter.end()
-            
+
             return pixmap
-        
+
         @staticmethod
-        def create_sprite_sheet(frame_count=8, frame_size=(32, 32), layout="horizontal", 
-                              colors=None, spacing=0, margin=0):
+        def create_sprite_sheet(
+            frame_count=8,
+            frame_size=(32, 32),
+            layout="horizontal",
+            colors=None,
+            spacing=0,
+            margin=0,
+        ):
             """Create a real sprite sheet with multiple frames."""
             frame_width, frame_height = frame_size
-            
+
             if colors is None:
-                colors = [Qt.red, Qt.green, Qt.blue, Qt.yellow, Qt.cyan, Qt.magenta, 
-                         Qt.darkRed, Qt.darkGreen, Qt.darkBlue, Qt.darkYellow]
-            
+                colors = [
+                    Qt.red,
+                    Qt.green,
+                    Qt.blue,
+                    Qt.yellow,
+                    Qt.cyan,
+                    Qt.magenta,
+                    Qt.darkRed,
+                    Qt.darkGreen,
+                    Qt.darkBlue,
+                    Qt.darkYellow,
+                ]
+
             if layout == "horizontal":
                 sheet_width = frame_count * frame_width + (frame_count - 1) * spacing + 2 * margin
                 sheet_height = frame_height + 2 * margin
@@ -674,18 +731,18 @@ def real_image_factory(qapp):
                 sheet_width = frame_width + 2 * margin
                 sheet_height = frame_count * frame_height + (frame_count - 1) * spacing + 2 * margin
             else:  # grid layout
-                cols = int(frame_count ** 0.5)
+                cols = int(frame_count**0.5)
                 if cols * cols < frame_count:
                     cols += 1
                 rows = (frame_count + cols - 1) // cols
                 sheet_width = cols * frame_width + (cols - 1) * spacing + 2 * margin
                 sheet_height = rows * frame_height + (rows - 1) * spacing + 2 * margin
-            
+
             sprite_sheet = QPixmap(sheet_width, sheet_height)
             sprite_sheet.fill(Qt.white)
-            
+
             painter = QPainter(sprite_sheet)
-            
+
             for i in range(frame_count):
                 if layout == "horizontal":
                     x = margin + i * (frame_width + spacing)
@@ -698,74 +755,74 @@ def real_image_factory(qapp):
                     row = i // cols
                     x = margin + col * (frame_width + spacing)
                     y = margin + row * (frame_height + spacing)
-                
+
                 # Draw colored frame background
                 color = colors[i % len(colors)]
                 painter.fillRect(x, y, frame_width, frame_height, color)
-                
+
                 # Add frame number
                 painter.setPen(Qt.white)
                 font = QFont()
                 font.setPointSize(max(8, min(frame_width, frame_height) // 8))
                 painter.setFont(font)
-                
+
                 text = str(i)
                 text_rect = painter.fontMetrics().boundingRect(text)
                 text_x = x + (frame_width - text_rect.width()) // 2
                 text_y = y + (frame_height + text_rect.height()) // 2
-                
+
                 painter.drawText(text_x, text_y, text)
-            
+
             painter.end()
             return sprite_sheet
-        
+
         @staticmethod
         def create_ccl_test_sprite():
             """Create a sprite sheet specifically for CCL testing."""
             # Create a sheet with isolated sprites for CCL to detect
             sheet = QPixmap(200, 100)
             sheet.fill(Qt.transparent)
-            
+
             painter = QPainter(sheet)
-            
+
             # Create separate colored rectangles for CCL to find
             sprite_rects = [
                 (10, 10, 30, 30, Qt.red),
-                (50, 10, 25, 35, Qt.green), 
+                (50, 10, 25, 35, Qt.green),
                 (85, 15, 20, 25, Qt.blue),
                 (115, 5, 35, 40, Qt.yellow),
-                (160, 20, 30, 25, Qt.cyan)
+                (160, 20, 30, 25, Qt.cyan),
             ]
-            
+
             for x, y, w, h, color in sprite_rects:
                 painter.fillRect(x, y, w, h, color)
                 # Add small border to make sprites distinct
                 painter.setPen(Qt.black)
                 painter.drawRect(x, y, w, h)
-            
+
             painter.end()
             return sheet
-        
+
         @staticmethod
         def save_to_temp_file(pixmap, temp_dir, filename="test_sprite.png"):
             """Save real image to temporary file and return path."""
             file_path = temp_dir / filename
             success = pixmap.save(str(file_path))
             return str(file_path) if success else None
-        
+
         @staticmethod
         def create_animation_frames(count=6, size=(48, 48), animation_type="rotate"):
             """Create frames for animation testing."""
             frames = []
             width, height = size
-            
+
             for i in range(count):
                 pixmap = QPixmap(width, height)
                 pixmap.fill(Qt.transparent)
-                
+
                 painter = QPainter(pixmap)
                 painter.setRenderHint(QPainter.Antialiasing)
-                
+
                 if animation_type == "rotate":
                     # Rotating square animation
                     angle = (360 / count) * i
@@ -773,24 +830,25 @@ def real_image_factory(qapp):
                     painter.rotate(angle)
                     painter.fillRect(-10, -10, 20, 20, Qt.red)
                 elif animation_type == "scale":
-                    # Scaling circle animation  
+                    # Scaling circle animation
                     scale = 0.5 + 0.5 * (i / count)
                     radius = int(min(width, height) * 0.3 * scale)
                     center_x, center_y = width // 2, height // 2
                     painter.setBrush(Qt.blue)
-                    painter.drawEllipse(center_x - radius, center_y - radius, 
-                                      radius * 2, radius * 2)
+                    painter.drawEllipse(
+                        center_x - radius, center_y - radius, radius * 2, radius * 2
+                    )
                 elif animation_type == "move":
                     # Moving dot animation
                     x = int((width - 20) * (i / (count - 1)))
                     y = height // 2 - 10
                     painter.fillRect(x, y, 20, 20, Qt.green)
-                
+
                 painter.end()
                 frames.append(pixmap)
-            
+
             return frames
-    
+
     return RealImageFactory()
 
 
@@ -802,12 +860,13 @@ def real_sprite_system(qapp):
     """
     if not PYSIDE6_AVAILABLE:
         return MagicMock()
-    
-    from sprite_model import SpriteModel
-    from core.animation_controller import AnimationController
-    from PySide6.QtGui import QPixmap, QPainter
+
     from PySide6.QtCore import Qt
-    
+    from PySide6.QtGui import QPainter, QPixmap
+
+    from core.animation_controller import AnimationController
+    from sprite_model import SpriteModel
+
     class RealSpriteSystem:
         """Integrated real sprite system for authentic component testing."""
 
@@ -816,32 +875,32 @@ def real_sprite_system(qapp):
             self.animation_controller = None  # Created during initialize_system
             self.test_frames = []
             self._initialized = False
-        
+
         def setup_test_frames(self, frame_count=6, frame_size=(64, 64)):
             """Create real test frames with actual image data."""
             self.test_frames = []
             width, height = frame_size
             colors = [Qt.red, Qt.green, Qt.blue, Qt.yellow, Qt.cyan, Qt.magenta]
-            
+
             for i in range(frame_count):
                 pixmap = QPixmap(width, height)
                 color = colors[i % len(colors)]
                 pixmap.fill(color)
-                
+
                 # Add frame number for identification
                 painter = QPainter(pixmap)
                 painter.setPen(Qt.white)
                 painter.drawText(10, height // 2, str(i))
                 painter.end()
-                
+
                 self.test_frames.append(pixmap)
-            
+
             return self.test_frames
-        
+
         def setup_sprite_model(self, frame_count=6, frame_size=(64, 64)):
             """Setup sprite model with real frame data."""
             self.setup_test_frames(frame_count, frame_size)
-            
+
             # Configure sprite model with real data
             self.sprite_model._sprite_frames = self.test_frames
             self.sprite_model._frame_width, self.sprite_model._frame_height = frame_size
@@ -850,17 +909,17 @@ def real_sprite_system(qapp):
             self.sprite_model._offset_y = 0
             self.sprite_model._spacing_x = 0
             self.sprite_model._spacing_y = 0
-            
+
             # Use real setter methods
             self.sprite_model.set_fps(10)
             self.sprite_model.set_loop_enabled(True)
-            
+
             # Mock only the methods that need simulation for testing
             self.sprite_model.next_frame = Mock(return_value=(1, True))
             self.sprite_model.first_frame = Mock()
-            
+
             return self.sprite_model
-        
+
         def initialize_system(self, frame_count=6, frame_size=(64, 64)):
             """Initialize complete real system with sprite model and animation controller."""
             # Setup sprite model with real data
@@ -877,74 +936,76 @@ def real_sprite_system(qapp):
 
             self._initialized = True
             return True
-        
+
         def get_real_signal_connections(self):
             """Get dictionary of real signals for testing."""
             if not self._initialized:
                 return {}
-                
+
             return {
-                'fps_changed': self.animation_controller.fpsChanged,
-                'playback_state_changed': self.animation_controller.playbackStateChanged,
-                'loop_mode_changed': self.animation_controller.loopModeChanged,
-                'animation_started': self.animation_controller.animationStarted,
-                'animation_paused': self.animation_controller.animationPaused,
-                'animation_stopped': self.animation_controller.animationStopped,
-                'frame_advanced': self.animation_controller.frameAdvanced,
-                'status_changed': self.animation_controller.statusChanged,
-                'error_occurred': self.animation_controller.errorOccurred
+                "fps_changed": self.animation_controller.fpsChanged,
+                "playback_state_changed": self.animation_controller.playbackStateChanged,
+                "loop_mode_changed": self.animation_controller.loopModeChanged,
+                "animation_started": self.animation_controller.animationStarted,
+                "animation_paused": self.animation_controller.animationPaused,
+                "animation_stopped": self.animation_controller.animationStopped,
+                "frame_advanced": self.animation_controller.frameAdvanced,
+                "status_changed": self.animation_controller.statusChanged,
+                "error_occurred": self.animation_controller.errorOccurred,
             }
-        
+
         def create_real_sprite_with_frames(self, frame_count=8):
             """Create real sprite frames for advanced testing."""
             frames = []
             for i in range(frame_count):
                 pixmap = QPixmap(48, 48)
-                
+
                 # Create different visual patterns for each frame
                 painter = QPainter(pixmap)
-                
+
                 if i % 3 == 0:
                     painter.fillRect(0, 0, 48, 48, Qt.red)
                 elif i % 3 == 1:
                     painter.fillRect(0, 0, 48, 48, Qt.green)
                 else:
                     painter.fillRect(0, 0, 48, 48, Qt.blue)
-                
+
                 # Add frame number
                 painter.setPen(Qt.white)
                 painter.drawText(20, 25, str(i))
                 painter.end()
-                
+
                 frames.append(pixmap)
-            
+
             return frames
-        
+
         def verify_system_state(self):
             """Verify the system is in a valid state for testing."""
             checks = {
-                'controller_initialized': self._initialized,
-                'has_sprite_model': self.sprite_model is not None,
-                'has_test_frames': len(self.test_frames) > 0,
-                'controller_active': self.animation_controller._is_active if self._initialized else False,
-                'valid_fps': self.animation_controller._current_fps > 0,
-                'timer_exists': self.animation_controller._animation_timer is not None
+                "controller_initialized": self._initialized,
+                "has_sprite_model": self.sprite_model is not None,
+                "has_test_frames": len(self.test_frames) > 0,
+                "controller_active": self.animation_controller._is_active
+                if self._initialized
+                else False,
+                "valid_fps": self.animation_controller._current_fps > 0,
+                "timer_exists": self.animation_controller._animation_timer is not None,
             }
             return checks
-        
+
         def cleanup(self):
             """Clean up system resources."""
             if self.animation_controller._is_playing:
                 self.animation_controller.stop_animation()
             self.animation_controller.shutdown()
             self.test_frames.clear()
-    
+
     system = RealSpriteSystem()
     yield system
     system.cleanup()
 
 
-@pytest.fixture  
+@pytest.fixture
 def enhanced_animation_controller(real_sprite_system):
     """
     Enhanced animation controller with real sprite model integration.
@@ -958,6 +1019,7 @@ def enhanced_animation_controller(real_sprite_system):
 # TEST DATA GENERATORS
 # ============================================================================
 
+
 @pytest.fixture
 def detection_test_cases() -> list[dict]:
     """Test cases for detection algorithms."""
@@ -967,22 +1029,22 @@ def detection_test_cases() -> list[dict]:
             "frame_size": (32, 32),
             "expected_frames": 16,
             "margin": (0, 0),
-            "spacing": (0, 0)
+            "spacing": (0, 0),
         },
         {
-            "name": "rect_32x48", 
+            "name": "rect_32x48",
             "frame_size": (32, 48),
             "expected_frames": 12,
             "margin": (4, 4),
-            "spacing": (2, 2)
+            "spacing": (2, 2),
         },
         {
             "name": "large_64x64",
             "frame_size": (64, 64),
             "expected_frames": 9,
-            "margin": (8, 8), 
-            "spacing": (4, 4)
-        }
+            "margin": (8, 8),
+            "spacing": (4, 4),
+        },
     ]
 
 
@@ -994,20 +1056,20 @@ def animation_test_cases() -> list[dict]:
             "name": "default_fps",
             "fps": 10,
             "frame_count": 4,
-            "expected_interval": 100  # milliseconds
+            "expected_interval": 100,  # milliseconds
         },
         {
             "name": "fast_animation",
             "fps": 30,
             "frame_count": 8,
-            "expected_interval": 33  # milliseconds (rounded)
+            "expected_interval": 33,  # milliseconds (rounded)
         },
         {
-            "name": "slow_animation", 
+            "name": "slow_animation",
             "fps": 2,
             "frame_count": 6,
-            "expected_interval": 500  # milliseconds
-        }
+            "expected_interval": 500,  # milliseconds
+        },
     ]
 
 
@@ -1015,12 +1077,15 @@ def animation_test_cases() -> list[dict]:
 # PARAMETRIZED TEST DATA
 # ============================================================================
 
-@pytest.fixture(params=[
-    {"width": 32, "height": 32},
-    {"width": 48, "height": 32},
-    {"width": 64, "height": 48},
-    {"width": 128, "height": 128}
-])
+
+@pytest.fixture(
+    params=[
+        {"width": 32, "height": 32},
+        {"width": 48, "height": 32},
+        {"width": 64, "height": 48},
+        {"width": 128, "height": 128},
+    ]
+)
 def frame_sizes(request):
     """Parametrized frame sizes for testing."""
     return request.param
@@ -1036,6 +1101,7 @@ def fps_values(request):
 # CLEANUP AND UTILITIES
 # ============================================================================
 
+
 @pytest.fixture(autouse=True)
 def cleanup_globals():
     """Auto-cleanup for any global state changes."""
@@ -1046,11 +1112,11 @@ def cleanup_globals():
 def pytest_configure(config):
     """Pytest configuration hook for Qt environment setup."""
     import logging
-    
+
     # Configure logging to reduce Qt noise
-    logging.getLogger('Qt').setLevel(logging.CRITICAL)
-    logging.getLogger('PySide6').setLevel(logging.CRITICAL)
-    logging.getLogger('shiboken6').setLevel(logging.CRITICAL)
+    logging.getLogger("Qt").setLevel(logging.CRITICAL)
+    logging.getLogger("PySide6").setLevel(logging.CRITICAL)
+    logging.getLogger("shiboken6").setLevel(logging.CRITICAL)
 
 
 def pytest_collection_modifyitems(config, items):
@@ -1068,7 +1134,7 @@ def pytest_collection_modifyitems(config, items):
         elif "performance" in str(item.fspath):
             item.add_marker(pytest.mark.performance)
             item.add_marker(pytest.mark.slow)
-        
+
         # Skip UI tests if PySide6 not available
         if not PYSIDE6_AVAILABLE and "ui" in str(item.fspath):
             item.add_marker(pytest.mark.skip(reason="PySide6 not available"))
@@ -1085,6 +1151,7 @@ def pytest_runtest_setup(item):
 # ENHANCED FIXTURES FOR FOUNDATION TESTS (Added for Option A)
 # ============================================================================
 
+
 @pytest.fixture
 def export_temp_dir(temp_dir) -> Path:
     """Temporary directory specifically for export testing."""
@@ -1093,29 +1160,29 @@ def export_temp_dir(temp_dir) -> Path:
     return export_dir
 
 
-@pytest.fixture  
+@pytest.fixture
 def keyboard_test_helper(qapp):
     """Helper for simulating keyboard events in tests."""
     if not PYSIDE6_AVAILABLE:
         return MagicMock()
-    
-    from PySide6.QtGui import QKeyEvent
+
     from PySide6.QtCore import Qt
-    
+    from PySide6.QtGui import QKeyEvent
+
     class KeyboardTestHelper:
         def __init__(self, app):
             self.app = app
-        
+
         def create_key_event(self, key, modifiers=Qt.NoModifier):
             """Create a QKeyEvent for testing."""
             return QKeyEvent(QKeyEvent.KeyPress, key, modifiers)
-        
+
         def simulate_key_press(self, widget, key, modifiers=Qt.NoModifier):
             """Simulate a key press on a widget."""
             event = self.create_key_event(key, modifiers)
             widget.keyPressEvent(event)
             self.app.processEvents()
-        
+
         def simulate_shortcut(self, widget, key_sequence):
             """Simulate a keyboard shortcut (e.g., 'Ctrl+O')."""
             # Parse common shortcut formats
@@ -1139,11 +1206,11 @@ def keyboard_test_helper(qapp):
                     "Left": Qt.Key_Left,
                     "Right": Qt.Key_Right,
                     "Home": Qt.Key_Home,
-                    "End": Qt.Key_End
+                    "End": Qt.Key_End,
                 }
                 if key_sequence in key_map:
                     self.simulate_key_press(widget, key_map[key_sequence])
-    
+
     return KeyboardTestHelper(qapp)
 
 
@@ -1152,30 +1219,30 @@ def menu_test_helper(qapp):
     """Helper for testing menu actions and structure."""
     if not PYSIDE6_AVAILABLE:
         return MagicMock()
-    
+
     class MenuTestHelper:
         def __init__(self, app):
             self.app = app
-        
+
         def find_menu(self, menubar, menu_name):
             """Find a menu by name in a menubar."""
             for action in menubar.actions():
                 if action.text() == menu_name:
                     return action.menu()
             return None
-        
+
         def find_action(self, menu, action_text):
             """Find an action by text in a menu."""
             for action in menu.actions():
                 if action_text in action.text():
                     return action
             return None
-        
+
         def trigger_action(self, action):
             """Trigger a menu action and process events."""
             action.trigger()
             self.app.processEvents()
-        
+
         def get_menu_structure(self, menubar):
             """Get the complete menu structure for testing."""
             structure = {}
@@ -1185,15 +1252,19 @@ def menu_test_helper(qapp):
                     actions = []
                     for action in menu.actions():
                         if not action.isSeparator():
-                            actions.append({
-                                'text': action.text(),
-                                'shortcut': action.shortcut().toString() if hasattr(action, 'shortcut') else '',
-                                'checkable': action.isCheckable(),
-                                'has_submenu': action.menu() is not None
-                            })
+                            actions.append(
+                                {
+                                    "text": action.text(),
+                                    "shortcut": action.shortcut().toString()
+                                    if hasattr(action, "shortcut")
+                                    else "",
+                                    "checkable": action.isCheckable(),
+                                    "has_submenu": action.menu() is not None,
+                                }
+                            )
                     structure[menu_action.text()] = actions
             return structure
-    
+
     return MenuTestHelper(qapp)
 
 
@@ -1202,24 +1273,24 @@ def settings_test_helper(temp_dir):
     """Helper for testing settings persistence."""
     if not PYSIDE6_AVAILABLE:
         return MagicMock()
-    
+
     from PySide6.QtCore import QSettings
-    
+
     class SettingsTestHelper:
         def __init__(self, temp_dir):
             self.temp_dir = temp_dir
             self.settings_file = temp_dir / "test_settings.ini"
-        
+
         def create_test_settings(self):
             """Create a QSettings instance for testing."""
             # Use INI format for easier testing
             return QSettings(str(self.settings_file), QSettings.IniFormat)
-        
+
         def clear_settings(self):
             """Clear all test settings."""
             if self.settings_file.exists():
                 self.settings_file.unlink()
-        
+
         def get_all_settings(self):
             """Get all settings as a dictionary."""
             settings = self.create_test_settings()
@@ -1227,7 +1298,7 @@ def settings_test_helper(temp_dir):
             for key in settings.allKeys():
                 result[key] = settings.value(key)
             return result
-    
+
     return SettingsTestHelper(temp_dir)
 
 
@@ -1236,36 +1307,38 @@ def signal_test_helper():
     """Helper for testing Qt signals and slots."""
     if not PYSIDE6_AVAILABLE:
         return MagicMock()
-    
-    from PySide6.QtTest import QSignalSpy
+
     from PySide6.QtCore import QObject, Signal
-    
+    from PySide6.QtTest import QSignalSpy
+
     class SignalTestHelper:
         def __init__(self):
             self.spies = []
-        
+
         def create_spy(self, signal):
             """Create a QSignalSpy for testing signal emissions."""
             spy = QSignalSpy(signal)
             self.spies.append(spy)
             return spy
-        
+
         def wait_for_signal(self, spy, timeout=1000):
             """Wait for a signal to be emitted."""
             return spy.wait(timeout)
-        
+
         def assert_signal_emitted(self, spy, expected_count=1):
             """Assert that a signal was emitted the expected number of times."""
-            assert spy.count() == expected_count, f"Expected {expected_count} emissions, got {spy.count()}"
+            assert spy.count() == expected_count, (
+                f"Expected {expected_count} emissions, got {spy.count()}"
+            )
 
         def assert_signal_not_emitted(self, spy):
             """Assert that a signal was not emitted."""
             assert spy.count() == 0, f"Expected no emissions, got {spy.count()}"
-        
+
         def cleanup(self):
             """Cleanup signal spies."""
             self.spies.clear()
-    
+
     helper = SignalTestHelper()
     yield helper
     helper.cleanup()
@@ -1274,31 +1347,28 @@ def signal_test_helper():
 @pytest.fixture
 def mock_file_operations():
     """Mock file operations for testing without affecting real filesystem."""
+
     class MockFileOperations:
         def __init__(self):
             self.mock_files = {}
             self.operations_log = []
-        
+
         def add_mock_file(self, path, content=None):
             """Add a mock file that can be 'opened' during tests."""
             self.mock_files[str(path)] = content
-        
+
         def log_operation(self, operation, path, **kwargs):
             """Log file operations for verification."""
-            self.operations_log.append({
-                'operation': operation,
-                'path': str(path),
-                **kwargs
-            })
-        
+            self.operations_log.append({"operation": operation, "path": str(path), **kwargs})
+
         def get_operations(self, operation_type=None):
             """Get logged operations, optionally filtered by type."""
             if operation_type:
-                return [op for op in self.operations_log if op['operation'] == operation_type]
+                return [op for op in self.operations_log if op["operation"] == operation_type]
             return self.operations_log.copy()
-        
+
         def clear_log(self):
             """Clear the operations log."""
             self.operations_log.clear()
-    
+
     return MockFileOperations()

@@ -3,57 +3,55 @@ Error scenario tests for Python Sprite Viewer.
 Tests application behavior under various error conditions.
 """
 
-import pytest
-import tempfile
 import os
 from pathlib import Path
-from unittest.mock import Mock, MagicMock, patch, mock_open
+from unittest.mock import MagicMock, Mock, patch
+
+import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
-from PySide6.QtWidgets import QMessageBox
 
-from sprite_viewer import SpriteViewer
-from sprite_model import SpriteModel
-from sprite_model.extraction_mode import ExtractionMode
 from export import ExportDialog, get_frame_exporter
 from managers import AnimationSegmentManager
+from sprite_model import SpriteModel
+from sprite_model.extraction_mode import ExtractionMode
 
 
 @pytest.mark.integration
 class TestFileOperationErrors:
     """Test error handling for file operations."""
-    
+
     def test_load_nonexistent_file(self):
         """Test loading a file that doesn't exist."""
         model = SpriteModel()
-        
+
         result = model.load_sprite_sheet("/nonexistent/path/sprite.png")
-        
+
         # Handle both return types: bool or (bool, message) tuple
         if isinstance(result, tuple):
             success, message = result
             assert success is False, "Loading nonexistent file should fail"
         else:
             assert result is False, "Loading nonexistent file should fail"
-        
+
         # Model should remain in valid state
         assert model.sprite_frames == []
         assert model.current_frame == 0
 
-    @patch('pathlib.Path.open', side_effect=PermissionError("Access denied"))
+    @patch("pathlib.Path.open", side_effect=PermissionError("Access denied"))
     def test_load_permission_denied(self, mock_open):
         """Test loading a file without read permissions."""
         model = SpriteModel()
-        
+
         result = model.load_sprite_sheet("/restricted/file.png")
-        
+
         # Handle both return types: bool or (bool, message) tuple
         if isinstance(result, tuple):
             success, message = result
             assert success is False, "Loading restricted file should fail gracefully"
         else:
             assert result is False, "Loading restricted file should fail gracefully"
-    
+
     def test_save_to_readonly_directory(self, qapp, tmp_path):
         """Test exporting to a read-only directory."""
         # Create read-only directory
@@ -79,7 +77,7 @@ class TestFileOperationErrors:
                 output_dir=str(readonly_dir / "subdir"),  # Creating subdir should fail
                 base_name="test",
                 format="PNG",
-                mode="individual"
+                mode="individual",
             )
 
             # Export should fail or error should be emitted
@@ -104,7 +102,7 @@ class TestFileOperationErrors:
             output_dir=str(tmp_path),
             base_name="test",
             format="PNG",
-            mode="individual"
+            mode="individual",
         )
 
         assert result is False, "Export should fail with empty frames"
@@ -114,43 +112,42 @@ class TestFileOperationErrors:
 @pytest.mark.integration
 class TestInvalidDataHandling:
     """Test handling of invalid data inputs."""
-    
+
     def test_sprite_model_invalid_frame_dimensions(self, qapp):
         """Test sprite extraction with invalid dimensions."""
         model = SpriteModel()
-        
+
         # Create a valid pixmap
         test_pixmap = QPixmap(100, 100)
         test_pixmap.fill()  # Fill with default color
-        
+
         # Use proper loading method to set internal state
         model._original_sprite_sheet = test_pixmap
         model._sprite_sheet = test_pixmap
-        
+
         # Try to extract with invalid dimensions
         invalid_cases = [
-            (0, 50),      # Zero width
-            (50, 0),      # Zero height
-            (-50, 50),    # Negative width
-            (50, -50),    # Negative height
-            (200, 50),    # Width larger than sprite sheet
-            (50, 200),    # Height larger than sprite sheet
+            (0, 50),  # Zero width
+            (50, 0),  # Zero height
+            (-50, 50),  # Negative width
+            (50, -50),  # Negative height
+            (200, 50),  # Width larger than sprite sheet
+            (50, 200),  # Height larger than sprite sheet
         ]
-        
+
         for width, height in invalid_cases:
-            result = model.extract_frames(
-                width=width,
-                height=height,
-                offset_x=0,
-                offset_y=0
-            )
-            
+            result = model.extract_frames(width=width, height=height, offset_x=0, offset_y=0)
+
             # extract_frames returns (success, message, frame_count)
             success, message, frame_count = result
-            assert success is False, f"Should fail with dimensions ({width}, {height}). Got: {message}"
-            assert frame_count == 0, f"Frame count should be 0 for failed extraction, got {frame_count}"
+            assert success is False, (
+                f"Should fail with dimensions ({width}, {height}). Got: {message}"
+            )
+            assert frame_count == 0, (
+                f"Frame count should be 0 for failed extraction, got {frame_count}"
+            )
             assert model.sprite_frames == [], "Frames should be empty after failed extraction"
-    
+
     def test_animation_controller_invalid_fps(self):
         """Test animation controller with invalid FPS values."""
         from core import AnimationController
@@ -167,60 +164,64 @@ class TestInvalidDataHandling:
             sprite_model=mock_model,
             sprite_viewer=Mock(),
         )
-        
+
         # Set initial valid FPS
         controller._current_fps = 30
-        
+
         # Test invalid FPS values
-        invalid_fps_values = [0, -10, None, "string", float('inf'), float('nan')]
-        
+        invalid_fps_values = [0, -10, None, "string", float("inf"), float("nan")]
+
         for fps in invalid_fps_values:
             previous_fps = controller._current_fps
-            
+
             # All invalid values should now return False (no exceptions)
             result = controller.set_fps(fps)
             assert result is False, f"set_fps should return False for invalid value: {fps}"
-            
+
             # Controller should maintain previous valid FPS value
-            assert controller._current_fps == previous_fps, f"FPS should remain {previous_fps} after invalid input: {fps}"
+            assert controller._current_fps == previous_fps, (
+                f"FPS should remain {previous_fps} after invalid input: {fps}"
+            )
             assert controller._current_fps > 0, "FPS should remain positive"
-        
+
         # Test that valid floats are converted to int
         result = controller.set_fps(24.7)
         assert result is True, "Valid float should be accepted"
         assert controller._current_fps == 24, "Float should be converted to int"
-    
+
     def test_segment_manager_invalid_segments(self):
         """Test segment manager with invalid segment data."""
         manager = AnimationSegmentManager()
         manager.set_auto_save_enabled(False)  # Disable auto-save for testing
         manager.set_sprite_context("test.png", 20)  # Set sprite context
-        
+
         # Test invalid segment parameters using the API
         invalid_segments = [
-            ("", 0, 10),           # Empty name
-            ("Test1", 10, 5),      # End before start
-            ("Test2", -5, 10),     # Negative start
-            ("Test3", 0, -10),     # Negative end
-            ("Test4", 25, 30),     # Beyond sprite bounds
+            ("", 0, 10),  # Empty name
+            ("Test1", 10, 5),  # End before start
+            ("Test2", -5, 10),  # Negative start
+            ("Test3", 0, -10),  # Negative end
+            ("Test4", 25, 30),  # Beyond sprite bounds
         ]
-        
+
         for name, start, end in invalid_segments:
             # Manager should reject invalid segments
             success, message = manager.add_segment(name, start, end)
-            
+
             if name == "":
-                assert not success, f"Should reject empty name"
+                assert not success, "Should reject empty name"
                 assert "name" in message.lower()
             elif end < start:
-                assert not success, f"Should reject end before start"
+                assert not success, "Should reject end before start"
             elif start < 0 or end < 0:
-                assert not success, f"Should reject negative frames"
+                assert not success, "Should reject negative frames"
             elif start >= 20 or end >= 20:
-                assert not success, f"Should reject frames beyond sprite bounds"
-                
+                assert not success, "Should reject frames beyond sprite bounds"
+
             # Verify segment was not added
-            assert manager.get_segment(name) is None, f"Invalid segment '{name}' should not be added"
+            assert manager.get_segment(name) is None, (
+                f"Invalid segment '{name}' should not be added"
+            )
 
 
 @pytest.mark.integration
@@ -229,26 +230,18 @@ class TestUIErrorHandling:
 
     def test_export_dialog_handles_invalid_settings(self, qapp):
         """Test export dialog with invalid settings."""
-        dialog = ExportDialog(
-            parent=None,
-            frame_count=5,
-            current_frame=0
-        )
-        
+        dialog = ExportDialog(parent=None, frame_count=5, current_frame=0)
+
         # Test with invalid settings
-        invalid_settings = {
-            'format': 'INVALID_FORMAT',
-            'scale': -1.0,
-            'output_dir': None
-        }
-        
+        invalid_settings = {"format": "INVALID_FORMAT", "scale": -1.0, "output_dir": None}
+
         # Should handle gracefully (not crash)
-        if hasattr(dialog, 'exportRequested'):
+        if hasattr(dialog, "exportRequested"):
             dialog.exportRequested.emit(invalid_settings)
-    
+
     def test_ui_components_handle_null_data(self, qapp):
         """Test UI components handle null/empty data gracefully."""
-        from ui import SpriteCanvas, PlaybackControls, FrameExtractor
+        from ui import FrameExtractor, PlaybackControls, SpriteCanvas
 
         # Create components with no data
         canvas = SpriteCanvas()
@@ -274,8 +267,9 @@ class TestExportFailureRecovery:
 
     def test_export_failure_cleanup(self, tmp_path):
         """Verify cleanup when export fails mid-operation."""
-        from export.core.frame_exporter import ExportWorker, ExportTask, ExportMode, ExportFormat
         from unittest.mock import MagicMock
+
+        from export.core.frame_exporter import ExportFormat, ExportMode, ExportTask, ExportWorker
 
         # Create mock frames
         frames = []
@@ -284,7 +278,7 @@ class TestExportFailureRecovery:
             frame.width.return_value = 64
             frame.height.return_value = 64
             # First frame succeeds, rest fail
-            frame.save.return_value = (i == 0)
+            frame.save.return_value = i == 0
             frames.append(frame)
 
         task = ExportTask(
@@ -292,7 +286,7 @@ class TestExportFailureRecovery:
             output_dir=tmp_path,
             base_name="test",
             format=ExportFormat.PNG,
-            mode=ExportMode.INDIVIDUAL_FRAMES
+            mode=ExportMode.INDIVIDUAL_FRAMES,
         )
 
         worker = ExportWorker(task)
@@ -322,14 +316,12 @@ class TestExportFailureRecovery:
         output_dir.mkdir()
 
         # Start export with mocked worker
-        with patch('export.core.frame_exporter.ExportWorker') as mock_worker_class:
+        with patch("export.core.frame_exporter.ExportWorker") as mock_worker_class:
             mock_worker = MagicMock()
             mock_worker_class.return_value = mock_worker
 
             success = exporter.export_frames(
-                frames=test_frames,
-                output_dir=str(output_dir),
-                base_name="test"
+                frames=test_frames, output_dir=str(output_dir), base_name="test"
             )
 
             # Should succeed in starting (directory exists at start time)
@@ -401,7 +393,7 @@ class TestRecoveryScenarios:
         frames = [Mock(), Mock(), Mock()]
         model.sprite_frames = frames
         # Configure the mock to return proper boolean for empty check
-        model.configure_mock(**{'sprite_frames': frames})
+        model.configure_mock(**{"sprite_frames": frames})
 
         # Add required model properties
         model.fps = 30
@@ -414,32 +406,32 @@ class TestRecoveryScenarios:
             sprite_model=model,
             sprite_viewer=Mock(),
         )
-        
+
         # Start with working state
         model.next_frame.return_value = (1, True)
         success = controller.start_animation()
         assert success, "Initial animation start should succeed"
         assert controller._is_playing is True
-        
+
         # Now simulate error during animation update
         model.next_frame.side_effect = RuntimeError("Test error")
-        
+
         # The error during timer callback shouldn't crash the controller
         # Timer will handle the error internally
-        
+
         # Stop animation cleanly
         controller.stop_animation()
         assert controller._is_playing is False
-        
+
         # Fix the mock - remove the error
         model.next_frame.side_effect = None
         model.next_frame.return_value = (1, True)
-        
+
         # Should be able to restart animation
         success = controller.start_animation()
         assert success, "Animation restart should succeed after recovery"
         assert controller._is_playing is True
-        
+
         # Clean up
         controller.stop_animation()
 
@@ -447,30 +439,31 @@ class TestRecoveryScenarios:
 @pytest.mark.integration
 class TestMemoryErrorHandling:
     """Test handling of memory-related errors."""
-    
+
     @pytest.mark.memory_intensive
     def test_large_sprite_sheet_handling(self, qapp):
         """Test handling very large sprite sheets."""
         model = SpriteModel()
-        
+
         # Try to create unreasonably large pixmap
         # Most systems will fail to allocate this
         try:
             huge_pixmap = QPixmap(50000, 50000)
             # If it somehow succeeds, verify model handles it
             model._sprite_sheet = huge_pixmap
-            
+
             # Extraction should handle gracefully
             result = model.extract_frames(1000, 1000, 0, 0)
             # Should either work or fail gracefully
         except (MemoryError, RuntimeError):
             # Expected - system can't allocate such large image
             pass
-    
+
+
 # Test utilities for error injection
 class ErrorInjector:
     """Utility class for injecting errors in tests."""
-    
+
     @staticmethod
     def make_file_unreadable(filepath):
         """Make a file unreadable (platform-specific)."""
@@ -479,7 +472,7 @@ class ErrorInjector:
         except Exception:
             # May not work on all platforms
             pass
-    
+
     @staticmethod
     def restore_file_permissions(filepath):
         """Restore file permissions."""
@@ -487,18 +480,18 @@ class ErrorInjector:
             os.chmod(filepath, 0o644)
         except Exception:
             pass
-    
+
     @staticmethod
-    def create_corrupt_image(filepath, corruption_type='invalid_header'):
+    def create_corrupt_image(filepath, corruption_type="invalid_header"):
         """Create various types of corrupt image files."""
         corruptions = {
-            'invalid_header': b'NOTAPNG\x00\x00\x00',
-            'truncated': b'\x89PNG\r\n\x1a\n',  # Valid header but nothing else
-            'random': os.urandom(1024),  # Random bytes
-            'empty': b'',  # Empty file
+            "invalid_header": b"NOTAPNG\x00\x00\x00",
+            "truncated": b"\x89PNG\r\n\x1a\n",  # Valid header but nothing else
+            "random": os.urandom(1024),  # Random bytes
+            "empty": b"",  # Empty file
         }
-        
-        Path(filepath).write_bytes(corruptions.get(corruption_type, corruptions['random']))
+
+        Path(filepath).write_bytes(corruptions.get(corruption_type, corruptions["random"]))
 
 
 if __name__ == "__main__":

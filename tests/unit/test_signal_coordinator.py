@@ -247,7 +247,7 @@ class TestSignalCoordinatorConstruction:
         mock_playback_controls,
         mock_frame_extractor,
         mock_status_manager,
-            mock_actions,
+        mock_actions,
         mock_handlers,
     ):
         """Coordinator can be constructed with grid_view=None."""
@@ -263,7 +263,7 @@ class TestSignalCoordinatorConstruction:
             frame_extractor=mock_frame_extractor,
             grid_view=None,
             status_manager=mock_status_manager,
-                actions=mock_actions,
+            actions=mock_actions,
             on_frame_changed=mock_handlers["on_frame_changed"],
             on_sprite_loaded=mock_handlers["on_sprite_loaded"],
             on_extraction_completed=mock_handlers["on_extraction_completed"],
@@ -294,7 +294,7 @@ class TestSignalCoordinatorConstruction:
         mock_playback_controls,
         mock_frame_extractor,
         mock_grid_view,
-            mock_actions,
+        mock_actions,
         mock_handlers,
     ):
         """Coordinator can be constructed with status_manager=None."""
@@ -310,7 +310,7 @@ class TestSignalCoordinatorConstruction:
             frame_extractor=mock_frame_extractor,
             grid_view=mock_grid_view,
             status_manager=None,
-                actions=mock_actions,
+            actions=mock_actions,
             on_frame_changed=mock_handlers["on_frame_changed"],
             on_sprite_loaded=mock_handlers["on_sprite_loaded"],
             on_extraction_completed=mock_handlers["on_extraction_completed"],
@@ -373,14 +373,18 @@ class TestDisconnectAll:
 class TestModelSignalConnections:
     """Test SpriteModel signal connections."""
 
-    def test_model_frame_changed_connected(self, signal_coordinator, mock_sprite_model, mock_handlers):
+    def test_model_frame_changed_connected(
+        self, signal_coordinator, mock_sprite_model, mock_handlers
+    ):
         """SpriteModel.frameChanged is connected to handler."""
         signal_coordinator.connect_all()
         mock_sprite_model.frameChanged.connect.assert_called_once_with(
             mock_handlers["on_frame_changed"]
         )
 
-    def test_model_data_loaded_connected(self, signal_coordinator, mock_sprite_model, mock_handlers):
+    def test_model_data_loaded_connected(
+        self, signal_coordinator, mock_sprite_model, mock_handlers
+    ):
         """SpriteModel.dataLoaded is connected to handler."""
         signal_coordinator.connect_all()
         mock_sprite_model.dataLoaded.connect.assert_called_once_with(
@@ -622,7 +626,7 @@ class TestGridViewSignalConnections:
         mock_playback_controls,
         mock_frame_extractor,
         mock_status_manager,
-            mock_actions,
+        mock_actions,
         mock_handlers,
     ):
         """Grid view connections are skipped when grid_view=None."""
@@ -638,7 +642,7 @@ class TestGridViewSignalConnections:
             frame_extractor=mock_frame_extractor,
             grid_view=None,
             status_manager=mock_status_manager,
-                actions=mock_actions,
+            actions=mock_actions,
             on_frame_changed=mock_handlers["on_frame_changed"],
             on_sprite_loaded=mock_handlers["on_sprite_loaded"],
             on_extraction_completed=mock_handlers["on_extraction_completed"],
@@ -740,9 +744,7 @@ class TestActionCallbackConnections:
             mock_handlers["on_export_current_frame_requested"]
         )
 
-    def test_toolbar_export_action_connected(
-        self, signal_coordinator, mock_actions, mock_handlers
-    ):
+    def test_toolbar_export_action_connected(self, signal_coordinator, mock_actions, mock_handlers):
         """toolbar_export action is connected."""
         signal_coordinator.connect_all()
         mock_actions["toolbar_export"].triggered.connect.assert_called_once_with(
@@ -822,7 +824,7 @@ class TestOptionalComponents:
         mock_playback_controls,
         mock_frame_extractor,
         mock_grid_view,
-            mock_actions,
+        mock_actions,
         mock_handlers,
     ):
         """When status_manager is None, status-related connections are skipped."""
@@ -838,7 +840,7 @@ class TestOptionalComponents:
             frame_extractor=mock_frame_extractor,
             grid_view=mock_grid_view,
             status_manager=None,
-                actions=mock_actions,
+            actions=mock_actions,
             on_frame_changed=mock_handlers["on_frame_changed"],
             on_sprite_loaded=mock_handlers["on_sprite_loaded"],
             on_extraction_completed=mock_handlers["on_extraction_completed"],

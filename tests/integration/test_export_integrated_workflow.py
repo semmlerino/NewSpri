@@ -31,28 +31,20 @@ class TestIntegratedExportWorkflow:
     @pytest.fixture
     def export_dialog(self, test_sprites):
         """Create export dialog with test data."""
-        dialog = ExportDialog(
-            frame_count=len(test_sprites),
-            current_frame=3,
-            sprites=test_sprites
-        )
+        dialog = ExportDialog(frame_count=len(test_sprites), current_frame=3, sprites=test_sprites)
         return dialog
 
     def _wait_for_step(self, qtbot, dialog, expected_step_index, timeout=1000):
         """Wait for wizard to reach expected step."""
         qtbot.waitUntil(
-            lambda: dialog.wizard.current_step_index == expected_step_index,
-            timeout=timeout
+            lambda: dialog.wizard.current_step_index == expected_step_index, timeout=timeout
         )
 
     def _wait_for_preview_update(self, qtbot, settings_step, timeout=500):
         """Wait for preview debounce timer to complete."""
         # Wait for any pending updates to process
-        if hasattr(settings_step, '_preview_timer') and settings_step._preview_timer.isActive():
-            qtbot.waitUntil(
-                lambda: not settings_step._preview_timer.isActive(),
-                timeout=timeout
-            )
+        if hasattr(settings_step, "_preview_timer") and settings_step._preview_timer.isActive():
+            qtbot.waitUntil(lambda: not settings_step._preview_timer.isActive(), timeout=timeout)
         QApplication.processEvents()
 
     @pytest.mark.integration
@@ -88,8 +80,8 @@ class TestIntegratedExportWorkflow:
         # Check settings were created for sprite sheet (using current API)
         settings_step = export_dialog.settings_preview_step
         # Current API uses layout_mode (QButtonGroup) and spacing (QSlider)
-        assert 'layout_mode' in settings_step._settings_widgets
-        assert 'spacing' in settings_step._settings_widgets
+        assert "layout_mode" in settings_step._settings_widgets
+        assert "spacing" in settings_step._settings_widgets
 
     @pytest.mark.integration
     def test_live_preview_updates(self, qtbot, export_dialog):
@@ -118,7 +110,7 @@ class TestIntegratedExportWorkflow:
         initial_count = update_count[0]
 
         # Change spacing - triggers setting change
-        settings_step._settings_widgets['spacing'].setValue(4)
+        settings_step._settings_widgets["spacing"].setValue(4)
 
         # Wait for debounced update
         self._wait_for_preview_update(qtbot, settings_step)
@@ -126,7 +118,7 @@ class TestIntegratedExportWorkflow:
 
         # Preview should have updated (or already was up-to-date)
         # The _update_preview may be called during initialization, so check it's callable
-        assert hasattr(settings_step, '_update_preview')
+        assert hasattr(settings_step, "_update_preview")
 
     @pytest.mark.integration
     def test_export_button_triggers_wizard_finish(self, qtbot, export_dialog):
@@ -167,8 +159,8 @@ class TestIntegratedExportWorkflow:
 
         # Configure settings using current API
         settings_step.path_edit.setText("/tmp/export")
-        if 'base_name' in settings_step._settings_widgets:
-            settings_step._settings_widgets['base_name'].setText("sprite")
+        if "base_name" in settings_step._settings_widgets:
+            settings_step._settings_widgets["base_name"].setText("sprite")
         settings_step.format_combo.setCurrentText("PNG")
         # Scale uses button group - click 2x button
         scale_btn = settings_step.scale_group.button(2)
@@ -180,9 +172,9 @@ class TestIntegratedExportWorkflow:
 
         # Check data collection
         data = settings_step.get_data()
-        assert data['output_dir'] == "/tmp/export"
-        assert data['format'] == "PNG"
-        assert data['scale'] == 2
+        assert data["output_dir"] == "/tmp/export"
+        assert data["format"] == "PNG"
+        assert data["scale"] == 2
 
     @pytest.mark.integration
     def test_sprite_sheet_workflow(self, qtbot, export_dialog):
@@ -198,12 +190,12 @@ class TestIntegratedExportWorkflow:
 
         # Configure settings using current API
         settings_step.path_edit.setText("/tmp/sheets")
-        if 'sheet_filename' in settings_step._settings_widgets:
-            settings_step._settings_widgets['sheet_filename'].setText("atlas")
-        settings_step._settings_widgets['spacing'].setValue(2)
+        if "sheet_filename" in settings_step._settings_widgets:
+            settings_step._settings_widgets["sheet_filename"].setText("atlas")
+        settings_step._settings_widgets["spacing"].setValue(2)
 
         # Change layout mode (button index 1 = columns)
-        layout_mode = settings_step._settings_widgets['layout_mode']
+        layout_mode = settings_step._settings_widgets["layout_mode"]
         columns_btn = layout_mode.button(1)
         if columns_btn:
             columns_btn.click()
@@ -213,10 +205,10 @@ class TestIntegratedExportWorkflow:
 
         # Verify data
         data = settings_step.get_data()
-        assert data['output_dir'] == "/tmp/sheets"
-        assert data['single_filename'] == "atlas"
-        assert data['spacing'] == 2
-        assert data['layout_mode'] == "columns"
+        assert data["output_dir"] == "/tmp/sheets"
+        assert data["single_filename"] == "atlas"
+        assert data["spacing"] == 2
+        assert data["layout_mode"] == "columns"
 
     @pytest.mark.integration
     def test_selected_frames_workflow(self, qtbot, export_dialog):
@@ -231,7 +223,7 @@ class TestIntegratedExportWorkflow:
         settings_step = export_dialog.settings_preview_step
 
         # Select specific frames using frame_list attribute directly
-        if hasattr(settings_step, 'frame_list'):
+        if hasattr(settings_step, "frame_list"):
             frame_list = settings_step.frame_list
             frame_list.clearSelection()
             if frame_list.count() >= 8:
@@ -245,8 +237,8 @@ class TestIntegratedExportWorkflow:
 
         # Verify data
         data = settings_step.get_data()
-        if 'selected_indices' in data:
-            assert sorted(data['selected_indices']) == [1, 3, 5, 7]
+        if "selected_indices" in data:
+            assert sorted(data["selected_indices"]) == [1, 3, 5, 7]
 
     @pytest.mark.integration
     def test_format_change_updates_settings(self, qtbot, export_dialog):
@@ -266,7 +258,7 @@ class TestIntegratedExportWorkflow:
 
         # Check format was updated
         data = settings_step.get_data()
-        assert data['format'] == "JPG"
+        assert data["format"] == "JPG"
 
     @pytest.mark.integration
     def test_preview_zoom_controls(self, qtbot, export_dialog):
@@ -284,12 +276,12 @@ class TestIntegratedExportWorkflow:
         self._wait_for_preview_update(qtbot, settings_step)
 
         # Verify preview_view exists
-        assert hasattr(settings_step, 'preview_view')
+        assert hasattr(settings_step, "preview_view")
 
         # Test zoom methods if they exist (smoke test - just ensure no crashes)
-        if hasattr(settings_step.preview_view, 'fit_to_view'):
+        if hasattr(settings_step.preview_view, "fit_to_view"):
             settings_step.preview_view.fit_to_view()
-        if hasattr(settings_step.preview_view, 'reset_zoom'):
+        if hasattr(settings_step.preview_view, "reset_zoom"):
             settings_step.preview_view.reset_zoom()
 
     @pytest.mark.integration
@@ -337,7 +329,7 @@ class TestIntegratedExportWorkflow:
         settings_step = export_dialog.settings_preview_step
 
         # Verify summary_label exists (current API)
-        assert hasattr(settings_step, 'summary_label')
+        assert hasattr(settings_step, "summary_label")
 
         # Set directory and trigger summary update
         settings_step.path_edit.setText("/home/user/exports")
@@ -363,6 +355,6 @@ class TestIntegratedExportWorkflow:
 
         # Verify we can get data (this is what the wizard needs to complete)
         data = export_dialog.settings_preview_step.get_data()
-        assert 'output_dir' in data
-        assert 'format' in data
-        assert data['output_dir'] == "/tmp"
+        assert "output_dir" in data
+        assert "format" in data
+        assert data["output_dir"] == "/tmp"
