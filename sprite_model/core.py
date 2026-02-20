@@ -1,8 +1,10 @@
 """
-Integrated SpriteModel using refactored modules.
-Maintains complete API compatibility with original implementation.
-Part of Legacy Integration Phase 1: Create integrated SpriteModel structure.
+Central data model for sprite sheet operations.
+Delegates file loading to FileLoader, animation state to AnimationStateManager,
+and CCL extraction to CCLOperations.
 """
+
+import os
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QPixmap
@@ -166,7 +168,7 @@ class SpriteModel(QObject):
         self._spacing_x = spacing_x
         self._spacing_y = spacing_y
 
-        # Validate settings first
+        # Settings are stored first so _re_extract_frames_tuple can use them; validation follows
         valid, msg = self.validate_frame_settings(
             width, height, offset_x, offset_y, spacing_x, spacing_y
         )
@@ -225,6 +227,8 @@ class SpriteModel(QObject):
 
         This method is for setting parameters only, without triggering extraction.
         For extraction, use extract_frames() after setting parameters.
+
+        Note: Does NOT emit configurationChanged. Callers handle signaling themselves.
         """
         # Validate inputs
         if width <= 0 or height <= 0:
@@ -573,16 +577,9 @@ class SpriteModel(QObject):
     @property
     def file_name(self) -> str:
         """Get file name of loaded sprite sheet."""
-        import os
-
         return os.path.basename(self._file_path) if self._file_path else ""
 
     # Helper Methods
-    def _re_extract_frames(self) -> None:
-        """Re-extract frames using current settings."""
-        if self._frame_width > 0 and self._frame_height > 0:
-            self._re_extract_frames_tuple()
-
     def _re_extract_frames_tuple(self) -> tuple[bool, str, int]:
         """Re-extract frames using current settings, returning the extraction result."""
         return self.extract_frames(

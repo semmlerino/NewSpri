@@ -1,7 +1,6 @@
 """
-Frame Exporter - Export functionality for sprite frames
-Handles exporting individual frames, sprite sheets, and animations.
-Part of Phase 4: Frame Export System implementation.
+Frame export engine for sprite frames.
+Supports individual frame export, sprite sheet composition, and GIF output.
 """
 
 from __future__ import annotations
@@ -251,11 +250,6 @@ class ExportTask:
         if scale_factor <= 0:
             raise ValueError("Scale factor must be positive")
 
-        # Additional validation for sprite sheet mode
-        if mode == ExportMode.SPRITE_SHEET and sprite_sheet_layout is None:
-            # Use default layout if none provided for sprite sheet mode
-            self.sprite_sheet_layout = SpriteSheetLayout()
-
 
 class ExportWorker(QThread):
     """Worker thread for export operations."""
@@ -360,10 +354,6 @@ class ExportWorker(QThread):
 
     def _export_sprite_sheet(self):
         """Export all frames as a single sprite sheet with enhanced layout options."""
-        if not self.task.frames:
-            self.finished.emit(False, "No frames to export")
-            return
-
         self.progress.emit(0, 3, "Calculating layout...")
 
         # Get layout configuration
@@ -417,7 +407,7 @@ class ExportWorker(QThread):
         # Draw frames onto sprite sheet with spacing
         if is_segments_mode:
             draw_ok = self._draw_sprites_segments_per_row(
-                sprite_sheet, cols, rows, frame_width, frame_height, layout
+                sprite_sheet, frame_width, frame_height, layout
             )
         else:
             draw_ok = self._draw_sprites_with_layout(
@@ -500,7 +490,6 @@ class ExportWorker(QThread):
         # Start with square root as base
         sqrt_frames = math.sqrt(frame_count)
         base_cols = math.ceil(sqrt_frames)
-        base_rows = math.ceil(frame_count / base_cols)
 
         # Consider different aspect ratios and choose the best one
         candidates = []
@@ -526,11 +515,8 @@ class ExportWorker(QThread):
                 candidates.append((combined_score, cols, rows))
 
         # Choose the best candidate
-        if candidates:
-            candidates.sort(key=lambda x: x[0], reverse=True)
-            return candidates[0][1], candidates[0][2]
-        else:
-            return base_cols, base_rows
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        return candidates[0][1], candidates[0][2]
 
     def _calculate_sheet_dimensions(
         self, cols: int, rows: int, frame_width: int, frame_height: int, layout: SpriteSheetLayout
@@ -691,8 +677,6 @@ class ExportWorker(QThread):
     def _draw_sprites_segments_per_row(
         self,
         sprite_sheet: QImage,
-        cols: int,
-        rows: int,
         frame_width: int,
         frame_height: int,
         layout: SpriteSheetLayout,
