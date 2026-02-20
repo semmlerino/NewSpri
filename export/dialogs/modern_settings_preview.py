@@ -357,23 +357,20 @@ class _IndividualSettingsPanel:
 
     def _on_base_name_changed(self, text: str):
         """Handle base name change - update pattern displays."""
-
         if not self._parent._pattern_radios:
             self._parent._on_setting_changed()
             return
 
         # Update pattern radio button displays
-        base_name = text if text else "frame"
+        base_name = text or "frame"
         try:
             for radio in self._parent._pattern_radios:
                 pattern = radio.property("pattern")
                 if pattern:
-                    new_display = self._parent._generate_pattern_display(pattern, base_name)
-                    radio.setText(new_display)
+                    radio.setText(self._parent._generate_pattern_display(pattern, base_name))
         except Exception as e:
             logger.warning("Error updating pattern displays: %s", e)
 
-        # Trigger regular setting change
         self._parent._on_setting_changed()
 
 
@@ -495,35 +492,14 @@ class _PreviewGenerator:
                 # If segments preview fails, fall back to regular sheet preview
                 logger.debug("Failed to generate segments preview: %s", e)
                 logger.debug("Falling back to regular sheet preview")
-                # Continue with regular sheet preview below
 
         # Get layout settings
         layout_mode = self._parent._get_layout_mode()
-        cols = rows = 8
+        sprite_count = len(self._parent._sprites)
+        cols, rows = self._calculate_grid(layout_mode, sprite_count)
 
-        if layout_mode == "columns":
-            cols = self._parent.cols_spin.value()
-            rows = math.ceil(len(self._parent._sprites) / cols)
-        elif layout_mode == "rows":
-            rows = self._parent.rows_spin.value()
-            cols = math.ceil(len(self._parent._sprites) / rows)
-        elif layout_mode == "square":
-            side = math.ceil(math.sqrt(len(self._parent._sprites)))
-            cols = rows = side
-        else:  # auto
-            cols = math.ceil(math.sqrt(len(self._parent._sprites)))
-            rows = math.ceil(len(self._parent._sprites) / cols)
-
-        # Get spacing
-        spacing_widget = self._parent._settings_widgets.get("spacing")
-        spacing = spacing_widget.value() if spacing_widget is not None else 0
-
-        # Calculate size
-        if self._parent._sprites:
-            fw = self._parent._sprites[0].width()
-            fh = self._parent._sprites[0].height()
-        else:
-            fw = fh = 32
+        spacing = self._get_spacing()
+        fw, fh = self._get_frame_dimensions()
 
         sheet_w = cols * fw + (cols - 1) * spacing
         sheet_h = rows * fh + (rows - 1) * spacing
@@ -547,7 +523,6 @@ class _PreviewGenerator:
 
         painter.end()
 
-        # Update info
         self._parent._update_preview_info(
             f"Sprite Sheet: {cols}x{rows} grid, {sheet_w}x{sheet_h}px"
         )
@@ -571,12 +546,8 @@ class _PreviewGenerator:
                 placeholder_text, "Segments Per Row: No segments defined"
             )
 
-        # Get all segments
-        segments = (
-            self._parent._segment_manager.get_all_segments()
-            if self._parent._segment_manager
-            else []
-        )
+        # _segment_manager is guaranteed non-None after the guard above
+        segments = self._parent._segment_manager.get_all_segments()
         logger.debug("Retrieved %d segments from manager", len(segments))
 
         for i, seg in enumerate(segments):
@@ -603,39 +574,26 @@ class _PreviewGenerator:
         cols = max_frames_in_segment
         logger.debug("Preview layout will be %d rows x %d cols", rows, cols)
 
-        # Get spacing
-        spacing_widget = self._parent._settings_widgets.get("spacing")
-        spacing = spacing_widget.value() if spacing_widget is not None else 0
-
-        # Calculate size
-        if self._parent._sprites:
-            fw = self._parent._sprites[0].width()
-            fh = self._parent._sprites[0].height()
-        else:
-            fw = fh = 32
+        spacing = self._get_spacing()
+        fw, fh = self._get_frame_dimensions()
 
         # Scale down for preview if too large
         max_preview_width = 800
         max_preview_height = 600
 
         # Calculate compact dimensions based on actual content
-        # Width: longest segment with spacing
         sheet_w = max_frames_in_segment * fw + (max_frames_in_segment - 1) * spacing
-        # Height: number of segments with spacing
         sheet_h = rows * fh + (rows - 1) * spacing
 
         # Scale if needed
-        scale = 1.0
-        if sheet_w > max_preview_width:
-            scale = max_preview_width / sheet_w
-        if sheet_h * scale > max_preview_height:
+        scale = min(1.0, max_preview_width / sheet_w if sheet_w > 0 else 1.0)
+        if sheet_h * scale > max_preview_height and sheet_h > 0:
             scale = max_preview_height / sheet_h
 
         if scale < 1.0:
             fw = int(fw * scale)
             fh = int(fh * scale)
             spacing = int(spacing * scale)
-            # Recalculate compact dimensions with scaled values
             sheet_w = max_frames_in_segment * fw + (max_frames_in_segment - 1) * spacing
             sheet_h = rows * fh + (rows - 1) * spacing
 
@@ -648,7 +606,6 @@ class _PreviewGenerator:
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         for row_idx, segment in enumerate(segments):
-            # Draw frames for this segment
             for frame_idx in range(segment.start_frame, segment.end_frame + 1):
                 if frame_idx < len(self._parent._sprites):
                     col_idx = frame_idx - segment.start_frame
@@ -775,6 +732,33 @@ class _PreviewGenerator:
 
         self._parent._update_preview_info(info)
         return pixmap
+
+    def _get_spacing(self) -> int:
+        """Return the current spacing value from the settings widgets."""
+        spacing_widget = self._parent._settings_widgets.get("spacing")
+        return spacing_widget.value() if spacing_widget is not None else 0
+
+    def _get_frame_dimensions(self) -> tuple[int, int]:
+        """Return (width, height) of the first sprite, or (32, 32) as fallback."""
+        if self._parent._sprites:
+            return self._parent._sprites[0].width(), self._parent._sprites[0].height()
+        return 32, 32
+
+    def _calculate_grid(self, layout_mode: str, sprite_count: int) -> tuple[int, int]:
+        """Calculate (cols, rows) for the given layout mode and sprite count."""
+        if layout_mode == "columns":
+            cols = self._parent.cols_spin.value()
+            rows = math.ceil(sprite_count / cols)
+        elif layout_mode == "rows":
+            rows = self._parent.rows_spin.value()
+            cols = math.ceil(sprite_count / rows)
+        elif layout_mode == "square":
+            side = math.ceil(math.sqrt(sprite_count))
+            cols = rows = side
+        else:  # auto
+            cols = math.ceil(math.sqrt(sprite_count))
+            rows = math.ceil(sprite_count / cols)
+        return cols, rows
 
 
 class ModernExportSettings(WizardStep):
@@ -1074,11 +1058,8 @@ class ModernExportSettings(WizardStep):
             self.mode_stack.removeWidget(self.mode_stack.widget(0))
 
         # Add appropriate settings widget
-        if preset.mode is ExportMode.SPRITE_SHEET:
-            logger.debug("Creating sheet settings widget")
-            settings = self._create_sheet_settings()
-        elif preset.mode is ExportMode.SEGMENTS_SHEET:
-            logger.debug("Creating sheet settings widget for segments_sheet mode")
+        if preset.mode in (ExportMode.SPRITE_SHEET, ExportMode.SEGMENTS_SHEET):
+            logger.debug("Creating sheet settings widget for mode: %s", preset.mode)
             settings = self._create_sheet_settings()
         elif preset.mode is ExportMode.SELECTED_FRAMES:
             logger.debug("Creating selected settings widget")
@@ -1132,47 +1113,26 @@ class ModernExportSettings(WizardStep):
 
     def _on_format_changed(self, format: str):
         """Handle format change."""
-
         # Update pattern displays with new format
         try:
-            if (
-                hasattr(self, "_pattern_radios")
-                and self._pattern_radios
-                and hasattr(self, "base_name")
-            ):
-                base_name = self.base_name.text() if self.base_name.text() else "frame"
-
+            if self._pattern_radios and hasattr(self, "base_name"):
+                base_name = self.base_name.text() or "frame"
                 for radio in self._pattern_radios:
                     pattern = radio.property("pattern")
                     if pattern:
-                        new_display = self._generate_pattern_display(pattern, base_name)
-                        radio.setText(new_display)
+                        radio.setText(self._generate_pattern_display(pattern, base_name))
         except Exception as e:
             logger.warning("Error updating pattern displays on format change: %s", e)
 
-        # Show/hide transparency warning for JPG format
         self._update_transparency_warning(format)
-
-        # Show quality slider for JPG
         self._on_setting_changed()
 
     def _update_transparency_warning(self, format: str):
         """Show warning when exporting transparent sprites to JPG."""
-        if not hasattr(self, "_transparency_warning"):
-            return
-
-        show_warning = False
-        if format.upper() == "JPG" and self._sprites:
-            # Check if any sprite has transparency
-            for sprite in self._sprites:
-                if sprite and not sprite.isNull() and sprite.hasAlphaChannel():
-                    show_warning = True
-                    break
-
-        if show_warning:
-            self._transparency_warning.show()
-        else:
-            self._transparency_warning.hide()
+        show_warning = format.upper() == "JPG" and any(
+            sprite and not sprite.isNull() and sprite.hasAlphaChannel() for sprite in self._sprites
+        )
+        self._transparency_warning.setVisible(show_warning)
 
     def _on_scale_changed(self, button: QAbstractButton):
         """Handle scale change."""
@@ -1241,15 +1201,13 @@ class ModernExportSettings(WizardStep):
 
     def _get_layout_mode(self) -> str:
         """Return the currently selected layout mode string."""
-        layout_mode = "auto"
-        if "layout_mode" in self._settings_widgets:
-            mode_group = self._settings_widgets["layout_mode"]
-            modes = ["auto", "columns", "rows", "square"]
-            for i, mode in enumerate(modes):
-                if mode_group.button(i) and mode_group.button(i).isChecked():
-                    layout_mode = mode
-                    break
-        return layout_mode
+        modes = ["auto", "columns", "rows", "square"]
+        mode_group = self._settings_widgets.get("layout_mode")
+        if mode_group is not None:
+            checked_id = mode_group.checkedId()
+            if 0 <= checked_id < len(modes):
+                return modes[checked_id]
+        return "auto"
 
     def _generate_sheet_preview(self) -> QPixmap:
         """Generate sprite sheet preview."""
@@ -1338,7 +1296,7 @@ class ModernExportSettings(WizardStep):
             "Current preset mode: %s", self._current_preset.mode if self._current_preset else "None"
         )
 
-        data = {
+        data: dict[str, Any] = {
             "output_dir": self.path_edit.text(),
             "format": self.format_combo.currentText(),
             "scale": self.scale_group.checkedId() if self.scale_group.checkedButton() else 1,
@@ -1353,69 +1311,82 @@ class ModernExportSettings(WizardStep):
 
         if self._current_preset:
             if self._current_preset.mode is ExportMode.SPRITE_SHEET:
-                w = self._settings_widgets.get("sheet_filename")
-                data["single_filename"] = w.text() if w is not None else ""
-
-                # Layout settings
-                data["layout_mode"] = self._get_layout_mode()
-                data["columns"] = self.cols_spin.value()
-                data["rows"] = self.rows_spin.value()
-
-                # Style settings
-                spacing_widget = self._settings_widgets.get("spacing")
-                data["spacing"] = spacing_widget.value() if spacing_widget is not None else 0
-                data["padding"] = 0
-
-                bg_widget = self._settings_widgets.get("background")
-                bg_index = bg_widget.currentIndex() if bg_widget is not None else 0
-                if bg_index == 0:
-                    data["background_mode"] = "transparent"
-                elif bg_index == 1:
-                    data["background_mode"] = "solid"
-                    data["background_color"] = (255, 255, 255, 255)
-                else:
-                    data["background_mode"] = "solid"
-                    data["background_color"] = (0, 0, 0, 255)
-
+                data.update(self._get_sheet_data())
             elif self._current_preset.mode is ExportMode.INDIVIDUAL_FRAMES:
-                # Get base name with proper fallback
-                base_name_widget = self._settings_widgets.get("base_name")
-                if base_name_widget and hasattr(base_name_widget, "text"):
-                    base_name = base_name_widget.text()
-                    data["base_name"] = base_name if base_name else "frame"
-                else:
-                    data["base_name"] = "frame"
-
-                # Pattern
-                patterns = ["{name}_{index:03d}", "{name}-{index}", "{name}{index}"]
-                pattern_group = self._settings_widgets.get("pattern_group")
-                if pattern_group and pattern_group.checkedButton():
-                    data["pattern"] = patterns[pattern_group.id(pattern_group.checkedButton())]
-                else:
-                    data["pattern"] = patterns[0]
-
+                data.update(self._get_individual_frames_data())
             elif self._current_preset.mode is ExportMode.SELECTED_FRAMES:
-                # Selected frames
-                selected_indices = []
-                if hasattr(self, "frame_list"):
-                    selected_indices.extend(
-                        item.data(Qt.ItemDataRole.UserRole)
-                        for item in self.frame_list.selectedItems()
-                    )
-                data["selected_indices"] = selected_indices
-
-                # Get base name with proper fallback
-                base_name_widget = self._settings_widgets.get("selected_base_name")
-                if base_name_widget and hasattr(base_name_widget, "text"):
-                    base_name = base_name_widget.text()
-                    data["base_name"] = base_name if base_name else "frame"
-                else:
-                    data["base_name"] = "frame"
-                data["pattern"] = "{name}_{index:03d}"
+                data.update(self._get_selected_frames_data())
 
         logger.debug("Final get_data() result: %s", data)
         logger.debug("Data keys: %s", list(data.keys()))
         return data
+
+    def _get_sheet_data(self) -> dict[str, Any]:
+        """Collect sprite sheet export settings."""
+        w = self._settings_widgets.get("sheet_filename")
+        data: dict[str, Any] = {
+            "single_filename": w.text() if w is not None else "",
+            "layout_mode": self._get_layout_mode(),
+            "columns": self.cols_spin.value(),
+            "rows": self.rows_spin.value(),
+            "padding": 0,
+        }
+
+        # Style settings
+        spacing_widget = self._settings_widgets.get("spacing")
+        data["spacing"] = spacing_widget.value() if spacing_widget is not None else 0
+
+        bg_widget = self._settings_widgets.get("background")
+        bg_index = bg_widget.currentIndex() if bg_widget is not None else 0
+        if bg_index == 0:
+            data["background_mode"] = "transparent"
+        elif bg_index == 1:
+            data["background_mode"] = "solid"
+            data["background_color"] = (255, 255, 255, 255)
+        else:
+            data["background_mode"] = "solid"
+            data["background_color"] = (0, 0, 0, 255)
+
+        return data
+
+    def _get_individual_frames_data(self) -> dict[str, Any]:
+        """Collect individual frames export settings."""
+        data: dict[str, Any] = {
+            "base_name": self._widget_text_or("base_name", "frame"),
+        }
+
+        # Pattern
+        patterns = ["{name}_{index:03d}", "{name}-{index}", "{name}{index}"]
+        pattern_group = self._settings_widgets.get("pattern_group")
+        if pattern_group and pattern_group.checkedButton():
+            data["pattern"] = patterns[pattern_group.id(pattern_group.checkedButton())]
+        else:
+            data["pattern"] = patterns[0]
+
+        return data
+
+    def _get_selected_frames_data(self) -> dict[str, Any]:
+        """Collect selected frames export settings."""
+        selected_indices: list[int] = []
+        if hasattr(self, "frame_list"):
+            selected_indices.extend(
+                item.data(Qt.ItemDataRole.UserRole) for item in self.frame_list.selectedItems()
+            )
+
+        return {
+            "selected_indices": selected_indices,
+            "base_name": self._widget_text_or("selected_base_name", "frame"),
+            "pattern": "{name}_{index:03d}",
+        }
+
+    def _widget_text_or(self, widget_key: str, fallback: str) -> str:
+        """Get text from a settings widget, falling back if absent or empty."""
+        widget = self._settings_widgets.get(widget_key)
+        if widget and hasattr(widget, "text"):
+            text = widget.text()
+            if text:
+                return text
+        return fallback
 
     def set_sprites(self, sprites: list[QPixmap]):
         """Set sprite frames."""

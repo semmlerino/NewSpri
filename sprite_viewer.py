@@ -1,7 +1,6 @@
 """
-Sprite Viewer - Main application window (REFACTORED)
-Modern sprite sheet animation viewer with improved usability.
-Refactored to use centralized managers for better maintainability.
+Sprite Viewer - Main application window.
+Modern sprite sheet animation viewer with centralized managers.
 """
 
 import os
@@ -33,35 +32,21 @@ from PySide6.QtWidgets import (
 )
 
 from config import Config
-
-# Coordinators
 from coordinators import SignalCoordinator
-
-# Core controllers
 from core import (
     AnimationController,
     AnimationSegmentController,
     AutoDetectionController,
     ExportCoordinator,
 )
-
-# Export dialog
 from export import ExportDialog
-
-# Managers
 from managers import (
     AnimationSegmentManager,
     get_recent_files_manager,
     get_settings_manager,
 )
-
-# Core MVC Components
 from sprite_model import SpriteModel
-
-# Sprite model
 from sprite_model.extraction_mode import ExtractionMode
-
-# UI Components
 from ui import (
     AnimationGridView,
     EnhancedStatusBar,
@@ -167,9 +152,8 @@ ACTIONS_REQUIRING_FRAMES = {
 class SpriteViewer(QMainWindow):
     """
     Main sprite viewer application window.
-    Refactored to use centralized managers for better maintainability.
 
-    Responsibilities (after refactoring):
+    Responsibilities:
     - Component coordination and integration
     - High-level event handling
     - Window state management
@@ -221,7 +205,52 @@ class SpriteViewer(QMainWindow):
         self._grid_enabled = False
         self._loading_in_progress = False
 
-        # Initialize controllers with all dependencies (single-step init)
+        # Initialize controllers with all dependencies
+        self._init_controllers()
+
+        # Set up managers with UI components
+        self._setup_managers()
+
+        # Debounce timer for frame slicing (prevents per-keystroke extraction)
+        self._slicing_debounce_timer = QTimer(self)
+        self._slicing_debounce_timer.setSingleShot(True)
+        self._slicing_debounce_timer.setInterval(300)
+        self._slicing_debounce_timer.timeout.connect(self._update_frame_slicing)
+
+        # Create signal coordinator and connect all signals
+        self._init_signal_coordinator()
+
+        # Apply settings and show welcome
+        self._apply_settings()
+        self._show_welcome_message()
+
+    def _init_managers(self):
+        """Initialize all centralized managers."""
+        # Utility managers (keep using factories - used by dialogs etc.)
+        self._settings_manager = get_settings_manager()
+
+        # Actions storage
+        self._actions: dict[str, QAction] = {}
+        self._shortcut_to_action: dict[str, str] = {}  # Key sequence -> action_id
+
+    def _init_core_components(self):
+        """Initialize core MVC components (model only - controllers need UI)."""
+        # Model layer (no dependencies)
+        self._sprite_model = SpriteModel()
+
+        # Animation splitting components
+        self._segment_manager = AnimationSegmentManager()
+
+        # Recent files manager setup - handle clicks on recent file menu items
+        self._recent_files = get_recent_files_manager()
+
+        def on_recent_file(path: str) -> None:
+            self._load_sprite_file(path)
+
+        self._recent_files.set_file_open_callback(on_recent_file)
+
+    def _init_controllers(self):
+        """Initialize controllers with all dependencies (single-step init)."""
         self._animation_controller = AnimationController(
             sprite_model=self._sprite_model,
             sprite_viewer=self,
@@ -229,10 +258,9 @@ class SpriteViewer(QMainWindow):
 
         self._auto_detection_controller = AutoDetectionController(
             sprite_model=self._sprite_model,
-            frame_extractor=self._frame_extractor,
         )
 
-        # Initialize export coordinator (must be before segment controller)
+        # Export coordinator must be before segment controller
         self._export_coordinator = ExportCoordinator(
             sprite_model=self._sprite_model,
             segment_manager=self._segment_manager,
@@ -253,16 +281,8 @@ class SpriteViewer(QMainWindow):
         self._refresh_grid_btn.clicked.connect(self._segment_controller.update_grid_view_frames)
         self._tab_widget.currentChanged.connect(self._segment_controller.on_tab_changed)
 
-        # Set up managers with UI components
-        self._setup_managers()
-
-        # Debounce timer for frame slicing (prevents per-keystroke extraction)
-        self._slicing_debounce_timer = QTimer(self)
-        self._slicing_debounce_timer.setSingleShot(True)
-        self._slicing_debounce_timer.setInterval(300)
-        self._slicing_debounce_timer.timeout.connect(self._update_frame_slicing)
-
-        # Create signal coordinator and connect all signals
+    def _init_signal_coordinator(self):
+        """Create signal coordinator and connect all signals."""
         self._signal_coordinator = SignalCoordinator(
             sprite_model=self._sprite_model,
             animation_controller=self._animation_controller,
@@ -292,42 +312,6 @@ class SpriteViewer(QMainWindow):
             on_zoom_changed=self._on_zoom_changed,
         )
         self._signal_coordinator.connect_all()
-
-        # Apply settings and show welcome
-        self._apply_settings()
-        self._show_welcome_message()
-
-    def _init_managers(self):
-        """Initialize all centralized managers."""
-        # Utility managers (keep using factories - used by dialogs etc.)
-        self._settings_manager = get_settings_manager()
-
-        # Actions storage
-        self._actions: dict[str, QAction] = {}
-        self._shortcut_to_action: dict[str, str] = {}  # Key sequence -> action_id
-
-    def _init_core_components(self):
-        """Initialize core MVC components (model only - controllers need UI)."""
-        # Model layer (no dependencies)
-        self._sprite_model = SpriteModel()
-
-        # Animation splitting components
-        self._segment_manager = AnimationSegmentManager()
-
-        # Recent files manager setup - handle clicks on recent file menu items
-        self._recent_files = get_recent_files_manager()
-
-        def _on_recent_file(path: str) -> None:
-            self._load_sprite_file(path)
-
-        self._recent_files.set_file_open_callback(_on_recent_file)
-
-        # Placeholders - will be initialized after UI setup
-        self._grid_view = None
-        self._status_manager = None
-        self._animation_controller = None
-        self._auto_detection_controller = None
-        self._signal_coordinator = None
 
     def _setup_window(self):
         """Set up main window properties."""
@@ -509,7 +493,7 @@ class SpriteViewer(QMainWindow):
         self._tab_widget.addTab(grid_tab, "Animation Splitting")
 
         # Info label at bottom
-        self._info_label = QLabel("Ready - Drag and drop a sprite sheet or use File > Open")
+        self._info_label = QLabel(Config.App.WELCOME_MESSAGE)
         self._info_label.setWordWrap(True)
         self._info_label.setStyleSheet(StyleManager.info_label())
         main_layout.addWidget(self._info_label)
@@ -607,8 +591,7 @@ class SpriteViewer(QMainWindow):
     def _setup_managers(self):
         """Configure managers with application-specific settings."""
         # Connect segment controller status messages
-        if self._status_manager is not None:
-            self._segment_controller.statusMessage.connect(self._status_manager.show_message)
+        self._segment_controller.statusMessage.connect(self._status_manager.show_message)
 
         # Update action states based on initial context
         self._update_has_frames_actions()
@@ -658,58 +641,55 @@ class SpriteViewer(QMainWindow):
             return False
         self._loading_in_progress = True
         try:
-            # Check if loading a new sprite would clear existing segments
-            current_path = self._sprite_model.file_path
-            if current_path and current_path != file_path:
-                existing_segments = self._segment_manager.get_all_segments()
-                if existing_segments:
-                    reply = QMessageBox.question(
-                        self,
-                        "Clear Segments?",
-                        f"Loading a new sprite will clear {len(existing_segments)} existing segment(s).\n\nContinue?",
-                        QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                    )
-                    if reply != QMessageBox.StandardButton.Yes:
-                        return False
+            if not self._confirm_load_over_segments(file_path):
+                return False
 
-            # Try to load via sprite model
             success, error_message = self._sprite_model.load_sprite_sheet(file_path)
-
             if not success:
                 QMessageBox.critical(self, "Load Error", error_message)
                 return False
 
-            # Add to recent files on successful load
             self._recent_files.add_file_to_recent(file_path)
-
-            # Update action states
             self._update_has_frames_actions()
-
-            # Update display first (fast)
             self._canvas.update()
             self._info_label.setText(self._sprite_model.sprite_info)
-
-            # Trigger appropriate detection based on current extraction mode
-            current_mode = self._frame_extractor.get_extraction_mode()
-            if current_mode is ExtractionMode.CCL:
-                # For CCL mode, try direct CCL extraction without grid auto-detection
-                if self._status_manager is not None:
-                    self._status_manager.show_message("Running CCL extraction...")
-                self._update_frame_slicing()  # This will trigger CCL extraction
-            else:
-                # For grid mode, run comprehensive grid auto-detection
-                # Use wait cursor to indicate processing
-                QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-                QApplication.processEvents()
-                try:
-                    if self._auto_detection_controller:
-                        self._auto_detection_controller.run_comprehensive_detection_with_dialog()
-                finally:
-                    QApplication.restoreOverrideCursor()
+            self._trigger_post_load_detection()
 
             return True
         finally:
             self._loading_in_progress = False
+
+    def _confirm_load_over_segments(self, file_path: str) -> bool:
+        """Ask user to confirm if loading a new sprite would clear existing segments."""
+        current_path = self._sprite_model.file_path
+        if not current_path or current_path == file_path:
+            return True
+
+        existing_segments = self._segment_manager.get_all_segments()
+        if not existing_segments:
+            return True
+
+        reply = QMessageBox.question(
+            self,
+            "Clear Segments?",
+            f"Loading a new sprite will clear {len(existing_segments)} existing segment(s).\n\nContinue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
+
+    def _trigger_post_load_detection(self):
+        """Trigger appropriate frame detection based on current extraction mode."""
+        current_mode = self._frame_extractor.get_extraction_mode()
+        if current_mode is ExtractionMode.CCL:
+            self._status_manager.show_message("Running CCL extraction...")
+            self._update_frame_slicing()
+        else:
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            QApplication.processEvents()
+            try:
+                self._auto_detection_controller.run_comprehensive_detection_with_dialog()
+            finally:
+                QApplication.restoreOverrideCursor()
 
     # ============================================================================
     # VIEW OPERATIONS
@@ -744,13 +724,10 @@ class SpriteViewer(QMainWindow):
     def _restart_animation(self):
         """Restart animation from first frame."""
         self._sprite_model.set_current_frame(0)
-        if self._status_manager is not None:
-            self._status_manager.show_message("Animation restarted")
+        self._status_manager.show_message("Animation restarted")
 
     def _step_animation_speed(self, increase: bool):
         """Step animation speed up or down by one entry in SPEED_STEPS."""
-        if not self._animation_controller:
-            return
         current_fps = self._animation_controller.current_fps
         speed_steps = Config.Animation.SPEED_STEPS
         if increase:
@@ -776,10 +753,7 @@ class SpriteViewer(QMainWindow):
         """Handle frame change."""
         # Update canvas frame info
         self._canvas.set_frame_info(frame_index, total_frames)
-        # Push current frame pixmap to canvas (MVC: controller pushes to view)
-        pixmap = self._sprite_model.current_frame_pixmap
-        if pixmap and not pixmap.isNull():
-            self._canvas.set_pixmap(pixmap, auto_fit=False)
+        self._push_current_frame_to_canvas()
 
         # Update playback controls
         self._playback_controls.set_current_frame(frame_index)
@@ -794,23 +768,18 @@ class SpriteViewer(QMainWindow):
 
     def _on_sprite_loaded(self, file_path: str):
         """Handle sprite loaded."""
-        # Reset and update canvas view (Phase 3 refactoring)
         self._canvas.reset_view()
         self._canvas.update()
 
         # Update action states
         self._update_has_frames_actions()
 
-        # Enable CCL mode - always available when sprite is loaded
-        self._frame_extractor.set_ccl_available(True, 0)
-
         # Check if frames are available immediately after loading
         frame_count = len(self._sprite_model.sprite_frames)
         if frame_count > 0:
             self._segment_controller.update_grid_view_frames()
 
-        if self._status_manager is not None:
-            self._status_manager.show_message(f"Loaded sprite sheet: {file_path}")
+        self._status_manager.show_message(f"Loaded sprite sheet: {file_path}")
 
     def _on_playback_started(self):
         """Handle playback start."""
@@ -836,7 +805,7 @@ class SpriteViewer(QMainWindow):
         """Handle animation controller error."""
         QMessageBox.warning(self, "Animation Error", error_message)
 
-    def _on_extraction_completed_update_playback(self, frame_count: int):
+    def _update_playback_for_extraction(self, frame_count: int):
         """Update playback controls after extraction completion."""
         if frame_count > 0:
             self._playback_controls.set_frame_range(frame_count - 1)
@@ -852,10 +821,9 @@ class SpriteViewer(QMainWindow):
     def _on_extraction_completed(self, frame_count: int):
         """Handle extraction completion."""
         # Update playback controls
-        self._on_extraction_completed_update_playback(frame_count)
+        self._update_playback_for_extraction(frame_count)
 
         if frame_count > 0:
-            # Update canvas with frame info (Phase 3 refactoring)
             current_frame = self._sprite_model.current_frame
             self._canvas.set_frame_info(current_frame, frame_count)
 
@@ -869,18 +837,12 @@ class SpriteViewer(QMainWindow):
                 )
         else:
             self._canvas.set_frame_info(0, 0)
-
-            # Clear grid view if no frames
-            if self._grid_view:
-                self._grid_view.set_frames([])
+            self._grid_view.set_frames([])
 
         # Update action states
         self._update_has_frames_actions()
 
-        # Push current frame pixmap to canvas
-        pixmap = self._sprite_model.current_frame_pixmap
-        if pixmap and not pixmap.isNull():
-            self._canvas.set_pixmap(pixmap, auto_fit=False)
+        self._push_current_frame_to_canvas()
 
     def _on_frame_settings_detected(self, width: int, height: int):
         """Handle frame settings detected."""
@@ -901,8 +863,7 @@ class SpriteViewer(QMainWindow):
             self._frame_extractor.blockSignals(True)
             self._frame_extractor.set_extraction_mode(current_mode)
             self._frame_extractor.blockSignals(False)
-            if self._status_manager is not None:
-                self._status_manager.show_message(f"Failed to switch extraction mode to {mode}")
+            self._status_manager.show_message(f"Failed to switch extraction mode to {mode}")
             return
 
         # Update info label immediately to reflect mode change
@@ -913,8 +874,7 @@ class SpriteViewer(QMainWindow):
 
         # Update status
         mode_name = "CCL" if mode is ExtractionMode.CCL else "Grid"
-        if self._status_manager is not None:
-            self._status_manager.show_message(f"Switched to {mode_name} extraction mode")
+        self._status_manager.show_message(f"Switched to {mode_name} extraction mode")
 
     def _on_settings_changed_debounced(self):
         """Restart debounce timer on settings change (prevents per-keystroke extraction)."""
@@ -925,54 +885,54 @@ class SpriteViewer(QMainWindow):
         if not self._sprite_model.original_sprite_sheet:
             return
 
-        # Get current extraction mode
-        mode = self._frame_extractor.get_extraction_mode()
-
-        # Use wait cursor to indicate processing (CCL can be slow for large sheets)
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        QApplication.processEvents()
-        try:
-            if mode is ExtractionMode.CCL:
-                # Use CCL extraction
-                success, error_message, total_frames = self._sprite_model.extract_ccl_frames()
-            else:
-                # Get frame extraction settings for grid mode
-                frame_width, frame_height = self._frame_extractor.get_frame_size()
-                offset_x, offset_y = self._frame_extractor.get_offset()
-                spacing_x, spacing_y = self._frame_extractor.get_spacing()
-
-                # Extract frames using grid mode
-                success, error_message, total_frames = self._sprite_model.extract_frames(
-                    frame_width, frame_height, offset_x, offset_y, spacing_x, spacing_y
-                )
-        finally:
-            QApplication.restoreOverrideCursor()
+        success, error_message, total_frames = self._extract_frames_by_mode()
 
         if not success:
             QMessageBox.warning(self, "Frame Extraction Error", error_message)
             return
 
-        # Update info
         self._info_label.setText(self._sprite_model.sprite_info)
-
-        # Update action states
         self._update_has_frames_actions()
 
         # Ensure first frame is displayed after extraction
         if total_frames > 0:
             self._sprite_model.set_current_frame(0)
-            # Push first frame pixmap to canvas
-            pixmap = self._sprite_model.current_frame_pixmap
-            if pixmap and not pixmap.isNull():
-                self._canvas.set_pixmap(pixmap, auto_fit=False)
+            self._push_current_frame_to_canvas()
 
-    # ============================================================================
-    # HELP DIALOGS
-    # ============================================================================
+    def _extract_frames_by_mode(self) -> tuple[bool, str, int]:
+        """Run frame extraction using the current mode, with a wait cursor."""
+        mode = self._frame_extractor.get_extraction_mode()
+
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        QApplication.processEvents()
+        try:
+            if mode is ExtractionMode.CCL:
+                return self._sprite_model.extract_ccl_frames()
+
+            frame_width, frame_height = self._frame_extractor.get_frame_size()
+            offset_x, offset_y = self._frame_extractor.get_offset()
+            spacing_x, spacing_y = self._frame_extractor.get_spacing()
+            return self._sprite_model.extract_frames(
+                frame_width, frame_height, offset_x, offset_y, spacing_x, spacing_y
+            )
+        finally:
+            QApplication.restoreOverrideCursor()
+
+    def _push_current_frame_to_canvas(self):
+        """Push the current frame pixmap to the canvas if valid."""
+        pixmap = self._sprite_model.current_frame_pixmap
+        if pixmap and not pixmap.isNull():
+            self._canvas.set_pixmap(pixmap, auto_fit=False)
 
     def _show_welcome_message(self):
         """Show welcome message."""
-        self._info_label.setText("Ready - Drag and drop a sprite sheet or use File > Open")
+        self._info_label.setText(Config.App.WELCOME_MESSAGE)
+
+    def _on_grid_frame_preview(self, frame_index: int):
+        """Handle frame preview request (double-click) - switch to main view."""
+        self._tab_widget.setCurrentIndex(0)
+        self._sprite_model.set_current_frame(frame_index)
+        self._status_manager.show_message(f"Previewing frame {frame_index}")
 
     # ============================================================================
     # EVENT HANDLERS
@@ -1000,15 +960,6 @@ class SpriteViewer(QMainWindow):
         if file_path:
             self._load_sprite_file(file_path)
             event.acceptProposedAction()
-
-    # Animation Grid View Signal Handlers
-    def _on_grid_frame_preview(self, frame_index: int):
-        """Handle frame preview request (double-click) - switch to main view."""
-        # Switch to canvas view and show selected frame
-        self._tab_widget.setCurrentIndex(0)  # Switch to Frame View tab
-        self._sprite_model.set_current_frame(frame_index)
-        if self._status_manager is not None:
-            self._status_manager.show_message(f"Previewing frame {frame_index}")
 
     # ============================================================================
     # HELP DIALOGS
@@ -1091,19 +1042,24 @@ class SpriteViewer(QMainWindow):
 
     def keyPressEvent(self, event: QKeyEvent):
         """Handle keyboard shortcuts."""
+        key_sequence_str = self._build_key_sequence(event)
+        if key_sequence_str is None:
+            super().keyPressEvent(event)
+            return
+
+        if self._handle_shortcut(key_sequence_str):
+            event.accept()
+        else:
+            super().keyPressEvent(event)
+
+    def _build_key_sequence(self, event: QKeyEvent) -> str | None:
+        """Build a key sequence string from a key event, or None if unhandled."""
         key = event.key()
         modifiers = event.modifiers()
-
-        # Build key sequence using Qt's built-in functionality
-        q_key_sequence = QKeySequence(
-            key | (modifiers.value if hasattr(modifiers, "value") else int(modifiers.value))
-        )
-        key_sequence_str = q_key_sequence.toString()
-
-        # For special keys not handled well by QKeySequence, use our mapping
         qt_key = Qt.Key(key)
+
         if qt_key in self.KEY_MAPPING:
-            # Build custom sequence for special keys
+            # Special keys (Space, arrows, etc.) not handled well by QKeySequence
             parts = []
             if modifiers & Qt.KeyboardModifier.ControlModifier:
                 parts.append("Ctrl")
@@ -1112,23 +1068,19 @@ class SpriteViewer(QMainWindow):
             if modifiers & Qt.KeyboardModifier.AltModifier:
                 parts.append("Alt")
             parts.append(self.KEY_MAPPING[qt_key])
-            key_sequence_str = "+".join(parts)
-        elif (Qt.Key.Key_A <= key <= Qt.Key.Key_Z) or (Qt.Key.Key_0 <= key <= Qt.Key.Key_9):
-            # Handle single letter/digit keys - QKeySequence may not format them correctly
-            if modifiers == Qt.KeyboardModifier.NoModifier:
-                # For single letters/digits with no modifiers, use the character directly
-                key_sequence_str = chr(key)
-            # else let QKeySequence handle modified keys (Ctrl+A, Alt+1, etc.)
-        else:
-            # Let parent handle other keys
-            super().keyPressEvent(event)
-            return
+            return "+".join(parts)
 
-        # Try to find and trigger matching action
-        if self._handle_shortcut(key_sequence_str):
-            event.accept()
-        else:
-            super().keyPressEvent(event)
+        if (Qt.Key.Key_A <= key <= Qt.Key.Key_Z) or (Qt.Key.Key_0 <= key <= Qt.Key.Key_9):
+            if modifiers == Qt.KeyboardModifier.NoModifier:
+                return chr(key)
+            # Let QKeySequence handle modified keys (Ctrl+A, Alt+1, etc.)
+            q_key_sequence = QKeySequence(
+                key | (modifiers.value if hasattr(modifiers, "value") else int(modifiers.value))
+            )
+            return q_key_sequence.toString()
+
+        # Unrecognized key -- let parent handle
+        return None
 
     def _handle_shortcut(self, key_sequence: str) -> bool:
         """
@@ -1172,9 +1124,9 @@ class SpriteViewer(QMainWindow):
             self,
             frame_count=len(sprites),
             current_frame=current_frame,
+            sprites=sprites,
             segment_manager=self._segment_manager,
         )
-        dialog.set_sprites(sprites)
         dialog.exportRequested.connect(self._export_coordinator.handle_export_request)
         dialog.exec()
 
@@ -1184,15 +1136,15 @@ class SpriteViewer(QMainWindow):
         self._settings_manager.save_window_geometry(self)
 
         # Stop segment preview timers before signal disconnects
-        if hasattr(self, "_segment_preview") and self._segment_preview:
+        if getattr(self, "_segment_preview", None):
             self._segment_preview.clear_segments()
 
         # Clean up signal coordinator
-        if self._signal_coordinator:
+        if getattr(self, "_signal_coordinator", None):
             self._signal_coordinator.disconnect_all()
 
         # Clean up controllers
-        if self._animation_controller:
+        if getattr(self, "_animation_controller", None):
             self._animation_controller.shutdown()
 
         # Force settings sync to ensure all pending changes are saved

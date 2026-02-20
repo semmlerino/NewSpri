@@ -41,6 +41,12 @@ class BackgroundMode(Enum):
     CHECKERBOARD = "checkerboard"
 
 
+def _validate_range(name: str, value: int, min_val: int, max_val: int) -> None:
+    """Raise ValueError if value is outside [min_val, max_val]."""
+    if not (min_val <= value <= max_val):
+        raise ValueError(f"{name} must be between {min_val} and {max_val}")
+
+
 @dataclass
 class SpriteSheetLayout:
     """Configuration for sprite sheet layout and spacing."""
@@ -57,49 +63,48 @@ class SpriteSheetLayout:
 
     def __post_init__(self):
         """Validate layout configuration."""
-        # Validate spacing
-        if not (
-            Config.Export.MIN_SPRITE_SPACING <= self.spacing <= Config.Export.MAX_SPRITE_SPACING
-        ):
-            raise ValueError(
-                f"Spacing must be between {Config.Export.MIN_SPRITE_SPACING} and {Config.Export.MAX_SPRITE_SPACING}"
-            )
+        _validate_range(
+            "Spacing",
+            self.spacing,
+            Config.Export.MIN_SPRITE_SPACING,
+            Config.Export.MAX_SPRITE_SPACING,
+        )
+        _validate_range(
+            "Padding",
+            self.padding,
+            Config.Export.MIN_SHEET_PADDING,
+            Config.Export.MAX_SHEET_PADDING,
+        )
 
-        # Validate padding
-        if not (Config.Export.MIN_SHEET_PADDING <= self.padding <= Config.Export.MAX_SHEET_PADDING):
-            raise ValueError(
-                f"Padding must be between {Config.Export.MIN_SHEET_PADDING} and {Config.Export.MAX_SHEET_PADDING}"
+        # Validate optional grid constraints
+        if self.max_columns is not None:
+            _validate_range(
+                "Max columns",
+                self.max_columns,
+                Config.Export.MIN_GRID_SIZE,
+                Config.Export.MAX_GRID_SIZE,
             )
-
-        # Validate grid constraints
-        if self.max_columns is not None and not (
-            Config.Export.MIN_GRID_SIZE <= self.max_columns <= Config.Export.MAX_GRID_SIZE
-        ):
-            raise ValueError(
-                f"Max columns must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}"
-            )
-
-        if self.max_rows is not None and not (
-            Config.Export.MIN_GRID_SIZE <= self.max_rows <= Config.Export.MAX_GRID_SIZE
-        ):
-            raise ValueError(
-                f"Max rows must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}"
+        if self.max_rows is not None:
+            _validate_range(
+                "Max rows", self.max_rows, Config.Export.MIN_GRID_SIZE, Config.Export.MAX_GRID_SIZE
             )
 
         # Validate custom grid (for custom mode)
         if self.mode is LayoutMode.CUSTOM:
             if self.custom_columns is None or self.custom_rows is None:
                 raise ValueError("Custom mode requires both custom_columns and custom_rows")
-            if not (
-                Config.Export.MIN_GRID_SIZE <= self.custom_columns <= Config.Export.MAX_GRID_SIZE
-            ):
-                raise ValueError(
-                    f"Custom columns must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}"
-                )
-            if not (Config.Export.MIN_GRID_SIZE <= self.custom_rows <= Config.Export.MAX_GRID_SIZE):
-                raise ValueError(
-                    f"Custom rows must be between {Config.Export.MIN_GRID_SIZE} and {Config.Export.MAX_GRID_SIZE}"
-                )
+            _validate_range(
+                "Custom columns",
+                self.custom_columns,
+                Config.Export.MIN_GRID_SIZE,
+                Config.Export.MAX_GRID_SIZE,
+            )
+            _validate_range(
+                "Custom rows",
+                self.custom_rows,
+                Config.Export.MIN_GRID_SIZE,
+                Config.Export.MAX_GRID_SIZE,
+            )
 
         # Validate background color (RGBA tuple) — isinstance is defensive for runtime callers
         if not (
@@ -813,11 +818,44 @@ class FrameExporter(QObject):
             self.exportError.emit("An export is already in progress")
             return False
 
-        # Validate inputs
+        task = self._prepare_export(
+            frames,
+            output_dir,
+            base_name,
+            format,
+            mode,
+            scale_factor,
+            pattern,
+            sprite_sheet_layout,
+            segment_info,
+        )
+        if task is None:
+            return False
+
+        self._current_task = task
+        self._start_worker(task)
+        return True
+
+    def _prepare_export(
+        self,
+        frames: list[QPixmap],
+        output_dir: str,
+        base_name: str,
+        format: str,
+        mode: str,
+        scale_factor: float,
+        pattern: str | None,
+        sprite_sheet_layout: SpriteSheetLayout | None,
+        segment_info: list[dict[str, Any]] | None,
+    ) -> ExportTask | None:
+        """Validate inputs, parse settings, convert frames, and build an ExportTask.
+
+        Returns None (and emits exportError) on any validation failure.
+        """
         if not frames:
             logger.debug("No frames to export, emitting error")
             self.exportError.emit("No frames to export")
-            return False
+            return None
 
         # Create output directory if needed
         output_path = Path(output_dir)
@@ -825,7 +863,7 @@ class FrameExporter(QObject):
             output_path.mkdir(parents=True, exist_ok=True)
         except OSError as e:
             self.exportError.emit(f"Failed to create output directory: {e!s}")
-            return False
+            return None
 
         # Parse format and mode
         try:
@@ -836,9 +874,8 @@ class FrameExporter(QObject):
             logger.debug("Parsed export mode: %s", export_mode)
         except ValueError as e:
             self.exportError.emit(f"Invalid export settings: {e!s}")
-            return False
+            return None
 
-        # Use default pattern if not provided
         if pattern is None:
             pattern = Config.Export.DEFAULT_PATTERN
 
@@ -846,19 +883,13 @@ class FrameExporter(QObject):
         base_name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", base_name)
 
         # Convert QPixmap frames to QImage for thread-safe processing
-        # QPixmap is NOT thread-safe and must only be used from the main GUI thread
-        # QImage IS thread-safe and can be safely used in worker threads
-        image_frames: list[QImage] = []
-        for i, frame in enumerate(frames):
-            image = frame.toImage()
-            if image.isNull():
-                self.exportError.emit(f"Failed to convert frame {i} to image")
-                return False
-            image_frames.append(image)
+        # QPixmap is NOT thread-safe; QImage IS thread-safe for worker threads
+        image_frames = self._convert_frames_to_images(frames)
+        if image_frames is None:
+            return None
 
-        # Create export task
         try:
-            self._current_task = ExportTask(
+            return ExportTask(
                 frames=image_frames,
                 output_dir=output_path,
                 base_name=base_name,
@@ -871,18 +902,30 @@ class FrameExporter(QObject):
             )
         except ValueError as e:
             self.exportError.emit(str(e))
-            return False
+            return None
 
-        # Create and start worker
-        self._worker = ExportWorker(self._current_task)
+    def _convert_frames_to_images(self, frames: list[QPixmap]) -> list[QImage] | None:
+        """Convert QPixmap frames to thread-safe QImage list.
+
+        Returns None (and emits exportError) if any frame fails to convert.
+        """
+        image_frames: list[QImage] = []
+        for i, frame in enumerate(frames):
+            image = frame.toImage()
+            if image.isNull():
+                self.exportError.emit(f"Failed to convert frame {i} to image")
+                return None
+            image_frames.append(image)
+        return image_frames
+
+    def _start_worker(self, task: ExportTask) -> None:
+        """Create, connect, and start the export worker thread."""
+        self._worker = ExportWorker(task)
         self._worker.progress.connect(self._on_progress)
         self._worker.finished.connect(self._on_finished)
         self._worker.error.connect(self._on_error)
-
         self.exportStarted.emit()
         self._worker.start()
-
-        return True
 
     def cancel_export(self):
         """Cancel the current export operation."""

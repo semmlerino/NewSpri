@@ -812,8 +812,7 @@ def _detect_spacing_1d(
 
 def _record_step(
     result: "DetectionResult",
-    results: list,
-    confidence_scores: list,
+    confidence_scores: list[float],
     step_name: str,
     success: bool,
     confidence: float,
@@ -851,231 +850,275 @@ def comprehensive_auto_detect(
         return False, "No sprite sheet provided", DetectionResult()
 
     result = DetectionResult()
-    results: list[str] = []
+    messages: list[str] = []
     confidence_scores: list[float] = []
     overall_success = True
 
     try:
         # Step 1: Detect margins first (affects all other calculations)
-        results.append("🔍 Step 1: Detecting margins...")
-
-        try:
-            margin_success, offset_x, offset_y, margin_msg = detect_margins(sprite_sheet)
-            result.offset_x = offset_x
-            result.offset_y = offset_y
-        except Exception as e:
-            margin_success, offset_x, offset_y, margin_msg = False, 0, 0, f"Error: {e!s}"
-            result.offset_x = 0
-            result.offset_y = 0
-
-        if margin_success:
-            results.append(f"   ✓ {margin_msg}")
-            margin_conf = _CONFIDENCE_HIGH  # Margin detection is usually reliable
-        else:
-            results.append(f"   ⚠ Margin detection failed: {margin_msg}")
-            results.append("   → Using default margins (0, 0)")
-            margin_conf = _CONFIDENCE_LOW
-
-        _record_step(
-            result, results, confidence_scores, "margins", margin_success, margin_conf, margin_msg
-        )
+        _run_margin_step(sprite_sheet, result, messages, confidence_scores)
 
         # Step 2: Detect optimal frame size with multiple fallback strategies
-        results.append("\n🔍 Step 2: Detecting frame size...")
-
-        # Each entry: (display_name, callable, success_confidence, is_fallback)
-        frame_strategies = [
-            (
-                "Content-based",
-                lambda: detect_content_based(sprite_sheet),
-                _CONFIDENCE_CONTENT,
-                False,
-            ),
-            (
-                "Rectangular",
-                lambda: detect_rectangular_frames(sprite_sheet),
-                _CONFIDENCE_MEDIUM,
-                True,
-            ),
-            ("Basic square", lambda: detect_frame_size(sprite_sheet), _CONFIDENCE_FALLBACK, True),
-        ]
-
-        frame_detected = False
-        for strategy_name, strategy_fn, strategy_conf, is_fallback in frame_strategies:
-            try:
-                fs, fw, fh, msg = strategy_fn()
-                if fs:
-                    result.frame_width = fw
-                    result.frame_height = fh
-                    results.append(f"   ✓ {msg}")
-                    _record_step(
-                        result,
-                        results,
-                        confidence_scores,
-                        "frame_size",
-                        True,
-                        strategy_conf,
-                        msg,
-                        fallback_used=is_fallback,
-                    )
-                    frame_detected = True
-                    break
-                else:
-                    results.append(f"   ⚠ {strategy_name} detection failed: {msg}")
-                    if is_fallback:
-                        results.append("   → Trying next strategy...")
-            except Exception as e:
-                results.append(f"   ✗ {strategy_name} detection error: {e!s}")
-
+        frame_detected = _run_frame_size_step(sprite_sheet, result, messages, confidence_scores)
         if not frame_detected:
-            last_msg = results[-1] if results else "All frame detection strategies failed"
-            results.append("   ✗ All frame detection strategies exhausted")
             overall_success = False
-            _record_step(
-                result,
-                results,
-                confidence_scores,
-                "frame_size",
-                False,
-                _CONFIDENCE_FAILED,
-                last_msg,
-                fallback_used=True,
-            )
 
         # Step 3: Detect spacing (only if frame size detection succeeded)
-        if result.frame_width > 0 and result.frame_height > 0:
-            results.append("\n🔍 Step 3: Detecting frame spacing...")
-
-            try:
-                spacing_success, spacing_x, spacing_y, spacing_msg = detect_spacing(
-                    sprite_sheet,
-                    result.frame_width,
-                    result.frame_height,
-                    result.offset_x,
-                    result.offset_y,
-                )
-
-                if spacing_success:
-                    result.spacing_x = spacing_x
-                    result.spacing_y = spacing_y
-                    results.append(f"   ✓ {spacing_msg}")
-                    # Map the textual confidence label back to a numeric score
-                    if "confidence: high" in spacing_msg:
-                        spacing_conf: float = _CONFIDENCE_HIGH
-                    elif "confidence: medium" in spacing_msg:
-                        spacing_conf = _CONFIDENCE_MEDIUM
-                    else:
-                        spacing_conf = 0.5
-                    _record_step(
-                        result,
-                        results,
-                        confidence_scores,
-                        "spacing",
-                        True,
-                        spacing_conf,
-                        spacing_msg,
-                    )
-                else:
-                    results.append(f"   ⚠ Spacing detection failed: {spacing_msg}")
-                    results.append("   → Using default spacing (0, 0)")
-                    result.spacing_x = 0
-                    result.spacing_y = 0
-                    _record_step(
-                        result,
-                        results,
-                        confidence_scores,
-                        "spacing",
-                        False,
-                        _CONFIDENCE_LOW,
-                        spacing_msg,
-                    )
-            except Exception as e:
-                results.append(f"   ✗ Spacing detection error: {e!s}")
-                results.append("   → Using default spacing (0, 0)")
-                result.spacing_x = 0
-                result.spacing_y = 0
-                _record_step(
-                    result, results, confidence_scores, "spacing", False, _CONFIDENCE_ERROR, str(e)
-                )
-        else:
-            results.append("\n⚠ Step 3: Skipped spacing detection (no valid frame size)")
-            _record_step(
-                result,
-                results,
-                confidence_scores,
-                "spacing",
-                False,
-                _CONFIDENCE_FAILED,
-                "Skipped - no valid frame size",
-            )
+        _run_spacing_step(sprite_sheet, result, messages, confidence_scores)
 
         # Step 4: Cross-validation and final verification
-        results.append("\n🔍 Step 4: Cross-validation...")
-        try:
-            validation_success, validation_msg = _validate_detection_consistency(
-                sprite_sheet, result
-            )
-
-            if validation_success:
-                results.append(f"   ✓ {validation_msg}")
-                val_conf: float = 0.8
-            else:
-                results.append(f"   ⚠ {validation_msg}")
-                val_conf = 0.4
-            _record_step(
-                result,
-                results,
-                confidence_scores,
-                "cross_validation",
-                validation_success,
-                val_conf,
-                validation_msg,
-            )
-        except Exception as e:
-            results.append(f"   ✗ Validation error: {e!s}")
-            _record_step(
-                result,
-                results,
-                confidence_scores,
-                "cross_validation",
-                False,
-                _CONFIDENCE_LOW,
-                str(e),
-            )
+        _run_validation_step(sprite_sheet, result, messages, confidence_scores)
 
         # Step 5: Calculate overall confidence and summary
         overall_confidence = (
             sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0
         )
-        confidence_text = _confidence_label(overall_confidence)
-
-        results.append("\n📊 Overall Result:")
-        results.append(f"   • Frame Size: {result.frame_width}×{result.frame_height}")
-        results.append(f"   • Margins: X={result.offset_x}, Y={result.offset_y}")
-        results.append(f"   • Spacing: X={result.spacing_x}, Y={result.spacing_y}")
-        results.append(f"   • Confidence: {confidence_text} ({overall_confidence:.1%})")
-
-        if overall_success and overall_confidence >= 0.6:
-            results.append("   🎉 Auto-detection completed successfully!")
-            result.success = True
-        elif overall_confidence >= 0.4:
-            results.append("   ⚠ Auto-detection completed with warnings")
-            result.success = True
-        else:
-            results.append("   ❌ Auto-detection completed with low confidence")
-            overall_success = False
-            result.success = False
+        overall_success, result.success = _summarize_detection(
+            result, messages, overall_success, overall_confidence
+        )
 
         result.confidence = overall_confidence
-        result.messages = results
+        result.messages = messages
 
-        return overall_success, "\n".join(results), result
+        return overall_success, "\n".join(messages), result
 
     except Exception as e:
         error_msg = f"❌ Comprehensive auto-detection failed: {e!s}"
-        results.append(error_msg)
-        result.messages = results
-        return False, "\n".join(results), result
+        messages.append(error_msg)
+        result.messages = messages
+        return False, "\n".join(messages), result
+
+
+def _run_margin_step(
+    sprite_sheet: QPixmap,
+    result: DetectionResult,
+    messages: list[str],
+    confidence_scores: list[float],
+) -> None:
+    """Step 1: Detect transparent margins around sprite content."""
+    messages.append("🔍 Step 1: Detecting margins...")
+
+    try:
+        margin_success, offset_x, offset_y, margin_msg = detect_margins(sprite_sheet)
+        result.offset_x = offset_x
+        result.offset_y = offset_y
+    except Exception as e:
+        margin_success, margin_msg = False, f"Error: {e!s}"
+        result.offset_x = 0
+        result.offset_y = 0
+
+    if margin_success:
+        messages.append(f"   ✓ {margin_msg}")
+        margin_conf = _CONFIDENCE_HIGH
+    else:
+        messages.append(f"   ⚠ Margin detection failed: {margin_msg}")
+        messages.append("   → Using default margins (0, 0)")
+        margin_conf = _CONFIDENCE_LOW
+
+    _record_step(result, confidence_scores, "margins", margin_success, margin_conf, margin_msg)
+
+
+def _run_frame_size_step(
+    sprite_sheet: QPixmap,
+    result: DetectionResult,
+    messages: list[str],
+    confidence_scores: list[float],
+) -> bool:
+    """Step 2: Detect optimal frame size with multiple fallback strategies.
+
+    Returns True if a frame size was detected, False otherwise.
+    """
+    messages.append("\n🔍 Step 2: Detecting frame size...")
+
+    # Each entry: (display_name, callable, success_confidence, is_fallback)
+    frame_strategies = [
+        (
+            "Content-based",
+            lambda: detect_content_based(sprite_sheet),
+            _CONFIDENCE_CONTENT,
+            False,
+        ),
+        (
+            "Rectangular",
+            lambda: detect_rectangular_frames(sprite_sheet),
+            _CONFIDENCE_MEDIUM,
+            True,
+        ),
+        ("Basic square", lambda: detect_frame_size(sprite_sheet), _CONFIDENCE_FALLBACK, True),
+    ]
+
+    for strategy_name, strategy_fn, strategy_conf, is_fallback in frame_strategies:
+        try:
+            success, fw, fh, msg = strategy_fn()
+            if success:
+                result.frame_width = fw
+                result.frame_height = fh
+                messages.append(f"   ✓ {msg}")
+                _record_step(
+                    result,
+                    confidence_scores,
+                    "frame_size",
+                    True,
+                    strategy_conf,
+                    msg,
+                    fallback_used=is_fallback,
+                )
+                return True
+            messages.append(f"   ⚠ {strategy_name} detection failed: {msg}")
+            if is_fallback:
+                messages.append("   → Trying next strategy...")
+        except Exception as e:
+            messages.append(f"   ✗ {strategy_name} detection error: {e!s}")
+
+    last_msg = messages[-1] if messages else "All frame detection strategies failed"
+    messages.append("   ✗ All frame detection strategies exhausted")
+    _record_step(
+        result,
+        confidence_scores,
+        "frame_size",
+        False,
+        _CONFIDENCE_FAILED,
+        last_msg,
+        fallback_used=True,
+    )
+    return False
+
+
+def _run_spacing_step(
+    sprite_sheet: QPixmap,
+    result: DetectionResult,
+    messages: list[str],
+    confidence_scores: list[float],
+) -> None:
+    """Step 3: Detect spacing between frames (skipped if no valid frame size)."""
+    if result.frame_width <= 0 or result.frame_height <= 0:
+        messages.append("\n⚠ Step 3: Skipped spacing detection (no valid frame size)")
+        _record_step(
+            result,
+            confidence_scores,
+            "spacing",
+            False,
+            _CONFIDENCE_FAILED,
+            "Skipped - no valid frame size",
+        )
+        return
+
+    messages.append("\n🔍 Step 3: Detecting frame spacing...")
+
+    try:
+        spacing_success, spacing_x, spacing_y, spacing_msg = detect_spacing(
+            sprite_sheet,
+            result.frame_width,
+            result.frame_height,
+            result.offset_x,
+            result.offset_y,
+        )
+    except Exception as e:
+        messages.append(f"   ✗ Spacing detection error: {e!s}")
+        messages.append("   → Using default spacing (0, 0)")
+        result.spacing_x = 0
+        result.spacing_y = 0
+        _record_step(result, confidence_scores, "spacing", False, _CONFIDENCE_ERROR, str(e))
+        return
+
+    if spacing_success:
+        result.spacing_x = spacing_x
+        result.spacing_y = spacing_y
+        messages.append(f"   ✓ {spacing_msg}")
+        # Map the textual confidence label back to a numeric score
+        if "confidence: high" in spacing_msg:
+            spacing_conf: float = _CONFIDENCE_HIGH
+        elif "confidence: medium" in spacing_msg:
+            spacing_conf = _CONFIDENCE_MEDIUM
+        else:
+            spacing_conf = 0.5
+        _record_step(
+            result,
+            confidence_scores,
+            "spacing",
+            True,
+            spacing_conf,
+            spacing_msg,
+        )
+    else:
+        messages.append(f"   ⚠ Spacing detection failed: {spacing_msg}")
+        messages.append("   → Using default spacing (0, 0)")
+        result.spacing_x = 0
+        result.spacing_y = 0
+        _record_step(
+            result,
+            confidence_scores,
+            "spacing",
+            False,
+            _CONFIDENCE_LOW,
+            spacing_msg,
+        )
+
+
+def _run_validation_step(
+    sprite_sheet: QPixmap,
+    result: DetectionResult,
+    messages: list[str],
+    confidence_scores: list[float],
+) -> None:
+    """Step 4: Cross-validate that all detected parameters work together."""
+    messages.append("\n🔍 Step 4: Cross-validation...")
+    try:
+        validation_success, validation_msg = _validate_detection_consistency(sprite_sheet, result)
+
+        if validation_success:
+            messages.append(f"   ✓ {validation_msg}")
+            val_conf: float = 0.8
+        else:
+            messages.append(f"   ⚠ {validation_msg}")
+            val_conf = 0.4
+        _record_step(
+            result,
+            confidence_scores,
+            "cross_validation",
+            validation_success,
+            val_conf,
+            validation_msg,
+        )
+    except Exception as e:
+        messages.append(f"   ✗ Validation error: {e!s}")
+        _record_step(
+            result,
+            confidence_scores,
+            "cross_validation",
+            False,
+            _CONFIDENCE_LOW,
+            str(e),
+        )
+
+
+def _summarize_detection(
+    result: DetectionResult,
+    messages: list[str],
+    overall_success: bool,
+    overall_confidence: float,
+) -> tuple[bool, bool]:
+    """Append summary messages and determine final success.
+
+    Returns (overall_success, result_success) tuple.
+    """
+    confidence_text = _confidence_label(overall_confidence)
+
+    messages.append("\n📊 Overall Result:")
+    messages.append(f"   • Frame Size: {result.frame_width}×{result.frame_height}")
+    messages.append(f"   • Margins: X={result.offset_x}, Y={result.offset_y}")
+    messages.append(f"   • Spacing: X={result.spacing_x}, Y={result.spacing_y}")
+    messages.append(f"   • Confidence: {confidence_text} ({overall_confidence:.1%})")
+
+    if overall_success and overall_confidence >= 0.6:
+        messages.append("   🎉 Auto-detection completed successfully!")
+        return True, True
+    elif overall_confidence >= 0.4:
+        messages.append("   ⚠ Auto-detection completed with warnings")
+        return overall_success, True
+    else:
+        messages.append("   ❌ Auto-detection completed with low confidence")
+        return False, False
 
 
 def _validate_detection_consistency(

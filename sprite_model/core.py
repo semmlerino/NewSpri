@@ -91,48 +91,28 @@ class SpriteModel(QObject):
             Tuple of (success, message)
         """
         try:
-            # Use FileLoader module
             success, pixmap, _metadata, message = self._file_loader.load_sprite_sheet(file_path)
 
-            if success:
-                # Store state
-                self._original_sprite_sheet = pixmap
-                self._file_path = file_path
-                self._sprite_sheet_path = file_path
-
-                # Clear previous frames and reset animation
-                self._sprite_frames.clear()
-                self._animation_state.reset_state()
-                self._ccl_operations.clear_ccl_data()
-
-                # Emit dataLoaded signal for compatibility
-                self.dataLoaded.emit(file_path)
-
-                return True, "Sprite sheet loaded successfully"
-            else:
+            if not success:
                 return False, message
+
+            # Store state
+            self._original_sprite_sheet = pixmap
+            self._file_path = file_path
+            self._sprite_sheet_path = file_path
+
+            # Clear previous frames and reset animation
+            self._sprite_frames.clear()
+            self._animation_state.reset_state()
+            self._ccl_operations.clear_ccl_data()
+
+            self.dataLoaded.emit(file_path)
+            return True, "Sprite sheet loaded successfully"
 
         except Exception as e:
             error_msg = f"Error loading sprite sheet: {e!s}"
             self.errorOccurred.emit(error_msg)
             return False, error_msg
-
-    def reload_current_sheet(self) -> tuple[bool, str]:
-        """Reload the current sprite sheet."""
-        if not self._file_path:
-            return False, "No sprite sheet loaded"
-
-        # Use FileLoader's reload method
-        success, pixmap, _metadata, message = self._file_loader.reload_sprite_sheet(self._file_path)
-
-        if success:
-            self._original_sprite_sheet = pixmap
-            # Re-extract frames if we had them before
-            if self._sprite_frames:
-                self._re_extract_frames()
-            return True, "Sprite sheet reloaded successfully"
-        else:
-            return False, message
 
     def clear_sprite_data(self) -> None:
         """Clear all sprite data and reset state."""
@@ -193,7 +173,13 @@ class SpriteModel(QObject):
         if not valid:
             return False, msg, 0
 
-        # Create GridConfig for the extractor
+        # Delegate to CCL extraction if not in grid mode
+        if self._ccl_operations.get_extraction_mode() is not ExtractionMode.GRID:
+            return self.extract_ccl_frames()
+
+        if self._original_sprite_sheet is None:
+            return False, "No sprite sheet loaded", 0
+
         config = GridConfig(
             width=width,
             height=height,
@@ -203,41 +189,28 @@ class SpriteModel(QObject):
             spacing_y=spacing_y,
         )
 
-        # Extract frames based on current mode
-        if self._ccl_operations.get_extraction_mode() is ExtractionMode.GRID:
-            if self._original_sprite_sheet is None:
-                return False, "No sprite sheet loaded", 0
+        success, message, frames, skipped = extract_grid_frames(self._original_sprite_sheet, config)
 
-            success, message, frames, skipped = extract_grid_frames(
-                self._original_sprite_sheet, config
+        if not success:
+            return False, message, 0
+
+        if len(frames) == 0:
+            return (
+                False,
+                "No frames could be extracted with current settings. Check frame size and offsets.",
+                0,
             )
 
-            if success:
-                # Check for zero frames - this indicates settings don't match sprite sheet
-                if len(frames) == 0:
-                    return (
-                        False,
-                        "No frames could be extracted with current settings. Check frame size and offsets.",
-                        0,
-                    )
+        self._store_frames(frames)
+        self.extractionCompleted.emit(len(frames))
 
-                # Modify list in-place to preserve AnimationStateManager reference
-                self._sprite_frames.clear()
-                self._sprite_frames.extend(frames)
-                self._animation_state.update_frame_count(len(frames))
-                self.extractionCompleted.emit(len(frames))
-
-                # Build result message including skipped frame warning if any
-                if skipped > 0:
-                    result_msg = f"Extracted {len(frames)} frames ({skipped} skipped - exceeded sheet boundaries)"
-                else:
-                    result_msg = f"Extracted {len(frames)} frames"
-                return True, result_msg, len(frames)
-            else:
-                return False, message, 0
+        if skipped > 0:
+            result_msg = (
+                f"Extracted {len(frames)} frames ({skipped} skipped - exceeded sheet boundaries)"
+            )
         else:
-            # Use CCL extraction instead
-            return self.extract_ccl_frames()
+            result_msg = f"Extracted {len(frames)} frames"
+        return True, result_msg, len(frames)
 
     def set_frame_settings(
         self,
@@ -315,10 +288,7 @@ class SpriteModel(QObject):
         )
 
         if success:
-            # Modify list in-place to preserve AnimationStateManager reference
-            self._sprite_frames.clear()
-            self._sprite_frames.extend(frames)
-            self._animation_state.update_frame_count(frame_count)
+            self._store_frames(frames)
 
         return success, message, frame_count
 
@@ -329,17 +299,6 @@ class SpriteModel(QObject):
             detect_sprites_ccl_enhanced,
         )
 
-        def extract_grid_callback():
-            # Re-extract using current settings
-            return self.extract_frames(
-                self._frame_width,
-                self._frame_height,
-                self._offset_x,
-                self._offset_y,
-                self._spacing_x,
-                self._spacing_y,
-            )
-
         # Get sprite sheet, defaulting to empty QPixmap if None
         sprite_sheet = self._original_sprite_sheet if self._original_sprite_sheet else QPixmap()
 
@@ -348,7 +307,7 @@ class SpriteModel(QObject):
             sprite_sheet=sprite_sheet,
             sprite_sheet_path=self._sprite_sheet_path,
             ccl_available=self.is_ccl_available(),
-            extract_grid_frames_callback=extract_grid_callback,
+            extract_grid_frames_callback=self._re_extract_frames_tuple,
             detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
             detect_background_color=detect_background_color,
             emit_extraction_completed=lambda count: self.extractionCompleted.emit(count),
@@ -357,16 +316,8 @@ class SpriteModel(QObject):
         # If CCL mode succeeded, retrieve and store the extracted frames
         if success and mode is ExtractionMode.CCL:
             ccl_frames = self._ccl_operations.get_last_extracted_frames()
-
             if ccl_frames:
-                # Update main model state with CCL results
-                # Modify list in-place to preserve AnimationStateManager reference
-                self._sprite_frames.clear()
-                self._sprite_frames.extend(ccl_frames)
-                # CRITICAL FIX: Update animation state so total_frames property reflects CCL frame count
-                self._animation_state.update_frame_count(len(ccl_frames))
-
-                # Emit extraction completed signal
+                self._store_frames(ccl_frames)
                 self.extractionCompleted.emit(len(ccl_frames))
 
         return success
@@ -448,7 +399,7 @@ class SpriteModel(QObject):
             return False, 0, 0, message
 
     def comprehensive_auto_detect(self) -> tuple[bool, DetectionResult]:
-        """Run comprehensive auto-detection."""
+        """Run comprehensive auto-detection and extract frames with detected parameters."""
         if not self._original_sprite_sheet:
             empty_result = DetectionResult()
             empty_result.messages = ["No sprite sheet loaded"]
@@ -458,37 +409,27 @@ class SpriteModel(QObject):
             self._original_sprite_sheet, self._sprite_sheet_path
         )
 
-        if success and result:
-            # Update internal state from result
-            self._frame_width = result.frame_width
-            self._frame_height = result.frame_height
-            self._offset_x = result.offset_x
-            self._offset_y = result.offset_y
-            self._spacing_x = result.spacing_x
-            self._spacing_y = result.spacing_y
+        if not (success and result):
+            return False, result
 
-            self.configurationChanged.emit()
+        # Apply detected parameters to internal state
+        self._frame_width = result.frame_width
+        self._frame_height = result.frame_height
+        self._offset_x = result.offset_x
+        self._offset_y = result.offset_y
+        self._spacing_x = result.spacing_x
+        self._spacing_y = result.spacing_y
+        self.configurationChanged.emit()
 
-            # Auto-extract frames using grid mode (since we detected grid parameters)
-            # Switch to grid mode for extraction with detected parameters
-            self.set_extraction_mode(ExtractionMode.GRID)
+        # Extract frames using detected grid parameters
+        self.set_extraction_mode(ExtractionMode.GRID)
+        extract_success, extract_msg, _count = self._re_extract_frames_tuple()
 
-            extract_success, extract_msg, _count = self.extract_frames(
-                self._frame_width,
-                self._frame_height,
-                self._offset_x,
-                self._offset_y,
-                self._spacing_x,
-                self._spacing_y,
-            )
+        if extract_success:
+            result.messages.append(extract_msg)
+            return True, result
 
-            if extract_success:
-                result.messages.append(extract_msg)
-                return True, result
-            else:
-                result.messages.append(f"Extraction failed: {extract_msg}")
-                return False, result
-
+        result.messages.append(f"Extraction failed: {extract_msg}")
         return False, result
 
     # Animation Control Methods (delegate to AnimationStateManager)
@@ -640,11 +581,25 @@ class SpriteModel(QObject):
     def _re_extract_frames(self) -> None:
         """Re-extract frames using current settings."""
         if self._frame_width > 0 and self._frame_height > 0:
-            self.extract_frames(
-                self._frame_width,
-                self._frame_height,
-                self._offset_x,
-                self._offset_y,
-                self._spacing_x,
-                self._spacing_y,
-            )
+            self._re_extract_frames_tuple()
+
+    def _re_extract_frames_tuple(self) -> tuple[bool, str, int]:
+        """Re-extract frames using current settings, returning the extraction result."""
+        return self.extract_frames(
+            self._frame_width,
+            self._frame_height,
+            self._offset_x,
+            self._offset_y,
+            self._spacing_x,
+            self._spacing_y,
+        )
+
+    def _store_frames(self, frames: list[QPixmap]) -> None:
+        """Replace stored frames in-place and update animation state.
+
+        Modifies the list in-place to preserve the AnimationStateManager reference.
+        Does NOT emit extractionCompleted -- callers handle that individually.
+        """
+        self._sprite_frames.clear()
+        self._sprite_frames.extend(frames)
+        self._animation_state.update_frame_count(len(frames))
