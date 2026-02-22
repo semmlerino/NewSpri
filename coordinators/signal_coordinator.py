@@ -130,14 +130,15 @@ class SignalCoordinator(QObject):
         self._connected = True
 
     def disconnect_all(self) -> None:
-        """Disconnect all signals for clean shutdown."""
+        """Mark coordinator as disconnected.
+
+        Does not actually disconnect Qt signals — Qt handles signal cleanup
+        automatically on object destruction. Attempting explicit disconnection
+        of already-destroyed objects can cause crashes, so this method only
+        resets the internal connected flag to prevent redundant connect_all calls.
+        """
         if not self._connected:
             return
-
-        # Qt handles signal disconnection on object destruction,
-        # but explicit disconnect is cleaner for lifecycle management.
-        # Note: We don't disconnect here because Qt handles it automatically
-        # and trying to disconnect already-destroyed objects can cause issues.
 
         self._connected = False
 

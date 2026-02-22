@@ -69,11 +69,8 @@ def loaded_model(sprite_model: SpriteModel, test_sprite_sheet: QPixmap, tmp_path
     success, _error = sprite_model.load_sprite_sheet(str(sprite_path))
     assert success, f"Failed to load test sprite: {_error}"
 
-    # CCL is now default mode, so we need to clear CCL data and switch to grid mode first
-    sprite_model._ccl_operations.clear_ccl_data()
-    assert (
-        sprite_model.get_extraction_mode() == ExtractionMode.GRID
-    )  # clear_ccl_data sets mode to grid
+    # GRID is the default mode; verify it
+    assert sprite_model.get_extraction_mode() == ExtractionMode.GRID
 
     # Extract frames using grid mode
     success, _msg, frame_count = sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
@@ -107,16 +104,16 @@ def mock_ccl_detection():
 class TestModeSwitching:
     """Tests for switching between grid and CCL modes."""
 
-    def test_initial_mode_is_ccl(self, sprite_model: SpriteModel) -> None:
-        """Default extraction mode should be CCL (changed from grid)."""
-        assert sprite_model.get_extraction_mode() == ExtractionMode.CCL
+    def test_initial_mode_is_grid(self, sprite_model: SpriteModel) -> None:
+        """Default extraction mode should be GRID."""
+        assert sprite_model.get_extraction_mode() == ExtractionMode.GRID
 
-    def test_switch_to_grid_without_sprite_sheet_fails(self, sprite_model: SpriteModel) -> None:
-        """Cannot switch to grid without a loaded sprite sheet."""
-        result = sprite_model.set_extraction_mode(ExtractionMode.GRID)
+    def test_switch_to_ccl_without_sprite_sheet_fails(self, sprite_model: SpriteModel) -> None:
+        """Cannot switch to CCL without a loaded sprite sheet."""
+        result = sprite_model.set_extraction_mode(ExtractionMode.CCL)
 
         assert result is False
-        assert sprite_model.get_extraction_mode() == ExtractionMode.CCL
+        assert sprite_model.get_extraction_mode() == ExtractionMode.GRID
 
     def test_switch_grid_to_ccl_with_mock_detection(
         self, loaded_model: SpriteModel, mock_ccl_detection
@@ -478,9 +475,9 @@ class TestCCLOperationsUnit:
         assert "No sprite sheet path" in error or "No CCL sprite boundaries" in error
 
     def test_get_extraction_mode_default(self) -> None:
-        """Default extraction mode should be 'ccl' (changed from grid)."""
+        """Default extraction mode should be GRID."""
         ccl_ops = CCLOperations()
-        assert ccl_ops.get_extraction_mode() == ExtractionMode.CCL
+        assert ccl_ops.get_extraction_mode() == ExtractionMode.GRID
 
     def test_get_ccl_sprite_bounds_empty(self) -> None:
         """CCL bounds should be empty initially."""

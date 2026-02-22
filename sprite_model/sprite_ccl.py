@@ -39,14 +39,13 @@ class CCLOperations:
         self._ccl_sprite_bounds: list[
             tuple[int, int, int, int]
         ] = []  # (x, y, w, h) for each sprite
-        self._ccl_available: bool = False
         self._ccl_background_color: tuple[int, int, int] | None = (
             None  # RGB background color for transparency
         )
         self._ccl_color_tolerance: int = 10  # Tolerance for background color matching
 
         # Mode state
-        self._extraction_mode: ExtractionMode = ExtractionMode.CCL  # CCL is now the default
+        self._extraction_mode: ExtractionMode = ExtractionMode.GRID
 
         # Last extraction results
         self._last_extracted_frames: list[QPixmap] = []
@@ -109,7 +108,6 @@ class CCLOperations:
                     # Store CCL sprite boundaries
                     if "ccl_sprite_bounds" in ccl_result:
                         self._ccl_sprite_bounds = ccl_result["ccl_sprite_bounds"]
-                        self._ccl_available = True
 
                         # Store background color info if available
                         bg_color_info = detect_background_color(sprite_sheet_path)
@@ -202,10 +200,7 @@ class CCLOperations:
             # Generate updated sprite sheet info with CCL extraction information
             updated_info = ""
             if len(sprite_frames) > 0:
-                bounds_info = [
-                    (x, y, w, h) for x, y, w, h in self._ccl_sprite_bounds[:5]
-                ]  # Show first 5
-                bounds_preview = str(bounds_info) + (
+                bounds_preview = str(self._ccl_sprite_bounds[:5]) + (
                     "..." if len(self._ccl_sprite_bounds) > 5 else ""
                 )
 
@@ -293,15 +288,9 @@ class CCLOperations:
         """Get the CCL-detected sprite boundaries."""
         return self._ccl_sprite_bounds.copy()
 
-    def set_ccl_sprite_bounds(self, bounds: list[tuple[int, int, int, int]]) -> None:
-        """Set the CCL sprite boundaries."""
-        self._ccl_sprite_bounds = bounds.copy()
-        self._ccl_available = len(bounds) > 0
-
     def clear_ccl_data(self) -> None:
         """Clear all CCL-related data and reset to defaults."""
         self._ccl_sprite_bounds.clear()
-        self._ccl_available = False
         self._ccl_background_color = None
         self._ccl_color_tolerance = 10
         self._extraction_mode = ExtractionMode.GRID
@@ -358,31 +347,6 @@ class CCLOperations:
             logger.warning("Failed to apply background transparency: %s", e)
             return pixmap  # Return original if processing fails
 
-    # State accessors for integration
-    def get_ccl_background_color(self) -> tuple[int, int, int] | None:
-        """Get the CCL background color."""
-        return self._ccl_background_color
-
-    def set_ccl_background_color(self, color: tuple[int, int, int] | None) -> None:
-        """Set the CCL background color."""
-        self._ccl_background_color = color
-
-    def get_ccl_color_tolerance(self) -> int:
-        """Get the CCL color tolerance."""
-        return self._ccl_color_tolerance
-
-    def set_ccl_color_tolerance(self, tolerance: int) -> None:
-        """Set the CCL color tolerance."""
-        self._ccl_color_tolerance = max(0, min(255, tolerance))  # Clamp to valid range
-
-    def is_ccl_state_available(self) -> bool:
-        """Check if CCL state indicates sprites are available."""
-        return self._ccl_available and len(self._ccl_sprite_bounds) > 0
-
     def get_last_extracted_frames(self) -> list[QPixmap]:
         """Get the frames from the last CCL extraction."""
         return self._last_extracted_frames
-
-    def get_last_extracted_info(self) -> str:
-        """Get the info from the last CCL extraction."""
-        return self._last_extracted_info

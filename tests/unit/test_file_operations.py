@@ -400,34 +400,6 @@ class TestFileLoader:
         assert "Error loading sprite sheet" in error
         assert "Test exception" in error
 
-    def test_reload_sprite_sheet_no_path(self):
-        """Test reloading with no file path."""
-        loader = FileLoader()
-
-        success, pixmap, metadata, error = loader.reload_sprite_sheet("")
-
-        assert not success
-        assert pixmap is None
-        assert metadata == {}
-        assert "No sprite sheet path provided" in error
-
-    def test_reload_sprite_sheet_delegates_to_load(self, temp_dir):
-        """Test that reload delegates to load_sprite_sheet."""
-        loader = FileLoader()
-
-        test_file = temp_dir / "test.png"
-        test_file.write_bytes(b"content")
-
-        # Mock load_sprite_sheet
-        loader.load_sprite_sheet = Mock(return_value=(True, "mock_pixmap", {"test": "data"}, ""))
-
-        success, pixmap, metadata, error = loader.reload_sprite_sheet(str(test_file))
-
-        loader.load_sprite_sheet.assert_called_once_with(str(test_file))
-        assert success
-        assert pixmap == "mock_pixmap"
-        assert metadata == {"test": "data"}
-
 
 class TestFileOperationsIntegration:
     """Test integration between file operations components."""

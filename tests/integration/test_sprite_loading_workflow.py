@@ -27,14 +27,12 @@ class TestSpriteLoadingWorkflow:
 
         # Initialize controllers with minimal mock viewer (single-step constructor DI)
         mock_viewer = Mock()
-        mock_frame_extractor = Mock()
         animation_controller = AnimationController(
             sprite_model=sprite_model,
             sprite_viewer=mock_viewer,
         )
         auto_detection_controller = AutoDetectionController(
             sprite_model=sprite_model,
-            frame_extractor=mock_frame_extractor,
         )
 
         # Signal spies to track workflow
@@ -243,9 +241,6 @@ class TestComponentInteraction:
         # Create all components
         sprite_model = SpriteModel()
 
-        # Setup mock frame extractor
-        mock_frame_extractor = Mock()
-
         # Initialize components (single-step constructor DI)
         animation_controller = AnimationController(
             sprite_model=sprite_model,
@@ -253,7 +248,6 @@ class TestComponentInteraction:
         )
         auto_detection_controller = AutoDetectionController(
             sprite_model=sprite_model,
-            frame_extractor=mock_frame_extractor,
         )
 
         # Load sprite (use grid mode for direct pixmap assignment)

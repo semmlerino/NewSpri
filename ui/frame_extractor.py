@@ -294,27 +294,13 @@ class FrameExtractor(QGroupBox):
         self.auto_margins_btn.setEnabled(enabled)
         self.auto_spacing_btn.setEnabled(enabled)
 
-    def set_ccl_available(self, available: bool, sprite_count: int = 0):
-        """Enable/disable auto-detect mode based on availability."""
-        self.ccl_mode_btn.setEnabled(available)
-        if available:
-            if sprite_count > 0:
-                self.ccl_mode_btn.setToolTip(f"Auto-Detect: Ready ({sprite_count} sprites found)")
-            else:
-                self.ccl_mode_btn.setToolTip(
-                    "Automatically finds each sprite's boundaries.\n"
-                    "Best for sprites with transparent backgrounds."
-                )
-        else:
-            self.ccl_mode_btn.setToolTip("Auto-Detect: Load a sprite sheet first")
-
     def get_extraction_mode(self) -> ExtractionMode:
         """Get current extraction mode."""
         return ExtractionMode.CCL if self.ccl_mode_btn.isChecked() else ExtractionMode.GRID
 
     def set_extraction_mode(self, mode: ExtractionMode):
         """Set extraction mode programmatically."""
-        if mode is ExtractionMode.CCL and self.ccl_mode_btn.isEnabled():
+        if mode is ExtractionMode.CCL:
             self.ccl_mode_btn.setChecked(True)
         else:
             self.grid_mode_btn.setChecked(True)

@@ -7,15 +7,9 @@ Contains utility modules and helper functions:
 """
 
 from .sprite_rendering import create_padded_pixmap
-from .ui_common import (
-    AutoButtonManager,
-    AutoDetectionResult,
-    parse_detection_tuple,
-)
+from .ui_common import AutoButtonManager
 
 __all__ = [
     "AutoButtonManager",
-    "AutoDetectionResult",
     "create_padded_pixmap",
-    "parse_detection_tuple",
 ]

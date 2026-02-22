@@ -218,10 +218,6 @@ class EnhancedStatusBar(QStatusBar):
             self._mouse_label.setText("Mouse: -")
             self._mouse_label.setToolTip("Mouse position not available")
 
-    def show_welcome_message(self) -> None:
-        """Show welcome message."""
-        self.show_permanent_message(Config.App.WELCOME_MESSAGE)
-
 
 class StatusBarManager(QObject):
     """Signal router for coordinating status bar updates with application state.

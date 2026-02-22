@@ -444,7 +444,7 @@ def detect_content_based(sprite_sheet: QPixmap) -> tuple[bool, int, int, str]:
         image = sprite_sheet.toImage()
 
         # Find content boundaries by analyzing transparency
-        content_bounds = _analyze_content_boundaries(image)
+        content_bounds = _find_nonempty_grid_cells(image)
 
         if not content_bounds:
             return False, 0, 0, "No content boundaries detected"
@@ -528,15 +528,15 @@ def _score_frame_candidate(
     return score
 
 
-def _analyze_content_boundaries(image: QImage) -> list[tuple[int, int, int, int]]:
+def _find_nonempty_grid_cells(image: QImage) -> list[tuple[int, int, int, int]]:
     """
-    Analyze image to find content boundaries (sprites).
+    Find non-empty grid cells by testing candidate grid sizes against image content.
 
     Args:
         image: QImage to analyze
 
     Returns:
-        List of (x, y, width, height) tuples for detected sprites
+        List of (x, y, width, height) tuples for grid cells that contain non-transparent pixels
     """
     # This is a simplified implementation
     # In a full implementation, this would use more sophisticated algorithms
@@ -630,7 +630,7 @@ def _calculate_common_dimensions(
 
 def detect_spacing(
     sprite_sheet: QPixmap, frame_width: int, frame_height: int, offset_x: int = 0, offset_y: int = 0
-) -> tuple[bool, int, int, str]:
+) -> tuple[bool, int, int, str, float]:
     """
     Enhanced spacing detection that validates across multiple frame positions.
 
@@ -642,13 +642,14 @@ def detect_spacing(
         offset_y: Y offset (margin) from top edge
 
     Returns:
-        Tuple of (success, spacing_x, spacing_y, status_message)
+        Tuple of (success, spacing_x, spacing_y, status_message, avg_confidence)
+        where avg_confidence is a float in [0.0, 1.0] indicating detection reliability
     """
     if not sprite_sheet or sprite_sheet.isNull():
-        return False, 0, 0, "No sprite sheet provided"
+        return False, 0, 0, "No sprite sheet provided", 0.0
 
     if frame_width <= 0 or frame_height <= 0:
-        return False, 0, 0, "Frame size must be greater than 0"
+        return False, 0, 0, "Frame size must be greater than 0", 0.0
 
     try:
         image = sprite_sheet.toImage()
@@ -701,10 +702,11 @@ def detect_spacing(
                 f"Auto-detected spacing: X={best_spacing_x}, Y={best_spacing_y} "
                 f"(confidence: {confidence_text}, consistency: {avg_confidence:.2f})"
             ),
+            avg_confidence,
         )
 
     except Exception as e:
-        return False, 0, 0, f"Error in enhanced spacing detection: {e!s}"
+        return False, 0, 0, f"Error in enhanced spacing detection: {e!s}", 0.0
 
 
 def _detect_spacing_1d(
@@ -1006,7 +1008,7 @@ def _run_spacing_step(
     messages.append("\n🔍 Step 3: Detecting frame spacing...")
 
     try:
-        spacing_success, spacing_x, spacing_y, spacing_msg = detect_spacing(
+        spacing_success, spacing_x, spacing_y, spacing_msg, spacing_confidence = detect_spacing(
             sprite_sheet,
             result.frame_width,
             result.frame_height,
@@ -1025,19 +1027,12 @@ def _run_spacing_step(
         result.spacing_x = spacing_x
         result.spacing_y = spacing_y
         messages.append(f"   ✓ {spacing_msg}")
-        # Map the textual confidence label back to a numeric score
-        if "confidence: high" in spacing_msg:
-            spacing_conf: float = _CONFIDENCE_HIGH
-        elif "confidence: medium" in spacing_msg:
-            spacing_conf = _CONFIDENCE_MEDIUM
-        else:
-            spacing_conf = 0.5
         _record_step(
             result,
             confidence_scores,
             "spacing",
             True,
-            spacing_conf,
+            spacing_confidence,
             spacing_msg,
         )
     else:

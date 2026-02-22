@@ -783,7 +783,7 @@ class SpriteViewer(QMainWindow):
 
     def _on_playback_started(self):
         """Handle playback start."""
-        self._playback_controls.update_button_states(has_frames=False, at_start=True, at_end=True)
+        self._playback_controls.update_button_states(has_frames=True, at_start=True, at_end=True)
 
     def _on_playback_paused(self):
         """Handle playback pause."""
@@ -1074,9 +1074,7 @@ class SpriteViewer(QMainWindow):
             if modifiers == Qt.KeyboardModifier.NoModifier:
                 return chr(key)
             # Let QKeySequence handle modified keys (Ctrl+A, Alt+1, etc.)
-            q_key_sequence = QKeySequence(
-                key | (modifiers.value if hasattr(modifiers, "value") else int(modifiers.value))
-            )
+            q_key_sequence = QKeySequence(key | modifiers.value)
             return q_key_sequence.toString()
 
         # Unrecognized key -- let parent handle

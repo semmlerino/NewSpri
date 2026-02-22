@@ -272,7 +272,6 @@ class AppConfig:
 
     # Status messages
     WELCOME_MESSAGE = "Welcome! Drag & drop sprite sheets or click Open to get started"
-    READY_MESSAGE = "Ready. Drag & drop sprite sheets or use File > Open"
 
     # ==========================================================================
     # FILE HANDLING (formerly FileConfig)

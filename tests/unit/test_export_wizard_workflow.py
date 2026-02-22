@@ -248,14 +248,6 @@ class TestExportDialog:
         assert hasattr(dialog, "type_step")
         assert hasattr(dialog, "settings_preview_step")
 
-    def test_export_dialog_set_sprites(self, qapp, sample_sprites: list[QPixmap]) -> None:
-        """ExportDialog set_sprites should update sprites."""
-        dialog = ExportDialog(parent=None, frame_count=4, current_frame=0, sprites=[])
-
-        dialog.set_sprites(sample_sprites)
-
-        assert dialog.sprites == sample_sprites
-
     def test_export_dialog_has_signals(self, qapp, sample_sprites: list[QPixmap]) -> None:
         """ExportDialog should have expected signals."""
         dialog = ExportDialog(
@@ -548,14 +540,6 @@ class TestEdgeCases:
         # Should not raise when getting data
         data = wizard.get_wizard_data()
         assert isinstance(data, dict)
-
-    def test_set_sprites_with_none(self, qapp, sample_sprites: list[QPixmap]) -> None:
-        """set_sprites with None should use empty list."""
-        dialog = ExportDialog(parent=None, frame_count=4, current_frame=0, sprites=sample_sprites)
-
-        dialog.set_sprites(None)
-
-        assert dialog.sprites == []
 
     def test_export_preset_short_description_optional(self, qapp) -> None:
         """ExportPreset short_description should be optional."""

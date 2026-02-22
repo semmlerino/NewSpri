@@ -275,9 +275,9 @@ def detect_background_color(image_path: str) -> tuple[tuple[int, int, int], int]
         binary_mask = (alpha_channel > 128).astype(np.uint8)
         opaque_pixels = np.sum(binary_mask)
         total_pixels = binary_mask.size
-        alpha_transparency_ratio = 100 * opaque_pixels / total_pixels
+        opaque_pixel_pct = 100 * opaque_pixels / total_pixels
 
-        if alpha_transparency_ratio > 95:  # Less than 5% alpha transparency
+        if opaque_pixel_pct > 95:  # Less than 5% alpha transparency
             # Try to detect background color (color key)
             color_key_result = _detect_color_key_mask(img_array, [])
             if color_key_result is not None:
@@ -298,7 +298,7 @@ def detect_background_color(image_path: str) -> tuple[tuple[int, int, int], int]
 
 
 def _detect_color_key_mask(
-    img_array: np.ndarray, debug_log: list
+    img_array: np.ndarray, debug_log: list[str]
 ) -> tuple[np.ndarray, np.ndarray, int] | None:
     """
     Detect background color by analyzing corner pixels and testing tolerances.
@@ -361,7 +361,7 @@ def _detect_color_key_mask(
 
 
 def _test_color_key_background(
-    img_array: np.ndarray, background_color: np.ndarray, tolerance: int, debug_log: list
+    img_array: np.ndarray, background_color: np.ndarray, tolerance: int, debug_log: list[str]
 ) -> tuple[np.ndarray, float] | None:
     """
     Test a specific background color and tolerance combination.
@@ -467,7 +467,7 @@ def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
         # Stage 2: Label connected components and extract bounding boxes
         sprite_bounds = _extract_sprite_bounds(binary_mask, debug_log)
         if not sprite_bounds:
-            return {"success": False, "debug_log": debug_log}
+            return {"success": False, "method": "ccl_enhanced", "debug_log": debug_log}
 
         # Stage 3: Decide whether to merge nearby components
         skip_merging = _should_skip_merging(sprite_bounds, debug_log)
@@ -489,7 +489,7 @@ def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
             return analysis_result
 
         debug_log.append("CCL Failed: layout too irregular or insufficient sprites")
-        return {"success": False, "method": "ccl_enhanced"}
+        return {"success": False, "method": "ccl_enhanced", "debug_log": debug_log}
 
     except Exception as e:
         debug_log.append(f"CCL Detection Error: {e!s}")
@@ -517,15 +517,13 @@ def _load_sprite_mask(image_path: str, debug_log: list[str]) -> tuple[np.ndarray
     binary_mask = (alpha_channel > 128).astype(np.uint8)
     opaque_pixels = np.sum(binary_mask)
     total_pixels = binary_mask.size
-    alpha_transparency_ratio = 100 * opaque_pixels / total_pixels
-    debug_log.append(
-        f"Alpha mask: {opaque_pixels}/{total_pixels} opaque ({alpha_transparency_ratio:.1f}%)"
-    )
+    opaque_pixel_pct = 100 * opaque_pixels / total_pixels
+    debug_log.append(f"Alpha mask: {opaque_pixels}/{total_pixels} opaque ({opaque_pixel_pct:.1f}%)")
     debug_log.append("Using alpha channel for sprite boundary detection")
 
     # For mostly-opaque images, try color key detection instead
-    if alpha_transparency_ratio > 95:
-        debug_log.append(f"Solid image detected ({alpha_transparency_ratio:.1f}% opaque)")
+    if opaque_pixel_pct > 95:
+        debug_log.append(f"Solid image detected ({opaque_pixel_pct:.1f}% opaque)")
         color_key_result = _detect_color_key_mask(img_array, debug_log)
         if color_key_result is not None:
             color_key_mask, _background_color, _color_tolerance = color_key_result

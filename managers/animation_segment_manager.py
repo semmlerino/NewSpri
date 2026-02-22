@@ -20,6 +20,33 @@ from PySide6.QtGui import QColor, QPixmap
 
 logger = logging.getLogger(__name__)
 
+_WINDOWS_RESERVED_NAMES: frozenset[str] = frozenset(
+    {
+        "CON",
+        "PRN",
+        "AUX",
+        "NUL",
+        "COM1",
+        "COM2",
+        "COM3",
+        "COM4",
+        "COM5",
+        "COM6",
+        "COM7",
+        "COM8",
+        "COM9",
+        "LPT1",
+        "LPT2",
+        "LPT3",
+        "LPT4",
+        "LPT5",
+        "LPT6",
+        "LPT7",
+        "LPT8",
+        "LPT9",
+    }
+)
+
 
 @dataclass
 class AnimationSegment:
@@ -96,32 +123,8 @@ class AnimationSegment:
             )
 
         # Check for Windows reserved names
-        reserved_names = {
-            "CON",
-            "PRN",
-            "AUX",
-            "NUL",
-            "COM1",
-            "COM2",
-            "COM3",
-            "COM4",
-            "COM5",
-            "COM6",
-            "COM7",
-            "COM8",
-            "COM9",
-            "LPT1",
-            "LPT2",
-            "LPT3",
-            "LPT4",
-            "LPT5",
-            "LPT6",
-            "LPT7",
-            "LPT8",
-            "LPT9",
-        }
         name_without_ext = self.name.split(".")[0].upper()
-        if name_without_ext in reserved_names:
+        if name_without_ext in _WINDOWS_RESERVED_NAMES:
             return False, f"'{self.name}' is a reserved system name and cannot be used"
 
         if self.start_frame < 0:

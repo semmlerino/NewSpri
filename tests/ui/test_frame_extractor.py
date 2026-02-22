@@ -85,8 +85,7 @@ class TestFrameExtractorModeHandling:
         widget = FrameExtractor()
         enum_spy = QSignalSpy(widget.modeChangedEnum)
 
-        # Switch to CCL mode (first enable it)
-        widget.set_ccl_available(True)
+        # Switch to CCL mode
         widget.ccl_mode_btn.setChecked(True)
         widget._on_mode_changed(widget.ccl_mode_btn)
 
@@ -126,8 +125,7 @@ class TestFrameExtractorModeHandling:
         """Test CCL mode disables grid-specific controls."""
         widget = FrameExtractor()
 
-        # Enable and switch to CCL mode
-        widget.set_ccl_available(True)
+        # Switch to CCL mode
         widget.set_extraction_mode(ExtractionMode.CCL)
 
         # Grid controls should be disabled in CCL mode
@@ -145,23 +143,6 @@ class TestFrameExtractorModeHandling:
         for button in widget.preset_group.buttons():
             assert not button.isEnabled()
 
-    def test_ccl_availability(self, qapp):
-        """Test CCL availability setting."""
-        widget = FrameExtractor()
-
-        # CCL is now enabled by default (changed from disabled)
-        assert widget.ccl_mode_btn.isEnabled()
-
-        # Update CCL info with sprite count
-        widget.set_ccl_available(True, sprite_count=5)
-        assert widget.ccl_mode_btn.isEnabled()
-        assert "5 sprites" in widget.ccl_mode_btn.toolTip()
-
-        # Disable CCL
-        widget.set_ccl_available(False)
-        assert not widget.ccl_mode_btn.isEnabled()
-        assert "Load a sprite sheet first" in widget.ccl_mode_btn.toolTip()
-
     def test_mode_status_updates(self, qapp):
         """Test mode status indicator updates correctly."""
         widget = FrameExtractor()
@@ -171,7 +152,6 @@ class TestFrameExtractorModeHandling:
         assert "Grid mode active" in widget.mode_status.text()
 
         # CCL mode status (UI shows "Auto-detect" for user-friendliness)
-        widget.set_ccl_available(True)
         widget.set_extraction_mode(ExtractionMode.CCL)
         assert "Auto-detect active" in widget.mode_status.text()
 
@@ -440,9 +420,6 @@ def test_extraction_modes_parametrized(qapp, mode):
     """Test both extraction modes work correctly."""
     widget = FrameExtractor()
 
-    if mode == ExtractionMode.CCL:
-        widget.set_ccl_available(True)
-
     widget.set_extraction_mode(mode)
     assert widget.get_extraction_mode() == mode
 
@@ -456,21 +433,6 @@ class TestFrameExtractorErrorHandling:
 
         # Setting invalid mode should default to grid
         widget.set_extraction_mode("invalid_mode")
-        assert widget.get_extraction_mode() == ExtractionMode.GRID
-
-    def test_ccl_mode_when_unavailable(self, qapp):
-        """Test CCL mode when explicitly disabled."""
-        widget = FrameExtractor()
-
-        # CCL is enabled by default; first switch to grid mode
-        widget.set_extraction_mode(ExtractionMode.GRID)
-        assert widget.get_extraction_mode() == ExtractionMode.GRID
-
-        # Disable CCL availability
-        widget.set_ccl_available(False)
-
-        # Now trying to set CCL should keep us in grid mode
-        widget.set_extraction_mode(ExtractionMode.CCL)
         assert widget.get_extraction_mode() == ExtractionMode.GRID
 
     def test_extreme_values(self, qapp):

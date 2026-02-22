@@ -270,11 +270,8 @@ def animation_controller(sprite_model) -> AnimationController:
 
 @pytest.fixture
 def auto_detection_controller(sprite_model) -> AutoDetectionController:
-    """Fresh AutoDetectionController instance for testing with mock dependencies."""
-    from unittest.mock import MagicMock
-
-    mock_frame_extractor = MagicMock()
-    return AutoDetectionController(sprite_model=sprite_model, frame_extractor=mock_frame_extractor)
+    """Fresh AutoDetectionController instance for testing."""
+    return AutoDetectionController(sprite_model=sprite_model)
 
 
 @pytest.fixture

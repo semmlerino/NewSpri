@@ -94,29 +94,23 @@ class TestAutoDetectionControllerInitialization:
     """Test AutoDetectionController initialization contract (constructor DI)."""
 
     def test_constructor_requires_dependencies(self):
-        """Controller constructor requires sprite_model and frame_extractor."""
+        """Controller constructor requires sprite_model."""
         mock_model = Mock()
-        mock_extractor = Mock()
 
         controller = AutoDetectionController(
             sprite_model=mock_model,
-            frame_extractor=mock_extractor,
         )
 
         assert controller is not None
         assert controller._sprite_model is mock_model
-        assert controller._frame_extractor is mock_extractor
 
     def test_controller_stores_dependencies(self):
         """Controller properly stores dependencies at construction."""
         mock_model = Mock()
-        mock_extractor = Mock()
 
         controller = AutoDetectionController(
             sprite_model=mock_model,
-            frame_extractor=mock_extractor,
         )
 
         # Dependencies should be accessible via private attributes
         assert controller._sprite_model is mock_model
-        assert controller._frame_extractor is mock_extractor

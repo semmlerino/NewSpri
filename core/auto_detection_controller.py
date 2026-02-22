@@ -12,11 +12,9 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox
 
 from sprite_model.sprite_detection import DetectionResult
-from utils.ui_common import parse_detection_tuple
 
 if TYPE_CHECKING:
     from sprite_model import SpriteModel
-    from ui import FrameExtractor
 
 logger = logging.getLogger(__name__)
 
@@ -43,22 +41,17 @@ class AutoDetectionController(QObject):
     buttonConfidenceUpdate = Signal(str, str, str)  # button_type, confidence, message
     statusUpdate = Signal(str, int)  # message, timeout_ms
 
-    def __init__(self, sprite_model: "SpriteModel", frame_extractor: "FrameExtractor"):
+    def __init__(self, sprite_model: "SpriteModel"):
         """
         Initialize controller with required dependencies.
 
         Args:
             sprite_model: The sprite data model
-            frame_extractor: The frame extractor UI component
         """
         super().__init__()
 
         # References to external components
         self._sprite_model = sprite_model
-        self._frame_extractor = frame_extractor
-
-        # Workflow state
-        self._workflow_state = "idle"
 
     # ============================================================================
     # MANUAL AUTO-DETECTION WORKFLOWS
@@ -71,7 +64,6 @@ class AutoDetectionController(QObject):
             return
 
         self.detectionStarted.emit("comprehensive")
-        self._workflow_state = "working"
 
         try:
             # Run the comprehensive workflow
@@ -86,20 +78,16 @@ class AutoDetectionController(QObject):
             # Show detailed results dialog
             self._show_detection_results_dialog(success, result)
 
-            # Update workflow state
             if success:
-                self._workflow_state = "completed"
                 self.detectionCompleted.emit(
                     "comprehensive", True, "Auto-detection completed successfully"
                 )
             else:
-                self._workflow_state = "failed"
                 self.detectionCompleted.emit(
                     "comprehensive", False, "Auto-detection completed with issues"
                 )
 
         except Exception as e:
-            self._workflow_state = "failed"
             self.detectionFailed.emit("comprehensive", str(e))
 
     def run_frame_detection(self):
@@ -112,21 +100,19 @@ class AutoDetectionController(QObject):
 
         try:
             # Try enhanced rectangular detection first
-            result_tuple = self._sprite_model.auto_detect_rectangular_frames()
-            result = parse_detection_tuple(result_tuple)
+            success, width, height, message = self._sprite_model.auto_detect_rectangular_frames()
 
-            if result.success:
-                width = result.x if result.x is not None else 0
-                height = result.y if result.y is not None else 0
+            if success:
                 self.frameSettingsDetected.emit(width, height)
 
-                self.buttonConfidenceUpdate.emit("frame", result.confidence, result.message)
-                self.statusUpdate.emit(result.message, 3000)
-                self.detectionCompleted.emit("frame", True, result.message)
+                confidence = "medium"
+                self.buttonConfidenceUpdate.emit("frame", confidence, message)
+                self.statusUpdate.emit(message, 3000)
+                self.detectionCompleted.emit("frame", True, message)
             else:
-                self.buttonConfidenceUpdate.emit("frame", "failed", result.message)
-                self.statusUpdate.emit(f"Frame detection failed: {result.message}", 3000)
-                self.detectionFailed.emit("frame", result.message)
+                self.buttonConfidenceUpdate.emit("frame", "failed", message)
+                self.statusUpdate.emit(f"Frame detection failed: {message}", 3000)
+                self.detectionFailed.emit("frame", message)
 
         except Exception as e:
             self.detectionFailed.emit("frame", str(e))
@@ -140,23 +126,20 @@ class AutoDetectionController(QObject):
         self.detectionStarted.emit("margins")
 
         try:
-            result_tuple = self._sprite_model.auto_detect_margins()
-            result = parse_detection_tuple(result_tuple)
+            success, offset_x, offset_y, message = self._sprite_model.auto_detect_margins()
 
-            if result.success:
-                offset_x = result.x if result.x is not None else 0
-                offset_y = result.y if result.y is not None else 0
+            if success:
                 self.marginSettingsDetected.emit(offset_x, offset_y)
 
                 # Margin detection confidence based on results
-                result.confidence = "high" if offset_x > 0 or offset_y > 0 else "medium"
-                self.buttonConfidenceUpdate.emit("margins", result.confidence, result.message)
-                self.statusUpdate.emit(result.message, 3000)
-                self.detectionCompleted.emit("margins", True, result.message)
+                confidence = "high" if offset_x > 0 or offset_y > 0 else "medium"
+                self.buttonConfidenceUpdate.emit("margins", confidence, message)
+                self.statusUpdate.emit(message, 3000)
+                self.detectionCompleted.emit("margins", True, message)
             else:
-                self.buttonConfidenceUpdate.emit("margins", "failed", result.message)
-                self.statusUpdate.emit(f"Margin detection failed: {result.message}", 3000)
-                self.detectionFailed.emit("margins", result.message)
+                self.buttonConfidenceUpdate.emit("margins", "failed", message)
+                self.statusUpdate.emit(f"Margin detection failed: {message}", 3000)
+                self.detectionFailed.emit("margins", message)
 
         except Exception as e:
             self.detectionFailed.emit("margins", str(e))
@@ -170,21 +153,21 @@ class AutoDetectionController(QObject):
         self.detectionStarted.emit("spacing")
 
         try:
-            result_tuple = self._sprite_model.auto_detect_spacing_enhanced()
-            result = parse_detection_tuple(result_tuple)
+            success, spacing_x, spacing_y, message = (
+                self._sprite_model.auto_detect_spacing_enhanced()
+            )
 
-            if result.success:
-                spacing_x = result.x if result.x is not None else 0
-                spacing_y = result.y if result.y is not None else 0
+            if success:
                 self.spacingSettingsDetected.emit(spacing_x, spacing_y)
 
-                self.buttonConfidenceUpdate.emit("spacing", result.confidence, result.message)
-                self.statusUpdate.emit(result.message, 3000)
-                self.detectionCompleted.emit("spacing", True, result.message)
+                confidence = "medium"
+                self.buttonConfidenceUpdate.emit("spacing", confidence, message)
+                self.statusUpdate.emit(message, 3000)
+                self.detectionCompleted.emit("spacing", True, message)
             else:
-                self.buttonConfidenceUpdate.emit("spacing", "failed", result.message)
-                self.statusUpdate.emit(f"Spacing detection failed: {result.message}", 3000)
-                self.detectionFailed.emit("spacing", result.message)
+                self.buttonConfidenceUpdate.emit("spacing", "failed", message)
+                self.statusUpdate.emit(f"Spacing detection failed: {message}", 3000)
+                self.detectionFailed.emit("spacing", message)
 
         except Exception as e:
             self.detectionFailed.emit("spacing", str(e))

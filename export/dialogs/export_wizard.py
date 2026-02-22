@@ -222,10 +222,3 @@ class ExportDialog(QDialog):
         super().showEvent(event)
         # Ensure wizard starts at first step
         self.wizard.set_current_step(0)
-
-    def set_sprites(self, sprites: list[QPixmap]):
-        """Set sprite frames for export. Compatible with legacy API."""
-        self.sprites = sprites or []
-        # Update the settings step if it exists
-        if hasattr(self, "settings_preview_step") and self.settings_preview_step:
-            self.settings_preview_step.set_sprites(self.sprites)

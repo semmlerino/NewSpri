@@ -142,7 +142,7 @@ class TestFrameDetector:
 
         # Mock the content analysis methods
         with (
-            patch("sprite_model.sprite_detection._analyze_content_boundaries") as mock_analyze,
+            patch("sprite_model.sprite_detection._find_nonempty_grid_cells") as mock_analyze,
             patch("sprite_model.sprite_detection._calculate_common_dimensions") as mock_calc,
         ):
             # Setup mocks to return successful results
@@ -162,7 +162,7 @@ class TestFrameDetector:
         pixmap = QPixmap(64, 64)
         pixmap.fill(Qt.white)
 
-        with patch("sprite_model.sprite_detection._analyze_content_boundaries") as mock_analyze:
+        with patch("sprite_model.sprite_detection._find_nonempty_grid_cells") as mock_analyze:
             mock_analyze.return_value = []  # No content found
 
             success, width, height, message = detect_content_based(pixmap)
@@ -406,13 +406,14 @@ class TestSpacingDetector:
         pixmap = QPixmap(100, 100)
         pixmap.fill(Qt.red)
 
-        success, spacing_x, spacing_y, message = detect_spacing(pixmap, 32, 32)
+        success, spacing_x, spacing_y, message, confidence = detect_spacing(pixmap, 32, 32)
 
         assert success
         assert spacing_x >= 0
         assert spacing_y >= 0
         assert "Auto-detected spacing" in message
         assert "confidence:" in message
+        assert 0.0 <= confidence <= 1.0
 
     def test_detect_spacing_with_gaps(self, qapp):
         """Test spacing detection with actual gaps between frames."""
@@ -438,7 +439,9 @@ class TestSpacingDetector:
                             image.setPixel(x, y, 0xFF000000)
 
         pixmap = QPixmap.fromImage(image)
-        success, detected_x, detected_y, message = detect_spacing(pixmap, frame_size, frame_size)
+        success, detected_x, detected_y, message, _confidence = detect_spacing(
+            pixmap, frame_size, frame_size
+        )
 
         assert success
         # Should detect the 2px spacing (or close to it)
@@ -544,19 +547,19 @@ class TestSpacingDetector:
         # Removed - using function-based API
 
         # Test with None
-        success, spacing_x, spacing_y, message = detect_spacing(None, 32, 32)
+        success, spacing_x, spacing_y, message, _conf = detect_spacing(None, 32, 32)
         assert not success
         assert "No sprite sheet provided" in message
 
         # Test with null pixmap
         null_pixmap = QPixmap()
-        success, spacing_x, spacing_y, message = detect_spacing(null_pixmap, 32, 32)
+        success, spacing_x, spacing_y, message, _conf = detect_spacing(null_pixmap, 32, 32)
         assert not success
         assert "No sprite sheet provided" in message
 
         # Test with zero frame size
         pixmap = QPixmap(100, 100)
-        success, spacing_x, spacing_y, message = detect_spacing(pixmap, 0, 32)
+        success, spacing_x, spacing_y, message, _conf = detect_spacing(pixmap, 0, 32)
         assert not success
         assert "Frame size must be greater than 0" in message
 
@@ -566,12 +569,13 @@ class TestSpacingDetector:
         pixmap = QPixmap(64, 64)
         pixmap.fill(Qt.blue)
 
-        success, spacing_x, spacing_y, message = detect_spacing(pixmap, 16, 16)
+        success, spacing_x, spacing_y, message, confidence = detect_spacing(pixmap, 16, 16)
 
         assert success
         # Should include confidence in message
         assert "confidence:" in message
         assert any(conf in message for conf in ["high", "medium", "low"])
+        assert 0.0 <= confidence <= 1.0
 
 
 class TestAutoDetectionController:
@@ -580,10 +584,8 @@ class TestAutoDetectionController:
     def test_controller_initialization(self, qapp):
         """Test AutoDetectionController can be created with dependencies."""
         mock_model = Mock()
-        mock_extractor = Mock()
         controller = AutoDetectionController(
             sprite_model=mock_model,
-            frame_extractor=mock_extractor,
         )
         assert controller is not None
 
@@ -591,7 +593,6 @@ class TestAutoDetectionController:
         """Test all required signals are defined."""
         controller = AutoDetectionController(
             sprite_model=Mock(),
-            frame_extractor=Mock(),
         )
 
         # Check workflow signals
@@ -609,15 +610,12 @@ class TestAutoDetectionController:
     def test_controller_stores_dependencies(self, qapp):
         """Test controller properly stores dependencies at construction."""
         mock_sprite_model = Mock()
-        mock_frame_extractor = Mock()
 
         controller = AutoDetectionController(
             sprite_model=mock_sprite_model,
-            frame_extractor=mock_frame_extractor,
         )
 
         assert controller._sprite_model == mock_sprite_model
-        assert controller._frame_extractor == mock_frame_extractor
 
     def test_run_frame_detection_no_original(self, qapp):
         """Test frame detection without original sprite sheet."""
@@ -626,7 +624,6 @@ class TestAutoDetectionController:
 
         controller = AutoDetectionController(
             sprite_model=mock_model,
-            frame_extractor=Mock(),
         )
         status_spy = QSignalSpy(controller.statusUpdate)
 
@@ -649,7 +646,6 @@ class TestAutoDetectionController:
 
         controller = AutoDetectionController(
             sprite_model=mock_sprite_model,
-            frame_extractor=Mock(),
         )
 
         # Test signals
@@ -675,7 +671,6 @@ class TestAutoDetectionController:
 
         controller = AutoDetectionController(
             sprite_model=mock_sprite_model,
-            frame_extractor=Mock(),
         )
 
         # Test signals
@@ -703,7 +698,6 @@ class TestAutoDetectionController:
 
         controller = AutoDetectionController(
             sprite_model=mock_sprite_model,
-            frame_extractor=Mock(),
         )
 
         # Test signals
@@ -730,7 +724,6 @@ class TestAutoDetectionController:
 
         controller = AutoDetectionController(
             sprite_model=mock_sprite_model,
-            frame_extractor=Mock(),
         )
 
         summary = controller._create_detection_summary()
@@ -743,7 +736,6 @@ class TestAutoDetectionController:
         """Test button confidence updates from detection result."""
         controller = AutoDetectionController(
             sprite_model=Mock(),
-            frame_extractor=Mock(),
         )
         button_spy = QSignalSpy(controller.buttonConfidenceUpdate)
 
@@ -872,7 +864,7 @@ class TestDetectionIntegration:
         assert margin_success
 
         # Step 3: Spacing detection with frame and margin context
-        spacing_success, spacing_x, spacing_y, _ = detect_spacing(
+        spacing_success, spacing_x, spacing_y, _, _conf = detect_spacing(
             pixmap, frame_width, frame_height, offset_x, offset_y
         )
         assert spacing_success

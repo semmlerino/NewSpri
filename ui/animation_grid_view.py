@@ -40,7 +40,6 @@ class FrameThumbnail(QLabel):
         self.frame_index = frame_index
         self._thumbnail_size = thumbnail_size
         self._selected = False
-        self._highlighted = False  # For hover/drag-over effects
         self._is_segment_start = False
         self._is_segment_end = False
         self._segment_color = None
@@ -86,7 +85,6 @@ class FrameThumbnail(QLabel):
         self.setStyleSheet(
             StyleManager.thumbnail_style(
                 selected=self._selected,
-                highlighted=self._highlighted,
                 segment_color=segment_color,
                 segment_bg=segment_bg,
                 is_segment_start=self._is_segment_start,
@@ -97,11 +95,6 @@ class FrameThumbnail(QLabel):
     def set_selected(self, selected: bool):
         """Set selection state."""
         self._selected = selected
-        self._update_style()
-
-    def set_highlighted(self, highlighted: bool):
-        """Set highlighted state (for drag-over effects)."""
-        self._highlighted = highlighted
         self._update_style()
 
     def set_segment_markers(
@@ -125,7 +118,6 @@ class FrameThumbnail(QLabel):
         self._is_segment_end = False
         self._segment_color = None
         self._selected = False
-        self._highlighted = False
 
         # Use the same style path as _update_style() for the unselected, no-segment state
         self.setStyleSheet(StyleManager.thumbnail_style())
@@ -259,16 +251,7 @@ class AnimationGridView(QWidget):
             "Selection modes: Click = select • Drag = range • Shift+Click = extend range • "
             "Ctrl/Alt+Click = multi-select • Double-Click = preview • Right-Click = add as segment"
         )
-        instructions.setStyleSheet("""
-            QLabel {
-                background-color: #F0F8FF;
-                border: 1px solid #B0C4DE;
-                border-radius: 4px;
-                padding: 6px;
-                font-size: 11px;
-                color: #2F4F4F;
-            }
-        """)
+        instructions.setStyleSheet(StyleManager.instruction_label())
         instructions.setWordWrap(True)
         parent_layout.addWidget(instructions)
 
@@ -337,8 +320,6 @@ class AnimationGridView(QWidget):
 
     def _on_frame_clicked(self, frame_index: int, modifiers: int):
         """Handle frame thumbnail click with keyboard modifiers."""
-        from PySide6.QtCore import Qt
-
         # Check modifiers using bitwise operations directly on the integer value
         ctrl_pressed = bool(modifiers & int(Qt.KeyboardModifier.ControlModifier.value))
         alt_pressed = bool(modifiers & int(Qt.KeyboardModifier.AltModifier.value))
@@ -575,23 +556,14 @@ class AnimationGridView(QWidget):
 
     def _generate_unique_segment_name(self, base_name: str = "Animation") -> str:
         """Generate a unique segment name that doesn't conflict with existing segments."""
-        # Start with index 1
-        index = 1
-
-        # Keep incrementing until we find a unique name
-        while True:
+        for index in range(1, 1001):
             candidate_name = f"{base_name}_{index}"
             if candidate_name not in self._segments:
                 return candidate_name
-            index += 1
-
-            # Safety check to prevent infinite loop
-            if index > 1000:
-                # Use timestamp as fallback
-                import time
-
-                timestamp = int(time.time() * 1000) % 100000
-                return f"{base_name}_{timestamp}"
+        raise RuntimeError(
+            f"Could not generate a unique segment name after 1000 attempts "
+            f"(base_name={base_name!r})"
+        )
 
     def _get_next_segment_color(self) -> QColor:
         """Get the next color for a new segment from the palette."""

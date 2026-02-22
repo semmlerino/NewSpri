@@ -222,11 +222,7 @@ class AnimationSegmentController(QObject):
         """Return True if the grid view reports that it contains the named segment."""
         if not self._grid_view:
             return False
-        has_segment = getattr(self._grid_view, "has_segment", None)
-        if callable(has_segment):
-            result = has_segment(segment_name)
-            return isinstance(result, bool) and result
-        return False
+        return self._grid_view.has_segment(segment_name)
 
     def _add_segment_to_preview(
         self,
@@ -357,9 +353,7 @@ class AnimationSegmentController(QObject):
 
     def _on_export_requested(self, segment_name: str) -> None:
         """Handle export request from grid view or preview panel."""
-        segment = next(
-            (s for s in self._segment_manager.get_all_segments() if s.name == segment_name), None
-        )
+        segment = self._segment_manager.get_segment(segment_name)
         if segment:
             self.export_segment(segment, self._tab_widget or self._grid_view)
 
@@ -388,9 +382,9 @@ class AnimationSegmentController(QObject):
             parent_widget,
             frame_count=len(segment_frames),
             current_frame=0,
+            sprites=segment_frames,
             segment_manager=self._segment_manager,
         )
-        dialog.set_sprites(segment_frames)
         coordinator = self._export_coordinator
         if coordinator is not None:
             dialog.exportRequested.connect(
@@ -467,11 +461,7 @@ class AnimationSegmentController(QObject):
             if self._sprite_model and self._sprite_model.sprite_frames
             else 0
         )
-        current_sprite_path = (
-            self._sprite_model.file_path
-            if self._sprite_model and hasattr(self._sprite_model, "file_path")
-            else ""
-        )
+        current_sprite_path = self._sprite_model.file_path if self._sprite_model else ""
 
         frame_data_changed = (
             current_frame_count != self._last_sync_frame_count

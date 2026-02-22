@@ -654,14 +654,12 @@ class ExportWorker(QThread):
         return True
 
     def _calculate_segments_per_row_layout(self) -> tuple[int, int]:
-        """Calculate layout for segments per row mode."""
+        """Calculate layout for segments per row mode.
 
-        if not self.task.segment_info:
-            # No segments, fall back to square layout
-            frame_count = len(self.task.frames)
-            cols = math.ceil(math.sqrt(frame_count))
-            rows = math.ceil(frame_count / cols)
-            return cols, rows
+        Precondition: segment_info is non-empty (validated by _validate_segment_info
+        before this method is called).
+        """
+        assert self.task.segment_info, "segment_info must be non-empty (validated before call)"
 
         # Calculate maximum frames per segment
         max_frames_per_segment = max(

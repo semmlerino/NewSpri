@@ -264,9 +264,10 @@ class TestAnimationSegmentController(unittest.TestCase):
             "TestSegment", frames
         )
 
-        # Verify dialog creation
+        # Verify dialog creation with sprites in constructor
         mock_dialog_class.assert_called_once()
-        mock_dialog.set_sprites.assert_called_once_with(segment_frames)
+        call_kwargs = mock_dialog_class.call_args
+        assert call_kwargs[1]["sprites"] == segment_frames
         mock_dialog.exportRequested.connect.assert_called_once()
 
     @patch("core.animation_segment_controller.QMessageBox")

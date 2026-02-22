@@ -48,6 +48,10 @@ from ..dialogs.base.wizard_base import WizardStep, WizardWidget
 
 logger = logging.getLogger(__name__)
 
+# Ordered layout mode identifiers. Index matches the QButtonGroup id used in
+# _SheetSettingsPanel._create_layout_tab and _get_layout_mode.
+_LAYOUT_MODES: tuple[str, ...] = ("auto", "columns", "rows", "square")
+
 
 class CompactLivePreview(QGraphicsView):
     """Modern preview widget with integrated controls."""
@@ -106,7 +110,7 @@ class CompactLivePreview(QGraphicsView):
             self.resetTransform()
             self.scale(10, 10)
 
-    def update_preview(self, pixmap: QPixmap, info: dict[str, Any]):
+    def update_preview(self, pixmap: QPixmap):
         """Update preview with modern styling."""
         self._preview_scene.clear()
 
@@ -194,10 +198,10 @@ class _SheetSettingsPanel:
         mode_layout.setSpacing(8)
 
         modes = [
-            ("Auto", "auto", "Best fit"),
-            ("Fixed Columns", "columns", "Set columns"),
-            ("Fixed Rows", "rows", "Set rows"),
-            ("Square", "square", "Force square"),
+            ("Auto", _LAYOUT_MODES[0], "Best fit"),
+            ("Fixed Columns", _LAYOUT_MODES[1], "Set columns"),
+            ("Fixed Rows", _LAYOUT_MODES[2], "Set rows"),
+            ("Square", _LAYOUT_MODES[3], "Force square"),
         ]
 
         for i, (label, value, tooltip) in enumerate(modes):
@@ -1163,7 +1167,8 @@ class ModernExportSettings(WizardStep):
                 w = self._settings_widgets.get("base_name")
                 valid &= bool(w.text() if w is not None else "")
             elif self._current_preset.mode is ExportMode.SELECTED_FRAMES:
-                valid &= len(self.frame_list.selectedItems()) > 0
+                frame_list = self._settings_widgets.get("frame_list")
+                valid &= frame_list is not None and len(frame_list.selectedItems()) > 0
                 w = self._settings_widgets.get("selected_base_name")
                 valid &= bool(w.text() if w is not None else "")
 
@@ -1172,17 +1177,8 @@ class ModernExportSettings(WizardStep):
 
     def _update_preview(self):
         """Update preview based on settings."""
-        logger.debug("_update_preview called")
-        logger.debug("Current preset: %s", self._current_preset)
-        logger.debug(
-            "Current preset mode: %s", self._current_preset.mode if self._current_preset else "None"
-        )
-        logger.debug("Number of sprites: %d", len(self._sprites))
-        logger.debug("Segment manager available: %s", self._segment_manager is not None)
-
         if not self._current_preset or not self._sprites:
-            logger.debug("No preset or sprites, showing empty preview")
-            self.preview_view.update_preview(QPixmap(), {})
+            self.preview_view.update_preview(QPixmap())
             return
 
         # Generate preview
@@ -1190,32 +1186,20 @@ class ModernExportSettings(WizardStep):
             ExportMode.SPRITE_SHEET,
             ExportMode.SEGMENTS_SHEET,
         ):
-            logger.debug("Generating sheet preview for mode: %s", self._current_preset.mode)
-            pixmap = self._generate_sheet_preview()
+            pixmap = self._preview_generator.generate_sheet_preview()
         else:
-            logger.debug("Generating frames preview for mode: %s", self._current_preset.mode)
-            pixmap = self._generate_frames_preview()
+            pixmap = self._preview_generator.generate_frames_preview()
 
-        logger.debug("Generated preview pixmap size: %dx%d", pixmap.width(), pixmap.height())
-        self.preview_view.update_preview(pixmap, {})
+        self.preview_view.update_preview(pixmap)
 
     def _get_layout_mode(self) -> str:
         """Return the currently selected layout mode string."""
-        modes = ["auto", "columns", "rows", "square"]
         mode_group = self._settings_widgets.get("layout_mode")
         if mode_group is not None:
             checked_id = mode_group.checkedId()
-            if 0 <= checked_id < len(modes):
-                return modes[checked_id]
+            if 0 <= checked_id < len(_LAYOUT_MODES):
+                return _LAYOUT_MODES[checked_id]
         return "auto"
-
-    def _generate_sheet_preview(self) -> QPixmap:
-        """Generate sprite sheet preview."""
-        return self._preview_generator.generate_sheet_preview()
-
-    def _generate_frames_preview(self) -> QPixmap:
-        """Generate individual frames preview."""
-        return self._preview_generator.generate_frames_preview()
 
     def _update_preview_info(self, text: str):
         """Update preview info overlay."""
@@ -1396,19 +1380,7 @@ class ModernExportSettings(WizardStep):
 
     def _generate_pattern_display(self, pattern: str, base_name: str) -> str:
         """Generate display text for a pattern with the given base name."""
-        # Get format extension
         format_ext = (
             self.format_combo.currentText().lower() if hasattr(self, "format_combo") else "png"
         )
-
-        # Replace placeholders
-        if pattern == "{name}_{index:03d}":
-            result = f"{base_name}_001.{format_ext}"
-        elif pattern == "{name}-{index}":
-            result = f"{base_name}-1.{format_ext}"
-        elif pattern == "{name}{index}":
-            result = f"{base_name}1.{format_ext}"
-        else:
-            result = f"{base_name}.{format_ext}"
-
-        return result
+        return f"{pattern.format(name=base_name, index=1)}.{format_ext}"

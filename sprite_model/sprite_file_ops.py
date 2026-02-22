@@ -296,21 +296,3 @@ class FileLoader:
 
         except OSError as e:
             return False, None, {}, f"Error loading sprite sheet: {e!s}"
-
-    def reload_sprite_sheet(self, file_path: str) -> tuple[bool, QPixmap | None, dict, str]:
-        """
-        Reload a sprite sheet from disk.
-
-        Args:
-            file_path: Path to the sprite sheet file
-
-        Returns:
-            Tuple of (success, pixmap, metadata, error_message)
-        """
-        if not PYSIDE6_AVAILABLE:
-            return False, None, {}, "PySide6 not available - required for image loading"
-
-        if not file_path:
-            return False, None, {}, "No sprite sheet path provided"
-
-        return self.load_sprite_sheet(file_path)

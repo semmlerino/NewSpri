@@ -126,7 +126,6 @@ class TestModelViewControllerIntegration:
 
         model = SpriteModel()
         mock_viewer = Mock()
-        mock_extractor = Mock()
 
         animation_controller = AnimationController(
             sprite_model=model,
@@ -134,7 +133,6 @@ class TestModelViewControllerIntegration:
         )
         detection_controller = AutoDetectionController(
             sprite_model=model,
-            frame_extractor=mock_extractor,
         )
 
         # Create a sprite sheet with 16 frames (4x4 grid)
@@ -199,7 +197,6 @@ class TestModelViewControllerIntegration:
         # Auto-detection should have run when sprite was loaded
         # Just verify the controller was initialized properly
         assert detection_controller._sprite_model == model
-        assert detection_controller._frame_extractor == mock_extractor
 
     @pytest.mark.integration
     def test_signal_propagation_chain(self, qtbot):

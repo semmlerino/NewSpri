@@ -384,7 +384,7 @@ class SpriteModel(QObject):
         if not self._original_sprite_sheet:
             return False, 0, 0, "No sprite sheet loaded"
 
-        success, spacing_x, spacing_y, message = detect_spacing(
+        success, spacing_x, spacing_y, message, _confidence = detect_spacing(
             self._original_sprite_sheet,
             self._frame_width,
             self._frame_height,

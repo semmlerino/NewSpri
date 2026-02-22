@@ -32,6 +32,7 @@ class StyleManager:
         # Warning / Playing (orange)
         WARNING = "#FF9800"
         WARNING_HOVER = "#F57C00"
+        WARNING_PRESSED = "#cc7a00"
 
         # Danger / Stop (red)
         DANGER = "#f44336"
@@ -72,6 +73,16 @@ class StyleManager:
         # Specific UI elements
         ZOOM_BUTTON = "#666"
         ZOOM_BUTTON_HOVER = "#555"
+
+        # Hold button (small animation control buttons)
+        BG_HOLD_BUTTON = "#E0E0E0"
+        BG_HOLD_BUTTON_HOVER = "#D0D0D0"
+        BORDER_HOLD_BUTTON = "#999"
+
+        # Instruction label (grid view info bar)
+        BG_INSTRUCTION = "#F0F8FF"
+        BORDER_INSTRUCTION = "#B0C4DE"
+        TEXT_INSTRUCTION = "#2F4F4F"
 
     # =========================================================================
     # Pre-built Stylesheets
@@ -134,14 +145,14 @@ class StyleManager:
         """Blue primary action button."""
         return f"""
             QPushButton {{
-                background-color: {cls.Colors.SELECTION_BORDER};
+                background-color: {cls.Colors.PRIMARY};
                 color: white;
                 border: none;
                 border-radius: {border_radius}px;
                 padding: 4px 12px;
             }}
             QPushButton:hover {{
-                background-color: {cls.Colors.PRIMARY};
+                background-color: {cls.Colors.PRIMARY_HOVER};
             }}
         """
 
@@ -236,17 +247,17 @@ class StyleManager:
     @classmethod
     def button_small_hold(cls) -> str:
         """Small hold button for animation controls."""
-        return """
-            QPushButton {
+        return f"""
+            QPushButton {{
                 font-size: 10px;
                 padding: 2px;
-                background-color: #E0E0E0;
-                border: 1px solid #999;
+                background-color: {cls.Colors.BG_HOLD_BUTTON};
+                border: 1px solid {cls.Colors.BORDER_HOLD_BUTTON};
                 border-radius: 3px;
-            }
-            QPushButton:hover {
-                background-color: #D0D0D0;
-            }
+            }}
+            QPushButton:hover {{
+                background-color: {cls.Colors.BG_HOLD_BUTTON_HOVER};
+            }}
         """
 
     # =========================================================================
@@ -316,8 +327,8 @@ class StyleManager:
             }}
             QListWidget::item:selected {{
                 background-color: {cls.Colors.SELECTION_BG};
-                color: #1976d2;
-                border-left: 3px solid #1976d2;
+                color: {cls.Colors.PRIMARY};
+                border-left: 3px solid {cls.Colors.PRIMARY};
             }}
             QListWidget::item:hover {{
                 background-color: #f5f5f5;
@@ -485,12 +496,26 @@ class StyleManager:
     @classmethod
     def label_empty_state(cls) -> str:
         """Empty state message label."""
-        return """
-            QLabel {
-                color: #999;
+        return f"""
+            QLabel {{
+                color: {cls.Colors.TEXT_MUTED};
                 font-style: italic;
                 padding: 40px;
-            }
+            }}
+        """
+
+    @classmethod
+    def instruction_label(cls) -> str:
+        """Instruction/info bar label for grid and other selection areas."""
+        return f"""
+            QLabel {{
+                background-color: {cls.Colors.BG_INSTRUCTION};
+                border: 1px solid {cls.Colors.BORDER_INSTRUCTION};
+                border-radius: 4px;
+                padding: 6px;
+                font-size: 11px;
+                color: {cls.Colors.TEXT_INSTRUCTION};
+            }}
         """
 
     @classmethod
@@ -561,7 +586,6 @@ class StyleManager:
     def thumbnail_style(
         cls,
         selected: bool = False,
-        highlighted: bool = False,
         segment_color: str | None = None,
         segment_bg: str | None = None,
         is_segment_start: bool = False,
@@ -571,7 +595,6 @@ class StyleManager:
 
         Args:
             selected: Whether the thumbnail is selected
-            highlighted: Whether the thumbnail is highlighted (drag-over)
             segment_color: Hex color of the segment border, if in a segment
             segment_bg: Hex color for segment background (lighter version of segment_color)
             is_segment_start: Whether this is the first frame of a segment
@@ -581,10 +604,6 @@ class StyleManager:
             border_color = cls.Colors.SUCCESS
             border_width = "3px"
             background = cls.Colors.SUCCESS_LIGHT
-        elif highlighted:
-            border_color = cls.Colors.SELECTION_BORDER
-            border_width = "2px"
-            background = cls.Colors.SELECTION_BG
         elif segment_color:
             border_color = segment_color
             border_width = "3px"
@@ -595,7 +614,7 @@ class StyleManager:
             background = "white"
 
         hover_style = ""
-        if not selected and not highlighted:
+        if not selected:
             hover_style = f"""
                 QLabel:hover {{
                     border-color: {cls.Colors.SELECTION_BORDER};
@@ -882,10 +901,10 @@ class StyleManager:
                 border-radius: 4px;
             }}
             QPushButton:hover {{
-                background-color: #e68900;
+                background-color: {cls.Colors.WARNING_HOVER};
             }}
             QPushButton:pressed {{
-                background-color: #cc7a00;
+                background-color: {cls.Colors.WARNING_PRESSED};
             }}
         """
 

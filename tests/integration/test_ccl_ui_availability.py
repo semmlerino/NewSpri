@@ -78,11 +78,8 @@ class TestCCLUIAvailability:
         )
         print("✅ SpriteModel CCL methods exist")
 
-        # Test FrameExtractor has set_ccl_available method
+        # Test FrameExtractor has required methods
         frame_extractor = viewer._frame_extractor
-        assert hasattr(frame_extractor, "set_ccl_available"), (
-            "FrameExtractor missing set_ccl_available method"
-        )
         assert hasattr(frame_extractor, "get_extraction_mode"), (
             "FrameExtractor missing get_extraction_mode method"
         )
@@ -185,25 +182,6 @@ class TestCCLUIAvailability:
         assert not grid_button.isChecked(), "Grid mode should be unchecked"
         print("✅ Successfully switched back to CCL mode")
 
-    def test_ccl_enabled_in_sprite_loaded_handler(self, qtbot):
-        """Test that CCL is enabled when sprite is loaded."""
-        from sprite_viewer import SpriteViewer
-
-        print("\n🔍 TESTING CCL ENABLEMENT IN SPRITE LOADED HANDLER")
-        print("=" * 50)
-
-        viewer = SpriteViewer()
-        qtbot.addWidget(viewer)
-
-        # Mock set_ccl_available to verify it's called
-        with patch.object(viewer._frame_extractor, "set_ccl_available") as mock_set_ccl:
-            # Call _on_sprite_loaded (this is what happens after successful sprite loading)
-            viewer._on_sprite_loaded("/fake/test.png")
-
-            # Verify that set_ccl_available was called with True
-            mock_set_ccl.assert_called_once_with(True, 0)
-            print("✅ CCL enabled via set_ccl_available(True, 0) in _on_sprite_loaded handler")
-
     def test_real_ccl_workflow_with_ark_png(self, qtbot):
         """Test real CCL workflow with Ark.png if available."""
         from sprite_viewer import SpriteViewer
@@ -275,10 +253,6 @@ class TestCCLRegressionPrevention:
             (
                 "SpriteModel has set_extraction_mode method",
                 lambda: hasattr(viewer._sprite_model, "set_extraction_mode"),
-            ),
-            (
-                "FrameExtractor has set_ccl_available method",
-                lambda: hasattr(viewer._frame_extractor, "set_ccl_available"),
             ),
             (
                 "FrameExtractor has ccl_mode_btn attribute",
