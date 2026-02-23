@@ -48,7 +48,6 @@ ui/                         - UI components
   frame_extractor.py        - Configuration interface
   animation_grid_view.py    - Animation splitting interface
   animation_segment_preview.py - Segment preview panel
-  animation_segment_widget.py - Segment list widget
   enhanced_status_bar.py    - Status bar with enhanced info
 
 core/                       - Controllers
@@ -72,7 +71,6 @@ coordinators/               - Component coordination
 sprite_model/               - Data layer & algorithms
 export/                     - Export system (core/, dialogs/)
 tests/                      - Test suite (unit/, integration/, ui/, performance/)
-archive/                    - Historical documentation (ignore for development)
 ```
 
 ## Critical Patterns
@@ -123,7 +121,8 @@ These are real API contracts discovered through testing. Violating them causes r
 Segments are saved as JSON in `.sprite_segments/` directory alongside sprite sheets:
 ```json
 {
-  "sprite_sheet": "character.png",
+  "sprite_sheet_path": "/path/to/character.png",
+  "max_frames": 8,
   "segments": [{"name": "Walk", "start_frame": 0, "end_frame": 7, "color": [233, 30, 99]}]
 }
 ```
@@ -134,7 +133,7 @@ Key components:
 - `AnimationSegmentController` - Coordination
 - `AnimationSegmentPreview` - Playback
 
-When loading sprites: `set_sprite_context()` must be called to trigger segment loading, then `sync_segments_with_manager()` to synchronize with grid view.
+When loading sprites, prefer `AnimationSegmentController.set_sprite_context_and_sync(...)` so segment loading and overlay synchronization happen together.
 
 ## Export System
 
@@ -148,7 +147,7 @@ export/
   dialogs/type_selection.py     - Export type selection
 ```
 
-Formats: PNG, JPG, BMP. Scale factors: 0.5x-4.0x. Shortcuts: Ctrl+E (all), Ctrl+Shift+E (current).
+Formats: PNG, JPG, BMP. Scale factors: 1x, 2x, 4x. Shortcuts: Ctrl+E (all), Ctrl+Shift+E (current).
 
 ## Testing Notes
 
@@ -220,7 +219,6 @@ uv run ruff check . && uv run ruff format . && uv run basedpyright && uv run pyt
 
 ## Files to Ignore
 
-- `archive/` - Historical documentation, not active code
 - `web_frontend/` - Local/dependency-only web directory (not active product source)
 - `debug_*.py` - Debug utilities, not production code
 - `venv/` - Virtual environment

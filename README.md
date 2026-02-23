@@ -20,7 +20,7 @@ spritetests/                     # Sample sprite sheets used by tests/manual che
 ```
 
 ### Key Modules
-- `ui/`: `sprite_canvas.py`, `playback_controls.py`, `frame_extractor.py`, `animation_grid_view.py`, `animation_segment_preview.py`, `animation_segment_widget.py`, `enhanced_status_bar.py`
+- `ui/`: `sprite_canvas.py`, `playback_controls.py`, `frame_extractor.py`, `animation_grid_view.py`, `animation_segment_preview.py`, `enhanced_status_bar.py`
 - `core/`: `animation_controller.py`, `animation_segment_controller.py`, `auto_detection_controller.py`, `export_coordinator.py`
 - `managers/`: `animation_segment_manager.py`, `recent_files_manager.py`, `settings_manager.py`
 - `coordinators/`: `signal_coordinator.py`
@@ -33,7 +33,7 @@ spritetests/                     # Sample sprite sheets used by tests/manual che
 - Playback controls with precise FPS control (1-60), frame stepping, and looping
 - Canvas zoom/pan and optional grid overlay
 - Animation splitting with named segments and persisted segment metadata
-- Export presets for individual frames, sprite sheets, and segments-per-row layouts
+- Export presets for individual frames, selected frames, sprite sheets, and segments-per-row layouts
 - Export formats: `PNG`, `JPG`, `BMP`
 
 Supported input formats: `PNG`, `JPG`, `JPEG`, `BMP`, `GIF`.
@@ -96,7 +96,8 @@ python3 run_tests.py --integration
 python3 run_tests.py --coverage
 ```
 
-`run_tests.py` executes tests only; it no longer installs dependencies at runtime.
+`run_tests.py` does not auto-install dependencies during normal test runs; use
+`python3 run_tests.py --install` only when you explicitly want dependency sync.
 
 ### Lint / format / type-check
 ```bash
@@ -118,7 +119,6 @@ pre-commit run --all-files
 
 - `CLAUDE.md`: assistant-oriented engineering notes and API contracts
 - `tests/README.md`: current testing workflow and markers
-- `WEB_UI_README.md`: status of the web UI effort (currently not active in this repo)
 
 ## License
 

@@ -38,6 +38,7 @@ pip install -r tests/requirements-test.txt
 uv run pytest
 uv run pytest -m unit
 uv run pytest -m integration
+uv run pytest tests/ui/
 uv run pytest -m ui
 uv run pytest -m performance
 uv run pytest -m smoke
@@ -61,8 +62,9 @@ python3 run_tests.py --suites
 
 Notes:
 - `run_tests.py` does not accept raw pytest flags like `-m`.
-- `run_tests.py` does not install dependencies. Run `uv sync --all-extras` first.
+- `run_tests.py` can install dependencies only when explicitly run with `--install`.
 - For custom pytest expressions (`-m "not slow"`, `-k ...`, etc.), use `uv run pytest` directly.
+- `uv run pytest tests/ui/` is the most reliable way to run all UI-directory tests; `-m ui` only runs tests explicitly marked `ui`.
 
 ## Coverage
 
@@ -87,7 +89,9 @@ Common markers:
 ## CI
 
 GitHub Actions workflow: `.github/workflows/tests.yml`
-- Matrix tests (unit/integration/smoke/performance) run via `uv run pytest`
+- `test` matrix job runs unit + integration tests across Ubuntu/Windows/macOS and Python 3.11/3.12
+- `smoke-test` is a separate Ubuntu job (`uv run pytest -m smoke`)
+- `performance` is a separate Ubuntu job and runs on push events only (`uv run pytest -m performance`)
+- `code-quality` is a separate job (`ruff` + `basedpyright`)
 - Lockfile-based dependency sync (`uv sync --locked --all-extras`)
-- Coverage upload (Codecov)
-- Separate code-quality job (`ruff` + `basedpyright`)
+- Coverage upload (Codecov) from the Ubuntu/Python 3.11 unit-test run
