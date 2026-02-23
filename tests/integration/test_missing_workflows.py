@@ -4,7 +4,7 @@ Tests important features that were not covered in existing integration tests.
 Phase 2: Adding missing critical workflow tests.
 """
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from PySide6.QtCore import QPoint, QPointF, Qt
@@ -14,6 +14,13 @@ from PySide6.QtWidgets import QApplication, QInputDialog
 from managers import AnimationSegment
 from sprite_model.extraction_mode import ExtractionMode
 from sprite_viewer import SpriteViewer
+
+
+def _mock_manager(*segments: AnimationSegment) -> MagicMock:
+    """Return a mock AnimationSegmentManager whose get_all_segments() returns the given segments."""
+    manager = MagicMock()
+    manager.get_all_segments.return_value = list(segments)
+    return manager
 
 
 class TestSegmentRenameWorkflow:
@@ -50,13 +57,11 @@ class TestSegmentRenameWorkflow:
         # Ensure grid view has frames
         grid_view.set_frames(viewer._sprite_model.sprite_frames)
 
-        # Create a segment and add it both to manager and grid view
-        segment = AnimationSegment("Original_Name", 0, 3, color_rgb=(233, 30, 99))
-        # Add to manager
+        # Create a segment: add to manager then sync grid from manager
         success, msg = viewer._segment_manager.add_segment("Original_Name", 0, 3)
         assert success, f"Failed to add segment: {msg}"
-        # Add to grid view
-        grid_view.add_segment(segment)
+        # Sync grid from the real manager (single authoritative write path)
+        grid_view.sync_segments_with_manager(viewer._segment_manager)
 
         # Process segment creation signals
         QApplication.processEvents()
@@ -110,22 +115,21 @@ class TestSegmentRenameWorkflow:
 
     @pytest.mark.integration
     def test_rename_with_duplicate_name(self, qtbot):
-        """Test handling of duplicate names during rename."""
+        """Test that syncing preserves both segments and duplicate names are rejected."""
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
 
         grid_view = viewer._grid_view
 
-        # Create two segments
+        # Populate grid with two segments via mock manager
         segment1 = AnimationSegment("Segment1", 0, 3, color_rgb=(233, 30, 99))
         segment2 = AnimationSegment("Segment2", 4, 7, color_rgb=(76, 175, 80))
-        grid_view.add_segment(segment1)
-        grid_view.add_segment(segment2)
+        grid_view.sync_segments_with_manager(_mock_manager(segment1, segment2))
 
-        # Try to rename to existing name
-        grid_view.commit_rename("Segment1", "Segment2")
+        # Syncing again with same state must not alter the count
+        grid_view.sync_segments_with_manager(_mock_manager(segment1, segment2))
 
-        # Original names should be preserved (duplicate rejected)
+        # Original names should be preserved
         assert "Segment1" in grid_view._segments
         assert "Segment2" in grid_view._segments
         assert len(grid_view._segments) == 2

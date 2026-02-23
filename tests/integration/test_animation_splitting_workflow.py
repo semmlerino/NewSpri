@@ -3,6 +3,8 @@ Integration Tests for Animation Splitting Workflow - Testing the complete user w
 Tests the export workflow UX fixes and tab switching behavior that was recently improved.
 """
 
+from unittest.mock import MagicMock
+
 import pytest
 
 # Mark all tests as slow integration tests - they create full SpriteViewer windows
@@ -14,6 +16,13 @@ from PySide6.QtWidgets import QApplication, QTabWidget
 from managers import AnimationSegment
 from sprite_model.extraction_mode import ExtractionMode
 from sprite_viewer import SpriteViewer
+
+
+def _mock_manager(*segments: AnimationSegment) -> MagicMock:
+    """Return a mock AnimationSegmentManager whose get_all_segments() returns the given segments."""
+    manager = MagicMock()
+    manager.get_all_segments.return_value = list(segments)
+    return manager
 
 
 class TestAnimationSplittingWorkflow:
@@ -94,7 +103,7 @@ class TestAnimationSplittingWorkflow:
 
         # Create segment directly (bypass dialog)
         walk_segment = AnimationSegment("Walk", 0, 3, color_rgb=(233, 30, 99))
-        animation_grid.add_segment(walk_segment)
+        animation_grid.sync_segments_with_manager(_mock_manager(walk_segment))
         animation_grid.segmentCreated.emit(walk_segment)
 
         assert len(segments_created) == 1
@@ -111,7 +120,7 @@ class TestAnimationSplittingWorkflow:
 
         # Create segment directly
         attack_segment = AnimationSegment("Attack", 4, 7, color_rgb=(76, 175, 80))
-        animation_grid.add_segment(attack_segment)
+        animation_grid.sync_segments_with_manager(_mock_manager(walk_segment, attack_segment))
         animation_grid.segmentCreated.emit(attack_segment)
 
         assert len(segments_created) == 2
@@ -146,8 +155,7 @@ class TestAnimationSplittingWorkflow:
         walk_segment = AnimationSegment("Walk_Cycle", 0, 7, color_rgb=(233, 30, 99))
         attack_segment = AnimationSegment("Attack_Sequence", 8, 15, color_rgb=(76, 175, 80))
 
-        animation_grid.add_segment(walk_segment)
-        animation_grid.add_segment(attack_segment)
+        animation_grid.sync_segments_with_manager(_mock_manager(walk_segment, attack_segment))
 
         # Verify segments were added
         assert len(animation_grid._segments) == 2
@@ -169,7 +177,7 @@ class TestAnimationSplittingWorkflow:
 
         # Add test segment
         test_segment = AnimationSegment("Export_Test", 5, 10, color_rgb=(33, 150, 243))
-        animation_grid.add_segment(test_segment)
+        animation_grid.sync_segments_with_manager(_mock_manager(test_segment))
 
         # Set up signal spy
         export_signals = []
@@ -196,21 +204,25 @@ class TestAnimationSplittingWorkflow:
             AnimationSegment("Jump", 20, 27, color_rgb=(255, 152, 0)),
         ]
 
-        for segment in segments:
-            animation_grid.add_segment(segment)
+        animation_grid.sync_segments_with_manager(_mock_manager(*segments))
 
         # Verify all segments are stored in the dictionary
         assert len(animation_grid._segments) == 4
         assert len(animation_grid.get_segments()) == 4
 
-        # Test segment deletion
+        # Test segment deletion request
         delete_signals = []
         animation_grid.segmentDeleted.connect(lambda name: delete_signals.append(name))
 
-        animation_grid.delete_segment("Walk")
+        animation_grid.request_delete_segment("Walk")
 
         assert len(delete_signals) == 1
         assert delete_signals[0] == "Walk"
+
+        # Simulate the controller resync after deletion (removes Walk from grid)
+        remaining = [s for s in segments if s.name != "Walk"]
+        animation_grid.sync_segments_with_manager(_mock_manager(*remaining))
+
         assert len(animation_grid._segments) == 3
         assert len(animation_grid.get_segments()) == 3
 
@@ -234,7 +246,7 @@ class TestAnimationSplittingWorkflow:
 
         # Add segment
         segment = AnimationSegment("Visual_Test", 2, 5, color_rgb=(156, 39, 176))
-        animation_grid.add_segment(segment)
+        animation_grid.sync_segments_with_manager(_mock_manager(segment))
 
         # Check that thumbnails have segment markers
         for i in range(2, 6):  # Frames 2-5
@@ -275,7 +287,7 @@ class TestAnimationSplittingWorkflow:
             segment = AnimationSegment(
                 "NonContiguous_Test", start_frame, end_frame, color_rgb=(0, 188, 212)
             )
-            animation_grid.add_segment(segment)
+            animation_grid.sync_segments_with_manager(_mock_manager(segment))
             animation_grid.segmentCreated.emit(segment)
 
         # Should create segment from frame 1 to 7 (inclusive range)
@@ -297,7 +309,7 @@ class TestAnimationSplittingErrorHandling:
 
         # Add segment but don't select it
         segment = AnimationSegment("Unselected", 0, 3, color_rgb=(158, 158, 158))
-        animation_grid.add_segment(segment)
+        animation_grid.sync_segments_with_manager(_mock_manager(segment))
 
         # Try to export (should do nothing)
         export_signals = []
@@ -333,26 +345,20 @@ class TestAnimationSplittingErrorHandling:
         assert len(signals_received) == 0
 
     def test_duplicate_segment_name_handling(self, qtbot):
-        """Test handling of duplicate segment names."""
+        """Test that syncing from manager preserves all segments without duplicates."""
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
 
         animation_grid = viewer._grid_view
 
-        # Add first segment
+        # Set up two distinct segments via sync
         segment1 = AnimationSegment("Duplicate_Name", 0, 3, color_rgb=(121, 85, 72))
-        animation_grid.add_segment(segment1)
+        animation_grid.sync_segments_with_manager(_mock_manager(segment1))
 
-        # Try to rename segment to existing name
-        # Note: This would typically be handled by the UI dialog,
-        # but we test the underlying logic
-
-        # The rename should be rejected or handled gracefully
-        # (Implementation depends on specific UI behavior)
         original_count = len(animation_grid.get_segments())
 
-        # Simulate renaming attempt
-        animation_grid.commit_rename("Duplicate_Name", "Duplicate_Name")
+        # Re-sync with the same state — count must not change
+        animation_grid.sync_segments_with_manager(_mock_manager(segment1))
 
         # Should still have same number of segments
         assert len(animation_grid.get_segments()) == original_count
@@ -394,12 +400,14 @@ class TestAnimationSplittingPerformance:
 
         # Create many segments
         segment_count = 50
+        all_segs = []
         for i in range(segment_count):
             # Generate unique colors by cycling through hues
             color = QColor.fromHsv((i * 7) % 360, 200, 200)
             segment = AnimationSegment(f"Segment_{i:02d}", i * 4, i * 4 + 3)
             segment.set_color(color)
-            animation_grid.add_segment(segment)
+            all_segs.append(segment)
+        animation_grid.sync_segments_with_manager(_mock_manager(*all_segs))
 
         assert len(animation_grid.get_segments()) == segment_count
         assert len(animation_grid._segments) == segment_count

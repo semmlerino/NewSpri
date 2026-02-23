@@ -414,7 +414,7 @@ class AnimationGridView(QWidget):
 
             # Delete segment action
             delete_action = segment_menu.addAction("Delete Segment")
-            delete_action.triggered.connect(lambda: self.delete_segment(segment.name))
+            delete_action.triggered.connect(lambda: self.request_delete_segment(segment.name))
 
             menu.addSeparator()
 
@@ -573,7 +573,12 @@ class AnimationGridView(QWidget):
         return QColor(color_hex)
 
     def add_segment(self, segment: AnimationSegment):
-        """Add a new animation segment."""
+        """Add a new animation segment directly.
+
+        Retained for callers that operate without a live manager (e.g. tests that
+        pre-populate the grid before wiring up a controller).  Controller-driven paths
+        use sync_segments_with_manager instead.
+        """
         self._segments[segment.name] = segment
         self._update_segment_visualization()
 
@@ -595,18 +600,20 @@ class AnimationGridView(QWidget):
         # Update visualization
         self._update_segment_visualization()
 
-    def delete_segment(self, segment_name: str) -> bool:
-        """Delete an animation segment by name.
+    def request_delete_segment(self, segment_name: str) -> bool:
+        """Request deletion of a segment by name.
+
+        Emits segmentDeleted so the controller can remove it from the manager and
+        resync the grid.  Does NOT mutate _segments directly — the controller-driven
+        resync is the single write path.
 
         Args:
             segment_name: Name of segment to delete
 
         Returns:
-            True if segment was deleted, False if not found
+            True if segment was known to the grid (request emitted), False if not found
         """
         if segment_name in self._segments:
-            del self._segments[segment_name]
-            self._update_segment_visualization()
             self.segmentDeleted.emit(segment_name)
             return True
         return False
@@ -620,28 +627,8 @@ class AnimationGridView(QWidget):
         if ok and new_name.strip():
             new_name = new_name.strip()
             if new_name != old_name:
-                # Emit request — controller validates via manager, then calls commit_rename
+                # Emit request — controller validates via manager, then resyncs grid
                 self.segmentRenameRequested.emit(old_name, new_name)
-
-    def commit_rename(self, old_name: str, new_name: str) -> bool:
-        """Commit a validated rename to local grid state.
-
-        Called by controller after manager validation succeeds.
-
-        Args:
-            old_name: Current name of segment
-            new_name: New name for segment
-
-        Returns:
-            True if renamed successfully
-        """
-        if old_name in self._segments and new_name not in self._segments:
-            segment = self._segments.pop(old_name)
-            segment.name = new_name
-            self._segments[new_name] = segment
-            self._update_segment_visualization()
-            return True
-        return False
 
     # ============================================================================
     # PUBLIC SEGMENT MANIPULATION API

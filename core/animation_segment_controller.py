@@ -138,14 +138,15 @@ class AnimationSegmentController(QObject):
                 return True, message
 
         if not success:
-            # Clean up optimistic grid state if any callers pre-added a segment.
-            if self._grid_view and self._grid_has_segment(original_name):
-                self._grid_view.delete_segment(original_name)
+            # Resync grid to match manager state (manager already has no record of this segment).
+            if self._grid_view:
+                self._grid_view.sync_segments_with_manager(self._segment_manager)
             error_msg = f"{error}\n\nPlease try a different name."
             return False, error_msg
 
-        # Success case
-        self._sync_segment_to_grid(segment.name, fallback_segment=segment)
+        # Success case: resync grid from manager (single authoritative write path).
+        if self._grid_view:
+            self._grid_view.sync_segments_with_manager(self._segment_manager)
         message = f"Created animation segment '{segment.name}' with {segment.frame_count} frames"
         self.statusMessage.emit(message)
 
@@ -184,11 +185,9 @@ class AnimationSegmentController(QObject):
             )
 
             if success:
-                # Update segment name in grid view
+                # Resync grid from manager (single authoritative write path).
                 if self._grid_view:
-                    if self._grid_has_segment(original_name):
-                        self._grid_view.commit_rename(original_name, new_name)
-                    self._sync_segment_to_grid(new_name, fallback_segment=segment)
+                    self._grid_view.sync_segments_with_manager(self._segment_manager)
 
                 # Add to preview panel with new name
                 self._add_segment_to_preview(
@@ -202,28 +201,6 @@ class AnimationSegmentController(QObject):
                 return True, new_name
 
         return False, None
-
-    def _sync_segment_to_grid(
-        self, segment_name: str, fallback_segment: AnimationSegment | None = None
-    ) -> None:
-        """Ensure grid contains a segment that exists in manager state."""
-        if not self._grid_view:
-            return
-
-        if self._grid_has_segment(segment_name):
-            return
-
-        segment = self._segment_manager.get_segment(segment_name) if self._segment_manager else None
-        if segment is None:
-            segment = fallback_segment
-        if segment is not None:
-            self._grid_view.add_segment(segment)
-
-    def _grid_has_segment(self, segment_name: str) -> bool:
-        """Return True if the grid view reports that it contains the named segment."""
-        if not self._grid_view:
-            return False
-        return self._grid_view.has_segment(segment_name)
 
     def _add_segment_to_preview(
         self,
@@ -260,9 +237,9 @@ class AnimationSegmentController(QObject):
             self._renaming = False
 
         if success:
-            # Commit rename to grid view after manager validation
+            # Resync grid from manager after validated rename.
             if self._grid_view:
-                self._grid_view.commit_rename(old_name, new_name)
+                self._grid_view.sync_segments_with_manager(self._segment_manager)
 
             message = f"Renamed segment '{old_name}' to '{new_name}'"
             self.statusMessage.emit(message)
@@ -475,12 +452,12 @@ class AnimationSegmentController(QObject):
             self.update_grid_view_frames()
             self.sync_segments_from_manager()
 
-    def _on_manager_segment_removed(self, segment_name: str) -> None:
-        """Handle segment removal from manager by updating grid view."""
+    def _on_manager_segment_removed(self, _segment_name: str) -> None:
+        """Handle segment removal from manager by resyncing grid to manager state."""
         if self._renaming:
-            return  # Suppress during rename (commit_rename handles grid state)
+            return  # Suppress during rename (sync after rename handles grid state)
         if self._grid_view:
-            self._grid_view.delete_segment(segment_name)
+            self._grid_view.sync_segments_with_manager(self._segment_manager)
 
     def _on_manager_segments_cleared(self) -> None:
         """Handle all segments being cleared from manager."""
