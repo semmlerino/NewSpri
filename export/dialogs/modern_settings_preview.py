@@ -373,7 +373,7 @@ class _IndividualSettingsPanel:
                 if pattern:
                     radio.setText(self._parent._generate_pattern_display(pattern, base_name))
         except Exception as e:
-            logger.warning("Error updating pattern displays: %s", e)
+            logger.warning("Error updating pattern displays: %s", e, exc_info=True)
 
         self._parent._on_setting_changed()
 
@@ -494,7 +494,7 @@ class _PreviewGenerator:
                 return self.generate_segments_preview()
             except Exception as e:
                 # If segments preview fails, fall back to regular sheet preview
-                logger.debug("Failed to generate segments preview: %s", e)
+                logger.debug("Failed to generate segments preview: %s", e, exc_info=True)
                 logger.debug("Falling back to regular sheet preview")
 
         # Get layout settings
@@ -1126,7 +1126,7 @@ class ModernExportSettings(WizardStep):
                     if pattern:
                         radio.setText(self._generate_pattern_display(pattern, base_name))
         except Exception as e:
-            logger.warning("Error updating pattern displays on format change: %s", e)
+            logger.warning("Error updating pattern displays on format change: %s", e, exc_info=True)
 
         self._update_transparency_warning(format)
         self._on_setting_changed()

@@ -88,6 +88,7 @@ class AutoDetectionController(QObject):
                 )
 
         except Exception as e:
+            logger.warning("Comprehensive auto-detection failed: %s", e, exc_info=True)
             self.detectionFailed.emit("comprehensive", str(e))
 
     def run_frame_detection(self):
@@ -115,6 +116,7 @@ class AutoDetectionController(QObject):
                 self.detectionFailed.emit("frame", message)
 
         except Exception as e:
+            logger.warning("Frame detection failed: %s", e, exc_info=True)
             self.detectionFailed.emit("frame", str(e))
 
     def run_margin_detection(self):
@@ -142,6 +144,7 @@ class AutoDetectionController(QObject):
                 self.detectionFailed.emit("margins", message)
 
         except Exception as e:
+            logger.warning("Margin detection failed: %s", e, exc_info=True)
             self.detectionFailed.emit("margins", str(e))
 
     def run_spacing_detection(self):
@@ -170,6 +173,7 @@ class AutoDetectionController(QObject):
                 self.detectionFailed.emit("spacing", message)
 
         except Exception as e:
+            logger.warning("Spacing detection failed: %s", e, exc_info=True)
             self.detectionFailed.emit("spacing", str(e))
 
     # ============================================================================

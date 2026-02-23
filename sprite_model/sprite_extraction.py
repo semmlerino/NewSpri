@@ -117,6 +117,7 @@ def extract_grid_frames(
         return True, "", frames, skipped_count
 
     except Exception as e:
+        logger.debug("Error extracting frames: %s", e, exc_info=True)
         return False, f"Error extracting frames: {e!s}", [], 0
 
 
@@ -293,7 +294,7 @@ def detect_background_color(image_path: str) -> tuple[tuple[int, int, int], int]
         return None  # No background color detected (transparent image)
 
     except Exception as e:
-        logger.warning("Background color detection failed: %s", e)
+        logger.debug("Background color detection failed: %s", e, exc_info=True)
         return None
 
 
@@ -356,6 +357,7 @@ def _detect_color_key_mask(
         return None
 
     except Exception as e:
+        logger.debug("Color key detection error: %s", e, exc_info=True)
         debug_log.append(f"   [ERROR] Color key detection error: {e}")
         return None
 
@@ -416,6 +418,7 @@ def _test_color_key_background(
         return None
 
     except Exception as e:
+        logger.debug("Color key test error: %s", e, exc_info=True)
         debug_log.append(f"   [ERROR] Color key test error: {e}")
         return None
 
@@ -492,6 +495,7 @@ def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
         return {"success": False, "method": "ccl_enhanced", "debug_log": debug_log}
 
     except Exception as e:
+        logger.debug("CCL Detection error: %s", e, exc_info=True)
         debug_log.append(f"CCL Detection Error: {e!s}")
         return {"success": False, "method": "ccl_enhanced", "error": str(e), "debug_log": debug_log}
 

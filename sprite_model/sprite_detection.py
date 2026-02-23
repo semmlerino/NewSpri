@@ -12,6 +12,7 @@ Automatic detection algorithms for sprite sheets including:
 Consolidated from sprite_model/detection/ subpackage.
 """
 
+import logging
 import math
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -19,6 +20,8 @@ from dataclasses import dataclass
 from PySide6.QtGui import QImage, QPixmap
 
 from config import Config
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Confidence score constants
@@ -142,6 +145,7 @@ def detect_margins(
         return True, validated_left, validated_top, status_msg
 
     except Exception as e:
+        logger.debug("Error detecting margins: %s", e, exc_info=True)
         return False, 0, 0, f"Error detecting margins: {e!s}"
 
 
@@ -469,6 +473,7 @@ def detect_content_based(sprite_sheet: QPixmap) -> tuple[bool, int, int, str]:
         )
 
     except Exception as e:
+        logger.debug("Content-based detection failed: %s", e, exc_info=True)
         return False, 0, 0, f"Content-based detection failed: {e!s}"
 
 
@@ -706,6 +711,7 @@ def detect_spacing(
         )
 
     except Exception as e:
+        logger.debug("Error in enhanced spacing detection: %s", e, exc_info=True)
         return False, 0, 0, f"Error in enhanced spacing detection: {e!s}", 0.0
 
 
@@ -885,6 +891,7 @@ def comprehensive_auto_detect(
         return overall_success, "\n".join(messages), result
 
     except Exception as e:
+        logger.debug("Comprehensive auto-detection failed: %s", e, exc_info=True)
         error_msg = f"❌ Comprehensive auto-detection failed: {e!s}"
         messages.append(error_msg)
         result.messages = messages
@@ -905,6 +912,7 @@ def _run_margin_step(
         result.offset_x = offset_x
         result.offset_y = offset_y
     except Exception as e:
+        logger.debug("Error in margin detection step: %s", e, exc_info=True)
         margin_success, margin_msg = False, f"Error: {e!s}"
         result.offset_x = 0
         result.offset_y = 0
@@ -970,6 +978,9 @@ def _run_frame_size_step(
             if is_fallback:
                 messages.append("   → Trying next strategy...")
         except Exception as e:
+            logger.debug(
+                "Frame size detection strategy %s error: %s", strategy_name, e, exc_info=True
+            )
             messages.append(f"   ✗ {strategy_name} detection error: {e!s}")
 
     last_msg = messages[-1] if messages else "All frame detection strategies failed"
@@ -1016,6 +1027,7 @@ def _run_spacing_step(
             result.offset_y,
         )
     except Exception as e:
+        logger.debug("Error in spacing detection step: %s", e, exc_info=True)
         messages.append(f"   ✗ Spacing detection error: {e!s}")
         messages.append("   → Using default spacing (0, 0)")
         result.spacing_x = 0
@@ -1076,6 +1088,7 @@ def _run_validation_step(
             validation_msg,
         )
     except Exception as e:
+        logger.debug("Error in validation step: %s", e, exc_info=True)
         messages.append(f"   ✗ Validation error: {e!s}")
         _record_step(
             result,
@@ -1180,4 +1193,5 @@ def _validate_detection_consistency(
         return True, f"Validation passed: {frames_x}×{frames_y} = {expected_frames} frames"
 
     except Exception as e:
+        logger.debug("Detection consistency validation error: %s", e, exc_info=True)
         return False, f"Validation error: {e!s}"
