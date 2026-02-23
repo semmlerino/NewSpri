@@ -17,6 +17,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QColor
 from PySide6.QtWidgets import QMessageBox, QTabWidget, QWidget
 
+from config import Config
 from managers import AnimationSegment, AnimationSegmentManager
 
 if TYPE_CHECKING:
@@ -453,7 +454,7 @@ class AnimationSegmentController(QObject):
         This prevents destroying in-progress segment preview playback on every
         tab switch.
         """
-        if index != 1 or not self._grid_view:
+        if index != Config.App.TAB_INDEX_ANIMATION_SPLIT or not self._grid_view:
             return
 
         current_frame_count = (

@@ -484,11 +484,11 @@ class SpriteViewer(QMainWindow):
         self._tab_widget = QTabWidget()
         main_layout.addWidget(self._tab_widget)
 
-        # Canvas view tab
+        # Canvas view tab (index must match Config.App.TAB_INDEX_FRAME_VIEW)
         canvas_tab = self._create_canvas_tab()
         self._tab_widget.addTab(canvas_tab, "Frame View")
 
-        # Grid view tab for animation splitting
+        # Grid view tab (index must match Config.App.TAB_INDEX_ANIMATION_SPLIT)
         grid_tab = self._create_grid_tab()
         self._tab_widget.addTab(grid_tab, "Animation Splitting")
 
@@ -930,7 +930,7 @@ class SpriteViewer(QMainWindow):
 
     def _on_grid_frame_preview(self, frame_index: int):
         """Handle frame preview request (double-click) - switch to main view."""
-        self._tab_widget.setCurrentIndex(0)
+        self._tab_widget.setCurrentIndex(Config.App.TAB_INDEX_FRAME_VIEW)
         self._sprite_model.set_current_frame(frame_index)
         self._status_manager.show_message(f"Previewing frame {frame_index}")
 
