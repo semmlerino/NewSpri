@@ -163,7 +163,6 @@ class TestConcurrentOperations:
 
         # System should handle this gracefully (frames replaced, playback state may change)
         # At minimum, no crash should occur
-        assert True  # If we get here, no crash occurred
 
     @pytest.mark.integration
     def test_segment_creation_during_playback(self, qtbot, sprite_viewer_with_frames):

@@ -221,15 +221,18 @@ class TestFrameDetector:
 
         # Test basic detection
         success, width, height, message = detect_frame_size(pixmap)
-        assert success or not success  # Should not crash
+        assert isinstance(success, bool)  # Should not crash
+        assert isinstance(message, str)
 
         # Test rectangular detection
         success, width, height, message = detect_rectangular_frames(pixmap)
-        assert success or not success  # Should not crash
+        assert isinstance(success, bool)  # Should not crash
+        assert isinstance(message, str)
 
         # Test content-based detection
         success, width, height, message = detect_content_based(pixmap)
-        assert success or not success  # Should not crash
+        assert isinstance(success, bool)  # Should not crash
+        assert isinstance(message, str)
 
 
 class TestMarginDetector:
@@ -389,7 +392,8 @@ class TestMarginDetector:
         pixmap.fill(Qt.red)
 
         success, offset_x, offset_y, message = detect_margins(pixmap, 32, 32)
-        assert success or not success  # Should not crash
+        assert isinstance(success, bool)  # Should not crash
+        assert isinstance(message, str)
 
 
 class TestSpacingDetector:
