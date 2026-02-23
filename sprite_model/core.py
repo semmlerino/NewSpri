@@ -21,13 +21,13 @@ from sprite_model.sprite_detection import (
 )
 from sprite_model.sprite_extraction import (
     GridConfig,
+    detect_background_color,
+    detect_sprites_ccl_enhanced,
     extract_grid_frames,
 )
 from sprite_model.sprite_extraction import (
     validate_frame_settings as validate_grid_frame_settings,
 )
-
-# Import all refactored modules
 from sprite_model.sprite_file_ops import FileLoader
 
 
@@ -48,10 +48,10 @@ class SpriteModel(QObject):
     configurationChanged = Signal()  # frame settings changed
 
     def __init__(self):
-        """Initialize SpriteModel with all refactored modules."""
+        """Initialize SpriteModel state and submodule instances."""
         super().__init__()
 
-        # Primary state variables (maintaining compatibility)
+        # Core sprite sheet state
         self._original_sprite_sheet: QPixmap | None = None
         self._sprite_frames: list[QPixmap] = []
         self._file_path: str = ""
@@ -78,8 +78,6 @@ class SpriteModel(QObject):
         # Forward animation signals to maintain compatibility
         self._animation_state.frameChanged.connect(self.frameChanged.emit)
         self._animation_state.playbackStateChanged.connect(self.playbackStateChanged.emit)
-
-        # Note: CCLOperations now uses direct parameters instead of callbacks
 
     # File Operations Methods
     def load_sprite_sheet(self, file_path: str) -> tuple[bool, str]:
@@ -256,7 +254,7 @@ class SpriteModel(QObject):
         spacing_y: int = 0,
     ) -> tuple[bool, str]:
         """Validate frame extraction settings."""
-        if not self._original_sprite_sheet:
+        if self._original_sprite_sheet is None:
             return False, "No sprite sheet loaded"
 
         # Create GridConfig for validation
@@ -273,13 +271,10 @@ class SpriteModel(QObject):
 
     def extract_ccl_frames(self) -> tuple[bool, str, int]:
         """Extract frames using Connected Component Labeling."""
-        from sprite_model.sprite_extraction import (
-            detect_background_color,
-            detect_sprites_ccl_enhanced,
-        )
+        if self._original_sprite_sheet is None:
+            return False, "No sprite sheet loaded", 0
 
-        # Get sprite sheet, defaulting to empty QPixmap if None
-        sprite_sheet = self._original_sprite_sheet if self._original_sprite_sheet else QPixmap()
+        sprite_sheet = self._original_sprite_sheet
 
         # Call CCLOperations with direct parameters
         success, message, frame_count, frames, _info = self._ccl_operations.extract_ccl_frames(
@@ -288,7 +283,7 @@ class SpriteModel(QObject):
             ccl_available=self.is_ccl_available(),
             detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
             detect_background_color=detect_background_color,
-            emit_extraction_completed=lambda count: self.extractionCompleted.emit(count),
+            emit_extraction_completed=self.extractionCompleted.emit,
         )
 
         if success:
@@ -298,13 +293,10 @@ class SpriteModel(QObject):
 
     def set_extraction_mode(self, mode: ExtractionMode) -> bool:
         """Set extraction mode (grid or ccl)."""
-        from sprite_model.sprite_extraction import (
-            detect_background_color,
-            detect_sprites_ccl_enhanced,
-        )
+        if self._original_sprite_sheet is None:
+            return False
 
-        # Get sprite sheet, defaulting to empty QPixmap if None
-        sprite_sheet = self._original_sprite_sheet if self._original_sprite_sheet else QPixmap()
+        sprite_sheet = self._original_sprite_sheet
 
         success = self._ccl_operations.set_extraction_mode(
             mode=mode,
@@ -314,7 +306,7 @@ class SpriteModel(QObject):
             extract_grid_frames_callback=self._re_extract_frames_tuple,
             detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
             detect_background_color=detect_background_color,
-            emit_extraction_completed=lambda count: self.extractionCompleted.emit(count),
+            emit_extraction_completed=self.extractionCompleted.emit,
         )
 
         # If CCL mode succeeded, retrieve and store the extracted frames
@@ -322,7 +314,6 @@ class SpriteModel(QObject):
             ccl_frames = self._ccl_operations.get_last_extracted_frames()
             if ccl_frames:
                 self._store_frames(ccl_frames)
-                self.extractionCompleted.emit(len(ccl_frames))
 
         return success
 
@@ -344,44 +335,42 @@ class SpriteModel(QObject):
 
     # Auto-Detection Methods
     def auto_detect_rectangular_frames(self) -> tuple[bool, int, int, str]:
-        """Auto-detect rectangular frames using detect_rectangular_frames function."""
-        if not self._original_sprite_sheet:
+        """Detect uniform frame dimensions from the loaded sprite sheet."""
+        if self._original_sprite_sheet is None:
             return False, 0, 0, "No sprite sheet loaded"
 
         success, width, height, message = detect_rectangular_frames(self._original_sprite_sheet)
 
-        if success:
-            # Update internal state
-            self._frame_width = width
-            self._frame_height = height
-            self.configurationChanged.emit()
-
-            return True, width, height, message
-        else:
+        if not success:
             return False, 0, 0, message
 
+        # Update internal state
+        self._frame_width = width
+        self._frame_height = height
+        self.configurationChanged.emit()
+        return True, width, height, message
+
     def auto_detect_margins(self) -> tuple[bool, int, int, str]:
-        """Auto-detect margins using detect_margins function."""
-        if not self._original_sprite_sheet:
+        """Detect the sheet margins (x/y offsets) for the current frame size."""
+        if self._original_sprite_sheet is None:
             return False, 0, 0, "No sprite sheet loaded"
 
         success, offset_x, offset_y, message = detect_margins(
             self._original_sprite_sheet, self._frame_width, self._frame_height
         )
 
-        if success:
-            # Update internal state
-            self._offset_x = offset_x
-            self._offset_y = offset_y
-            self.configurationChanged.emit()
-
-            return True, offset_x, offset_y, message
-        else:
+        if not success:
             return False, 0, 0, message
 
+        # Update internal state
+        self._offset_x = offset_x
+        self._offset_y = offset_y
+        self.configurationChanged.emit()
+        return True, offset_x, offset_y, message
+
     def auto_detect_spacing_enhanced(self) -> tuple[bool, int, int, str]:
-        """Auto-detect spacing using detect_spacing function."""
-        if not self._original_sprite_sheet:
+        """Detect inter-frame spacing for the current frame size and offsets."""
+        if self._original_sprite_sheet is None:
             return False, 0, 0, "No sprite sheet loaded"
 
         success, spacing_x, spacing_y, message, _confidence = detect_spacing(
@@ -392,19 +381,18 @@ class SpriteModel(QObject):
             self._offset_y,
         )
 
-        if success:
-            # Update internal state
-            self._spacing_x = spacing_x
-            self._spacing_y = spacing_y
-            self.configurationChanged.emit()
-
-            return True, spacing_x, spacing_y, message
-        else:
+        if not success:
             return False, 0, 0, message
+
+        # Update internal state
+        self._spacing_x = spacing_x
+        self._spacing_y = spacing_y
+        self.configurationChanged.emit()
+        return True, spacing_x, spacing_y, message
 
     def comprehensive_auto_detect(self) -> tuple[bool, DetectionResult]:
         """Run comprehensive auto-detection and extract frames with detected parameters."""
-        if not self._original_sprite_sheet:
+        if self._original_sprite_sheet is None:
             empty_result = DetectionResult()
             empty_result.messages = ["No sprite sheet loaded"]
             return False, empty_result
@@ -474,7 +462,7 @@ class SpriteModel(QObject):
     @property
     def sprite_info(self) -> str:
         """Get sprite sheet information string."""
-        if not self._original_sprite_sheet:
+        if self._original_sprite_sheet is None:
             return "No sprite sheet loaded"
 
         info_parts = []

@@ -30,6 +30,13 @@ _METHOD_FALLBACK = "fallback"
 _METHOD_MODE = "mode"
 _METHOD_MEDIAN = "median"
 
+_ALPHA_OPAQUE_THRESHOLD = 128  # Pixels with alpha > this are considered opaque
+_SOLID_IMAGE_OPAQUE_PCT = 95  # Images with >95% opaque pixels need color-key detection
+_MIN_SPRITE_COMPONENT_SIZE = 8  # Components smaller than 8x8 treated as noise
+_DEFAULT_FALLBACK_FRAME_SIZE = 48  # Fallback when distribution is too thin to estimate
+_CCL_MERGE_DISTANCE = 15  # Max center-to-center px for merging multi-part sprites
+_CCL_POSITION_GROUP_TOLERANCE = 15  # Max px gap for grouping positions into same row/column
+
 # ============================================================================
 # Data Structures
 # ============================================================================
@@ -273,12 +280,12 @@ def detect_background_color(image_path: str) -> tuple[tuple[int, int, int], int]
 
         # Check if image is mostly opaque (needs color key detection)
         alpha_channel = img_array[:, :, 3]
-        binary_mask = (alpha_channel > 128).astype(np.uint8)
+        binary_mask = (alpha_channel > _ALPHA_OPAQUE_THRESHOLD).astype(np.uint8)
         opaque_pixels = np.sum(binary_mask)
         total_pixels = binary_mask.size
         opaque_pixel_pct = 100 * opaque_pixels / total_pixels
 
-        if opaque_pixel_pct > 95:  # Less than 5% alpha transparency
+        if opaque_pixel_pct > _SOLID_IMAGE_OPAQUE_PCT:  # Less than 5% alpha transparency
             # Try to detect background color (color key)
             color_key_result = _detect_color_key_mask(img_array, [])
             if color_key_result is not None:
@@ -335,7 +342,8 @@ def _detect_color_key_mask(
         else:
             return None
 
-        # Test multiple tolerance levels to find optimal background separation
+        # Progressively looser tolerances: start strict to find clean backgrounds,
+        # fall back to more permissive matching for noisy or compressed images.
         tolerance_levels = [15, 25, 35, 50]
         best_result = None
         best_score = 0
@@ -396,8 +404,11 @@ def _test_color_key_background(
 
         # Calculate quality score based on background percentage and component count
         # Good background detection should have high background % and reasonable component count
-        if background_percentage > 50 and num_components > 0:
-            # Score = background_percentage + bonus for reasonable component count
+        if (
+            background_percentage > 50 and num_components > 0
+        ):  # Majority background → likely a valid color key
+            # Score: higher background % and lower tolerance both indicate a cleaner match.
+            # Divide by 10 to keep score in 0-10 range; cap at 50 to prevent runaway scores.
             component_bonus = min(num_components / 10, 50)  # Cap bonus at 50
             score = background_percentage + component_bonus
 
@@ -480,7 +491,7 @@ def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
             merged_bounds = sprite_bounds
         else:
             debug_log.append("Regular sprite sheet - merging nearby components")
-            merged_bounds = _merge_nearby_components(sprite_bounds, 15, debug_log)
+            merged_bounds = _merge_nearby_components(sprite_bounds, _CCL_MERGE_DISTANCE, debug_log)
 
         debug_log.append(f"After merging: {len(merged_bounds)} sprites")
 
@@ -518,7 +529,7 @@ def _load_sprite_mask(image_path: str, debug_log: list[str]) -> tuple[np.ndarray
     debug_log.append(f"Loaded image: {img_array.shape} (height, width, channels)")
 
     alpha_channel = img_array[:, :, 3]
-    binary_mask = (alpha_channel > 128).astype(np.uint8)
+    binary_mask = (alpha_channel > _ALPHA_OPAQUE_THRESHOLD).astype(np.uint8)
     opaque_pixels = np.sum(binary_mask)
     total_pixels = binary_mask.size
     opaque_pixel_pct = 100 * opaque_pixels / total_pixels
@@ -526,7 +537,7 @@ def _load_sprite_mask(image_path: str, debug_log: list[str]) -> tuple[np.ndarray
     debug_log.append("Using alpha channel for sprite boundary detection")
 
     # For mostly-opaque images, try color key detection instead
-    if opaque_pixel_pct > 95:
+    if opaque_pixel_pct > _SOLID_IMAGE_OPAQUE_PCT:
         debug_log.append(f"Solid image detected ({opaque_pixel_pct:.1f}% opaque)")
         color_key_result = _detect_color_key_mask(img_array, debug_log)
         if color_key_result is not None:
@@ -572,7 +583,7 @@ def _extract_sprite_bounds(
         y_start, y_end = y_slice.start, y_slice.stop
         width, height = x_end - x_start, y_end - y_start
 
-        if width >= 8 and height >= 8:
+        if width >= _MIN_SPRITE_COMPONENT_SIZE and height >= _MIN_SPRITE_COMPONENT_SIZE:
             sprite_bounds.append((x_start, y_start, width, height))
 
     debug_log.append(f"Valid components: {len(sprite_bounds)}")
@@ -601,19 +612,24 @@ def _should_skip_merging(
 
     size_range_w = max(widths) - min(widths)
     size_range_h = max(heights) - min(heights)
-    size_diversity = (width_std + height_std) / 2
+    avg_size_std = (width_std + height_std) / 2
 
     small_sprites_count = sum(1 for w, h in zip(widths, heights, strict=False) if w < 24 or h < 24)
 
-    skip = len(sprite_bounds) > 50 and (
-        size_diversity > 10
-        or (size_range_w > min(widths) * 3 or size_range_h > min(heights) * 3)
+    # Skip merging when sprites are numerous AND either highly varied or atlas-like.
+    # High variance suggests distinct sprites that shouldn't be merged; large atlas
+    # counts make O(n²) merging too expensive with unreliable results.
+    is_high_variance = (
+        avg_size_std > 10
+        or size_range_w > min(widths) * 3
+        or size_range_h > min(heights) * 3
         or small_sprites_count > 20
-        or len(sprite_bounds) > 200
     )
+    is_large_atlas = len(sprite_bounds) > 200
+    skip = len(sprite_bounds) > 50 and (is_high_variance or is_large_atlas)
 
     debug_log.append(
-        f"Analysis: {len(sprite_bounds)} sprites, diversity={size_diversity:.1f}, irregular={skip}"
+        f"Analysis: {len(sprite_bounds)} sprites, diversity={avg_size_std:.1f}, irregular={skip}"
     )
     return skip
 
@@ -644,14 +660,15 @@ def _merge_nearby_components(
     debug_log: list[str] | None = None,
 ) -> list[tuple[int, int, int, int]]:
     """
-    Merge sprite components that are close to each other (multi-part sprites).
+    Merge sprite components whose centers are within *threshold* px of each other (multi-part sprites).
 
-    Uses union-find for transitive closure so chains like A-B-C are fully merged
-    even when A and C are not directly within threshold of each other.
+    Proximity is measured as center-to-center Euclidean distance. Uses union-find for
+    transitive closure so chains like A-B-C are fully merged even when A and C are not
+    directly within threshold of each other.
 
     Args:
         sprite_bounds: List of (x, y, width, height) tuples
-        threshold: Maximum distance for merging sprites
+        threshold: Maximum center-to-center Euclidean distance (px) for merging sprites
         debug_log: List to append debug messages to
 
     Returns:
@@ -795,15 +812,17 @@ def _infer_grid_from_positions(
     centers_x = [x + w // 2 for x, _y, w, _h in sprite_bounds]
     centers_y = [y + h // 2 for _x, y, _w, h in sprite_bounds]
 
-    grouped_x = _group_positions(centers_x, tolerance=15)
+    grouped_x = _group_positions(centers_x, tolerance=_CCL_POSITION_GROUP_TOLERANCE)
 
     y_range = max(centers_y) - min(centers_y)
     avg_sprite_height = np.mean([h for _x, _y, _w, h in sprite_bounds])
 
-    if y_range <= avg_sprite_height * 0.4:
+    if (
+        y_range <= avg_sprite_height * 0.4
+    ):  # Single-row threshold: row must span at least 40% of image width
         grouped_y = [int(np.mean(centers_y))]
     else:
-        grouped_y = _group_positions(centers_y, tolerance=15)
+        grouped_y = _group_positions(centers_y, tolerance=_CCL_POSITION_GROUP_TOLERANCE)
 
     cols = len(grouped_x)
     rows = len(grouped_y)
@@ -848,21 +867,24 @@ def _choose_frame_size(
         Tuple of (width, height, method_name)
     """
     if is_irregular:
+        # 20-80px is the typical character sprite size band for pixel art
         char_sprites = [
             (w, h) for w, h in zip(widths, heights, strict=False) if 20 <= w <= 80 and 20 <= h <= 80
         ]
-        if len(char_sprites) >= 10:
+        if len(char_sprites) >= 10:  # Need sufficient samples for statistical estimate
             return (
                 int(np.median([w for w, _h in char_sprites])),
                 int(np.median([h for _w, h in char_sprites])),
                 _METHOD_BEST_EFFORT,
             )
-        return 48, 48, _METHOD_FALLBACK
+        return _DEFAULT_FALLBACK_FRAME_SIZE, _DEFAULT_FALLBACK_FRAME_SIZE, _METHOD_FALLBACK
 
     median_width = int(np.median(widths))
     median_height = int(np.median(heights))
 
-    if abs(median_width - common_width) <= 10 and abs(median_height - common_height) <= 10:
+    if (
+        abs(median_width - common_width) <= 10 and abs(median_height - common_height) <= 10
+    ):  # Mode and median agree within 10px
         return common_width, common_height, _METHOD_MODE
     return median_width, median_height, _METHOD_MEDIAN
 
@@ -891,7 +913,9 @@ def _analyze_irregular_sprites(
 
     Returns:
         Result dict with the same keys as _analyze_ccl_results returns on success,
-        or None if the data does not meet the minimum threshold.
+        plus additional keys ``size_alternatives`` (dict of mode/median/average/top_sizes)
+        and ``note`` (human-readable description of the chosen method).
+        Returns None if the data does not meet the minimum threshold.
     """
     width_std = float(np.std(widths))
     height_std = float(np.std(heights))
@@ -904,13 +928,15 @@ def _analyze_irregular_sprites(
     (common_width, common_height), frequency = max(size_frequency.items(), key=lambda x: x[1])
 
     # Reject if most common size is too rare
-    if frequency / len(sprite_bounds) < 0.02:
+    if (
+        frequency / len(sprite_bounds) < 0.02
+    ):  # Mode represents <2% of sprites — too rare to be meaningful
         return None
 
     sorted_sizes = sorted(size_frequency.items(), key=lambda x: x[1], reverse=True)
 
     # Determine if this is a truly irregular collection (e.g., icon atlas)
-    size_diversity = (width_std + height_std) / 2
+    avg_size_std = (width_std + height_std) / 2
     size_range_w = max(widths) - min(widths)
     size_range_h = max(heights) - min(heights)
 
@@ -921,7 +947,7 @@ def _analyze_irregular_sprites(
 
     is_irregular_collection = (
         len(sprite_bounds) > 50
-        and size_diversity > 10
+        and avg_size_std > 10
         and (size_range_w > min(widths) * 3 or size_range_h > min(heights) * 3)
         and small_count > 5
         and medium_count > 5

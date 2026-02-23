@@ -123,9 +123,9 @@ class TestModeSwitching:
 
         with (
             patch(
-                "sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites
+                "sprite_model.core.detect_sprites_ccl_enhanced", mock_detect_sprites
             ),
-            patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background),
+            patch("sprite_model.core.detect_background_color", mock_detect_background),
         ):
             result = loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
@@ -141,9 +141,9 @@ class TestModeSwitching:
         # First switch to CCL
         with (
             patch(
-                "sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites
+                "sprite_model.core.detect_sprites_ccl_enhanced", mock_detect_sprites
             ),
-            patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background),
+            patch("sprite_model.core.detect_background_color", mock_detect_background),
         ):
             loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
@@ -182,7 +182,7 @@ class TestCCLDetectionFailures:
             return None
 
         with patch(
-            "sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", failing_detect_sprites
+            "sprite_model.core.detect_sprites_ccl_enhanced", failing_detect_sprites
         ):
             result = loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
@@ -202,7 +202,7 @@ class TestCCLDetectionFailures:
             return {"success": False, "error": "Detection failed"}
 
         with patch(
-            "sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", failing_detect_sprites
+            "sprite_model.core.detect_sprites_ccl_enhanced", failing_detect_sprites
         ):
             result = loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
@@ -222,7 +222,7 @@ class TestCCLDetectionFailures:
             raise RuntimeError("Image codec error")
 
         with patch(
-            "sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", failing_detect_sprites
+            "sprite_model.core.detect_sprites_ccl_enhanced", failing_detect_sprites
         ):
             result = loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
@@ -237,7 +237,7 @@ class TestCCLDetectionFailures:
             return {"success": True, "ccl_sprite_bounds": []}
 
         with patch(
-            "sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites
+            "sprite_model.core.detect_sprites_ccl_enhanced", mock_detect_sprites
         ):
             result = loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
@@ -266,9 +266,9 @@ class TestFrameCountSync:
 
         with (
             patch(
-                "sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites
+                "sprite_model.core.detect_sprites_ccl_enhanced", mock_detect_sprites
             ),
-            patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background),
+            patch("sprite_model.core.detect_background_color", mock_detect_background),
         ):
             loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
@@ -286,9 +286,9 @@ class TestFrameCountSync:
         # Switch to CCL
         with (
             patch(
-                "sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites
+                "sprite_model.core.detect_sprites_ccl_enhanced", mock_detect_sprites
             ),
-            patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background),
+            patch("sprite_model.core.detect_background_color", mock_detect_background),
         ):
             loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
@@ -317,9 +317,9 @@ class TestToleranceCapping:
 
         with (
             patch(
-                "sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites
+                "sprite_model.core.detect_sprites_ccl_enhanced", mock_detect_sprites
             ),
-            patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background),
+            patch("sprite_model.core.detect_background_color", mock_detect_background),
         ):
             loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
@@ -338,9 +338,9 @@ class TestToleranceCapping:
 
         with (
             patch(
-                "sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites
+                "sprite_model.core.detect_sprites_ccl_enhanced", mock_detect_sprites
             ),
-            patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background),
+            patch("sprite_model.core.detect_background_color", mock_detect_background),
         ):
             loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
@@ -375,9 +375,9 @@ class TestBoundsValidation:
 
         with (
             patch(
-                "sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites
+                "sprite_model.core.detect_sprites_ccl_enhanced", mock_detect_sprites
             ),
-            patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background),
+            patch("sprite_model.core.detect_background_color", mock_detect_background),
         ):
             loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
@@ -402,9 +402,9 @@ class TestBoundsValidation:
 
         with (
             patch(
-                "sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites
+                "sprite_model.core.detect_sprites_ccl_enhanced", mock_detect_sprites
             ),
-            patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background),
+            patch("sprite_model.core.detect_background_color", mock_detect_background),
         ):
             loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
@@ -504,7 +504,7 @@ class TestStateConsistency:
             return None  # Simulate failure
 
         with patch(
-            "sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", failing_detect_sprites
+            "sprite_model.core.detect_sprites_ccl_enhanced", failing_detect_sprites
         ):
             result = loaded_model.set_extraction_mode(ExtractionMode.CCL)
 
@@ -524,9 +524,9 @@ class TestStateConsistency:
         # After CCL switch
         with (
             patch(
-                "sprite_model.sprite_extraction.detect_sprites_ccl_enhanced", mock_detect_sprites
+                "sprite_model.core.detect_sprites_ccl_enhanced", mock_detect_sprites
             ),
-            patch("sprite_model.sprite_extraction.detect_background_color", mock_detect_background),
+            patch("sprite_model.core.detect_background_color", mock_detect_background),
         ):
             loaded_model.set_extraction_mode(ExtractionMode.CCL)
 

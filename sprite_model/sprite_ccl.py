@@ -123,6 +123,8 @@ class CCLOperations:
                                     raw_tolerance,
                                     self._ccl_color_tolerance,
                                 )
+                    else:
+                        logger.warning("CCL detection succeeded but returned no sprite bounds")
                 else:
                     return False, "CCL auto-detection failed. Cannot extract CCL frames.", 0, [], ""
             except Exception as e:
@@ -199,17 +201,16 @@ class CCLOperations:
 
             # Generate updated sprite sheet info with CCL extraction information
             updated_info = ""
-            if len(sprite_frames) > 0:
+            if sprite_frames:
                 bounds_preview = str(self._ccl_sprite_bounds[:5]) + (
                     "..." if len(self._ccl_sprite_bounds) > 5 else ""
                 )
 
-                frame_info = (
+                updated_info = (
                     f"<br><b>CCL Frames:</b> {len(sprite_frames)} individual sprites<br>"
                     f"<b>Extraction:</b> Connected-Component Labeling<br>"
                     f"<b>Boundaries:</b> {bounds_preview}"
                 )
-                updated_info = frame_info
             else:
                 updated_info = "<br><b>CCL Frames:</b> 0"
 

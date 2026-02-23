@@ -33,6 +33,8 @@ _CONFIDENCE_FALLBACK = 0.6
 _CONFIDENCE_LOW = 0.3
 _CONFIDENCE_FAILED = 0.1
 _CONFIDENCE_ERROR = 0.2
+_CONFIDENCE_VALIDATION_OK = 0.8
+_CONFIDENCE_VALIDATION_WARN = 0.4
 
 
 def _confidence_label(confidence: float) -> str:
@@ -74,7 +76,7 @@ class DetectionResult:
         self.spacing_y: int = 0
         self.success: bool = False
         self._confidence: float = 0.0
-        self.messages: list = []
+        self.messages: list[str] = []
         self.step_results: list[DetectionStepResult] = []
 
     @property
@@ -543,19 +545,16 @@ def _find_nonempty_grid_cells(image: QImage) -> list[tuple[int, int, int, int]]:
     Returns:
         List of (x, y, width, height) tuples for grid cells that contain non-transparent pixels
     """
-    # This is a simplified implementation
-    # In a full implementation, this would use more sophisticated algorithms
-    # like connected component analysis or edge detection
+    # Grid-based approach: test candidate grid sizes, enumerate cells, keep non-empty ones.
+    # Uses pixel sampling (via _has_content_in_region) rather than connected component analysis.
 
     width = image.width()
     height = image.height()
     alpha_threshold = Config.FrameExtraction.MARGIN_DETECTION_ALPHA_THRESHOLD
 
-    # Simple grid-based content detection
-    # This is a placeholder for more sophisticated content analysis
     content_bounds = []
 
-    # Try different grid sizes to find content blocks
+    # Subset of Config.FrameExtraction.AUTO_DETECT_SIZES used for grid-based detection
     for grid_size in [16, 24, 32, 48, 64]:
         if width % grid_size == 0 and height % grid_size == 0:
             frames_x = width // grid_size
@@ -660,12 +659,6 @@ def detect_spacing(
         image = sprite_sheet.toImage()
         available_width = image.width() - offset_x
         available_height = image.height() - offset_y
-
-        # Test spacing values from 0-10 pixels
-        best_spacing_x = 0
-        best_score_x = 0
-        best_spacing_y = 0
-        best_score_y = 0
 
         # Horizontal spacing detection
         best_spacing_x, best_score_x = _detect_spacing_1d(
@@ -983,7 +976,6 @@ def _run_frame_size_step(
             )
             messages.append(f"   ✗ {strategy_name} detection error: {e!s}")
 
-    last_msg = messages[-1] if messages else "All frame detection strategies failed"
     messages.append("   ✗ All frame detection strategies exhausted")
     _record_step(
         result,
@@ -991,7 +983,7 @@ def _run_frame_size_step(
         "frame_size",
         False,
         _CONFIDENCE_FAILED,
-        last_msg,
+        "All frame detection strategies exhausted",
         fallback_used=True,
     )
     return False
@@ -1075,10 +1067,10 @@ def _run_validation_step(
 
         if validation_success:
             messages.append(f"   ✓ {validation_msg}")
-            val_conf: float = 0.8
+            val_conf: float = _CONFIDENCE_VALIDATION_OK
         else:
             messages.append(f"   ⚠ {validation_msg}")
-            val_conf = 0.4
+            val_conf = _CONFIDENCE_VALIDATION_WARN
         _record_step(
             result,
             confidence_scores,
