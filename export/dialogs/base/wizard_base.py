@@ -305,6 +305,10 @@ class WizardWidget(QWidget):
 
         self.wizardFinished.emit(all_data)
 
+    def finish(self) -> None:
+        """Public interface for programmatically completing the wizard."""
+        self._on_finish()
+
     def get_wizard_data(self) -> dict[str, Any]:
         """Get all collected wizard data."""
         return self._wizard_data.copy()

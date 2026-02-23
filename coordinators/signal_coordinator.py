@@ -8,6 +8,7 @@ and simplifies adding new component connections.
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject
@@ -24,6 +25,9 @@ if TYPE_CHECKING:
         SpriteCanvas,
         StatusBarManager,
     )
+
+
+logger = logging.getLogger(__name__)
 
 
 class SignalCoordinator(QObject):
@@ -177,9 +181,16 @@ class SignalCoordinator(QObject):
         self._auto_detection_controller.buttonConfidenceUpdate.connect(
             self._frame_extractor.update_auto_button_confidence
         )
+        self._auto_detection_controller.detectionFailed.connect(
+            lambda wf, msg: logger.warning("Detection failed (%s): %s", wf, msg)
+        )
 
         if self._status_manager is not None:
-            self._auto_detection_controller.statusUpdate.connect(self._status_manager.show_message)
+            status_manager = self._status_manager
+            self._auto_detection_controller.statusUpdate.connect(status_manager.show_message)
+            self._auto_detection_controller.detectionFailed.connect(
+                lambda _wf, msg: status_manager.show_message(f"Detection failed: {msg}")
+            )
 
     def _on_margin_settings_detected(self, offset_x: int, offset_y: int) -> None:
         """Update margin spin boxes when auto-detection finds margin values."""

@@ -302,7 +302,7 @@ class SegmentPreviewItem(QFrame):
         remove_action = menu.addAction("Remove Segment")
         remove_action.triggered.connect(lambda: self.removeRequested.emit(self.segment_name))
 
-        menu.exec_(self.mapToGlobal(pos))
+        menu.exec(self.mapToGlobal(pos))
 
     def _on_bounce_toggled(self, checked: bool):
         """Handle bounce mode toggle."""
@@ -338,7 +338,7 @@ class SegmentPreviewItem(QFrame):
             clear_action = menu.addAction("Clear All Holds")
             clear_action.triggered.connect(self._clear_frame_holds)
 
-        menu.exec_(self.hold_button.mapToGlobal(self.hold_button.rect().bottomLeft()))
+        menu.exec(self.hold_button.mapToGlobal(self.hold_button.rect().bottomLeft()))
 
     def _add_frame_hold(self):
         """Add a new frame hold."""

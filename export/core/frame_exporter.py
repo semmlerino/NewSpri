@@ -1,6 +1,6 @@
 """
 Frame export engine for sprite frames.
-Supports individual frame export, sprite sheet composition, and GIF output.
+Supports individual frame export and sprite sheet composition.
 """
 
 from __future__ import annotations

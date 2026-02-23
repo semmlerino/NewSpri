@@ -117,7 +117,7 @@ class ExportDialog(QDialog):
 
         # Trigger wizard finish to collect all data
         logger.debug("Triggering wizard finish to collect data")
-        self.wizard._on_finish()
+        self.wizard.finish()
 
     def _on_wizard_finished(self, data: dict[str, Any]):
         """Handle wizard completion - emit export request and close."""
