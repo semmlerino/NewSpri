@@ -20,6 +20,7 @@ from PySide6.QtCore import QRect
 from PySide6.QtGui import QImage, QPixmap
 
 from sprite_model.extraction_mode import ExtractionMode
+from sprite_model.sprite_extraction import CCLDetectionResult
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,7 @@ class CCLOperations:
         self,
         sprite_sheet: QPixmap | None,
         sprite_sheet_path: str,
-        detect_sprites_ccl_enhanced: Callable[[str], dict | None],
+        detect_sprites_ccl_enhanced: Callable[[str], CCLDetectionResult | None],
         detect_background_color: Callable[[str], tuple[tuple[int, int, int], int] | None],
         emit_extraction_completed: Callable[[int], None] | None = None,
     ) -> tuple[bool, str, int, list[QPixmap], str]:
@@ -84,8 +85,8 @@ class CCLOperations:
             try:
                 ccl_result = detect_sprites_ccl_enhanced(sprite_sheet_path)
 
-                # Ensure we got a dictionary result
-                if not isinstance(ccl_result, dict):
+                # Ensure we got a CCLDetectionResult
+                if not isinstance(ccl_result, CCLDetectionResult):
                     return (
                         False,
                         f"CCL auto-detection returned unexpected type: {type(ccl_result)}",
@@ -94,10 +95,10 @@ class CCLOperations:
                         "",
                     )
 
-                if ccl_result and ccl_result.get("success", False):
+                if ccl_result and ccl_result.success:
                     # Store CCL sprite boundaries
-                    if "ccl_sprite_bounds" in ccl_result:
-                        self._ccl_sprite_bounds = ccl_result["ccl_sprite_bounds"]
+                    if ccl_result.ccl_sprite_bounds:
+                        self._ccl_sprite_bounds = ccl_result.ccl_sprite_bounds
 
                         # Store background color info if available
                         bg_color_info = detect_background_color(sprite_sheet_path)
@@ -219,7 +220,7 @@ class CCLOperations:
         sprite_sheet: QPixmap,
         sprite_sheet_path: str,
         extract_grid_frames_callback: Callable[[], tuple[bool, str, int]],
-        detect_sprites_ccl_enhanced: Callable[[str], dict | None],
+        detect_sprites_ccl_enhanced: Callable[[str], CCLDetectionResult | None],
         detect_background_color: Callable[[str], tuple[tuple[int, int, int], int] | None],
         emit_extraction_completed: Callable[[int], None] | None = None,
     ) -> bool:

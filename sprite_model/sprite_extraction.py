@@ -12,6 +12,7 @@ All grid extraction methods are now module-level functions.
 """
 
 import logging
+from dataclasses import dataclass, field
 from typing import NamedTuple, cast
 
 import numpy as np
@@ -23,6 +24,32 @@ from scipy import ndimage
 from config import Config
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class CCLDetectionResult:
+    """Result from CCL-based sprite detection."""
+
+    success: bool
+    method: str = "ccl_enhanced"
+    # Frame settings (only meaningful when success=True)
+    frame_width: int = 0
+    frame_height: int = 0
+    offset_x: int = 0
+    offset_y: int = 0
+    spacing_x: int = 0
+    spacing_y: int = 0
+    sprite_count: int = 0
+    confidence: str = ""
+    ccl_sprite_bounds: list[tuple[int, int, int, int]] = field(default_factory=list)
+    irregular_collection: bool = False
+    # Optional fields (only present in some paths)
+    note: str = ""
+    size_alternatives: dict = field(default_factory=dict)
+    # Debug/error info (only on failure)
+    debug_log: list[str] = field(default_factory=list)
+    error: str = ""
+
 
 # Method name constants used in detection result dicts
 _METHOD_BEST_EFFORT = "best_effort"
@@ -439,7 +466,7 @@ def _test_color_key_background(
 # ============================================================================
 
 
-def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
+def detect_sprites_ccl_enhanced(image_path: str) -> CCLDetectionResult | None:
     """
     Enhanced CCL detection for sprite boundary detection.
     Returns sprite boundaries only - background color detection is handled separately.
@@ -448,22 +475,7 @@ def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
         image_path: Path to the sprite sheet image
 
     Returns:
-        Dictionary with detection results:
-        {
-            'success': bool,
-            'frame_width': int,
-            'frame_height': int,
-            'offset_x': int,
-            'offset_y': int,
-            'spacing_x': int,
-            'spacing_y': int,
-            'sprite_count': int,
-            'confidence': str,
-            'method': str,
-            'ccl_sprite_bounds': List[Tuple[int, int, int, int]],
-            'irregular_collection': bool,
-            'size_alternatives': dict
-        }
+        CCLDetectionResult with detection results, or None on unexpected error.
 
     Example:
         >>> result = detect_sprites_ccl_enhanced("sprite_atlas.png")
@@ -481,7 +493,7 @@ def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
         # Stage 2: Label connected components and extract bounding boxes
         sprite_bounds = _extract_sprite_bounds(binary_mask, debug_log)
         if not sprite_bounds:
-            return {"success": False, "method": "ccl_enhanced", "debug_log": debug_log}
+            return CCLDetectionResult(success=False, debug_log=debug_log)
 
         # Stage 3: Decide whether to merge nearby components
         skip_merging = _should_skip_merging(sprite_bounds, debug_log)
@@ -500,15 +512,15 @@ def detect_sprites_ccl_enhanced(image_path: str) -> dict | None:
             merged_bounds, img_array.shape[1], img_array.shape[0], debug_log
         )
         if analysis_result.get("success", False):
-            return analysis_result
+            return CCLDetectionResult(**analysis_result)
 
         debug_log.append("CCL Failed: layout too irregular or insufficient sprites")
-        return {"success": False, "method": "ccl_enhanced", "debug_log": debug_log}
+        return CCLDetectionResult(success=False, debug_log=debug_log)
 
     except Exception as e:
         logger.debug("CCL Detection error: %s", e, exc_info=True)
         debug_log.append(f"CCL Detection Error: {e!s}")
-        return {"success": False, "method": "ccl_enhanced", "error": str(e), "debug_log": debug_log}
+        return CCLDetectionResult(success=False, error=str(e), debug_log=debug_log)
 
 
 def _load_sprite_mask(image_path: str, debug_log: list[str]) -> tuple[np.ndarray, np.ndarray]:

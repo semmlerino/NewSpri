@@ -75,9 +75,6 @@ class AnimationSegmentController(QObject):
         self._segment_preview = segment_preview
         self._export_coordinator = export_coordinator
 
-        # Guard flag: suppress _on_manager_segment_removed during rename
-        self._renaming = False
-
         # Staleness tracking for on_tab_changed: avoid redundant full resyncs
         self._last_sync_frame_count: int = -1
         self._last_sync_sprite_path: str = ""
@@ -97,6 +94,7 @@ class AnimationSegmentController(QObject):
         # Manager signals
         if self._segment_manager:
             self._segment_manager.segmentRemoved.connect(self._on_manager_segment_removed)
+            self._segment_manager.segmentRenamed.connect(self._on_manager_segment_renamed)
             self._segment_manager.segmentsCleared.connect(self._on_manager_segments_cleared)
 
         # Preview widget signals
@@ -229,18 +227,9 @@ class AnimationSegmentController(QObject):
 
     def rename_segment(self, old_name: str, new_name: str) -> tuple[bool, str]:
         """Rename an animation segment (validate-first). Returns (success, message)."""
-        # Guard: manager emits segmentRemoved during rename which would delete from grid
-        self._renaming = True
-        try:
-            success, error = self._segment_manager.update_segment(old_name, new_name=new_name)
-        finally:
-            self._renaming = False
+        success, error = self._segment_manager.update_segment(old_name, new_name=new_name)
 
         if success:
-            # Resync grid from manager after validated rename.
-            if self._grid_view:
-                self._grid_view.sync_segments_with_manager(self._segment_manager)
-
             message = f"Renamed segment '{old_name}' to '{new_name}'"
             self.statusMessage.emit(message)
 
@@ -454,8 +443,11 @@ class AnimationSegmentController(QObject):
 
     def _on_manager_segment_removed(self, _segment_name: str) -> None:
         """Handle segment removal from manager by resyncing grid to manager state."""
-        if self._renaming:
-            return  # Suppress during rename (sync after rename handles grid state)
+        if self._grid_view:
+            self._grid_view.sync_segments_with_manager(self._segment_manager)
+
+    def _on_manager_segment_renamed(self, old_name: str, new_name: str) -> None:
+        """Handle segment rename from manager by resyncing grid to manager state."""
         if self._grid_view:
             self._grid_view.sync_segments_with_manager(self._segment_manager)
 

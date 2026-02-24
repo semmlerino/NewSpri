@@ -19,6 +19,7 @@ from PySide6.QtGui import QColor, QPainter, QPixmap
 from sprite_model import SpriteModel
 from sprite_model.extraction_mode import ExtractionMode
 from sprite_model.sprite_ccl import CCLOperations
+from sprite_model.sprite_extraction import CCLDetectionResult
 
 # Mark all tests in this module as requiring Qt
 pytestmark = pytest.mark.requires_qt
@@ -85,10 +86,10 @@ def mock_ccl_detection():
     """Mock the CCL detection functions."""
 
     def mock_detect_sprites(path: str):
-        return {
-            "success": True,
-            "ccl_sprite_bounds": [(0, 0, 32, 32), (32, 0, 32, 32), (64, 0, 32, 32)],
-        }
+        return CCLDetectionResult(
+            success=True,
+            ccl_sprite_bounds=[(0, 0, 32, 32), (32, 0, 32, 32), (64, 0, 32, 32)],
+        )
 
     def mock_detect_background(path: str):
         return ((255, 255, 255), 10)  # White background, tolerance 10
@@ -193,7 +194,7 @@ class TestCCLDetectionFailures:
 
         # Now try to switch to CCL with failing detection
         def failing_detect_sprites(path: str):
-            return {"success": False, "error": "Detection failed"}
+            return CCLDetectionResult(success=False, error="Detection failed")
 
         with patch("sprite_model.core.detect_sprites_ccl_enhanced", failing_detect_sprites):
             result = loaded_model.set_extraction_mode(ExtractionMode.CCL)
@@ -224,7 +225,7 @@ class TestCCLDetectionFailures:
         """CCL detection returning empty bounds list should fail."""
 
         def mock_detect_sprites(path: str):
-            return {"success": True, "ccl_sprite_bounds": []}
+            return CCLDetectionResult(success=True, ccl_sprite_bounds=[])
 
         with patch("sprite_model.core.detect_sprites_ccl_enhanced", mock_detect_sprites):
             result = loaded_model.set_extraction_mode(ExtractionMode.CCL)
@@ -294,7 +295,7 @@ class TestToleranceCapping:
         """Background color tolerance should be capped at 25."""
 
         def mock_detect_sprites(path: str):
-            return {"success": True, "ccl_sprite_bounds": [(0, 0, 32, 32)]}
+            return CCLDetectionResult(success=True, ccl_sprite_bounds=[(0, 0, 32, 32)])
 
         def mock_detect_background(path: str):
             return ((255, 255, 255), 50)  # Tolerance 50, should be capped to 25
@@ -313,7 +314,7 @@ class TestToleranceCapping:
         """Tolerance under 25 should not be modified."""
 
         def mock_detect_sprites(path: str):
-            return {"success": True, "ccl_sprite_bounds": [(0, 0, 32, 32)]}
+            return CCLDetectionResult(success=True, ccl_sprite_bounds=[(0, 0, 32, 32)])
 
         def mock_detect_background(path: str):
             return ((255, 255, 255), 10)  # Tolerance 10, should stay at 10
@@ -340,15 +341,15 @@ class TestBoundsValidation:
         """Bounds outside sprite sheet dimensions should be skipped."""
 
         def mock_detect_sprites(path: str):
-            return {
-                "success": True,
-                "ccl_sprite_bounds": [
+            return CCLDetectionResult(
+                success=True,
+                ccl_sprite_bounds=[
                     (0, 0, 32, 32),  # Valid
                     (-10, 0, 32, 32),  # Invalid: negative x
                     (0, 0, 32, 32),  # Valid
                     (1000, 0, 32, 32),  # Invalid: x beyond sheet
                 ],
-            }
+            )
 
         def mock_detect_background(path: str):
             return ((255, 255, 255), 10)
@@ -366,14 +367,14 @@ class TestBoundsValidation:
         """Bounds with negative coordinates should be filtered."""
 
         def mock_detect_sprites(path: str):
-            return {
-                "success": True,
-                "ccl_sprite_bounds": [
+            return CCLDetectionResult(
+                success=True,
+                ccl_sprite_bounds=[
                     (-5, 0, 32, 32),  # Invalid: negative x
                     (0, -5, 32, 32),  # Invalid: negative y
                     (0, 0, 32, 32),  # Valid
                 ],
-            }
+            )
 
         def mock_detect_background(path: str):
             return ((255, 255, 255), 10)
@@ -407,7 +408,7 @@ class TestCCLOperationsUnit:
         success, error, count, frames, info = ccl_ops.extract_ccl_frames(
             sprite_sheet=QPixmap(),  # Null pixmap
             sprite_sheet_path="/fake/path.png",
-            detect_sprites_ccl_enhanced=lambda x: {},
+            detect_sprites_ccl_enhanced=lambda x: CCLDetectionResult(success=False),
             detect_background_color=lambda x: None,
         )
 
@@ -425,7 +426,7 @@ class TestCCLOperationsUnit:
         success, error, count, frames, info = ccl_ops.extract_ccl_frames(
             sprite_sheet=pixmap,
             sprite_sheet_path="",  # No path
-            detect_sprites_ccl_enhanced=lambda x: {},
+            detect_sprites_ccl_enhanced=lambda x: CCLDetectionResult(success=False),
             detect_background_color=lambda x: None,
         )
 

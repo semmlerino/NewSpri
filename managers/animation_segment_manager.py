@@ -152,6 +152,7 @@ class AnimationSegmentManager(QObject):
     # Signals
     segmentAdded = Signal(AnimationSegment)
     segmentRemoved = Signal(str)  # segment_name
+    segmentRenamed = Signal(str, str)  # (old_name, new_name)
     segmentUpdated = Signal(AnimationSegment)
     segmentsCleared = Signal()
 
@@ -349,8 +350,7 @@ class AnimationSegmentManager(QObject):
         if new_name and new_name != name:
             del self._segments[name]
             self._segments[new_name] = segment
-            self.segmentRemoved.emit(name)
-            self.segmentAdded.emit(segment)
+            self.segmentRenamed.emit(name, new_name)
         else:
             self.segmentUpdated.emit(segment)
 

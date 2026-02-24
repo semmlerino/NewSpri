@@ -396,6 +396,16 @@ class FrameExtractor(QGroupBox):
         for button in self.preset_group.buttons():
             button.setChecked(False)
 
+    def set_offset(self, x: int, y: int) -> None:
+        """Set offset values programmatically."""
+        self.offset_x.setValue(x)
+        self.offset_y.setValue(y)
+
+    def set_spacing(self, x: int, y: int) -> None:
+        """Set spacing values programmatically."""
+        self.spacing_x.setValue(x)
+        self.spacing_y.setValue(y)
+
     def update_auto_button_confidence(self, button_type: str, confidence: str, message: str = ""):
         """
         Update auto-detect button appearance based on confidence level.
