@@ -9,7 +9,6 @@ import logging
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QMessageBox
 
 from sprite_model.sprite_detection import DetectionResult
 
@@ -33,6 +32,9 @@ class AutoDetectionController(QObject):
     detectionStarted = Signal(str)  # workflow_type: "comprehensive", "frame", "margins", "spacing"
     detectionCompleted = Signal(str, bool, str)  # workflow_type, success, message
     detectionFailed = Signal(str, str)  # workflow_type, error_message
+
+    # Detection results dialog signal
+    detectionResultsReady = Signal(bool, str, str)  # success, summary_text, detailed_text
 
     # UI update signals
     frameSettingsDetected = Signal(int, int)  # width, height
@@ -223,23 +225,14 @@ class AutoDetectionController(QObject):
                 level = step.confidence_level if step.success else "failed"
                 self.buttonConfidenceUpdate.emit(button, level, step.description)
 
-    def _show_detection_results_dialog(self, success: bool, result: DetectionResult):
-        """Show detailed detection results in a dialog."""
-        dialog = QMessageBox()
-        dialog.setWindowTitle("Comprehensive Auto-Detection Results")
-
+    def _show_detection_results_dialog(self, success: bool, result: DetectionResult) -> None:
+        """Emit detection results for UI display."""
         if success:
-            dialog.setIcon(QMessageBox.Icon.Information)
-
-            # Create user-friendly summary
             summary = self._create_detection_summary()
-            dialog.setText(summary)
         else:
-            dialog.setIcon(QMessageBox.Icon.Warning)
-            dialog.setText("Auto-detection completed with some issues.")
-
-        dialog.setDetailedText("\n".join(result.messages))
-        dialog.exec()
+            summary = "Auto-detection completed with some issues."
+        detailed_text = "\n".join(result.messages)
+        self.detectionResultsReady.emit(success, summary, detailed_text)
 
 
 # Export for easy importing

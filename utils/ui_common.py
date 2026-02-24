@@ -6,6 +6,8 @@ Part of Phase 2 refactoring: Code Deduplication.
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QPushButton
 
+from utils.styles import StyleManager
+
 
 class AutoButtonManager(QObject):
     """Manages auto-detection button states and styles."""
@@ -21,19 +23,19 @@ class AutoButtonManager(QObject):
         "high": {
             "color": "#2e7d32",  # Green
             "background": "#e8f5e9",
-            "border": "#4caf50",
+            "border": StyleManager.Colors.SUCCESS,
             "icon": "✓",
         },
         "medium": {
             "color": "#ef6c00",  # Orange
             "background": "#fff3e0",
-            "border": "#ff9800",
+            "border": StyleManager.Colors.WARNING,
             "icon": "⚠",
         },
         "low": {
             "color": "#c62828",  # Red
             "background": "#ffebee",
-            "border": "#f44336",
+            "border": StyleManager.Colors.DANGER,
             "icon": "!",
         },
         "failed": {

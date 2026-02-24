@@ -14,6 +14,8 @@ Consolidated from 13 classes to 6 logical groups:
 
 from PySide6.QtGui import QColor
 
+from utils.styles import StyleManager
+
 
 class CanvasConfig:
     """Canvas display and interaction settings."""
@@ -173,12 +175,12 @@ class UIConfig:
         """Semantic color constants for consistent UI styling."""
 
         # Mode indicators (Grid vs CCL detection)
-        MODE_GRID = "#4CAF50"  # Material Green 500
-        MODE_CCL = "#2196F3"  # Material Blue 500
+        MODE_GRID = StyleManager.Colors.SUCCESS  # Material Green 500
+        MODE_CCL = StyleManager.Colors.SELECTION_BORDER  # Material Blue 500
 
         # Selection and highlighting
-        SELECTION_HIGHLIGHT = "#2196F3"  # Blue for selected items
-        SELECTION_BORDER = "#1976D2"
+        SELECTION_HIGHLIGHT = StyleManager.Colors.SELECTION_BORDER  # Blue for selected items
+        SELECTION_BORDER = StyleManager.Colors.PRIMARY
 
         # Segment colors (Material Design palette for animation segments)
         SEGMENT_PALETTE = [
@@ -385,7 +387,7 @@ class ExportConfig:
     DEFAULT_BACKGROUND_COLOR = (255, 255, 255, 255)  # White with full alpha
 
     # Checkerboard pattern settings (for background)
-    CHECKERBOARD_TILE_SIZE = 16  # Size of checkerboard tiles
+    CHECKERBOARD_TILE_SIZE = UIConfig.Drawing.CHECKERBOARD_TILE_SIZE  # Size of checkerboard tiles
     CHECKERBOARD_LIGHT_COLOR = (255, 255, 255, 255)  # Light checkerboard color
     CHECKERBOARD_DARK_COLOR = (192, 192, 192, 255)  # Dark checkerboard color
 

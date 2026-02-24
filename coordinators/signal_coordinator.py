@@ -184,6 +184,9 @@ class SignalCoordinator(QObject):
         self._auto_detection_controller.detectionFailed.connect(
             lambda wf, msg: logger.warning("Detection failed (%s): %s", wf, msg)
         )
+        self._auto_detection_controller.detectionResultsReady.connect(
+            self._on_detection_results_ready
+        )
 
         if self._status_manager is not None:
             status_manager = self._status_manager
@@ -199,6 +202,17 @@ class SignalCoordinator(QObject):
     def _on_spacing_settings_detected(self, spacing_x: int, spacing_y: int) -> None:
         """Update spacing spin boxes when auto-detection finds spacing values."""
         self._frame_extractor.set_spacing(spacing_x, spacing_y)
+
+    def _on_detection_results_ready(self, success: bool, summary: str, details: str) -> None:
+        """Show detection results dialog."""
+        from PySide6.QtWidgets import QMessageBox
+
+        dialog = QMessageBox()
+        dialog.setWindowTitle("Comprehensive Auto-Detection Results")
+        dialog.setIcon(QMessageBox.Icon.Information if success else QMessageBox.Icon.Warning)
+        dialog.setText(summary)
+        dialog.setDetailedText(details)
+        dialog.exec()
 
     def _connect_canvas_signals(self) -> None:
         """Connect SpriteCanvas signals to handlers."""
