@@ -19,10 +19,6 @@ def test_settings_config_import():
     assert hasattr(SettingsConfig, "MAX_RECENT_FILES")
     assert hasattr(SettingsConfig, "DEFAULTS")
 
-    # Verify export config structure
-    assert hasattr(ExportConfig, "IMAGE_FORMATS")
-    assert hasattr(ExportConfig, "DEFAULT_FORMAT")
-
     # Verify integration with main Config class
     assert hasattr(Config, "Settings")
     assert hasattr(Config, "Export")
@@ -70,11 +66,6 @@ def test_export_config_values():
     """Test export configuration values are reasonable."""
     from config import ExportConfig
 
-    # Test image formats
-    assert "PNG" in ExportConfig.IMAGE_FORMATS
-    assert "JPG" in ExportConfig.IMAGE_FORMATS
-    assert ExportConfig.DEFAULT_FORMAT in ExportConfig.IMAGE_FORMATS
-
     # Test naming pattern
     assert "{name}" in ExportConfig.DEFAULT_PATTERN
     assert "{index" in ExportConfig.DEFAULT_PATTERN
@@ -113,10 +104,6 @@ def test_config_integration():
     # Test Settings config access
     assert hasattr(Config.Settings, "MAX_RECENT_FILES")
     assert hasattr(Config.Settings, "DEFAULTS")
-
-    # Test Export config access
-    assert hasattr(Config.Export, "IMAGE_FORMATS")
-    assert hasattr(Config.Export, "DEFAULT_FORMAT")
 
 
 if __name__ == "__main__":

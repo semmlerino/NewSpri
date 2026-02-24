@@ -359,10 +359,6 @@ class AppConfig:
 class ExportConfig:
     """Export functionality settings."""
 
-    # Supported image formats
-    IMAGE_FORMATS = ["PNG", "JPG", "BMP"]
-    DEFAULT_FORMAT = "PNG"
-
     # Default naming patterns
     DEFAULT_PATTERN = "{name}_{index:03d}"
     DEFAULT_SCALE_FACTORS = [1.0, 2.0, 4.0]

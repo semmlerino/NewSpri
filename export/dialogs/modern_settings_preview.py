@@ -43,7 +43,7 @@ from config import Config
 from utils.styles import StyleManager
 
 from ..core.export_presets import ExportPreset
-from ..core.frame_exporter import ExportMode
+from ..core.frame_exporter import ExportFormat, ExportMode
 from ..dialogs.base.wizard_base import WizardStep, WizardWidget
 
 logger = logging.getLogger(__name__)
@@ -927,7 +927,7 @@ class ModernExportSettings(WizardStep):
         format_layout.addWidget(format_label)
 
         self.format_combo = QComboBox()
-        self.format_combo.addItems(["PNG", "JPG", "BMP"])
+        self.format_combo.addItems([f.value for f in ExportFormat])
         self.format_combo.setMinimumWidth(100)
         self.format_combo.setStyleSheet(StyleManager.combo_standard())
         self.format_combo.currentTextChanged.connect(self._on_format_changed)
@@ -1371,7 +1371,6 @@ class ModernExportSettings(WizardStep):
             if text:
                 return text
         return fallback
-
 
     def _generate_pattern_display(self, pattern: str, base_name: str) -> str:
         """Generate display text for a pattern with the given base name."""
