@@ -634,7 +634,6 @@ class AnimationGridView(QWidget):
     # PUBLIC SEGMENT MANIPULATION API
     # ============================================================================
 
-
     def _update_segment_visualization(self):
         """Update visual markers for all segments."""
         # Clear all thumbnails to default state

@@ -30,7 +30,6 @@ class TestFileValidator:
         assert validator is not None
         assert len(validator.SUPPORTED_FORMATS) > 0
 
-
     def test_validate_empty_path(self):
         """Test validation with empty or None path."""
         validator = FileValidator()

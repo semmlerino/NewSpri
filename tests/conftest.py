@@ -233,7 +233,7 @@ def test_sprite_sheet(sample_sprite_paths) -> QPixmap | None:
 
 
 @pytest.fixture
-def mock_sprite_frames() -> list[QPixmap]:
+def mock_sprite_frames(qapp) -> list[QPixmap]:
     """Generate mock sprite frames for testing."""
     frames = []
     if PYSIDE6_AVAILABLE:
@@ -254,7 +254,7 @@ def mock_sprite_frames() -> list[QPixmap]:
 
 
 @pytest.fixture
-def sprite_model() -> SpriteModel:
+def sprite_model(qapp) -> SpriteModel:
     """Fresh SpriteModel instance for testing."""
     return SpriteModel()
 

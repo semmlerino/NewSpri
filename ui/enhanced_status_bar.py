@@ -137,7 +137,6 @@ class EnhancedStatusBar(QStatusBar):
         if timeout > 0:
             self._message_timer.start(timeout)
 
-
     def _clear_temporary_message(self) -> None:
         """Clear temporary status message."""
         self.clearMessage()

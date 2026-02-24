@@ -114,26 +114,6 @@ class SpriteModel(QObject):
             self.errorOccurred.emit(error_msg)
             return False, error_msg
 
-    def clear_sprite_data(self) -> None:
-        """Clear all sprite data and reset state."""
-        # Clear primary state
-        self._original_sprite_sheet = None
-        self._sprite_frames.clear()
-        self._file_path = ""
-        self._sprite_sheet_path = ""
-
-        # Reset frame settings
-        self._frame_width = 0
-        self._frame_height = 0
-        self._offset_x = 0
-        self._offset_y = 0
-        self._spacing_x = 0
-        self._spacing_y = 0
-
-        # Clear module states
-        self._animation_state.reset_state()
-        self._ccl_operations.clear_ccl_data()
-
     # Frame Extraction Methods
     def extract_frames(
         self,
@@ -211,38 +191,6 @@ class SpriteModel(QObject):
         else:
             result_msg = f"Extracted {len(frames)} frames"
         return True, result_msg, len(frames)
-
-    def set_frame_settings(
-        self,
-        width: int,
-        height: int,
-        offset_x: int = 0,
-        offset_y: int = 0,
-        spacing_x: int = 0,
-        spacing_y: int = 0,
-    ) -> None:
-        """Set frame extraction parameters without extracting.
-
-        This method is for setting parameters only, without triggering extraction.
-        For extraction, use extract_frames() after setting parameters.
-
-        Note: Does NOT emit configurationChanged. Callers handle signaling themselves.
-        """
-        # Validate inputs
-        if width <= 0 or height <= 0:
-            raise ValueError(f"Frame dimensions must be positive: {width}x{height}")
-        if offset_x < 0 or offset_y < 0:
-            raise ValueError(f"Offsets cannot be negative: ({offset_x}, {offset_y})")
-        if spacing_x < 0 or spacing_y < 0:
-            raise ValueError(f"Spacing cannot be negative: ({spacing_x}, {spacing_y})")
-
-        # Store settings
-        self._frame_width = width
-        self._frame_height = height
-        self._offset_x = offset_x
-        self._offset_y = offset_y
-        self._spacing_x = spacing_x
-        self._spacing_y = spacing_y
 
     def validate_frame_settings(
         self,

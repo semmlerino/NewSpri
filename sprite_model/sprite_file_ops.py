@@ -118,7 +118,6 @@ class FileValidator:
         return path.suffix.lower() in self.SUPPORTED_FORMATS
 
 
-
 class MetadataExtractor:
     """
     File metadata extraction functionality for sprite sheets.
