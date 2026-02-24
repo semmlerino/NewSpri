@@ -495,7 +495,6 @@ class AnimationSegmentManager(QObject):
         segments_file = segments_dir / f"{sprite_path.stem}_{ext}_segments.json"
         return str(segments_file)
 
-
     def save_segments_to_file(self, file_path: str | None = None) -> tuple[bool, str]:
         """
         Save segments to JSON file using atomic write pattern.

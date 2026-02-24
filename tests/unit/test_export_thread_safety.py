@@ -312,6 +312,7 @@ class TestStateConsistency:
     def test_reset_creates_new_instance(self, qapp) -> None:
         """Resetting the singleton global should create a new instance on next get."""
         import export.core.frame_exporter as _fe_mod
+
         exporter1 = get_frame_exporter()
         _fe_mod._exporter_instance = None
         exporter2 = get_frame_exporter()

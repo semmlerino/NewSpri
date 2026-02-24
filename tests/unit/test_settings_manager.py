@@ -38,6 +38,7 @@ pytestmark = pytest.mark.requires_qt
 def reset_singleton():
     """Reset the global settings manager before and after each test."""
     import managers.settings_manager as _sm_mod
+
     _sm_mod._settings_instance = None
     yield
     _sm_mod._settings_instance = None
@@ -87,6 +88,7 @@ class TestSingletonPattern:
     def test_reset_settings_manager_clears_singleton(self, qapp) -> None:
         """Resetting the singleton global should create a new instance on next get."""
         import managers.settings_manager as _sm_mod
+
         manager1 = get_settings_manager()
         _sm_mod._settings_instance = None
         manager2 = get_settings_manager()
