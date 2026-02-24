@@ -553,7 +553,7 @@ def test_file_operations_performance(qapp, temp_dir):
 
     loader = FileLoader()
 
-    start_time = time.time()
+    start_time = time.perf_counter()
 
     # Process all files
     for test_file in test_files:
@@ -567,7 +567,7 @@ def test_file_operations_performance(qapp, temp_dir):
             success, pixmap, metadata, error = loader.load_sprite_sheet(str(test_file))
             assert success
 
-    end_time = time.time()
+    end_time = time.perf_counter()
     total_time = end_time - start_time
 
     # Should process multiple files quickly (under 0.5 seconds)

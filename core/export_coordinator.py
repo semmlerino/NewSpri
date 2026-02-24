@@ -214,7 +214,8 @@ class ExportCoordinator(QObject):
 
     def _export_segments_per_row(self, config: ExportConfig) -> None:
         """Handle segments per row sprite sheet export."""
-        assert self._segment_manager is not None  # validated by _validate_mode_preconditions
+        if self._segment_manager is None:
+            raise RuntimeError("segment_manager is required for segment export")
         segments = self._segment_manager.get_all_segments()
         segment_info = sorted(
             [

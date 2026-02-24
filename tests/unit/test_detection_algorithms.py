@@ -93,8 +93,6 @@ class TestFrameDetector:
 
     def test_detect_frame_size_invalid_input(self, qapp):
         """Test frame detection with invalid input."""
-        # Removed - using function-based API
-
         # Test with None
         success, width, height, message = detect_frame_size(None)
         assert not success
@@ -108,7 +106,6 @@ class TestFrameDetector:
 
     def test_detect_rectangular_frames_success(self, qapp):
         """Test rectangular frame detection."""
-        # Removed - using function-based API
         # Create sprite sheet that should work with 32x48 frames
         pixmap = QPixmap(128, 96)  # 4x2 grid of 32x48 frames
         pixmap.fill(Qt.green)
@@ -122,8 +119,6 @@ class TestFrameDetector:
 
     def test_detect_rectangular_frames_scoring(self, qapp):
         """Test that scoring works correctly for candidates."""
-        # Removed - using function-based API
-
         # Test scoring function directly
         score1 = _score_frame_candidate(32, 32, 4, 4, 16)  # Good square case
         score2 = _score_frame_candidate(16, 16, 8, 8, 64)  # Too many frames
@@ -172,8 +167,6 @@ class TestFrameDetector:
 
     def test_has_content_in_region(self, qapp):
         """Test content detection in image regions."""
-        # Removed - using function-based API
-
         # Create image with transparent and opaque areas
         image = QImage(100, 100, QImage.Format_ARGB32)
         image.fill(Qt.transparent)
@@ -193,8 +186,6 @@ class TestFrameDetector:
 
     def test_calculate_common_dimensions(self, qapp):
         """Test calculation of common dimensions from content bounds."""
-        # Removed - using function-based API
-
         # Test with multiple same-size sprites
         content_bounds = [
             (0, 0, 32, 32),
@@ -215,7 +206,6 @@ class TestFrameDetector:
 
     def test_all_detection_methods(self, qapp):
         """Test all detection methods work correctly."""
-        # Removed - using function-based API
         pixmap = QPixmap(64, 64)
         pixmap.fill(Qt.red)
 
@@ -240,13 +230,10 @@ class TestMarginDetector:
 
     def test_margin_detector_initialization(self):
         """Test MarginDetector can be created."""
-        # Removed - using function-based API
         assert callable(detect_frame_size) or callable(detect_margins) or callable(detect_spacing)
 
     def test_detect_margins_basic(self, qapp):
         """Test basic margin detection."""
-        # Removed - using function-based API
-
         # Create pixmap with transparent margins
         pixmap = QPixmap(100, 100)
         pixmap.fill(Qt.transparent)
@@ -259,8 +246,6 @@ class TestMarginDetector:
 
     def test_detect_margins_with_content(self, qapp):
         """Test margin detection with actual content."""
-        # Removed - using function-based API
-
         # Create image with margins and content
         image = QImage(100, 100, QImage.Format_ARGB32)
         image.fill(Qt.transparent)
@@ -282,8 +267,6 @@ class TestMarginDetector:
 
     def test_detect_margins_validation(self, qapp):
         """Test margin validation logic."""
-        # Removed - using function-based API
-
         # Test validation with excessive margins
         left, right, top, bottom = 50, 5, 40, 5  # Large margins
         width, height = 100, 100
@@ -299,8 +282,6 @@ class TestMarginDetector:
 
     def test_detect_margins_frame_size_validation(self, qapp):
         """Test margin validation with frame size context."""
-        # Removed - using function-based API
-
         # Test with frame size that doesn't divide cleanly
         left, right, top, bottom = 5, 5, 5, 5
         width, height = 100, 100
@@ -320,8 +301,6 @@ class TestMarginDetector:
 
     def test_detect_margins_horizontal_strip(self, qapp):
         """Test margin detection for horizontal strips."""
-        # Removed - using function-based API
-
         # Test horizontal strip (wide aspect ratio)
         left, right, top, bottom = 10, 10, 10, 10
         width, height = 400, 100  # 4:1 aspect ratio
@@ -337,8 +316,6 @@ class TestMarginDetector:
 
     def test_detect_margins_small_margin_removal(self, qapp):
         """Test that very small margins are set to zero."""
-        # Removed - using function-based API
-
         left, right, top, bottom = 2, 5, 1, 5
         width, height = 100, 100
 
@@ -352,8 +329,6 @@ class TestMarginDetector:
 
     def test_detect_margins_invalid_input(self, qapp):
         """Test margin detection with invalid input."""
-        # Removed - using function-based API
-
         # Test with None
         success, offset_x, offset_y, message = detect_margins(None)
         assert not success
@@ -367,8 +342,6 @@ class TestMarginDetector:
 
     def test_detect_raw_margins_all_edges(self, qapp):
         """Test raw margin detection from all four edges."""
-        # Removed - using function-based API
-
         # Create image with different margins on each edge
         image = QImage(100, 80, QImage.Format_ARGB32)
         image.fill(Qt.transparent)
@@ -387,7 +360,6 @@ class TestMarginDetector:
 
     def test_detect_margins_with_frame_hints(self, qapp):
         """Test margin detection with frame size hints."""
-        # Removed - using function-based API
         pixmap = QPixmap(64, 64)
         pixmap.fill(Qt.red)
 
@@ -401,12 +373,10 @@ class TestSpacingDetector:
 
     def test_spacing_detector_initialization(self):
         """Test SpacingDetector can be created."""
-        # Removed - using function-based API
         assert callable(detect_frame_size) or callable(detect_margins) or callable(detect_spacing)
 
     def test_detect_spacing_basic(self, qapp):
         """Test basic spacing detection."""
-        # Removed - using function-based API
         pixmap = QPixmap(100, 100)
         pixmap.fill(Qt.red)
 
@@ -421,8 +391,6 @@ class TestSpacingDetector:
 
     def test_detect_spacing_with_gaps(self, qapp):
         """Test spacing detection with actual gaps between frames."""
-        # Removed - using function-based API
-
         # Create image with frames and gaps
         image = QImage(100, 100, QImage.Format_ARGB32)
         image.fill(Qt.transparent)
@@ -454,8 +422,6 @@ class TestSpacingDetector:
 
     def test_detect_horizontal_spacing(self, qapp):
         """Test horizontal spacing detection specifically."""
-        # Removed - using function-based API
-
         # Create simple test image with clear spacing pattern
         image = QImage(100, 50, QImage.Format_ARGB32)
         image.fill(Qt.transparent)
@@ -501,8 +467,6 @@ class TestSpacingDetector:
 
     def test_detect_vertical_spacing(self, qapp):
         """Test vertical spacing detection specifically."""
-        # Removed - using function-based API
-
         # Create simple test image with clear vertical spacing pattern
         image = QImage(50, 100, QImage.Format_ARGB32)
         image.fill(Qt.transparent)
@@ -548,8 +512,6 @@ class TestSpacingDetector:
 
     def test_detect_spacing_invalid_input(self, qapp):
         """Test spacing detection with invalid input."""
-        # Removed - using function-based API
-
         # Test with None
         success, spacing_x, spacing_y, message, _conf = detect_spacing(None, 32, 32)
         assert not success
@@ -569,7 +531,6 @@ class TestSpacingDetector:
 
     def test_spacing_confidence_calculation(self, qapp):
         """Test confidence calculation based on consistency scores."""
-        # Removed - using function-based API
         pixmap = QPixmap(64, 64)
         pixmap.fill(Qt.blue)
 
@@ -789,7 +750,6 @@ class TestAutoDetectionController:
 )
 def test_detection_parametrized_sizes(qapp, sheet_size, frame_size, expected_frames):
     """Test detection algorithms with various sheet and frame size combinations."""
-    # Removed - using function-based API
     pixmap = QPixmap(sheet_size[0], sheet_size[1])
     pixmap.fill(Qt.red)
 
@@ -814,14 +774,13 @@ def test_detection_performance_large_sprite_sheet(qapp):
     """Test detection performance with large sprite sheets."""
     import time
 
-    # Removed - using function-based API
     # Create large sprite sheet
     large_pixmap = QPixmap(1024, 1024)
     large_pixmap.fill(Qt.blue)
 
-    start_time = time.time()
+    start_time = time.perf_counter()
     success, width, height, message = detect_frame_size(large_pixmap)
-    end_time = time.time()
+    end_time = time.perf_counter()
 
     # Should complete within reasonable time (under 1 second)
     detection_time = end_time - start_time

@@ -55,7 +55,6 @@ class SpriteModel(QObject):
         self._original_sprite_sheet: QPixmap | None = None
         self._sprite_frames: list[QPixmap] = []
         self._file_path: str = ""
-        self._sprite_sheet_path: str = ""
 
         # Initialize refactored modules (pass dependencies directly)
         self._file_loader = FileLoader()
@@ -99,7 +98,6 @@ class SpriteModel(QObject):
             # Store state
             self._original_sprite_sheet = pixmap
             self._file_path = file_path
-            self._sprite_sheet_path = file_path
 
             # Clear previous frames and reset animation
             self._sprite_frames.clear()
@@ -227,7 +225,7 @@ class SpriteModel(QObject):
         # Call CCLOperations with direct parameters
         success, message, frame_count, frames, _info = self._ccl_operations.extract_ccl_frames(
             sprite_sheet=sprite_sheet,
-            sprite_sheet_path=self._sprite_sheet_path,
+            sprite_sheet_path=self._file_path,
             detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
             detect_background_color=detect_background_color,
             emit_extraction_completed=self.extractionCompleted.emit,
@@ -248,7 +246,7 @@ class SpriteModel(QObject):
         success = self._ccl_operations.set_extraction_mode(
             mode=mode,
             sprite_sheet=sprite_sheet,
-            sprite_sheet_path=self._sprite_sheet_path,
+            sprite_sheet_path=self._file_path,
             extract_grid_frames_callback=self._re_extract_frames_tuple,
             detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
             detect_background_color=detect_background_color,
@@ -336,7 +334,7 @@ class SpriteModel(QObject):
             return False, empty_result
 
         success, _message, result = comprehensive_auto_detect(
-            self._original_sprite_sheet, self._sprite_sheet_path
+            self._original_sprite_sheet, self._file_path
         )
 
         if not (success and result):

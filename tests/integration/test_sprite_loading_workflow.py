@@ -170,11 +170,11 @@ class TestPerformanceWorkflow:
         for width, height in frame_sizes:
             import time
 
-            start_time = time.time()
+            start_time = time.perf_counter()
 
             success, message, frame_count = sprite_model.extract_frames(width, height, 0, 0, 0, 0)
 
-            end_time = time.time()
+            end_time = time.perf_counter()
             extraction_times.append(end_time - start_time)
 
             assert success, f"Extraction failed: {message}"

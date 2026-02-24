@@ -783,11 +783,20 @@ class SpriteViewer(QMainWindow):
 
     def _on_playback_started(self):
         """Handle playback start."""
+        # Disable nav buttons during active playback. at_start=True/at_end=True disables
+        # both prev and next; _on_frame_changed will update to accurate position each tick.
         self._playback_controls.update_button_states(has_frames=True, at_start=True, at_end=True)
 
     def _on_playback_paused(self):
         """Handle playback pause."""
-        self._playback_controls.update_button_states(has_frames=True, at_start=True, at_end=True)
+        # Compute actual position so prev/next are correctly enabled after pausing.
+        frame_count = self._sprite_model.frame_count
+        current = self._sprite_model.current_frame
+        at_start = current == 0
+        at_end = current >= frame_count - 1 if frame_count > 0 else True
+        self._playback_controls.update_button_states(
+            has_frames=frame_count > 0, at_start=at_start, at_end=at_end
+        )
 
     def _on_playback_ended(self):
         """Shared handler for playback stop and completion."""

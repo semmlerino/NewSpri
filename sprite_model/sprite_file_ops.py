@@ -9,35 +9,11 @@ Consolidated from file_operations/ subpackage.
 
 import os
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import Any
+
+from PySide6.QtGui import QPixmap
 
 from config import Config
-
-if TYPE_CHECKING:
-    from PySide6.QtGui import QPixmap
-
-try:
-    from PySide6.QtGui import QPixmap as _QPixmapRuntime
-
-    PYSIDE6_AVAILABLE = True
-    if not TYPE_CHECKING:
-        QPixmap = _QPixmapRuntime
-except ImportError:
-    PYSIDE6_AVAILABLE = False
-    if not TYPE_CHECKING:
-        # Minimal QPixmap stub for when PySide6 unavailable
-        class QPixmap:
-            def __init__(self, *args):
-                self._null = True
-
-            def isNull(self):
-                return self._null
-
-            def width(self):
-                return 0
-
-            def height(self):
-                return 0
 
 
 class FileValidator:
@@ -150,18 +126,6 @@ class MetadataExtractor:
                 'sprite_sheet_info': str    # Formatted info string for display
             }
         """
-        if not PYSIDE6_AVAILABLE:
-            return {
-                "file_path": file_path,
-                "file_name": Path(file_path).name if file_path else "Unknown",
-                "sheet_width": 0,
-                "sheet_height": 0,
-                "file_format": "UNKNOWN",
-                "file_size": 0,
-                "last_modified": 0.0,
-                "sprite_sheet_info": "PySide6 not available - metadata extraction limited",
-            }
-
         try:
             path_obj = Path(file_path)
             file_stats = path_obj.stat()
@@ -266,9 +230,6 @@ class FileLoader:
             - metadata: Dictionary containing file metadata
             - error_message: Error description if failed, empty string if succeeded
         """
-        if not PYSIDE6_AVAILABLE:
-            return False, None, {}, "PySide6 not available - required for image loading"
-
         try:
             # Validate file path first
             is_valid, validation_error = self.validator.validate_file_path(file_path)
