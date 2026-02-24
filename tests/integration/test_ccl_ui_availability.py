@@ -64,9 +64,6 @@ class TestCCLUIAvailability:
 
         # Test SpriteModel has CCL methods
         sprite_model = viewer._sprite_model
-        assert hasattr(sprite_model, "is_ccl_available"), (
-            "SpriteModel missing is_ccl_available method"
-        )
         assert hasattr(sprite_model, "get_ccl_sprite_bounds"), (
             "SpriteModel missing get_ccl_sprite_bounds method"
         )
@@ -238,10 +235,6 @@ class TestCCLRegressionPrevention:
 
         # Checklist of requirements (updated for new behavior)
         requirements = [
-            (
-                "SpriteModel has is_ccl_available method",
-                lambda: hasattr(viewer._sprite_model, "is_ccl_available"),
-            ),
             (
                 "SpriteModel has get_ccl_sprite_bounds method",
                 lambda: hasattr(viewer._sprite_model, "get_ccl_sprite_bounds"),

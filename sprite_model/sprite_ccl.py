@@ -55,7 +55,6 @@ class CCLOperations:
         self,
         sprite_sheet: QPixmap | None,
         sprite_sheet_path: str,
-        ccl_available: bool,
         detect_sprites_ccl_enhanced: Callable[[str], dict | None],
         detect_background_color: Callable[[str], tuple[tuple[int, int, int], int] | None],
         emit_extraction_completed: Callable[[int], None] | None = None,
@@ -66,7 +65,6 @@ class CCLOperations:
         Args:
             sprite_sheet: The original sprite sheet QPixmap
             sprite_sheet_path: Path to the sprite sheet file
-            ccl_available: Whether CCL functionality is available
             detect_sprites_ccl_enhanced: Function to detect sprites using CCL
             detect_background_color: Function to detect background color
             emit_extraction_completed: Optional callback to emit extraction completed signal
@@ -79,14 +77,6 @@ class CCLOperations:
 
         # If no CCL sprite bounds, try to run auto-detection first
         if not self._ccl_sprite_bounds:
-            if not ccl_available:
-                return (
-                    False,
-                    "No CCL sprite boundaries available. Auto-detection not possible.",
-                    0,
-                    [],
-                    "",
-                )
             if not sprite_sheet_path:
                 return False, "No sprite sheet path available for CCL detection.", 0, [], ""
 
@@ -228,7 +218,6 @@ class CCLOperations:
         mode: ExtractionMode,
         sprite_sheet: QPixmap,
         sprite_sheet_path: str,
-        ccl_available: bool,
         extract_grid_frames_callback: Callable[[], tuple[bool, str, int]],
         detect_sprites_ccl_enhanced: Callable[[str], dict | None],
         detect_background_color: Callable[[str], tuple[tuple[int, int, int], int] | None],
@@ -241,7 +230,6 @@ class CCLOperations:
             mode: Extraction mode (ExtractionMode.GRID or ExtractionMode.CCL)
             sprite_sheet: The original sprite sheet QPixmap
             sprite_sheet_path: Path to the sprite sheet file
-            ccl_available: Whether CCL functionality is available
             extract_grid_frames_callback: Callback to extract grid frames
             detect_sprites_ccl_enhanced: Function to detect sprites using CCL
             detect_background_color: Function to detect background color
@@ -250,9 +238,6 @@ class CCLOperations:
         Returns:
             True if successful, False otherwise
         """
-        if mode is ExtractionMode.CCL and not ccl_available:
-            return False
-
         old_mode = self._extraction_mode
         self._extraction_mode = mode
 
@@ -261,7 +246,6 @@ class CCLOperations:
             success, _error, _count, frames, info = self.extract_ccl_frames(
                 sprite_sheet=sprite_sheet,
                 sprite_sheet_path=sprite_sheet_path,
-                ccl_available=ccl_available,
                 detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
                 detect_background_color=detect_background_color,
                 emit_extraction_completed=emit_extraction_completed,

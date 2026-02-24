@@ -280,7 +280,6 @@ class SpriteModel(QObject):
         success, message, frame_count, frames, _info = self._ccl_operations.extract_ccl_frames(
             sprite_sheet=sprite_sheet,
             sprite_sheet_path=self._sprite_sheet_path,
-            ccl_available=self.is_ccl_available(),
             detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
             detect_background_color=detect_background_color,
             emit_extraction_completed=self.extractionCompleted.emit,
@@ -302,7 +301,6 @@ class SpriteModel(QObject):
             mode=mode,
             sprite_sheet=sprite_sheet,
             sprite_sheet_path=self._sprite_sheet_path,
-            ccl_available=self.is_ccl_available(),
             extract_grid_frames_callback=self._re_extract_frames_tuple,
             detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
             detect_background_color=detect_background_color,
@@ -320,14 +318,6 @@ class SpriteModel(QObject):
     def get_extraction_mode(self) -> ExtractionMode:
         """Get current extraction mode."""
         return self._ccl_operations.get_extraction_mode()
-
-    def is_ccl_available(self) -> bool:
-        """Check if CCL extraction is available."""
-        # CCL mode should be available whenever a sprite sheet is loaded
-        # The actual CCL detection will happen during extraction
-        if self._original_sprite_sheet is None:
-            return False
-        return not self._original_sprite_sheet.isNull()
 
     def get_ccl_sprite_bounds(self) -> list[tuple[int, int, int, int]]:
         """Get bounding boxes of detected sprites."""
