@@ -941,20 +941,3 @@ def get_frame_exporter() -> FrameExporter:
     if _exporter_instance is None:
         _exporter_instance = FrameExporter()
     return _exporter_instance
-
-
-def reset_frame_exporter() -> None:
-    """Reset the global frame exporter instance (for testing).
-
-    Properly waits for any running export thread to complete before resetting.
-    """
-    global _exporter_instance
-    if (
-        _exporter_instance is not None
-        and _exporter_instance._worker is not None
-        and _exporter_instance._worker.isRunning()
-    ):
-        # Wait for any running export thread to complete
-        _exporter_instance._worker.quit()
-        _exporter_instance._worker.wait()
-    _exporter_instance = None

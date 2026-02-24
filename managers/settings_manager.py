@@ -214,9 +214,3 @@ def get_settings_manager() -> SettingsManager:
             if _settings_instance is None:
                 _settings_instance = SettingsManager()
     return _settings_instance
-
-
-def reset_settings_manager() -> None:
-    """Reset the global settings manager instance (for testing)."""
-    global _settings_instance
-    _settings_instance = None

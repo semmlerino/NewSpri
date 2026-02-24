@@ -23,7 +23,6 @@ from PySide6.QtWidgets import QMainWindow
 from managers.settings_manager import (
     SettingsManager,
     get_settings_manager,
-    reset_settings_manager,
 )
 
 # Mark all tests in this module as requiring Qt
@@ -38,9 +37,10 @@ pytestmark = pytest.mark.requires_qt
 @pytest.fixture(autouse=True)
 def reset_singleton():
     """Reset the global settings manager before and after each test."""
-    reset_settings_manager()
+    import managers.settings_manager as _sm_mod
+    _sm_mod._settings_instance = None
     yield
-    reset_settings_manager()
+    _sm_mod._settings_instance = None
 
 
 @pytest.fixture
@@ -85,9 +85,10 @@ class TestSingletonPattern:
         assert manager1 is manager2
 
     def test_reset_settings_manager_clears_singleton(self, qapp) -> None:
-        """reset_settings_manager should clear the singleton."""
+        """Resetting the singleton global should create a new instance on next get."""
+        import managers.settings_manager as _sm_mod
         manager1 = get_settings_manager()
-        reset_settings_manager()
+        _sm_mod._settings_instance = None
         manager2 = get_settings_manager()
 
         assert manager1 is not manager2

@@ -8,6 +8,22 @@ Performance Note:
 
 import pytest
 
+import export.core.frame_exporter as _fe_mod
+import managers.recent_files_manager as _rfm_mod
+import managers.settings_manager as _sm_mod
+
+
+def _reset_singletons():
+    """Reset singleton instances for test isolation."""
+    _sm_mod._settings_instance = None
+    _rfm_mod._recent_files_instance = None
+    # Wait for any running export thread before resetting
+    inst = _fe_mod._exporter_instance
+    if inst is not None and inst._worker is not None and inst._worker.isRunning():
+        inst._worker.quit()
+        inst._worker.wait()
+    _fe_mod._exporter_instance = None
+
 
 @pytest.fixture(autouse=True)
 def reset_singletons():
@@ -17,19 +33,9 @@ def reset_singletons():
     singletons - they use dependency injection. Only utility managers (SettingsManager,
     RecentFilesManager) still use the singleton pattern.
     """
-    # Import reset functions for utility singletons
-    from export.core.frame_exporter import reset_frame_exporter
-    from managers.recent_files_manager import reset_recent_files_manager
-    from managers.settings_manager import reset_settings_manager
-
-    # Reset utility managers
-    reset_settings_manager()
-    reset_recent_files_manager()
-    reset_frame_exporter()
+    _reset_singletons()
 
     yield
 
     # Reset again after test
-    reset_settings_manager()
-    reset_recent_files_manager()
-    reset_frame_exporter()
+    _reset_singletons()

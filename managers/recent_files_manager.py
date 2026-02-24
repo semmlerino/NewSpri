@@ -200,9 +200,3 @@ def get_recent_files_manager() -> RecentFilesManager:
             if _recent_files_instance is None:
                 _recent_files_instance = RecentFilesManager()
     return _recent_files_instance
-
-
-def reset_recent_files_manager() -> None:
-    """Reset the global recent files manager instance (for testing)."""
-    global _recent_files_instance
-    _recent_files_instance = None

@@ -25,7 +25,6 @@ from export.core.frame_exporter import (
     LayoutMode,
     SpriteSheetLayout,
     get_frame_exporter,
-    reset_frame_exporter,
 )
 
 # Mark all tests in this module as requiring Qt
@@ -40,9 +39,18 @@ pytestmark = pytest.mark.requires_qt
 @pytest.fixture(autouse=True)
 def reset_exporter():
     """Reset the global frame exporter before and after each test."""
-    reset_frame_exporter()
+    import export.core.frame_exporter as _fe_mod
+
+    def _do_reset():
+        inst = _fe_mod._exporter_instance
+        if inst is not None and inst._worker is not None and inst._worker.isRunning():
+            inst._worker.quit()
+            inst._worker.wait()
+        _fe_mod._exporter_instance = None
+
+    _do_reset()
     yield
-    reset_frame_exporter()
+    _do_reset()
 
 
 @pytest.fixture
@@ -302,9 +310,10 @@ class TestStateConsistency:
         assert exporter1 is exporter2
 
     def test_reset_creates_new_instance(self, qapp) -> None:
-        """reset_frame_exporter should create new instance."""
+        """Resetting the singleton global should create a new instance on next get."""
+        import export.core.frame_exporter as _fe_mod
         exporter1 = get_frame_exporter()
-        reset_frame_exporter()
+        _fe_mod._exporter_instance = None
         exporter2 = get_frame_exporter()
 
         assert exporter1 is not exporter2
