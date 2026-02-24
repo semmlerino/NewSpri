@@ -760,7 +760,6 @@ class FrameExporter(QObject):
         mode: str = "individual",
         scale_factor: float = 1.0,
         pattern: str | None = None,
-        selected_indices: list[int] | None = None,
         sprite_sheet_layout: SpriteSheetLayout | None = None,
         segment_info: list[dict[str, Any]] | None = None,
     ) -> bool:
@@ -778,7 +777,6 @@ class FrameExporter(QObject):
             mode: Export mode (individual, sheet, selected, segments_sheet)
             scale_factor: Scale factor for output
             pattern: Naming pattern for individual frames
-            selected_indices: Frame indices for selected export (unused by ExportTask; filtering done before calling)
             sprite_sheet_layout: Layout configuration for sprite sheet export
             segment_info: List of segment dictionaries with 'name', 'start_frame', 'end_frame'
 

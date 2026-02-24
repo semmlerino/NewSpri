@@ -451,7 +451,6 @@ def test_export_frames_with_selected_indices(mock_dialog_class, mock_sprite_mode
     mock_exporter.export_frames.assert_called_once()
     call_kwargs = mock_exporter.export_frames.call_args[1]
     assert call_kwargs["mode"] == "individual"
-    assert call_kwargs["selected_indices"] == [1, 2]
 
 
 @patch("core.export_coordinator.ExportProgressDialog")

@@ -206,7 +206,6 @@ class ExportCoordinator(QObject):
             mode=export_mode.value,
             scale_factor=config.scale_factor,
             pattern=config.pattern or None,
-            selected_indices=selected_indices if selected_indices else None,
             sprite_sheet_layout=sprite_sheet_layout,
         )
 
