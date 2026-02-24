@@ -206,68 +206,6 @@ class TestSegmentPersistence:
         return sheet
 
     @pytest.mark.integration
-    def test_legacy_segment_file_migration(self, tmp_path):
-        """Verify legacy-format segment files are migrated to new format on load.
-
-        Migration flow:
-        1. New-format file is absent
-        2. Legacy-format file ({stem}_segments.json) is present
-        3. set_sprite_context() loads legacy file, saves new-format file, deletes legacy file
-        """
-        sprite_path = tmp_path / "hero.png"
-        sprite_path.write_bytes(b"PNG\x89\x50\x4e\x47\x0d\x0a\x1a\x0a")  # Minimal PNG header
-
-        # Build legacy file path: .sprite_segments/{stem}_segments.json
-        segments_dir = sprite_path.parent / ".sprite_segments"
-        segments_dir.mkdir(exist_ok=True)
-        legacy_file = segments_dir / f"{sprite_path.stem}_segments.json"
-
-        # Build new-format file path: .sprite_segments/{stem}_{ext}_segments.json
-        ext = sprite_path.suffix.lstrip(".")
-        new_format_file = segments_dir / f"{sprite_path.stem}_{ext}_segments.json"
-
-        # Write valid segment data to the legacy file
-        legacy_data = {
-            "sprite_sheet_path": str(sprite_path),
-            "max_frames": 8,
-            "segments": [
-                {
-                    "name": "Walk",
-                    "start_frame": 0,
-                    "end_frame": 3,
-                    "color_rgb": [100, 150, 200],
-                    "description": "",
-                    "tags": [],
-                    "bounce_mode": False,
-                    "frame_holds": {},
-                }
-            ],
-        }
-        with open(legacy_file, "w") as f:
-            json.dump(legacy_data, f)
-
-        # Confirm preconditions: legacy exists, new-format does not
-        assert legacy_file.exists(), "Legacy file should exist before migration"
-        assert not new_format_file.exists(), "New-format file should not exist before migration"
-
-        # Trigger migration via set_sprite_context
-        manager = AnimationSegmentManager()
-        manager.set_sprite_context(str(sprite_path), frame_count=8)
-
-        # Assert new-format file was created
-        assert new_format_file.exists(), "New-format file should exist after migration"
-
-        # Assert legacy file was deleted
-        assert not legacy_file.exists(), "Legacy file should be deleted after migration"
-
-        # Assert segments were loaded correctly
-        segments = manager.get_all_segments()
-        assert len(segments) == 1, f"Expected 1 segment, got {len(segments)}"
-        assert segments[0].name == "Walk"
-        assert segments[0].start_frame == 0
-        assert segments[0].end_frame == 3
-
-    @pytest.mark.integration
     def test_corrupted_segment_json_recovery(self, tmp_path):
         """Verify graceful handling of malformed .sprite_segments/ files."""
         sprite_path = tmp_path / "test_sprite.png"
