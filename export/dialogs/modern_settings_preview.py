@@ -1372,11 +1372,6 @@ class ModernExportSettings(WizardStep):
                 return text
         return fallback
 
-    def set_sprites(self, sprites: list[QPixmap]):
-        """Set sprite frames."""
-        self._sprites = sprites
-        if self._current_preset:
-            self._update_preview()
 
     def _generate_pattern_display(self, pattern: str, base_name: str) -> str:
         """Generate display text for a pattern with the given base name."""

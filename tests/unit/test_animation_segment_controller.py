@@ -27,7 +27,6 @@ class TestAnimationSegmentController(unittest.TestCase):
         self.mock_grid_view = Mock()
         self.mock_grid_view._segments = {}  # Initialize as empty dict
         self.mock_grid_view._segment_list = Mock()
-        self.mock_grid_view.has_segment.return_value = False
         self.mock_sprite_model = Mock()
         self.mock_tab_widget = Mock()
 

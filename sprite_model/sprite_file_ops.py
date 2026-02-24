@@ -117,14 +117,6 @@ class FileValidator:
         """
         return path.suffix.lower() in self.SUPPORTED_FORMATS
 
-    def get_supported_formats(self) -> set[str]:
-        """
-        Get set of supported file formats.
-
-        Returns:
-            Set of supported file extensions (including dots)
-        """
-        return set(self.SUPPORTED_FORMATS)
 
 
 class MetadataExtractor:

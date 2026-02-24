@@ -634,17 +634,6 @@ class AnimationGridView(QWidget):
     # PUBLIC SEGMENT MANIPULATION API
     # ============================================================================
 
-    def has_segment(self, segment_name: str) -> bool:
-        """
-        Check if a segment with the given name exists.
-
-        Args:
-            segment_name: Name to check
-
-        Returns:
-            True if segment exists, False otherwise
-        """
-        return segment_name in self._segments
 
     def _update_segment_visualization(self):
         """Update visual markers for all segments."""

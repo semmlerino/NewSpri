@@ -30,20 +30,6 @@ class TestFileValidator:
         assert validator is not None
         assert len(validator.SUPPORTED_FORMATS) > 0
 
-    def test_get_supported_formats(self):
-        """Test getting supported formats."""
-        validator = FileValidator()
-        formats = validator.get_supported_formats()
-
-        assert isinstance(formats, set)
-        assert ".png" in formats
-        assert ".jpg" in formats
-        assert ".jpeg" in formats
-        assert ".bmp" in formats
-        assert ".gif" in formats
-        # Should be a copy, not the original
-        formats.add(".test")
-        assert ".test" not in validator.SUPPORTED_FORMATS
 
     def test_validate_empty_path(self):
         """Test validation with empty or None path."""
