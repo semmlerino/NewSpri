@@ -464,6 +464,28 @@ class TestCCLOperationsUnit:
         ccl_ops = CCLOperations()
         assert ccl_ops.get_ccl_sprite_bounds() == []
 
+    def test_apply_background_transparency_uses_tolerance_mask(self) -> None:
+        """Background-like pixels should be fully transparent without changing sprite pixels."""
+        ccl_ops = CCLOperations()
+        pixmap = QPixmap(4, 1)
+        pixmap.fill(QColor(250, 250, 250))
+
+        painter = QPainter(pixmap)
+        painter.fillRect(1, 0, 1, 1, QColor(246, 252, 255))  # Within tolerance
+        painter.fillRect(2, 0, 1, 1, QColor(244, 250, 250))  # Outside tolerance
+        painter.fillRect(3, 0, 1, 1, QColor(200, 20, 20))  # Sprite content
+        painter.end()
+
+        result = ccl_ops._apply_background_transparency(
+            pixmap, background_color=(250, 250, 250), tolerance=5
+        )
+        image = result.toImage()
+
+        assert image.pixel(0, 0) == 0
+        assert image.pixel(1, 0) == 0
+        assert image.pixelColor(2, 0) == QColor(244, 250, 250)
+        assert image.pixelColor(3, 0) == QColor(200, 20, 20)
+
 
 # ============================================================================
 # State Consistency Tests

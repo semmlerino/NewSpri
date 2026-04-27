@@ -16,6 +16,7 @@ Handles:
 import logging
 from collections.abc import Callable
 
+import numpy as np
 from PySide6.QtCore import QRect
 from PySide6.QtGui import QImage, QPixmap
 
@@ -301,28 +302,20 @@ class CCLOperations:
             if image.format() != QImage.Format.Format_ARGB32:
                 image = image.convertToFormat(QImage.Format.Format_ARGB32)
 
-            # Get image dimensions
             width = image.width()
             height = image.height()
+            bytes_per_line = image.bytesPerLine()
 
-            # Process each pixel
             bg_r, bg_g, bg_b = background_color
-            for y in range(height):
-                for x in range(width):
-                    # Get pixel color
-                    pixel = image.pixel(x, y)
-                    r = (pixel >> 16) & 0xFF
-                    g = (pixel >> 8) & 0xFF
-                    b = pixel & 0xFF
+            bg_bgr = np.array([bg_b, bg_g, bg_r], dtype=np.int16)
 
-                    # Check if pixel matches background color within tolerance
-                    if (
-                        abs(r - bg_r) <= tolerance
-                        and abs(g - bg_g) <= tolerance
-                        and abs(b - bg_b) <= tolerance
-                    ):
-                        # Make pixel transparent
-                        image.setPixel(x, y, 0x00000000)  # Fully transparent
+            image_buffer = np.frombuffer(image.bits(), dtype=np.uint8, count=image.sizeInBytes())
+            scanlines = image_buffer.reshape((height, bytes_per_line))
+            pixels = scanlines[:, : width * 4].reshape((height, width, 4))
+
+            color_delta = np.abs(pixels[:, :, :3].astype(np.int16) - bg_bgr)
+            background_mask = np.all(color_delta <= tolerance, axis=2)
+            pixels[background_mask] = 0
 
             # Convert back to QPixmap
             return QPixmap.fromImage(image)

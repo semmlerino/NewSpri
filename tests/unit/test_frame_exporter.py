@@ -137,6 +137,19 @@ class TestFrameExporter:
         mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
         mock_worker.start.assert_called_once()
 
+    def test_cancel_export_is_cooperative_and_non_blocking(self):
+        """Cancellation should not block the UI thread waiting for worker shutdown."""
+        exporter = FrameExporter()
+        mock_worker = MagicMock()
+        mock_worker.isRunning.return_value = True
+        exporter._worker = mock_worker
+
+        exporter.cancel_export()
+
+        mock_worker.cancel.assert_called_once_with()
+        mock_worker.wait.assert_not_called()
+        mock_worker.terminate.assert_not_called()
+
 
 class TestExportWorker:
     """Test ExportWorker functionality."""

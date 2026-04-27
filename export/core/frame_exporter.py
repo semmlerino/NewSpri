@@ -766,8 +766,8 @@ class FrameExporter(QObject):
         """
         Export frames with the specified settings.
 
-        Note: If a previous export is still running, this method will wait for it
-        to complete before starting the new export. This prevents thread crashes.
+        Note: If a previous export is still running, this method rejects the new export.
+        This prevents concurrent workers from writing into the same exporter state.
 
         Args:
             frames: List of frames to export
@@ -911,8 +911,6 @@ class FrameExporter(QObject):
         """Cancel the current export operation."""
         if self._worker and self._worker.isRunning():
             self._worker.cancel()
-            if not self._worker.wait(5000):
-                self._worker.terminate()
 
     def _on_progress(self, current: int, total: int, message: str):
         """Handle progress updates from worker."""
