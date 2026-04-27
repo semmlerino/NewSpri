@@ -13,6 +13,25 @@ def create_mock_signal():
     return signal
 
 
+class RecordingSignal:
+    """Small signal test double that preserves connected slots."""
+
+    def __init__(self):
+        self.slots = []
+        self.connect = MagicMock(side_effect=self._connect)
+        self.disconnect = MagicMock(side_effect=self._disconnect)
+
+    def _connect(self, slot):
+        self.slots.append(slot)
+
+    def _disconnect(self, slot):
+        self.slots.remove(slot)
+
+    def emit(self, *args):
+        for slot in list(self.slots):
+            slot(*args)
+
+
 @pytest.fixture
 def mock_sprite_model():
     """Mock SpriteModel with all required signals."""
@@ -368,6 +387,34 @@ class TestDisconnectAll:
         assert not signal_coordinator._connected
         signal_coordinator.disconnect_all()
         assert not signal_coordinator._connected
+
+    def test_disconnect_all_disconnects_tracked_slots(
+        self, signal_coordinator, mock_sprite_model, mock_handlers
+    ):
+        """disconnect_all disconnects the exact slots connected by connect_all."""
+        signal_coordinator.connect_all()
+        signal_coordinator.disconnect_all()
+
+        mock_sprite_model.frameChanged.disconnect.assert_called_once_with(
+            mock_handlers["on_frame_changed"]
+        )
+        assert signal_coordinator._connections == []
+
+    def test_reconnect_after_disconnect_does_not_duplicate_live_slots(
+        self, signal_coordinator, mock_sprite_model, mock_handlers
+    ):
+        """A connect/disconnect/connect cycle leaves one live slot per signal."""
+        recording_signal = RecordingSignal()
+        mock_sprite_model.frameChanged = recording_signal
+
+        signal_coordinator.connect_all()
+        signal_coordinator.disconnect_all()
+        signal_coordinator.connect_all()
+
+        recording_signal.emit(2, 8)
+
+        assert len(recording_signal.slots) == 1
+        mock_handlers["on_frame_changed"].assert_called_once_with(2, 8)
 
 
 class TestModelSignalConnections:
