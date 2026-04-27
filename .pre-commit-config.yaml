@@ -16,3 +16,8 @@ repos:
         entry: uv run basedpyright
         language: system
         pass_filenames: false
+      - id: skylos-agent-pre-commit
+        name: skylos agent pre-commit
+        entry: uv run skylos agent pre-commit .
+        language: system
+        pass_filenames: false

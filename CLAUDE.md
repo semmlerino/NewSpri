@@ -21,6 +21,7 @@ uv run ruff check .                        # Lint
 uv run ruff check . --fix                  # Lint and auto-fix
 uv run ruff format .                       # Format code
 uv run basedpyright                        # Type check
+uv run skylos agent pre-commit .           # Skylos staged-file audit
 
 # Install dev dependencies
 uv sync --all-extras
@@ -212,6 +213,9 @@ Run before committing:
 ```bash
 uv run ruff check . && uv run ruff format . && uv run basedpyright && uv run pytest
 ```
+
+Run `uv run skylos agent pre-commit .` for Skylos' staged-file security,
+secrets, and quality audit.
 
 ### Adding Features
 1. Identify layer (Model/View/Controller)

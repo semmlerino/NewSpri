@@ -25,6 +25,7 @@ dev = [
     "pytest-timeout",
     "ruff",
     "basedpyright",
+    "skylos>=4.7.0",
 ]
 
 [tool.ruff]
@@ -222,3 +223,40 @@ exclude_lines = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",
 ]
+
+[tool.skylos]
+complexity = 10
+nesting = 3
+max_args = 5
+max_lines = 50
+duplicate_strings = 3
+model = "gpt-4.1"
+exclude = [
+    ".skylos/cache",
+    "archive",
+    "sprite_exports",
+    "tools",
+    "web_backend",
+    "web_frontend",
+]
+ignore = []
+
+[tool.skylos.masking]
+names = []
+decorators = []
+bases = []
+
+[tool.skylos.whitelist]
+names = []
+
+[tool.skylos.whitelist.documented]
+
+[tool.skylos.whitelist.temporary]
+
+[tool.skylos.gate]
+fail_on_critical = true
+max_critical = 0
+max_high = 5
+max_security = 0
+max_quality = 10
+strict = false
