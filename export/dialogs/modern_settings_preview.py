@@ -147,18 +147,27 @@ class CompactLivePreview(QGraphicsView):
         self._zoom_level = 1.0
 
 
-class _SheetSettingsPanel:
-    """Helper class to build sheet settings widget for sprite sheet export."""
+class _SettingsPanelBase:
+    """Common boilerplate shared by sheet/individual/selected settings panels."""
 
     def __init__(self, parent: "ModernExportSettings"):
         self._parent = parent
 
-    def build(self) -> QWidget:
-        """Create sprite sheet specific settings widget."""
+    def _create_panel(self) -> tuple[QWidget, QVBoxLayout]:
+        """Create the standard widget + vertical layout with shared chrome."""
         widget = QWidget()
         layout = QVBoxLayout(widget)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(16)
+        return widget, layout
+
+
+class _SheetSettingsPanel(_SettingsPanelBase):
+    """Helper class to build sheet settings widget for sprite sheet export."""
+
+    def build(self) -> QWidget:
+        """Create sprite sheet specific settings widget."""
+        widget, layout = self._create_panel()
 
         # Filename
         filename_label = QLabel("Filename")
@@ -312,18 +321,12 @@ class _SheetSettingsPanel:
         return widget
 
 
-class _IndividualSettingsPanel:
+class _IndividualSettingsPanel(_SettingsPanelBase):
     """Helper class to build individual frames settings widget."""
-
-    def __init__(self, parent: "ModernExportSettings"):
-        self._parent = parent
 
     def build(self) -> QWidget:
         """Create individual frames settings widget."""
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(16)
+        widget, layout = self._create_panel()
 
         # Base name
         name_label = QLabel("Base Name")
@@ -370,35 +373,16 @@ class _IndividualSettingsPanel:
 
     def _on_base_name_changed(self, text: str):
         """Handle base name change - update pattern displays."""
-        if not self._parent._pattern_radios:
-            self._parent._on_setting_changed()
-            return
-
-        # Update pattern radio button displays
-        base_name = text or "frame"
-        try:
-            for radio in self._parent._pattern_radios:
-                pattern = radio.property("pattern")
-                if pattern:
-                    radio.setText(self._parent._generate_pattern_display(pattern, base_name))
-        except Exception as e:
-            logger.warning("Error updating pattern displays: %s", e, exc_info=True)
-
+        self._parent._refresh_pattern_radios(base_name_override=text or "frame")
         self._parent._on_setting_changed()
 
 
-class _SelectedSettingsPanel:
+class _SelectedSettingsPanel(_SettingsPanelBase):
     """Helper class to build selected frames settings widget."""
-
-    def __init__(self, parent: "ModernExportSettings"):
-        self._parent = parent
 
     def build(self) -> QWidget:
         """Create selected frames settings widget."""
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(16)
+        widget, layout = self._create_panel()
 
         # Frame selection
         selection_label = QLabel("Select Frames")
@@ -1133,19 +1117,27 @@ class ModernExportSettings(WizardStep):
 
     def _on_format_changed(self, format: str):
         """Handle format change."""
-        # Update pattern displays with new format
-        try:
-            if self._pattern_radios and hasattr(self, "base_name"):
-                base_name = self.base_name.text() or "frame"
-                for radio in self._pattern_radios:
-                    pattern = radio.property("pattern")
-                    if pattern:
-                        radio.setText(self._generate_pattern_display(pattern, base_name))
-        except Exception as e:
-            logger.warning("Error updating pattern displays on format change: %s", e, exc_info=True)
-
+        self._refresh_pattern_radios()
         self._update_transparency_warning(format)
         self._on_setting_changed()
+
+    def _refresh_pattern_radios(self, *, base_name_override: str | None = None) -> None:
+        """Re-render the pattern radio labels with the current base name."""
+        if not self._pattern_radios or not hasattr(self, "base_name"):
+            return
+
+        if base_name_override is not None:
+            base_name = base_name_override
+        else:
+            base_name = self.base_name.text() or "frame"
+
+        try:
+            for radio in self._pattern_radios:
+                pattern = radio.property("pattern")
+                if pattern:
+                    radio.setText(self._generate_pattern_display(pattern, base_name))
+        except Exception as e:
+            logger.warning("Error updating pattern displays: %s", e, exc_info=True)
 
     def _update_transparency_warning(self, format: str):
         """Show warning when exporting transparent sprites to JPG."""

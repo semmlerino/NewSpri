@@ -133,6 +133,18 @@ class SpriteSheetLayout:
             return self.max_rows or Config.Export.DEFAULT_MAX_ROWS
         return None
 
+    def dimensions_for(
+        self, cols: int, rows: int, frame_width: int, frame_height: int
+    ) -> tuple[int, int]:
+        """Compute sheet dimensions for an explicit cols x rows grid.
+
+        Used by both the export worker (which already knows cols/rows) and the
+        preview math, so the spacing/padding formula lives in exactly one place.
+        """
+        sheet_width = (cols * frame_width) + ((cols - 1) * self.spacing) + (2 * self.padding)
+        sheet_height = (rows * frame_height) + ((rows - 1) * self.spacing) + (2 * self.padding)
+        return sheet_width, sheet_height
+
     def calculate_estimated_dimensions(
         self, frame_width: int, frame_height: int, frame_count: int
     ) -> tuple[int, int]:
@@ -158,11 +170,7 @@ class SpriteSheetLayout:
             cols = math.ceil(math.sqrt(frame_count))
             rows = math.ceil(frame_count / cols)
 
-        # Calculate dimensions with spacing and padding
-        sheet_width = (cols * frame_width) + ((cols - 1) * self.spacing) + (2 * self.padding)
-        sheet_height = (rows * frame_height) + ((rows - 1) * self.spacing) + (2 * self.padding)
-
-        return sheet_width, sheet_height
+        return self.dimensions_for(cols, rows, frame_width, frame_height)
 
 
 class ExportFormat(Enum):
@@ -523,13 +531,7 @@ class ExportWorker(QThread):
         self, cols: int, rows: int, frame_width: int, frame_height: int, layout: SpriteSheetLayout
     ) -> tuple[int, int]:
         """Calculate total sprite sheet dimensions including spacing and padding."""
-        # Calculate total width: frames + spacing between frames + padding on both sides
-        sheet_width = (cols * frame_width) + ((cols - 1) * layout.spacing) + (2 * layout.padding)
-
-        # Calculate total height: frames + spacing between frames + padding on both sides
-        sheet_height = (rows * frame_height) + ((rows - 1) * layout.spacing) + (2 * layout.padding)
-
-        return sheet_width, sheet_height
+        return layout.dimensions_for(cols, rows, frame_width, frame_height)
 
     def _calculate_segments_sheet_dimensions(
         self, frame_width: int, frame_height: int, layout: SpriteSheetLayout
