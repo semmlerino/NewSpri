@@ -20,14 +20,14 @@ class TestSpriteViewerInitialization:
             qtbot.addWidget(viewer)
 
             # Verify that the status manager was created
-            assert hasattr(viewer, "_status_manager")
-            assert viewer._status_manager is not None
+            assert hasattr(viewer, "_status_bar")
+            assert viewer._status_bar is not None
 
             # Verify that status bar was created and is the right type
             from ui.enhanced_status_bar import EnhancedStatusBar
 
-            assert hasattr(viewer, "_status_manager")
-            assert viewer._status_manager is not None
+            assert hasattr(viewer, "_status_bar")
+            assert viewer._status_bar is not None
             assert isinstance(viewer.statusBar(), EnhancedStatusBar)
 
             # Verify that other essential components exist and are real objects
@@ -52,7 +52,7 @@ class TestSpriteViewerInitialization:
         except Exception as e:
             pytest.fail(f"SpriteViewer initialization failed with unexpected error: {e}")
 
-    def test_status_manager_api_exists(self, qtbot):
+    def test_status_bar_api_exists(self, qtbot):
         """Test that status manager has required methods after initialization."""
         from sprite_viewer import SpriteViewer
 
@@ -60,19 +60,19 @@ class TestSpriteViewerInitialization:
         qtbot.addWidget(viewer)
 
         # Test that status manager has the methods that caused failures
-        status_manager = viewer._status_manager
+        status_bar = viewer._status_bar
 
         # These methods must exist
-        assert hasattr(status_manager, "show_message")
-        assert hasattr(status_manager, "update_mouse_position")
+        assert hasattr(status_bar, "show_message")
+        assert hasattr(status_bar, "update_mouse_position")
 
         # Test that these methods are actually callable
-        assert callable(status_manager.show_message)
-        assert callable(status_manager.update_mouse_position)
+        assert callable(status_bar.show_message)
+        assert callable(status_bar.update_mouse_position)
 
         # Test actual method calls work
-        status_manager.show_message("Test message")
-        status_manager.update_mouse_position(100, 200)
+        status_bar.show_message("Test message")
+        status_bar.update_mouse_position(100, 200)
 
     def test_animation_controller_api_contract(self, qtbot):
         """Test that AnimationController has the correct API contract."""
@@ -152,8 +152,8 @@ class TestSpriteViewerInitialization:
             is_playing = viewer._animation_controller.is_playing  # Was is_playing()
             assert isinstance(is_playing, bool)
 
-            viewer._status_manager.show_message("Test")  # Was missing
-            viewer._status_manager.update_mouse_position(0, 0)  # Was missing
+            viewer._status_bar.show_message("Test")  # Was missing
+            viewer._status_bar.update_mouse_position(0, 0)  # Was missing
 
         except AttributeError as e:
             pytest.fail(f"Component integration failed: {e}")
@@ -173,14 +173,14 @@ class TestSpriteViewerInitialization:
         assert viewer is not None
 
         # Test that all previously failing integration points now work
-        assert viewer._status_manager is not None
+        assert viewer._status_bar is not None
         assert viewer._animation_controller.is_playing is not None  # Property access
         assert hasattr(viewer._canvas, "mouseMoved")  # Correct signal name
         assert hasattr(viewer._frame_extractor, "settingsChanged")  # Correct signal name
         assert hasattr(viewer._recent_files, "add_file_to_recent")  # Correct method name
         assert hasattr(viewer._canvas, "reset_view")  # Correct method name
-        assert hasattr(viewer._status_manager, "show_message")  # Previously missing
-        assert hasattr(viewer._status_manager, "update_mouse_position")  # Previously missing
+        assert hasattr(viewer._status_bar, "show_message")  # Previously missing
+        assert hasattr(viewer._status_bar, "update_mouse_position")  # Previously missing
 
 
 if __name__ == "__main__":

@@ -147,8 +147,8 @@ def mock_grid_view():
 
 
 @pytest.fixture
-def mock_status_manager():
-    """Mock StatusBarManager."""
+def mock_status_bar():
+    """Mock EnhancedStatusBar."""
     manager = MagicMock()
     manager.show_message = MagicMock()
     manager.update_mouse_position = MagicMock()
@@ -210,7 +210,7 @@ def signal_coordinator(
     mock_playback_controls,
     mock_frame_extractor,
     mock_grid_view,
-    mock_status_manager,
+    mock_status_bar,
     mock_actions,
     mock_handlers,
 ):
@@ -226,7 +226,7 @@ def signal_coordinator(
         playback_controls=mock_playback_controls,
         frame_extractor=mock_frame_extractor,
         grid_view=mock_grid_view,
-        status_manager=mock_status_manager,
+        status_bar=mock_status_bar,
         actions=mock_actions,
         on_frame_changed=mock_handlers["on_frame_changed"],
         on_sprite_loaded=mock_handlers["on_sprite_loaded"],
@@ -265,7 +265,7 @@ class TestSignalCoordinatorConstruction:
         mock_canvas,
         mock_playback_controls,
         mock_frame_extractor,
-        mock_status_manager,
+        mock_status_bar,
         mock_actions,
         mock_handlers,
     ):
@@ -281,7 +281,7 @@ class TestSignalCoordinatorConstruction:
             playback_controls=mock_playback_controls,
             frame_extractor=mock_frame_extractor,
             grid_view=None,
-            status_manager=mock_status_manager,
+            status_bar=mock_status_bar,
             actions=mock_actions,
             on_frame_changed=mock_handlers["on_frame_changed"],
             on_sprite_loaded=mock_handlers["on_sprite_loaded"],
@@ -303,7 +303,7 @@ class TestSignalCoordinatorConstruction:
         assert coordinator is not None
         assert coordinator._grid_view is None
 
-    def test_construction_with_none_status_manager(
+    def test_construction_with_none_status_bar(
         self,
         mock_sprite_model,
         mock_animation_controller,
@@ -316,7 +316,7 @@ class TestSignalCoordinatorConstruction:
         mock_actions,
         mock_handlers,
     ):
-        """Coordinator can be constructed with status_manager=None."""
+        """Coordinator can be constructed with status_bar=None."""
         from coordinators.signal_coordinator import SignalCoordinator
 
         coordinator = SignalCoordinator(
@@ -328,7 +328,7 @@ class TestSignalCoordinatorConstruction:
             playback_controls=mock_playback_controls,
             frame_extractor=mock_frame_extractor,
             grid_view=mock_grid_view,
-            status_manager=None,
+            status_bar=None,
             actions=mock_actions,
             on_frame_changed=mock_handlers["on_frame_changed"],
             on_sprite_loaded=mock_handlers["on_sprite_loaded"],
@@ -348,7 +348,7 @@ class TestSignalCoordinatorConstruction:
         )
 
         assert coordinator is not None
-        assert coordinator._status_manager is None
+        assert coordinator._status_bar is None
 
 
 class TestConnectAll:
@@ -496,13 +496,13 @@ class TestAnimationControllerSignalConnections:
             mock_handlers["on_animation_error"]
         )
 
-    def test_status_changed_connected_to_status_manager(
-        self, signal_coordinator, mock_animation_controller, mock_status_manager
+    def test_status_changed_connected_to_status_bar(
+        self, signal_coordinator, mock_animation_controller, mock_status_bar
     ):
         """AnimationController.statusChanged is connected to status manager."""
         signal_coordinator.connect_all()
         mock_animation_controller.statusChanged.connect.assert_called_once_with(
-            mock_status_manager.show_message
+            mock_status_bar.show_message
         )
 
 
@@ -518,13 +518,13 @@ class TestAutoDetectionSignalConnections:
             mock_handlers["on_frame_settings_detected"]
         )
 
-    def test_status_update_connected_to_status_manager(
-        self, signal_coordinator, mock_auto_detection_controller, mock_status_manager
+    def test_status_update_connected_to_status_bar(
+        self, signal_coordinator, mock_auto_detection_controller, mock_status_bar
     ):
         """AutoDetectionController.statusUpdate is connected to status manager."""
         signal_coordinator.connect_all()
         mock_auto_detection_controller.statusUpdate.connect.assert_called_once_with(
-            mock_status_manager.show_message
+            mock_status_bar.show_message
         )
 
 
@@ -536,13 +536,13 @@ class TestCanvasSignalConnections:
         signal_coordinator.connect_all()
         mock_canvas.zoomChanged.connect.assert_called_once_with(mock_handlers["on_zoom_changed"])
 
-    def test_mouse_moved_connected_to_status_manager(
-        self, signal_coordinator, mock_canvas, mock_status_manager
+    def test_mouse_moved_connected_to_status_bar(
+        self, signal_coordinator, mock_canvas, mock_status_bar
     ):
         """SpriteCanvas.mouseMoved is connected to status manager."""
         signal_coordinator.connect_all()
         mock_canvas.mouseMoved.connect.assert_called_once_with(
-            mock_status_manager.update_mouse_position
+            mock_status_bar.update_mouse_position
         )
 
 
@@ -672,7 +672,7 @@ class TestGridViewSignalConnections:
         mock_canvas,
         mock_playback_controls,
         mock_frame_extractor,
-        mock_status_manager,
+        mock_status_bar,
         mock_actions,
         mock_handlers,
     ):
@@ -688,7 +688,7 @@ class TestGridViewSignalConnections:
             playback_controls=mock_playback_controls,
             frame_extractor=mock_frame_extractor,
             grid_view=None,
-            status_manager=mock_status_manager,
+            status_bar=mock_status_bar,
             actions=mock_actions,
             on_frame_changed=mock_handlers["on_frame_changed"],
             on_sprite_loaded=mock_handlers["on_sprite_loaded"],
@@ -861,7 +861,7 @@ class TestActionCallbackConnections:
 class TestOptionalComponents:
     """Test handling of optional components (None checks)."""
 
-    def test_status_manager_none_skips_connections(
+    def test_status_bar_none_skips_connections(
         self,
         mock_sprite_model,
         mock_animation_controller,
@@ -874,7 +874,7 @@ class TestOptionalComponents:
         mock_actions,
         mock_handlers,
     ):
-        """When status_manager is None, status-related connections are skipped."""
+        """When status_bar is None, status-related connections are skipped."""
         from coordinators.signal_coordinator import SignalCoordinator
 
         coordinator = SignalCoordinator(
@@ -886,7 +886,7 @@ class TestOptionalComponents:
             playback_controls=mock_playback_controls,
             frame_extractor=mock_frame_extractor,
             grid_view=mock_grid_view,
-            status_manager=None,
+            status_bar=None,
             actions=mock_actions,
             on_frame_changed=mock_handlers["on_frame_changed"],
             on_sprite_loaded=mock_handlers["on_sprite_loaded"],

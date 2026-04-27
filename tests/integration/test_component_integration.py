@@ -228,12 +228,12 @@ class TestManagerIntegration:
     """Test integration of manager components."""
 
     @pytest.mark.integration
-    def test_status_manager_integration(self, qtbot):
+    def test_status_bar_integration(self, qtbot):
         """Test StatusManager integrates with all components."""
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
 
-        status = viewer._status_manager
+        status = viewer._status_bar
 
         # Test that status manager exists and has the right methods
         assert hasattr(status, "show_message")

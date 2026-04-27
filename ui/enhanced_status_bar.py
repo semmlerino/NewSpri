@@ -3,233 +3,46 @@
 Enhanced Status Bar Module
 ==========================
 
-Enhanced status bar with detailed application state information.
-Shows frame info, extraction mode, zoom level, FPS, and mouse coordinates.
+Status bar with temporary message and mouse-position indicator.
 """
 
-from PySide6.QtCore import QObject, QTimer
+from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QStatusBar, QWidget
-
-from config import Config
 
 
 class EnhancedStatusBar(QStatusBar):
-    """
-    Enhanced status bar with multiple information panels.
-
-    Layout: [Status Message] | Frame: 3/16 | Size: 32×32 px | Mode: Grid | Zoom: 150% | FPS: 12 | Mouse: (128, 64)
-    """
+    """Status bar with temporary message + permanent mouse-coordinates label."""
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
 
-        # Status message timer for temporary messages
         self._message_timer = QTimer()
         self._message_timer.setSingleShot(True)
-        self._message_timer.timeout.connect(self._clear_temporary_message)
+        self._message_timer.timeout.connect(self.clearMessage)
 
-        # Create permanent status widgets
-        self._setup_permanent_widgets()
-
-        # Initialize with default values
-        self._reset_to_defaults()
-
-    def _setup_permanent_widgets(self) -> None:
-        """Set up the permanent status bar widgets."""
-        # Create a container widget for permanent status
-        permanent_widget = QWidget()
-        permanent_layout = QHBoxLayout(permanent_widget)
-        permanent_layout.setContentsMargins(5, 0, 5, 0)
-        permanent_layout.setSpacing(15)
-
-        # Frame information
-        self._frame_label = QLabel("Frame: -")
-        self._frame_label.setToolTip("Current frame / Total frames")
-        self._frame_label.setMinimumWidth(80)
-
-        # Sprite size information
-        self._size_label = QLabel("Size: -")
-        self._size_label.setToolTip("Individual sprite dimensions")
-        self._size_label.setMinimumWidth(90)
-
-        # Extraction mode indicator
-        self._mode_label = QLabel("Mode: Grid")
-        self._mode_label.setToolTip("Current extraction mode (Grid or CCL)")
-        self._mode_label.setMinimumWidth(70)
-        self._mode_label.setStyleSheet(self._get_mode_style("grid"))
-
-        # Zoom level indicator
-        self._zoom_label = QLabel("Zoom: 100%")
-        self._zoom_label.setToolTip("Current zoom level")
-        self._zoom_label.setMinimumWidth(80)
-
-        # FPS indicator
-        self._fps_label = QLabel("FPS: 10")
-        self._fps_label.setToolTip("Animation frames per second")
-        self._fps_label.setMinimumWidth(50)
-
-        # Mouse coordinates
         self._mouse_label = QLabel("Mouse: -")
         self._mouse_label.setToolTip("Mouse position in sprite coordinates")
         self._mouse_label.setMinimumWidth(100)
 
-        # Add all widgets to layout
-        permanent_layout.addWidget(self._frame_label)
-        permanent_layout.addWidget(self._create_separator())
-        permanent_layout.addWidget(self._size_label)
-        permanent_layout.addWidget(self._create_separator())
-        permanent_layout.addWidget(self._mode_label)
-        permanent_layout.addWidget(self._create_separator())
-        permanent_layout.addWidget(self._zoom_label)
-        permanent_layout.addWidget(self._create_separator())
-        permanent_layout.addWidget(self._fps_label)
-        permanent_layout.addWidget(self._create_separator())
+        permanent_widget = QWidget()
+        permanent_layout = QHBoxLayout(permanent_widget)
+        permanent_layout.setContentsMargins(5, 0, 5, 0)
+        permanent_layout.setSpacing(15)
         permanent_layout.addWidget(self._mouse_label)
 
-        # Add permanent widget to status bar
         self.addPermanentWidget(permanent_widget)
 
-    def _create_separator(self) -> QLabel:
-        """Create a separator line for the status bar."""
-        separator = QLabel("|")
-        separator.setStyleSheet("color: #888888;")
-        return separator
-
-    def _get_mode_style(self, mode: str) -> str:
-        """Get stylesheet for extraction mode indicator."""
-        if mode.lower() == "grid":
-            bg_color = Config.Colors.MODE_GRID
-        elif mode.lower() == "ccl":
-            bg_color = Config.Colors.MODE_CCL
-        else:
-            bg_color = "#888888"
-
-        return f"""
-            QLabel {{
-                background-color: {bg_color};
-                color: white;
-                padding: 2px 6px;
-                border-radius: 3px;
-                font-weight: bold;
-            }}
-            """
-
-    def _reset_to_defaults(self) -> None:
-        """Reset all status indicators to default values."""
-        self.update_frame_info(0, 0)
-        self.update_sprite_size(0, 0)
-        self.update_extraction_mode("Grid")
-        self.update_zoom_level(100.0)
-        self.update_fps(Config.Animation.DEFAULT_FPS)
-        self.update_mouse_position(None, None)
-
-    # Status message methods
     def show_message(self, message: str, timeout: int = 5000) -> None:
-        """
-        Show a temporary status message.
-
-        Args:
-            message: Message to display
-            timeout: Time in milliseconds before clearing (0 = permanent)
-        """
+        """Show a temporary status message (timeout in ms; 0 = permanent)."""
         super().showMessage(message)
-
         if timeout > 0:
             self._message_timer.start(timeout)
 
-    def _clear_temporary_message(self) -> None:
-        """Clear temporary status message."""
-        self.clearMessage()
-
-    # Information update methods
-    def update_frame_info(self, current_frame: int, total_frames: int) -> None:
-        """
-        Update frame information display.
-
-        Args:
-            current_frame: Current frame number (1-based)
-            total_frames: Total number of frames
-        """
-        if total_frames > 0:
-            self._frame_label.setText(f"Frame: {current_frame}/{total_frames}")
-        else:
-            self._frame_label.setText("Frame: -")
-
-    def update_sprite_size(self, width: int, height: int) -> None:
-        """
-        Update sprite size information.
-
-        Args:
-            width: Sprite width in pixels
-            height: Sprite height in pixels
-        """
-        if width > 0 and height > 0:
-            self._size_label.setText(f"Size: {width}×{height} px")
-        else:
-            self._size_label.setText("Size: -")
-
-    def update_extraction_mode(self, mode: str) -> None:
-        """
-        Update extraction mode indicator.
-
-        Args:
-            mode: Current extraction mode ("Grid", "CCL", etc.)
-        """
-        self._mode_label.setText(f"Mode: {mode}")
-        self._mode_label.setStyleSheet(self._get_mode_style(mode))
-        self._mode_label.setToolTip(f"Current extraction mode: {mode}")
-
-    def update_zoom_level(self, zoom_percent: float) -> None:
-        """
-        Update zoom level indicator.
-
-        Args:
-            zoom_percent: Zoom level as percentage (100.0 = 100%)
-        """
-        self._zoom_label.setText(f"Zoom: {zoom_percent:.0f}%")
-        self._zoom_label.setToolTip(f"Current zoom level: {zoom_percent:.1f}%")
-
-    def update_fps(self, fps: int) -> None:
-        """
-        Update FPS indicator.
-
-        Args:
-            fps: Frames per second
-        """
-        self._fps_label.setText(f"FPS: {fps}")
-        self._fps_label.setToolTip(f"Animation speed: {fps} frames per second")
-
     def update_mouse_position(self, x: int | None, y: int | None) -> None:
-        """
-        Update mouse position indicator.
-
-        Args:
-            x: Mouse X coordinate in sprite space (None if not available)
-            y: Mouse Y coordinate in sprite space (None if not available)
-        """
+        """Update the mouse position label."""
         if x is not None and y is not None:
             self._mouse_label.setText(f"Mouse: ({x}, {y})")
             self._mouse_label.setToolTip(f"Mouse position in sprite coordinates: ({x}, {y})")
         else:
             self._mouse_label.setText("Mouse: -")
             self._mouse_label.setToolTip("Mouse position not available")
-
-
-class StatusBarManager(QObject):
-    """Signal router for coordinating status bar updates with application state.
-
-    This manager connects to various components and forwards their signals
-    to the status bar. It does not maintain redundant state.
-    """
-
-    def __init__(self, status_bar: EnhancedStatusBar):
-        super().__init__()
-        self._status_bar = status_bar
-
-    def show_message(self, message: str, timeout: int = 5000) -> None:
-        """Show a status message. Delegates to wrapped status bar."""
-        self._status_bar.show_message(message, timeout)
-
-    def update_mouse_position(self, x: int, y: int) -> None:
-        """Update mouse position display. Delegates to wrapped status bar."""
-        self._status_bar.update_mouse_position(x, y)

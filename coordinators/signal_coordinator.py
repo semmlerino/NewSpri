@@ -21,10 +21,10 @@ if TYPE_CHECKING:
     from sprite_model import SpriteModel
     from ui import (
         AnimationGridView,
+        EnhancedStatusBar,
         FrameExtractor,
         PlaybackControls,
         SpriteCanvas,
-        StatusBarManager,
     )
 
 
@@ -64,8 +64,8 @@ class SignalCoordinator(QObject):
         playback_controls: PlaybackControls,
         frame_extractor: FrameExtractor,
         grid_view: AnimationGridView | None,
-        # Managers
-        status_manager: StatusBarManager | None,
+        # Status bar
+        status_bar: EnhancedStatusBar | None,
         # Actions dict
         actions: dict[str, QAction],
         # Handler callbacks (from SpriteViewer)
@@ -96,7 +96,7 @@ class SignalCoordinator(QObject):
         self._playback_controls = playback_controls
         self._frame_extractor = frame_extractor
         self._grid_view = grid_view
-        self._status_manager = status_manager
+        self._status_bar = status_bar
         self._actions = actions
 
         # Store handler callbacks
@@ -169,10 +169,8 @@ class SignalCoordinator(QObject):
         self._connect(self._animation_controller.animationCompleted, self._on_playback_completed)
         self._connect(self._animation_controller.errorOccurred, self._on_animation_error)
 
-        if self._status_manager is not None:
-            self._connect(
-                self._animation_controller.statusChanged, self._status_manager.show_message
-            )
+        if self._status_bar is not None:
+            self._connect(self._animation_controller.statusChanged, self._status_bar.show_message)
 
     def _connect_auto_detection_signals(self) -> None:
         """Connect AutoDetectionController signals to handlers."""
@@ -202,15 +200,15 @@ class SignalCoordinator(QObject):
             self._on_detection_results_ready,
         )
 
-        if self._status_manager is not None:
-            status_manager = self._status_manager
+        if self._status_bar is not None:
+            status_bar = self._status_bar
             self._connect(
                 self._auto_detection_controller.statusUpdate,
-                status_manager.show_message,
+                status_bar.show_message,
             )
 
             def show_detection_failed(_wf: str, msg: str) -> None:
-                status_manager.show_message(f"Detection failed: {msg}")
+                status_bar.show_message(f"Detection failed: {msg}")
 
             self._connect(self._auto_detection_controller.detectionFailed, show_detection_failed)
 
@@ -237,8 +235,8 @@ class SignalCoordinator(QObject):
         """Connect SpriteCanvas signals to handlers."""
         self._connect(self._canvas.zoomChanged, self._on_zoom_changed)
 
-        if self._status_manager is not None:
-            self._connect(self._canvas.mouseMoved, self._status_manager.update_mouse_position)
+        if self._status_bar is not None:
+            self._connect(self._canvas.mouseMoved, self._status_bar.update_mouse_position)
 
     def _connect_frame_extractor_signals(self) -> None:
         """Connect FrameExtractor signals to handlers."""
@@ -284,8 +282,8 @@ class SignalCoordinator(QObject):
 
         # Frame selection feedback
         def show_selected_frame(idx: int) -> None:
-            if self._status_manager:
-                self._status_manager.show_message(f"Selected frame {idx}")
+            if self._status_bar:
+                self._status_bar.show_message(f"Selected frame {idx}")
 
         self._connect(self._grid_view.frameSelected, show_selected_frame)
 

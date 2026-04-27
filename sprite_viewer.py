@@ -53,7 +53,6 @@ from ui import (
     FrameExtractor,
     PlaybackControls,
     SpriteCanvas,
-    StatusBarManager,
 )
 from ui.animation_segment_preview import AnimationSegmentPreview
 from utils.styles import StyleManager
@@ -291,7 +290,7 @@ class SpriteViewer(QMainWindow):
             playback_controls=self._playback_controls,
             frame_extractor=self._frame_extractor,
             grid_view=self._grid_view,
-            status_manager=self._status_manager,
+            status_bar=self._status_bar,
             actions=self._actions,
             # Handler callbacks
             on_frame_changed=self._on_frame_changed,
@@ -464,9 +463,8 @@ class SpriteViewer(QMainWindow):
 
     def _setup_status_bar(self):
         """Set up status bar."""
-        status_bar = EnhancedStatusBar(self)
-        self.setStatusBar(status_bar)
-        self._status_manager = StatusBarManager(status_bar)
+        self._status_bar = EnhancedStatusBar(self)
+        self.setStatusBar(self._status_bar)
 
     def _setup_main_content(self):
         """Set up main content area with tabbed interface."""
@@ -590,7 +588,7 @@ class SpriteViewer(QMainWindow):
     def _setup_managers(self):
         """Configure managers with application-specific settings."""
         # Connect segment controller status messages
-        self._segment_controller.statusMessage.connect(self._status_manager.show_message)
+        self._segment_controller.statusMessage.connect(self._status_bar.show_message)
 
         # Update action states based on initial context
         self._update_has_frames_actions()
@@ -673,7 +671,7 @@ class SpriteViewer(QMainWindow):
         """Trigger appropriate frame detection based on current extraction mode."""
         current_mode = self._frame_extractor.get_extraction_mode()
         if current_mode is ExtractionMode.CCL:
-            self._status_manager.show_message("Running CCL extraction...")
+            self._status_bar.show_message("Running CCL extraction...")
             self._update_frame_slicing()
         else:
             QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
@@ -716,7 +714,7 @@ class SpriteViewer(QMainWindow):
     def _restart_animation(self):
         """Restart animation from first frame."""
         self._sprite_model.set_current_frame(0)
-        self._status_manager.show_message("Animation restarted")
+        self._status_bar.show_message("Animation restarted")
 
     def _step_animation_speed(self, increase: bool):
         """Step animation speed up or down by one entry in SPEED_STEPS."""
@@ -769,7 +767,7 @@ class SpriteViewer(QMainWindow):
             self._segment_controller.update_grid_view_frames()
 
         self._recent_files.add_file_to_recent(file_path)
-        self._status_manager.show_message(f"Loaded sprite sheet: {file_path}")
+        self._status_bar.show_message(f"Loaded sprite sheet: {file_path}")
         self._trigger_post_load_detection()
 
     def _clear_extracted_frame_views(self) -> None:
@@ -877,9 +875,7 @@ class SpriteViewer(QMainWindow):
         self._update_frame_slicing()
 
         self._info_label.setText(self._sprite_model.sprite_info)
-        self._status_manager.show_message(
-            f"Switched to {extraction_mode_label(mode)} extraction mode"
-        )
+        self._status_bar.show_message(f"Switched to {extraction_mode_label(mode)} extraction mode")
 
     def _on_settings_changed_debounced(self):
         """Restart debounce timer on settings change (prevents per-keystroke extraction)."""
@@ -936,7 +932,7 @@ class SpriteViewer(QMainWindow):
         """Handle frame preview request (double-click) - switch to main view."""
         self._tab_widget.setCurrentIndex(Config.App.TAB_INDEX_FRAME_VIEW)
         self._sprite_model.set_current_frame(frame_index)
-        self._status_manager.show_message(f"Previewing frame {frame_index}")
+        self._status_bar.show_message(f"Previewing frame {frame_index}")
 
     # ============================================================================
     # EVENT HANDLERS

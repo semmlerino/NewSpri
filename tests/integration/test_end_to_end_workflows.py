@@ -38,7 +38,7 @@ class TestCompleteApplicationLifecycle:
         # 1. Test startup state
         assert viewer._sprite_model.sprite_frames == []
         assert viewer._animation_controller.is_playing is False
-        assert viewer._status_manager is not None
+        assert viewer._status_bar is not None
 
         # 2. Load sprite sheet (direct load, no dialog mocking)
         success, message = viewer._sprite_model.load_sprite_sheet(str(sprite_path))
@@ -497,10 +497,10 @@ class TestAPIContracts:
                 "RecentFiles.add_file_to_recent()",
                 lambda: viewer._recent_files.add_file_to_recent("/test"),
             ),
-            ("StatusManager.show_message()", lambda: viewer._status_manager.show_message("test")),
+            ("StatusManager.show_message()", lambda: viewer._status_bar.show_message("test")),
             (
                 "StatusManager.update_mouse_position()",
-                lambda: viewer._status_manager.update_mouse_position(0, 0),
+                lambda: viewer._status_bar.update_mouse_position(0, 0),
             ),
             (
                 "AnimationController.is_playing property",
