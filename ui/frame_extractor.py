@@ -33,7 +33,6 @@ class FrameExtractor(QGroupBox):
     """Frame extraction settings widget."""
 
     settingsChanged = Signal()
-    presetSelected = Signal(int, int)
     modeChangedEnum = Signal(object)  # ExtractionMode enum
 
     def __init__(self):
@@ -109,7 +108,7 @@ class FrameExtractor(QGroupBox):
             btn = QRadioButton(label)
             btn.setToolTip(tooltip)
             # Use default font size for better readability
-            btn.clicked.connect(lambda checked, w=width, h=height: self.presetSelected.emit(w, h))
+            btn.clicked.connect(lambda checked, w=width, h=height: self._apply_preset_size(w, h))
             self.preset_group.addButton(btn, i)
             square_layout.addWidget(btn, i // cols, i % cols)
 
@@ -131,7 +130,7 @@ class FrameExtractor(QGroupBox):
             btn = QRadioButton(label)
             btn.setToolTip(tooltip)
             # Use default font size for better readability
-            btn.clicked.connect(lambda checked, w=width, h=height: self.presetSelected.emit(w, h))
+            btn.clicked.connect(lambda checked, w=width, h=height: self._apply_preset_size(w, h))
             self.preset_group.addButton(btn, square_count + i)
             rect_layout.addWidget(btn, i // rect_cols, i % rect_cols)
 
@@ -379,6 +378,18 @@ class FrameExtractor(QGroupBox):
         # Uncheck all preset buttons when custom size is used
         for button in self.preset_group.buttons():
             button.setChecked(False)
+        self.settingsChanged.emit()
+
+    def _apply_preset_size(self, width: int, height: int) -> None:
+        """Sync spinboxes from a preset click without unchecking the preset radio."""
+        self.width_spin.blockSignals(True)
+        self.height_spin.blockSignals(True)
+        try:
+            self.width_spin.setValue(width)
+            self.height_spin.setValue(height)
+        finally:
+            self.width_spin.blockSignals(False)
+            self.height_spin.blockSignals(False)
         self.settingsChanged.emit()
 
     def get_frame_size(self) -> tuple[int, int]:

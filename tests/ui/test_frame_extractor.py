@@ -34,7 +34,6 @@ class TestFrameExtractorInitialization:
 
         # Test signals exist
         assert hasattr(widget, "settingsChanged")
-        assert hasattr(widget, "presetSelected")
         assert hasattr(widget, "modeChangedEnum")
 
     def test_default_state(self, qapp):
@@ -159,26 +158,20 @@ class TestFrameExtractorModeHandling:
 class TestFrameExtractorPresetHandling:
     """Test preset selection and management."""
 
-    def test_preset_selection_signals(self, qapp):
-        """Test preset selection emits correct signals."""
+    def test_preset_click_syncs_spinboxes(self, qapp):
+        """Clicking a preset updates the width/height spinboxes and keeps the preset checked."""
         widget = FrameExtractor()
-
-        # Switch to grid mode first (CCL is now default and presets are disabled in CCL)
         widget.set_extraction_mode(ExtractionMode.GRID)
 
-        spy = QSignalSpy(widget.presetSelected)
+        _, width, height, _ = Config.FrameExtraction.SQUARE_PRESETS[0]
+        settings_spy = QSignalSpy(widget.settingsChanged)
 
-        # Get first square preset
-        first_preset = Config.FrameExtraction.SQUARE_PRESETS[0]
-        _, width, height, _ = first_preset
-
-        # Simulate clicking the first preset button
         button = widget.preset_group.button(0)
         button.click()
 
-        assert spy.count() == 1
-        assert spy.at(0)[0] == width
-        assert spy.at(0)[1] == height
+        assert widget.get_frame_size() == (width, height)
+        assert button.isChecked()
+        assert settings_spy.count() == 1
 
     def test_preset_updates_frame_size(self, qapp):
         """Test selecting preset updates frame size."""
