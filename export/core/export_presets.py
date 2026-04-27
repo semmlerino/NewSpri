@@ -51,7 +51,7 @@ PRESETS: dict[str, ExportPreset] = {
         scale=1.0,
         use_cases=["Web games", "Texture atlases", "CSS sprites", "Unity animations"],
         sprite_sheet_layout=SpriteSheetLayout(
-            mode=LayoutMode.AUTO, spacing=0, padding=0, background_mode=BackgroundMode.TRANSPARENT
+            mode=LayoutMode.AUTO, spacing=0, background_mode=BackgroundMode.TRANSPARENT
         ),
         short_description="Optimized for game engines",
     ),
@@ -83,7 +83,6 @@ PRESETS: dict[str, ExportPreset] = {
         sprite_sheet_layout=SpriteSheetLayout(
             mode=LayoutMode.SEGMENTS_PER_ROW,
             spacing=0,
-            padding=0,
             background_mode=BackgroundMode.TRANSPARENT,
         ),
         short_description="One row per animation",

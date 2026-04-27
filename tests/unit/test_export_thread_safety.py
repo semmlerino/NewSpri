@@ -475,18 +475,6 @@ class TestSpriteSheetLayout:
         effective_rows = layout.get_effective_rows()
         assert effective_rows == 4
 
-    def test_layout_with_padding(self, qapp) -> None:
-        """Layout with padding should account for spacing."""
-        layout = SpriteSheetLayout(mode=LayoutMode.ROWS, max_columns=4, padding=2)
-        width, height = layout.calculate_estimated_dimensions(
-            frame_width=32,
-            frame_height=32,
-            frame_count=8,
-        )
-        # With padding, dimensions should be larger than without
-        assert width > 128  # Should be larger due to padding
-        assert height > 64
-
     def test_sprite_sheet_output_dimensions(
         self, qapp, sample_frames: list[QImage], export_dir: Path
     ) -> None:
@@ -498,9 +486,7 @@ class TestSpriteSheetLayout:
             format=ExportFormat.PNG,
             mode=ExportMode.SPRITE_SHEET,
             scale_factor=1.0,
-            sprite_sheet_layout=SpriteSheetLayout(
-                mode=LayoutMode.ROWS, max_columns=4, spacing=0, padding=0
-            ),
+            sprite_sheet_layout=SpriteSheetLayout(mode=LayoutMode.ROWS, max_columns=4, spacing=0),
         )
         worker = ExportWorker(task)
         worker.run()

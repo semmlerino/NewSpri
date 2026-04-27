@@ -362,14 +362,10 @@ class ExportConfig:
     # Enhanced Sprite Sheet Layout Configuration
     # ==========================================
 
-    # Spacing and padding settings
+    # Spacing settings
     DEFAULT_SPRITE_SPACING = 0  # Pixels between sprites
     MIN_SPRITE_SPACING = 0  # Minimum spacing allowed
     MAX_SPRITE_SPACING = 50  # Maximum spacing allowed
-
-    DEFAULT_SHEET_PADDING = 0  # Padding around entire sheet
-    MIN_SHEET_PADDING = 0  # Minimum padding allowed
-    MAX_SHEET_PADDING = 100  # Maximum padding allowed
 
     # Grid configuration constraints
     DEFAULT_MAX_COLUMNS = 10  # Default max columns for 'rows' mode

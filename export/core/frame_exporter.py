@@ -54,7 +54,6 @@ class SpriteSheetLayout:
 
     mode: LayoutMode = LayoutMode.AUTO  # Layout calculation mode
     spacing: int = Config.Export.DEFAULT_SPRITE_SPACING  # Pixels between sprites
-    padding: int = Config.Export.DEFAULT_SHEET_PADDING  # Padding around sheet
     max_columns: int | None = None  # Max columns (rows mode)
     max_rows: int | None = None  # Max rows (columns mode)
     custom_columns: int | None = None  # Custom grid columns
@@ -69,12 +68,6 @@ class SpriteSheetLayout:
             self.spacing,
             Config.Export.MIN_SPRITE_SPACING,
             Config.Export.MAX_SPRITE_SPACING,
-        )
-        _validate_range(
-            "Padding",
-            self.padding,
-            Config.Export.MIN_SHEET_PADDING,
-            Config.Export.MAX_SHEET_PADDING,
         )
 
         # Validate optional grid constraints
@@ -139,10 +132,10 @@ class SpriteSheetLayout:
         """Compute sheet dimensions for an explicit cols x rows grid.
 
         Used by both the export worker (which already knows cols/rows) and the
-        preview math, so the spacing/padding formula lives in exactly one place.
+        preview math, so the spacing formula lives in exactly one place.
         """
-        sheet_width = (cols * frame_width) + ((cols - 1) * self.spacing) + (2 * self.padding)
-        sheet_height = (rows * frame_height) + ((rows - 1) * self.spacing) + (2 * self.padding)
+        sheet_width = (cols * frame_width) + ((cols - 1) * self.spacing)
+        sheet_height = (rows * frame_height) + ((rows - 1) * self.spacing)
         return sheet_width, sheet_height
 
     def calculate_estimated_dimensions(
@@ -150,7 +143,7 @@ class SpriteSheetLayout:
     ) -> tuple[int, int]:
         """Estimate sprite sheet dimensions with current layout settings."""
         if frame_count <= 0:
-            return (2 * self.padding, 2 * self.padding)
+            return (0, 0)
 
         if self.mode is LayoutMode.CUSTOM:
             # custom_columns and custom_rows validated in __post_init__
@@ -396,7 +389,7 @@ class ExportWorker(QThread):
 
         self.progress.emit(1, 3, f"Creating sprite sheet ({cols}x{rows})...")
 
-        # Calculate sprite sheet dimensions with spacing and padding
+        # Calculate sprite sheet dimensions with spacing
         if is_segments_mode:
             # For segments per row, calculate dimensions based on actual segment layouts
             sheet_width, sheet_height = self._calculate_segments_sheet_dimensions(
@@ -530,7 +523,7 @@ class ExportWorker(QThread):
     def _calculate_sheet_dimensions(
         self, cols: int, rows: int, frame_width: int, frame_height: int, layout: SpriteSheetLayout
     ) -> tuple[int, int]:
-        """Calculate total sprite sheet dimensions including spacing and padding."""
+        """Calculate total sprite sheet dimensions including spacing."""
         return layout.dimensions_for(cols, rows, frame_width, frame_height)
 
     def _calculate_segments_sheet_dimensions(
@@ -539,7 +532,7 @@ class ExportWorker(QThread):
         """Calculate sprite sheet dimensions for segments per row mode."""
 
         if not self.task.segment_info:
-            return frame_width + (2 * layout.padding), frame_height + (2 * layout.padding)
+            return frame_width, frame_height
 
         # Find the maximum width needed (longest segment)
         max_frames_in_segment = max(
@@ -547,19 +540,13 @@ class ExportWorker(QThread):
         )
 
         # Calculate width based on the longest segment
-        sheet_width = (
-            (max_frames_in_segment * frame_width)
-            + ((max_frames_in_segment - 1) * layout.spacing)
-            + (2 * layout.padding)
+        sheet_width = (max_frames_in_segment * frame_width) + (
+            (max_frames_in_segment - 1) * layout.spacing
         )
 
         # Calculate height based on actual number of segments (rows)
         num_segments = len(self.task.segment_info)
-        sheet_height = (
-            (num_segments * frame_height)
-            + ((num_segments - 1) * layout.spacing)
-            + (2 * layout.padding)
-        )
+        sheet_height = (num_segments * frame_height) + ((num_segments - 1) * layout.spacing)
 
         return sheet_width, sheet_height
 
@@ -647,9 +634,9 @@ class ExportWorker(QThread):
             row = i // cols
             col = i % cols
 
-            # Calculate pixel position with spacing and padding
-            x = layout.padding + (col * (frame_width + layout.spacing))
-            y = layout.padding + (row * (frame_height + layout.spacing))
+            # Calculate pixel position with spacing
+            x = col * (frame_width + layout.spacing)
+            y = row * (frame_height + layout.spacing)
 
             self._draw_frame(painter, frame, x, y)
 
@@ -706,9 +693,9 @@ class ExportWorker(QThread):
 
                 frame = self.task.frames[frame_idx]
 
-                # Calculate pixel position with spacing and padding
-                x = layout.padding + (col_idx * (frame_width + layout.spacing))
-                y = layout.padding + (row_idx * (frame_height + layout.spacing))
+                # Calculate pixel position with spacing
+                x = col_idx * (frame_width + layout.spacing)
+                y = row_idx * (frame_height + layout.spacing)
 
                 self._draw_frame(painter, frame, x, y)
                 frames_drawn += 1

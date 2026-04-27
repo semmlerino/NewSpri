@@ -158,7 +158,6 @@ class ExportDialog(QDialog):
                 sprite_sheet_layout = SpriteSheetLayout(
                     mode=layout_mode,
                     spacing=settings.get("spacing", 0),
-                    padding=settings.get("padding", 0),
                     max_columns=settings.get("columns", 8)
                     if layout_mode is LayoutMode.ROWS
                     else None,

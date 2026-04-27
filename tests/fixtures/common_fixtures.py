@@ -160,7 +160,7 @@ def mock_sprite_sheet_preset():
         tooltip="Create a sprite sheet for game engines",
         use_cases=["Game development", "Web animations"],
         sprite_sheet_layout=SpriteSheetLayout(
-            mode=LayoutMode.AUTO, spacing=0, padding=0, background_mode=BackgroundMode.TRANSPARENT
+            mode=LayoutMode.AUTO, spacing=0, background_mode=BackgroundMode.TRANSPARENT
         ),
         short_description="Optimized for games",
     )
@@ -272,7 +272,7 @@ def sample_sprite_sheet_settings():
         "pattern": "{name}",
         "preset_name": "sprite_sheet",
         "sprite_sheet_layout": SpriteSheetLayout(
-            mode=LayoutMode.AUTO, spacing=2, padding=4, background_mode=BackgroundMode.TRANSPARENT
+            mode=LayoutMode.AUTO, spacing=2, background_mode=BackgroundMode.TRANSPARENT
         ),
     }
 

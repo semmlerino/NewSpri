@@ -1059,7 +1059,9 @@ class ModernExportSettings(WizardStep):
 
         # Clear mode stack
         while self.mode_stack.count():
-            self.mode_stack.removeWidget(self.mode_stack.widget(0))
+            widget = self.mode_stack.widget(0)
+            if widget is not None:
+                self.mode_stack.removeWidget(widget)
 
         # Add appropriate settings widget
         if preset.mode in (ExportMode.SPRITE_SHEET, ExportMode.SEGMENTS_SHEET):
@@ -1325,7 +1327,6 @@ class ModernExportSettings(WizardStep):
             "layout_mode": self._get_layout_mode(),
             "columns": self.cols_spin.value(),
             "rows": self.rows_spin.value(),
-            "padding": 0,
         }
 
         # Style settings
