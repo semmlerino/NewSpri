@@ -308,6 +308,25 @@ class FrameExtractor(QGroupBox):
             self.ccl_mode_btn if mode is ExtractionMode.CCL else self.grid_mode_btn
         )
 
+    def apply_grid_settings(
+        self,
+        width: int,
+        height: int,
+        offset_x: int,
+        offset_y: int,
+        spacing_x: int,
+        spacing_y: int,
+    ) -> None:
+        """Apply a complete grid extraction configuration without emitting change signals."""
+        was_blocked = self.blockSignals(True)
+        try:
+            self.set_extraction_mode(ExtractionMode.GRID)
+            self.set_frame_size(width, height)
+            self.set_offset(offset_x, offset_y)
+            self.set_spacing(spacing_x, spacing_y)
+        finally:
+            self.blockSignals(was_blocked)
+
     def _create_collapsible_section(self, title: str, content_widget: QWidget) -> QWidget:
         """Create a collapsible section with expand/collapse button."""
         section_widget = QWidget()

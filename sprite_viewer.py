@@ -769,7 +769,7 @@ class SpriteViewer(QMainWindow):
     def _on_sprite_loaded(self, file_path: str):
         """Handle sprite loaded."""
         self._canvas.reset_view()
-        self._canvas.update()
+        self._clear_extracted_frame_views()
 
         # Update action states
         self._update_has_frames_actions()
@@ -780,6 +780,15 @@ class SpriteViewer(QMainWindow):
             self._segment_controller.update_grid_view_frames()
 
         self._status_manager.show_message(f"Loaded sprite sheet: {file_path}")
+
+    def _clear_extracted_frame_views(self) -> None:
+        """Clear all UI surfaces that display extracted frames."""
+        self._canvas.clear_pixmap()
+        self._canvas.set_frame_info(0, 0)
+        self._grid_view.set_frames([])
+        self._grid_view.clear_segments()
+        self._segment_preview.set_frames([])
+        self._segment_preview.clear_segments()
 
     def _on_playback_started(self):
         """Handle playback start."""
@@ -845,8 +854,7 @@ class SpriteViewer(QMainWindow):
                     self._sprite_model.file_path, frame_count
                 )
         else:
-            self._canvas.set_frame_info(0, 0)
-            self._grid_view.set_frames([])
+            self._clear_extracted_frame_views()
 
         # Update action states
         self._update_has_frames_actions()
@@ -855,7 +863,15 @@ class SpriteViewer(QMainWindow):
 
     def _on_frame_settings_detected(self, width: int, height: int):
         """Handle frame settings detected."""
-        self._frame_extractor.set_frame_size(width, height)
+        self._slicing_debounce_timer.stop()
+        self._frame_extractor.apply_grid_settings(
+            width,
+            height,
+            self._sprite_model.offset_x,
+            self._sprite_model.offset_y,
+            self._sprite_model.spacing_x,
+            self._sprite_model.spacing_y,
+        )
         self._update_frame_slicing()
 
     def _on_extraction_mode_changed(self, mode: ExtractionMode):
@@ -897,6 +913,8 @@ class SpriteViewer(QMainWindow):
         success, error_message, total_frames = self._extract_frames_by_mode()
 
         if not success:
+            self._clear_extracted_frame_views()
+            self._update_has_frames_actions()
             QMessageBox.warning(self, "Frame Extraction Error", error_message)
             return
 
@@ -932,6 +950,8 @@ class SpriteViewer(QMainWindow):
         pixmap = self._sprite_model.current_frame_pixmap
         if pixmap and not pixmap.isNull():
             self._canvas.set_pixmap(pixmap, auto_fit=False)
+        else:
+            self._canvas.clear_pixmap()
 
     def _show_welcome_message(self):
         """Show welcome message."""

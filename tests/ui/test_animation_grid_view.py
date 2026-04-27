@@ -336,6 +336,26 @@ class TestAnimationGridView:
         assert len(grid_view._frames) == 6
         assert len(grid_view._thumbnails) == 6
 
+    def test_set_frames_clears_stale_selection(self, qtbot):
+        """Replacing frame data should not keep selection from the previous frame list."""
+        grid_view = AnimationGridView()
+        qtbot.addWidget(grid_view)
+
+        grid_view.set_frames([QPixmap(32, 32) for _ in range(6)])
+        grid_view._selected_frames.update([2, 4])
+        grid_view._last_clicked_frame = 4
+        grid_view._update_selection_controls()
+
+        observed_selection_changes: list[list[int]] = []
+        grid_view.selectionChanged.connect(observed_selection_changes.append)
+
+        grid_view.set_frames([QPixmap(32, 32) for _ in range(2)])
+
+        assert grid_view._selected_frames == set()
+        assert grid_view._last_clicked_frame is None
+        assert not grid_view._create_segment_btn.isEnabled()
+        assert observed_selection_changes[-1] == []
+
     def test_selection_modes(self, qtbot):
         """Test different selection modes that were recently fixed."""
         grid_view = AnimationGridView()

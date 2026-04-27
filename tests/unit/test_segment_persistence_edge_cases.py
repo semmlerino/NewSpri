@@ -554,3 +554,34 @@ class TestSaveLoadRoundTrip:
         assert success is True
         assert new_manager.get_segment("走路") is not None
         assert new_manager.get_segment("ジャンプ") is not None
+
+
+# ============================================================================
+# Sprite Context Update Tests
+# ============================================================================
+
+
+class TestSpriteContextUpdates:
+    """Tests for reusing sprite context across frame extraction updates."""
+
+    def test_same_sprite_context_does_not_reload_segments(
+        self, configured_manager: AnimationSegmentManager
+    ) -> None:
+        """Re-extracting the same sprite should preserve in-memory segment edits."""
+        configured_manager.add_segment("Walk", 0, 3, QColor(255, 0, 0))
+
+        with patch.object(configured_manager, "_load_segments_for_sprite") as load_mock:
+            configured_manager.set_sprite_context(configured_manager._sprite_sheet_path, 12)
+
+        load_mock.assert_not_called()
+        assert configured_manager.get_segment("Walk") is not None
+
+    def test_same_sprite_context_prunes_segments_outside_frame_count(
+        self, configured_manager: AnimationSegmentManager
+    ) -> None:
+        """Segments that no longer fit the same sprite's frame count are removed in memory."""
+        configured_manager.add_segment("Tail", 7, 9, QColor(255, 0, 0))
+
+        configured_manager.set_sprite_context(configured_manager._sprite_sheet_path, 6)
+
+        assert configured_manager.get_segment("Tail") is None

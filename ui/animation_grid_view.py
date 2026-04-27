@@ -271,6 +271,10 @@ class AnimationGridView(QWidget):
 
     def set_frames(self, frames: list[QPixmap]):
         """Set the frames to display in the grid."""
+        had_selection = bool(self._selected_frames)
+        self._clear_selection()
+        if had_selection:
+            self.selectionChanged.emit([])
         self._frames = frames
         self._clear_grid()
         self._populate_grid()

@@ -262,6 +262,27 @@ class TestFrameCountSync:
         # CCL mock returns 3 bounds, so should have 3 frames
         assert loaded_model.frame_count == 3
 
+    def test_ccl_completion_signal_emits_after_frames_are_stored(
+        self, loaded_model: SpriteModel, mock_ccl_detection
+    ) -> None:
+        """CCL completion handlers should observe the newly extracted frame list."""
+        mock_detect_sprites, mock_detect_background = mock_ccl_detection
+        observed_counts: list[tuple[int, int, int]] = []
+
+        loaded_model.extractionCompleted.connect(
+            lambda count: observed_counts.append(
+                (count, loaded_model.frame_count, len(loaded_model.sprite_frames))
+            )
+        )
+
+        with (
+            patch("sprite_model.core.detect_sprites_ccl_enhanced", mock_detect_sprites),
+            patch("sprite_model.core.detect_background_color", mock_detect_background),
+        ):
+            loaded_model.set_extraction_mode(ExtractionMode.CCL)
+
+        assert observed_counts[-1] == (3, 3, 3)
+
     def test_grid_mode_restores_original_frame_count(
         self, loaded_model: SpriteModel, mock_ccl_detection
     ) -> None:

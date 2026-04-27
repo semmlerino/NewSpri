@@ -151,12 +151,10 @@ class SpriteModel(QObject):
         if not valid:
             return False, msg, 0
 
-        # Delegate to CCL extraction if not in grid mode
-        if self._ccl_operations.get_extraction_mode() is not ExtractionMode.GRID:
-            return self.extract_ccl_frames()
-
         if self._original_sprite_sheet is None:
             return False, "No sprite sheet loaded", 0
+
+        self._ccl_operations.set_current_mode(ExtractionMode.GRID)
 
         config = GridConfig(
             width=width,
@@ -228,20 +226,23 @@ class SpriteModel(QObject):
             sprite_sheet_path=self._file_path,
             detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
             detect_background_color=detect_background_color,
-            emit_extraction_completed=self.extractionCompleted.emit,
         )
 
         if success:
             self._store_frames(frames)
+            self.extractionCompleted.emit(len(frames))
 
         return success, message, frame_count
 
-    def set_extraction_mode(self, mode: ExtractionMode) -> bool:
+    def set_extraction_mode(self, mode: object) -> bool:
         """Set extraction mode (grid or ccl)."""
         if self._original_sprite_sheet is None:
             return False
+        if not isinstance(mode, ExtractionMode):
+            return False
 
         sprite_sheet = self._original_sprite_sheet
+        old_mode = self.get_extraction_mode()
 
         success = self._ccl_operations.set_extraction_mode(
             mode=mode,
@@ -250,14 +251,15 @@ class SpriteModel(QObject):
             extract_grid_frames_callback=self._re_extract_frames_tuple,
             detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
             detect_background_color=detect_background_color,
-            emit_extraction_completed=self.extractionCompleted.emit,
         )
 
         # If CCL mode succeeded, retrieve and store the extracted frames
         if success and mode is ExtractionMode.CCL:
             ccl_frames = self._ccl_operations.get_last_extracted_frames()
-            if ccl_frames:
-                self._store_frames(ccl_frames)
+            self._store_frames(ccl_frames)
+            self.extractionCompleted.emit(len(ccl_frames))
+        elif not success:
+            self._ccl_operations.set_current_mode(old_mode)
 
         return success
 

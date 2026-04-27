@@ -79,6 +79,12 @@ class SpriteCanvas(QLabel):
         else:
             self.update()
 
+    def clear_pixmap(self) -> None:
+        """Clear the displayed sprite pixmap."""
+        self._pixmap = None
+        self._cached_padded_pixmap = None
+        self.update()
+
     def update(self, *args: Any, **kwargs: Any):
         """Standard update - just trigger repaint without fetching frame."""
         super().update(*args, **kwargs)

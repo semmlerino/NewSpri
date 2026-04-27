@@ -58,7 +58,6 @@ class CCLOperations:
         sprite_sheet_path: str,
         detect_sprites_ccl_enhanced: Callable[[str], CCLDetectionResult | None],
         detect_background_color: Callable[[str], tuple[tuple[int, int, int], int] | None],
-        emit_extraction_completed: Callable[[int], None] | None = None,
     ) -> tuple[bool, str, int, list[QPixmap], str]:
         """
         Extract frames using CCL-detected sprite boundaries (for irregular sprite collections).
@@ -68,7 +67,6 @@ class CCLOperations:
             sprite_sheet_path: Path to the sprite sheet file
             detect_sprites_ccl_enhanced: Function to detect sprites using CCL
             detect_background_color: Function to detect background color
-            emit_extraction_completed: Optional callback to emit extraction completed signal
 
         Returns:
             Tuple of (success, error_message, frame_count, sprite_frames, updated_info)
@@ -205,10 +203,6 @@ class CCLOperations:
             else:
                 updated_info = "<br><b>CCL Frames:</b> 0"
 
-            # Emit extraction completed signal if callback available
-            if emit_extraction_completed:
-                emit_extraction_completed(len(sprite_frames))
-
             return True, "", len(sprite_frames), sprite_frames, updated_info
 
         except Exception as e:
@@ -222,7 +216,6 @@ class CCLOperations:
         extract_grid_frames_callback: Callable[[], tuple[bool, str, int]],
         detect_sprites_ccl_enhanced: Callable[[str], CCLDetectionResult | None],
         detect_background_color: Callable[[str], tuple[tuple[int, int, int], int] | None],
-        emit_extraction_completed: Callable[[int], None] | None = None,
     ) -> bool:
         """
         Set extraction mode and extract frames accordingly.
@@ -234,7 +227,6 @@ class CCLOperations:
             extract_grid_frames_callback: Callback to extract grid frames
             detect_sprites_ccl_enhanced: Function to detect sprites using CCL
             detect_background_color: Function to detect background color
-            emit_extraction_completed: Optional callback to emit extraction completed signal
 
         Returns:
             True if successful, False otherwise
@@ -249,7 +241,6 @@ class CCLOperations:
                 sprite_sheet_path=sprite_sheet_path,
                 detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
                 detect_background_color=detect_background_color,
-                emit_extraction_completed=emit_extraction_completed,
             )
             # Store the extracted frames and info for the main model to retrieve
             self._last_extracted_frames = frames if success else []
@@ -264,6 +255,13 @@ class CCLOperations:
             self._extraction_mode = old_mode
             return False
 
+        return True
+
+    def set_current_mode(self, mode: object) -> bool:
+        """Update the selected extraction mode without extracting frames."""
+        if not isinstance(mode, ExtractionMode):
+            return False
+        self._extraction_mode = mode
         return True
 
     def get_extraction_mode(self) -> ExtractionMode:

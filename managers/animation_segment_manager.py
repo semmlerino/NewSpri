@@ -177,7 +177,9 @@ class AnimationSegmentManager(QObject):
             sprite_sheet_path: Path to the sprite sheet file
             frame_count: Number of frames in the sprite sheet
         """
-        if sprite_sheet_path != self._sprite_sheet_path:
+        sprite_path_changed = sprite_sheet_path != self._sprite_sheet_path
+
+        if sprite_path_changed:
             # Clear existing segments when switching sprite sheets
             # Temporarily disable auto-save to prevent saving empty segments to old file
             was_auto_save_enabled = self._auto_save_enabled
@@ -191,8 +193,30 @@ class AnimationSegmentManager(QObject):
         self._max_frames = frame_count
 
         # Try to load existing segments for this sprite sheet
-        if sprite_sheet_path:
+        if sprite_sheet_path and sprite_path_changed:
             self._load_segments_for_sprite()
+        elif sprite_sheet_path:
+            self._prune_invalid_segments_for_frame_count()
+
+    def _prune_invalid_segments_for_frame_count(self) -> None:
+        """Remove in-memory segments that no longer fit the current frame count."""
+        invalid_segment_names = [
+            name
+            for name, segment in self._segments.items()
+            if not segment.validate(self._max_frames)[0]
+        ]
+
+        if not invalid_segment_names:
+            return
+
+        was_auto_save_enabled = self._auto_save_enabled
+        self._auto_save_enabled = False
+        try:
+            for name in invalid_segment_names:
+                del self._segments[name]
+                self.segmentRemoved.emit(name)
+        finally:
+            self._auto_save_enabled = was_auto_save_enabled
 
     def add_segment(
         self,
