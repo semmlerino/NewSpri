@@ -10,7 +10,7 @@ Feature code is split by responsibility:
 - `sprite_model/`: frame extraction and sprite-processing algorithms
 - `managers/`, `coordinators/`, `utils/`: app services, signal wiring, shared helpers
 - `export/`: export engine and dialogs
-- `tests/`: `unit/`, `integration/`, `ui/`, and `performance/` suites
+- `tests/`: `unit/`, `integration/`, and `ui` suites; performance tests are marker-based
 - `spritetests/`: sample sprite sheets used by tests and manual verification
 
 ## Build, Test, and Development Commands

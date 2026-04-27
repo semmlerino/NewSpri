@@ -7,6 +7,8 @@ import pytest
 
 from export import ExportDialog
 
+pytestmark = pytest.mark.smoke
+
 
 class TestExportDialog:
     """Test ExportDialog core functionality."""

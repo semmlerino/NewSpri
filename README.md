@@ -69,6 +69,8 @@ python sprite_viewer.py
 | `Space` | Play/pause |
 | `←` / `→` | Previous/next frame |
 | `Home` / `End` | First/last frame |
+| `R` | Restart animation |
+| `[` / `]` | Decrease/increase animation speed |
 | `G` | Toggle grid overlay |
 | `Ctrl+O` | Open sprite sheet |
 | `Ctrl++` / `Ctrl+-` | Zoom in/out |
@@ -98,6 +100,8 @@ python3 run_tests.py --coverage
 
 `run_tests.py` does not auto-install dependencies during normal test runs; use
 `python3 run_tests.py --install` only when you explicitly want dependency sync.
+Optional helper-runner modes (`--parallel`, `--watch`, `--report`) require
+`pip install -r tests/requirements-test.txt`.
 
 ### Lint / format / type-check
 ```bash
@@ -122,4 +126,4 @@ pre-commit run --all-files
 
 ## License
 
-Open source; use and modify as needed.
+MIT. See `LICENSE`.

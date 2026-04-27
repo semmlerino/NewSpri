@@ -123,7 +123,10 @@ class TestRunner:
 
         if args.parallel:
             if not self.has_module("xdist"):
-                print("pytest-xdist is not installed. Run `uv sync --all-extras`.")
+                print(
+                    "pytest-xdist is not installed. Run "
+                    "`pip install -r tests/requirements-test.txt`."
+                )
                 return 1
             cmd.extend(["-n", str(args.parallel)])
 
@@ -206,7 +209,10 @@ class TestRunner:
         """Run tests in watch mode (requires pytest-watcher)."""
         print("\nRunning tests in watch mode...")
         if not shutil.which("ptw"):
-            print("pytest-watcher is not installed. Run `uv sync --all-extras`.")
+            print(
+                "pytest-watcher is not installed. Run "
+                "`pip install -r tests/requirements-test.txt`."
+            )
             return 1
 
         cmd = ["ptw", "--", "-v", "--tb=short"]
@@ -216,7 +222,10 @@ class TestRunner:
         """Generate a comprehensive test report."""
         print("\nGenerating Test Report...")
         if not self.has_module("pytest_jsonreport"):
-            print("pytest-json-report is not installed. Run `uv sync --all-extras`.")
+            print(
+                "pytest-json-report is not installed. Run "
+                "`pip install -r tests/requirements-test.txt`."
+            )
             return 1
 
         # Run tests with JSON report

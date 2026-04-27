@@ -13,9 +13,10 @@ tests/
 │   └── sprite_sheets.py         # Generated sprite-sheet test data
 ├── unit/                        # Unit tests
 ├── integration/                 # Multi-component workflow tests
-├── ui/                          # UI/widget tests
-└── performance/                 # Reserved package (performance tests are marker-based)
+└── ui/                          # UI/widget tests
 ```
+
+Performance tests are marker-based and live beside the code area they exercise.
 
 ## Install Dependencies
 
@@ -63,6 +64,8 @@ python3 run_tests.py --suites
 Notes:
 - `run_tests.py` does not accept raw pytest flags like `-m`.
 - `run_tests.py` can install dependencies only when explicitly run with `--install`.
+- `--parallel`, `--watch`, and `--report` require optional helper-runner packages from
+  `tests/requirements-test.txt`; they are not installed by `uv sync --all-extras`.
 - For custom pytest expressions (`-m "not slow"`, `-k ...`, etc.), use `uv run pytest` directly.
 - `uv run pytest tests/ui/` is the most reliable way to run all UI-directory tests; `-m ui` only runs tests explicitly marked `ui`.
 

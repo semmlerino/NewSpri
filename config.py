@@ -276,7 +276,7 @@ class AppConfig:
     # ==========================================================================
 
     APP_NAME = "Python Sprite Viewer"
-    APP_VERSION = "2.0"
+    APP_VERSION = "2.0.0"
     WINDOW_TITLE = "Python Sprite Viewer"
 
     # Status messages

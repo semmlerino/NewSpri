@@ -7,6 +7,8 @@ import pytest
 
 from sprite_viewer import SpriteViewer
 
+pytestmark = pytest.mark.smoke
+
 
 class TestMenuStructureSmoke:
     """Smoke test for menu structure."""

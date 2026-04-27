@@ -1,5 +1,4 @@
-# Legacy pip compatibility file for test-focused installs.
-# Canonical dependency definitions live in pyproject.toml + uv.lock.
+# Optional pip install file for helper-runner plugins not included in pyproject dev extras.
 pytest>=7.4.0
 pytest-cov
 pytest-qt>=4.2.0

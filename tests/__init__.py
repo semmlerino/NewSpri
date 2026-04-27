@@ -8,10 +8,10 @@ Test Organization:
 - unit/: Fast, isolated component tests
 - integration/: Multi-component workflow tests
 - ui/: Qt widget and UI interaction tests
-- performance/: Load and performance tests
+- performance marker: Load and performance tests colocated with their target area
 - fixtures/: Reusable test data and utilities
 
 Run with: pytest
 """
 
-__version__ = "1.0.0"
+__version__ = "2.0.0"

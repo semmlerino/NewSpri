@@ -6,6 +6,8 @@ import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QKeyEvent
 
+pytestmark = pytest.mark.smoke
+
 
 class TestKeyboardShortcutsSmoke:
     """Smoke test that core keyboard shortcuts don't crash."""

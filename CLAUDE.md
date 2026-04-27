@@ -70,7 +70,7 @@ coordinators/               - Component coordination
   signal_coordinator.py     - Centralized signal wiring
 sprite_model/               - Data layer & algorithms
 export/                     - Export system (core/, dialogs/)
-tests/                      - Test suite (unit/, integration/, ui/, performance/)
+tests/                      - Test suite (unit/, integration/, ui/; performance is marker-based)
 ```
 
 ## Critical Patterns
@@ -123,9 +123,23 @@ Segments are saved as JSON in `.sprite_segments/` directory alongside sprite she
 {
   "sprite_sheet_path": "/path/to/character.png",
   "max_frames": 8,
-  "segments": [{"name": "Walk", "start_frame": 0, "end_frame": 7, "color": [233, 30, 99]}]
+  "segments": [
+    {
+      "name": "Walk",
+      "start_frame": 0,
+      "end_frame": 7,
+      "color_rgb": [233, 30, 99],
+      "description": "",
+      "tags": [],
+      "bounce_mode": false,
+      "frame_holds": {}
+    }
+  ]
 }
 ```
+
+Default segment files are named `{sprite_stem}_{extension}_segments.json`
+(for example, `hero_png_segments.json`).
 
 Key components:
 - `AnimationGridView` - Frame selection, visualization
