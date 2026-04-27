@@ -9,7 +9,7 @@ Extracted from monolithic SpriteModel for better separation of concerns and test
 Handles:
 - CCL-based frame extraction from irregular sprite collections
 - Background transparency processing
-- CCL mode switching and state management
+- CCL mode state management
 - Sprite boundary management
 """
 
@@ -48,10 +48,6 @@ class CCLOperations:
 
         # Mode state
         self._extraction_mode: ExtractionMode = ExtractionMode.GRID
-
-        # Last extraction results
-        self._last_extracted_frames: list[QPixmap] = []
-        self._last_extracted_info: str = ""
 
     def extract_ccl_frames(
         self,
@@ -209,55 +205,6 @@ class CCLOperations:
         except Exception as e:
             return False, f"Error extracting CCL frames: {e!s}", 0, [], ""
 
-    def set_extraction_mode(
-        self,
-        mode: ExtractionMode,
-        sprite_sheet: QPixmap,
-        sprite_sheet_path: str,
-        extract_grid_frames_callback: Callable[[], tuple[bool, str, int]],
-        detect_sprites_ccl_enhanced: Callable[[str], CCLDetectionResult | None],
-        detect_background_color: Callable[[str], tuple[tuple[int, int, int], int] | None],
-    ) -> bool:
-        """
-        Set extraction mode and extract frames accordingly.
-
-        Args:
-            mode: Extraction mode (ExtractionMode.GRID or ExtractionMode.CCL)
-            sprite_sheet: The original sprite sheet QPixmap
-            sprite_sheet_path: Path to the sprite sheet file
-            extract_grid_frames_callback: Callback to extract grid frames
-            detect_sprites_ccl_enhanced: Function to detect sprites using CCL
-            detect_background_color: Function to detect background color
-
-        Returns:
-            True if successful, False otherwise
-        """
-        old_mode = self._extraction_mode
-        self._extraction_mode = mode
-
-        # Re-extract frames with new mode
-        if mode is ExtractionMode.CCL:
-            success, _error, _count, frames, info = self.extract_ccl_frames(
-                sprite_sheet=sprite_sheet,
-                sprite_sheet_path=sprite_sheet_path,
-                detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
-                detect_background_color=detect_background_color,
-            )
-            # Store the extracted frames and info for the main model to retrieve
-            self._last_extracted_frames = frames if success else []
-            self._last_extracted_info = info if success else ""
-        else:
-            success, _error, _count = extract_grid_frames_callback()
-            self._last_extracted_frames = []
-            self._last_extracted_info = ""
-
-        if not success:
-            # Revert mode if extraction failed
-            self._extraction_mode = old_mode
-            return False
-
-        return True
-
     def set_current_mode(self, mode: object) -> bool:
         """Update the selected extraction mode without extracting frames."""
         if not isinstance(mode, ExtractionMode):
@@ -323,7 +270,3 @@ class CCLOperations:
         except Exception as e:
             logger.warning("Failed to apply background transparency: %s", e)
             return pixmap  # Return original if processing fails
-
-    def get_last_extracted_frames(self) -> list[QPixmap]:
-        """Get the frames from the last CCL extraction."""
-        return self._last_extracted_frames
