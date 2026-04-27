@@ -67,8 +67,8 @@ class TestCCLUIAvailability:
         assert hasattr(sprite_model, "get_ccl_sprite_bounds"), (
             "SpriteModel missing get_ccl_sprite_bounds method"
         )
-        assert hasattr(sprite_model, "extract_ccl_frames"), (
-            "SpriteModel missing extract_ccl_frames method"
+        assert hasattr(sprite_model, "extract_frames_for_mode"), (
+            "SpriteModel missing extract_frames_for_mode method"
         )
         assert hasattr(sprite_model, "set_extraction_mode"), (
             "SpriteModel missing set_extraction_mode method"
@@ -240,8 +240,8 @@ class TestCCLRegressionPrevention:
                 lambda: hasattr(viewer._sprite_model, "get_ccl_sprite_bounds"),
             ),
             (
-                "SpriteModel has extract_ccl_frames method",
-                lambda: hasattr(viewer._sprite_model, "extract_ccl_frames"),
+                "SpriteModel has extract_frames_for_mode method",
+                lambda: hasattr(viewer._sprite_model, "extract_frames_for_mode"),
             ),
             (
                 "SpriteModel has set_extraction_mode method",

@@ -426,7 +426,7 @@ class TestCCLOperationsUnit:
         """extract_ccl_frames with null sprite sheet should return error."""
         ccl_ops = CCLOperations()
 
-        success, error, count, frames, info = ccl_ops.extract_ccl_frames(
+        success, error, count, frames = ccl_ops.extract_ccl_frames(
             sprite_sheet=QPixmap(),  # Null pixmap
             sprite_sheet_path="/fake/path.png",
             detect_sprites_ccl_enhanced=lambda x: CCLDetectionResult(success=False),
@@ -444,7 +444,7 @@ class TestCCLOperationsUnit:
         pixmap = QPixmap(100, 100)
         pixmap.fill(QColor(255, 255, 255))
 
-        success, error, count, frames, info = ccl_ops.extract_ccl_frames(
+        success, error, count, frames = ccl_ops.extract_ccl_frames(
             sprite_sheet=pixmap,
             sprite_sheet_path="",  # No path
             detect_sprites_ccl_enhanced=lambda x: CCLDetectionResult(success=False),

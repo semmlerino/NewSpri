@@ -24,7 +24,6 @@ from sprite_model.sprite_detection import (
 )
 from sprite_model.sprite_extraction import (
     GridConfig,
-    calculate_grid_layout,
     extract_grid_frames,
     validate_frame_settings,
 )
@@ -247,71 +246,6 @@ class TestValidateFrameSettings:
         valid, error_msg = validate_frame_settings(simple_grid_sprite_sheet, config)
 
         assert valid is False
-
-
-# ============================================================================
-# Calculate Grid Layout Tests
-# ============================================================================
-
-
-class TestCalculateGridLayout:
-    """Tests for calculate_grid_layout function."""
-
-    def test_basic_layout_calculation(self, simple_grid_sprite_sheet: QPixmap) -> None:
-        """Basic layout should calculate correctly."""
-        config = GridConfig(width=32, height=32)
-
-        layout = calculate_grid_layout(simple_grid_sprite_sheet, config)
-
-        assert layout is not None
-        assert layout.frames_per_row == 4
-        assert layout.frames_per_col == 2
-        assert layout.total_frames == 8
-
-    def test_layout_with_offset(self, simple_grid_sprite_sheet: QPixmap) -> None:
-        """Layout with offset should reduce available frames."""
-        # Sheet is 128x64, with offset 32,32 we have 96x32 remaining
-        config = GridConfig(width=32, height=32, offset_x=32, offset_y=32)
-
-        layout = calculate_grid_layout(simple_grid_sprite_sheet, config)
-
-        assert layout is not None
-        assert layout.frames_per_row == 3  # (128-32) // 32 = 3
-        assert layout.frames_per_col == 1  # (64-32) // 32 = 1
-        assert layout.total_frames == 3
-
-    def test_layout_with_spacing(self, qapp) -> None:
-        """Layout with spacing should account for gaps."""
-        # Create a sheet where spacing matters
-        # 130 wide with 32px frames and 2px spacing: (130 + 2) / (32 + 2) = 3.88 = 3 frames
-        pixmap = QPixmap(130, 66)
-        pixmap.fill(QColor(255, 255, 255))
-
-        config = GridConfig(width=32, height=32, spacing_x=2, spacing_y=2)
-
-        layout = calculate_grid_layout(pixmap, config)
-
-        assert layout is not None
-        # Frames: (130 + 2) / (32 + 2) = 3.88 → 3 frames per row
-        # Frames: (66 + 2) / (32 + 2) = 2 → 2 frames per column
-        assert layout.frames_per_row >= 3
-        assert layout.frames_per_col >= 1
-
-    def test_layout_with_null_pixmap(self, null_pixmap: QPixmap) -> None:
-        """Layout with null pixmap should return None."""
-        config = GridConfig(width=32, height=32)
-
-        layout = calculate_grid_layout(null_pixmap, config)
-
-        assert layout is None
-
-    def test_layout_with_invalid_config(self, simple_grid_sprite_sheet: QPixmap) -> None:
-        """Layout with invalid config should return None."""
-        config = GridConfig(width=0, height=32)  # Invalid width
-
-        layout = calculate_grid_layout(simple_grid_sprite_sheet, config)
-
-        assert layout is None
 
 
 # ============================================================================
@@ -628,13 +562,3 @@ class TestEdgeCases:
         assert len(frames) == 1
         assert frames[0].width() == 64
         assert frames[0].height() == 64
-
-    def test_grid_layout_available_dimensions(self, simple_grid_sprite_sheet: QPixmap) -> None:
-        """GridLayout should report available dimensions."""
-        config = GridConfig(width=32, height=32, offset_x=10, offset_y=5)
-
-        layout = calculate_grid_layout(simple_grid_sprite_sheet, config)
-
-        assert layout is not None
-        assert layout.available_width == 128 - 10  # 118
-        assert layout.available_height == 64 - 5  # 59

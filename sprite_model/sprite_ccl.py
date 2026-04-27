@@ -55,7 +55,7 @@ class CCLOperations:
         sprite_sheet_path: str,
         detect_sprites_ccl_enhanced: Callable[[str], CCLDetectionResult | None],
         detect_background_color: Callable[[str], tuple[tuple[int, int, int], int] | None],
-    ) -> tuple[bool, str, int, list[QPixmap], str]:
+    ) -> tuple[bool, str, int, list[QPixmap]]:
         """
         Extract frames using CCL-detected sprite boundaries (for irregular sprite collections).
 
@@ -66,15 +66,15 @@ class CCLOperations:
             detect_background_color: Function to detect background color
 
         Returns:
-            Tuple of (success, error_message, frame_count, sprite_frames, updated_info)
+            Tuple of (success, error_message, frame_count, sprite_frames)
         """
         if sprite_sheet is None or sprite_sheet.isNull():
-            return False, "No sprite sheet loaded", 0, [], ""
+            return False, "No sprite sheet loaded", 0, []
 
         # If no CCL sprite bounds, try to run auto-detection first
         if not self._ccl_sprite_bounds:
             if not sprite_sheet_path:
-                return False, "No sprite sheet path available for CCL detection.", 0, [], ""
+                return False, "No sprite sheet path available for CCL detection.", 0, []
 
             # Try to run CCL detection automatically
             try:
@@ -87,7 +87,6 @@ class CCLOperations:
                         f"CCL auto-detection returned unexpected type: {type(ccl_result)}",
                         0,
                         [],
-                        "",
                     )
 
                 if ccl_result and ccl_result.success:
@@ -112,13 +111,13 @@ class CCLOperations:
                     else:
                         logger.warning("CCL detection succeeded but returned no sprite bounds")
                 else:
-                    return False, "CCL auto-detection failed. Cannot extract CCL frames.", 0, [], ""
+                    return False, "CCL auto-detection failed. Cannot extract CCL frames.", 0, []
             except Exception as e:
-                return False, f"CCL auto-detection error: {e!s}", 0, [], ""
+                return False, f"CCL auto-detection error: {e!s}", 0, []
 
         # Check again after potential auto-detection
         if not self._ccl_sprite_bounds:
-            return False, "No CCL sprite boundaries detected.", 0, [], ""
+            return False, "No CCL sprite boundaries detected.", 0, []
 
         try:
             # Extract individual sprites using exact CCL boundaries
@@ -185,25 +184,10 @@ class CCLOperations:
             # Set extraction mode
             self._extraction_mode = ExtractionMode.CCL
 
-            # Generate updated sprite sheet info with CCL extraction information
-            updated_info = ""
-            if sprite_frames:
-                bounds_preview = str(self._ccl_sprite_bounds[:5]) + (
-                    "..." if len(self._ccl_sprite_bounds) > 5 else ""
-                )
-
-                updated_info = (
-                    f"<br><b>CCL Frames:</b> {len(sprite_frames)} individual sprites<br>"
-                    f"<b>Extraction:</b> Connected-Component Labeling<br>"
-                    f"<b>Boundaries:</b> {bounds_preview}"
-                )
-            else:
-                updated_info = "<br><b>CCL Frames:</b> 0"
-
-            return True, "", len(sprite_frames), sprite_frames, updated_info
+            return True, "", len(sprite_frames), sprite_frames
 
         except Exception as e:
-            return False, f"Error extracting CCL frames: {e!s}", 0, [], ""
+            return False, f"Error extracting CCL frames: {e!s}", 0, []
 
     def set_current_mode(self, mode: object) -> bool:
         """Update the selected extraction mode without extracting frames."""

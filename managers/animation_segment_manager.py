@@ -640,5 +640,9 @@ class AnimationSegmentManager(QObject):
                 logger.warning("Auto-save failed: %s", error_msg)
 
     def set_auto_save_enabled(self, enabled: bool):
-        """Enable or disable auto-save functionality."""
+        """Enable or disable auto-save (test-only hook).
+
+        Production paths always run with auto-save enabled. Tests use this to
+        suppress disk I/O when exercising in-memory segment behavior.
+        """
         self._auto_save_enabled = enabled

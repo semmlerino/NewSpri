@@ -14,6 +14,12 @@ from ui.animation_grid_view import AnimationGridView
 from ui.animation_segment_preview import AnimationSegmentPreview
 
 
+def _inject_segment(grid_view: AnimationGridView, segment: AnimationSegment) -> None:
+    """Test helper: insert a segment directly into the grid view's local store."""
+    grid_view._segments[segment.name] = segment
+    grid_view._update_segment_visualization()
+
+
 class TestSegmentPreviewIntegration:
     """Test segment creation and preview integration."""
 
@@ -84,7 +90,7 @@ class TestSegmentPreviewIntegration:
 
         # Create a segment
         segment = AnimationSegment("TestWalk", 0, 3, color_rgb=(255, 0, 0))
-        grid_view.add_segment(segment)
+        _inject_segment(grid_view, segment)
         grid_view.segmentCreated.emit(segment)
 
         # Verify segment was created in all components
@@ -112,7 +118,7 @@ class TestSegmentPreviewIntegration:
 
         for name, start, end, color_rgb in segments_data:
             segment = AnimationSegment(name, start, end, color_rgb=color_rgb)
-            grid_view.add_segment(segment)
+            _inject_segment(grid_view, segment)
             grid_view.segmentCreated.emit(segment)
 
         # Verify all segments appear in preview
@@ -134,14 +140,14 @@ class TestSegmentPreviewIntegration:
 
         # Create first segment
         segment1 = AnimationSegment("Attack", 0, 3, color_rgb=(255, 0, 0))
-        grid_view.add_segment(segment1)
+        _inject_segment(grid_view, segment1)
         grid_view.segmentCreated.emit(segment1)
 
         assert "Attack" in segment_preview._preview_items
 
         # Try to create segment with same name
         segment2 = AnimationSegment("Attack", 4, 7, color_rgb=(0, 255, 0))
-        grid_view.add_segment(segment2)
+        _inject_segment(grid_view, segment2)
         grid_view.segmentCreated.emit(segment2)
 
         # Should have 2 segments now, with second one renamed
@@ -170,9 +176,9 @@ class TestSegmentPreviewIntegration:
         segment1 = AnimationSegment("Segment1", 0, 3, color_rgb=(255, 0, 0))
         segment2 = AnimationSegment("Segment2", 4, 7, color_rgb=(0, 255, 0))
 
-        grid_view.add_segment(segment1)
+        _inject_segment(grid_view, segment1)
         grid_view.segmentCreated.emit(segment1)
-        grid_view.add_segment(segment2)
+        _inject_segment(grid_view, segment2)
         grid_view.segmentCreated.emit(segment2)
 
         assert len(segment_preview._preview_items) == 2
@@ -197,7 +203,7 @@ class TestSegmentPreviewIntegration:
         # Create a segment
         grid_view = setup_components["grid_view"]
         segment = AnimationSegment("Test", 0, 3, color_rgb=(255, 0, 0))
-        grid_view.add_segment(segment)
+        _inject_segment(grid_view, segment)
         grid_view.segmentCreated.emit(segment)
 
         # Empty state should be hidden
@@ -218,7 +224,7 @@ class TestSegmentPreviewIntegration:
 
         # Create segments
         segment = AnimationSegment("Persistent", 0, 5, color_rgb=(128, 128, 255))
-        grid_view.add_segment(segment)
+        _inject_segment(grid_view, segment)
         grid_view.segmentCreated.emit(segment)
 
         assert "Persistent" in segment_preview._preview_items

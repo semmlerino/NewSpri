@@ -3,13 +3,12 @@
 Sprite File Operations
 =======================
 
-File loading, validation, and metadata extraction for sprite sheets.
+File loading and validation for sprite sheets.
 Consolidated from file_operations/ subpackage.
 """
 
 import os
 from pathlib import Path
-from typing import Any
 
 from PySide6.QtGui import QPixmap
 
@@ -94,129 +93,18 @@ class FileValidator:
         return path.suffix.lower() in self.SUPPORTED_FORMATS
 
 
-class MetadataExtractor:
-    """
-    File metadata extraction functionality for sprite sheets.
-
-    Extracts comprehensive metadata from sprite sheet files including
-    file information, image dimensions, format details, and timestamps.
-    """
-
-    def __init__(self):
-        """Initialize metadata extractor."""
-
-    def extract_file_metadata(self, file_path: str, pixmap: QPixmap) -> dict[str, Any]:
-        """
-        Extract comprehensive metadata from a sprite sheet file.
-
-        Args:
-            file_path: Path to the sprite sheet file
-            pixmap: Loaded QPixmap for dimension extraction
-
-        Returns:
-            Dictionary containing file metadata:
-            {
-                'file_path': str,           # Full file path
-                'file_name': str,           # File name only
-                'sheet_width': int,         # Image width in pixels
-                'sheet_height': int,        # Image height in pixels
-                'file_format': str,         # File format (PNG, JPG, etc.)
-                'file_size': int,           # File size in bytes
-                'last_modified': float,     # Last modification timestamp
-                'sprite_sheet_info': str    # Formatted info string for display
-            }
-        """
-        try:
-            path_obj = Path(file_path)
-            file_stats = path_obj.stat()
-
-            # Basic file information
-            file_name = path_obj.name
-            file_format = path_obj.suffix.upper()[1:] if path_obj.suffix else "UNKNOWN"
-            file_size = file_stats.st_size
-            last_modified = file_stats.st_mtime
-
-            # Image dimensions
-            sheet_width = pixmap.width()
-            sheet_height = pixmap.height()
-
-            # Generate formatted info string for UI display
-            sprite_sheet_info = self.format_sprite_info(
-                file_name, sheet_width, sheet_height, file_format, file_size
-            )
-
-            return {
-                "file_path": file_path,
-                "file_name": file_name,
-                "sheet_width": sheet_width,
-                "sheet_height": sheet_height,
-                "file_format": file_format,
-                "file_size": file_size,
-                "last_modified": last_modified,
-                "sprite_sheet_info": sprite_sheet_info,
-            }
-
-        except OSError as e:
-            # Return minimal metadata on error
-            return {
-                "file_path": file_path,
-                "file_name": Path(file_path).name if file_path else "Unknown",
-                "sheet_width": pixmap.width() if pixmap else 0,
-                "sheet_height": pixmap.height() if pixmap else 0,
-                "file_format": "UNKNOWN",
-                "file_size": 0,
-                "last_modified": 0.0,
-                "sprite_sheet_info": f"Error extracting metadata: {e!s}",
-            }
-
-    def format_sprite_info(
-        self, file_name: str, width: int, height: int, file_format: str, file_size: int = 0
-    ) -> str:
-        """
-        Format sprite sheet information for display.
-
-        Args:
-            file_name: Name of the file
-            width: Image width in pixels
-            height: Image height in pixels
-            file_format: File format (PNG, JPG, etc.)
-            file_size: File size in bytes (optional)
-
-        Returns:
-            HTML-formatted string for display in UI
-        """
-        info_parts = [
-            f"<b>File:</b> {file_name}",
-            f"<b>Size:</b> {width} × {height} px",
-            f"<b>Format:</b> {file_format}",
-        ]
-
-        # Add file size if provided
-        if file_size > 0:
-            if file_size < 1024:
-                size_str = f"{file_size} bytes"
-            elif file_size < 1024 * 1024:
-                size_str = f"{file_size / 1024:.1f} KB"
-            else:
-                size_str = f"{file_size / (1024 * 1024):.1f} MB"
-            info_parts.append(f"<b>File Size:</b> {size_str}")
-
-        return "<br>".join(info_parts)
-
-
 class FileLoader:
     """
     Core file loading functionality for sprite sheets.
 
-    Handles loading sprite sheets from disk with validation and metadata extraction.
+    Handles loading sprite sheets from disk with validation.
     """
 
     def __init__(self):
-        """Initialize file loader with validator and metadata extractor."""
+        """Initialize file loader with validator."""
         self.validator = FileValidator()
-        self.metadata_extractor = MetadataExtractor()
 
-    def load_sprite_sheet(self, file_path: str) -> tuple[bool, QPixmap | None, dict, str]:
+    def load_sprite_sheet(self, file_path: str) -> tuple[bool, QPixmap | None, str]:
         """
         Load and validate sprite sheet from file path.
 
@@ -224,27 +112,23 @@ class FileLoader:
             file_path: Path to the sprite sheet file
 
         Returns:
-            Tuple of (success, pixmap, metadata, error_message)
+            Tuple of (success, pixmap, error_message)
             - success: True if loading succeeded
             - pixmap: Loaded QPixmap or None if failed
-            - metadata: Dictionary containing file metadata
             - error_message: Error description if failed, empty string if succeeded
         """
         try:
             # Validate file path first
             is_valid, validation_error = self.validator.validate_file_path(file_path)
             if not is_valid:
-                return False, None, {}, validation_error
+                return False, None, validation_error
 
             # Load pixmap from file
             pixmap = QPixmap(file_path)
             if pixmap.isNull():
-                return False, None, {}, "Failed to load image file"
+                return False, None, "Failed to load image file"
 
-            # Extract file metadata
-            metadata = self.metadata_extractor.extract_file_metadata(file_path, pixmap)
-
-            return True, pixmap, metadata, ""
+            return True, pixmap, ""
 
         except OSError as e:
-            return False, None, {}, f"Error loading sprite sheet: {e!s}"
+            return False, None, f"Error loading sprite sheet: {e!s}"

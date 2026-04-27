@@ -291,8 +291,12 @@ class TestAnimationSegmentWorkflow:
         grid_view.set_frames(viewer._sprite_model.sprite_frames)
         grid_view.show()
 
-        # Connect segmentCreated signal to add_segment (normally the controller does this)
-        grid_view.segmentCreated.connect(grid_view.add_segment)
+        # Mirror what a controller would do: store the segment in the grid view
+        def _record_segment(segment):
+            grid_view._segments[segment.name] = segment
+            grid_view._update_segment_visualization()
+
+        grid_view.segmentCreated.connect(_record_segment)
 
         # Select frames for segment
         grid_view._selected_frames = {0, 1, 2, 3}

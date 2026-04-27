@@ -113,7 +113,7 @@ class CclExtractionStrategy:
         grid_config: GridConfig | None = None,
     ) -> ExtractionResult:
         """Extract CCL frames from the current sprite sheet."""
-        success, message, frame_count, frames, _info = context.ccl_operations.extract_ccl_frames(
+        success, message, frame_count, frames = context.ccl_operations.extract_ccl_frames(
             sprite_sheet=context.sprite_sheet,
             sprite_sheet_path=context.sprite_sheet_path,
             detect_sprites_ccl_enhanced=context.detect_sprites_ccl_enhanced,

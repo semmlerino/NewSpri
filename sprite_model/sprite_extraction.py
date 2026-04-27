@@ -85,9 +85,6 @@ class GridLayout(NamedTuple):
 
     frames_per_row: int
     frames_per_col: int
-    total_frames: int
-    available_width: int
-    available_height: int
 
 
 # ============================================================================
@@ -216,31 +213,6 @@ def validate_frame_settings(sprite_sheet: QPixmap, config: GridConfig) -> tuple[
     return True, ""
 
 
-def calculate_grid_layout(sprite_sheet: QPixmap, config: GridConfig) -> GridLayout | None:
-    """
-    Calculate the grid layout for the given sprite sheet and configuration.
-
-    Args:
-        sprite_sheet: Source sprite sheet
-        config: Grid configuration
-
-    Returns:
-        GridLayout object with layout information, or None if invalid
-    """
-    if not sprite_sheet or sprite_sheet.isNull():
-        return None
-
-    # Validate settings first
-    valid, _ = validate_frame_settings(sprite_sheet, config)
-    if not valid:
-        return None
-
-    available_width = sprite_sheet.width() - config.offset_x
-    available_height = sprite_sheet.height() - config.offset_y
-
-    return _calculate_grid_layout(available_width, available_height, config)
-
-
 def _calculate_grid_layout(
     available_width: int, available_height: int, config: GridConfig
 ) -> GridLayout:
@@ -267,14 +239,9 @@ def _calculate_grid_layout(
     else:
         frames_per_col = available_height // config.height if config.height > 0 else 0
 
-    total_frames = frames_per_row * frames_per_col
-
     return GridLayout(
         frames_per_row=frames_per_row,
         frames_per_col=frames_per_col,
-        total_frames=total_frames,
-        available_width=available_width,
-        available_height=available_height,
     )
 
 

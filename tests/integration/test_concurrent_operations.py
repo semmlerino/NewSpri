@@ -120,7 +120,7 @@ class TestConcurrentOperations:
         viewer._sprite_model.set_extraction_mode(ExtractionMode.CCL)
 
         # Try CCL extraction
-        viewer._sprite_model.extract_ccl_frames()
+        viewer._sprite_model.extract_frames_for_mode(ExtractionMode.CCL)
 
         # Should have some frames (CCL might detect different count)
         assert len(viewer._sprite_model.sprite_frames) >= 0

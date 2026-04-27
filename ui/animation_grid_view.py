@@ -576,16 +576,6 @@ class AnimationGridView(QWidget):
         self._segment_color_index += 1
         return QColor(color_hex)
 
-    def add_segment(self, segment: AnimationSegment):
-        """Add a new animation segment directly.
-
-        Retained for callers that operate without a live manager (e.g. tests that
-        pre-populate the grid before wiring up a controller).  Controller-driven paths
-        use sync_segments_with_manager instead.
-        """
-        self._segments[segment.name] = segment
-        self._update_segment_visualization()
-
     def sync_segments_with_manager(self, segment_manager: AnimationSegmentManager | None):
         """Synchronize local segments with segment manager to prevent conflicts."""
         if not segment_manager:

@@ -90,7 +90,7 @@ class SpriteModel(QObject):
             Tuple of (success, message)
         """
         try:
-            success, pixmap, _metadata, message = self._file_loader.load_sprite_sheet(file_path)
+            success, pixmap, message = self._file_loader.load_sprite_sheet(file_path)
 
             if not success:
                 return False, message
@@ -185,10 +185,6 @@ class SpriteModel(QObject):
         )
 
         return validate_grid_frame_settings(self._original_sprite_sheet, config)
-
-    def extract_ccl_frames(self) -> tuple[bool, str, int]:
-        """Extract frames using Connected Component Labeling."""
-        return self.extract_frames_for_mode(ExtractionMode.CCL)
 
     def extract_frames_for_mode(
         self,
