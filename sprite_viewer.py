@@ -648,13 +648,6 @@ class SpriteViewer(QMainWindow):
             if not success:
                 QMessageBox.critical(self, "Load Error", error_message)
                 return False
-
-            self._recent_files.add_file_to_recent(file_path)
-            self._update_has_frames_actions()
-            self._canvas.update()
-            self._info_label.setText(self._sprite_model.sprite_info)
-            self._trigger_post_load_detection()
-
             return True
         finally:
             self._loading_in_progress = False
@@ -767,19 +760,18 @@ class SpriteViewer(QMainWindow):
         )
 
     def _on_sprite_loaded(self, file_path: str):
-        """Handle sprite loaded."""
+        """Handle sprite loaded - all post-load UI work and downstream triggers."""
         self._canvas.reset_view()
         self._clear_extracted_frame_views()
-
-        # Update action states
+        self._info_label.setText(self._sprite_model.sprite_info)
         self._update_has_frames_actions()
 
-        # Check if frames are available immediately after loading
-        frame_count = len(self._sprite_model.sprite_frames)
-        if frame_count > 0:
+        if self._sprite_model.sprite_frames:
             self._segment_controller.update_grid_view_frames()
 
+        self._recent_files.add_file_to_recent(file_path)
         self._status_manager.show_message(f"Loaded sprite sheet: {file_path}")
+        self._trigger_post_load_detection()
 
     def _clear_extracted_frame_views(self) -> None:
         """Clear all UI surfaces that display extracted frames."""
@@ -875,29 +867,17 @@ class SpriteViewer(QMainWindow):
         self._update_frame_slicing()
 
     def _on_extraction_mode_changed(self, mode: ExtractionMode):
-        """Handle extraction mode change (grid vs CCL)."""
+        """Handle extraction mode change (grid vs CCL).
+
+        Extraction strategies update the model's mode on success, so a single
+        _update_frame_slicing() call handles both mode mutation and re-extraction.
+        """
         if not self._sprite_model.original_sprite_sheet:
             return
 
-        # Update sprite model extraction mode
-        success = self._sprite_model.set_extraction_mode(mode)
-
-        if not success:
-            # Revert UI radio button to current model mode without re-triggering
-            current_mode = self._sprite_model.get_extraction_mode()
-            self._frame_extractor.blockSignals(True)
-            self._frame_extractor.set_extraction_mode(current_mode)
-            self._frame_extractor.blockSignals(False)
-            self._status_manager.show_message(f"Failed to switch extraction mode to {mode}")
-            return
-
-        # Update info label immediately to reflect mode change
-        self._info_label.setText(self._sprite_model.sprite_info)
-
-        # Re-extract frames with new mode
         self._update_frame_slicing()
 
-        # Update status
+        self._info_label.setText(self._sprite_model.sprite_info)
         self._status_manager.show_message(
             f"Switched to {extraction_mode_label(mode)} extraction mode"
         )

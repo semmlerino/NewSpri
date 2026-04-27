@@ -3,11 +3,15 @@ Unit tests for SpriteModel core functionality.
 Tests the main model class and its modular components.
 """
 
+from unittest.mock import patch
+
 import pytest
-from PySide6.QtGui import QPixmap
+from PySide6.QtGui import QColor, QPainter, QPixmap
 from PySide6.QtTest import QSignalSpy
 
 from sprite_model import SpriteModel
+from sprite_model.extraction_mode import ExtractionMode
+from sprite_model.sprite_extraction import CCLDetectionResult
 
 
 def _clear_sprite_data(model: SpriteModel) -> None:
@@ -284,3 +288,75 @@ class TestSpriteModelErrorHandling:
         assert configured_sprite_model.frame_count == 0
         # Note: clearing sprite data may not reset frame dimensions
         # Just verify the frames are cleared
+
+
+class TestExtractionCompletedEmissions:
+    """Regression tests: extractionCompleted must fire exactly once per user action."""
+
+    @pytest.fixture
+    def loaded_model_with_sheet(self, sprite_model: SpriteModel, tmp_path) -> SpriteModel:
+        """Load a small grid sprite sheet so extraction can run."""
+        pixmap = QPixmap(128, 32)
+        pixmap.fill(QColor(255, 255, 255))
+        painter = QPainter(pixmap)
+        for i in range(4):
+            painter.fillRect(i * 32 + 4, 4, 24, 24, QColor(255, 0, 0))
+        painter.end()
+
+        sprite_path = tmp_path / "sheet.png"
+        pixmap.save(str(sprite_path), "PNG")
+
+        success, _msg = sprite_model.load_sprite_sheet(str(sprite_path))
+        assert success
+        return sprite_model
+
+    def test_set_extraction_mode_emits_once(self, loaded_model_with_sheet: SpriteModel) -> None:
+        """set_extraction_mode runs exactly one extraction (one extractionCompleted)."""
+        # Prime grid extraction
+        success, _msg, count = loaded_model_with_sheet.extract_frames(32, 32, 0, 0, 0, 0)
+        assert success and count == 4
+
+        spy = QSignalSpy(loaded_model_with_sheet.extractionCompleted)
+        result = loaded_model_with_sheet.set_extraction_mode(ExtractionMode.GRID)
+
+        assert result is True
+        assert spy.count() == 1, f"Expected 1 extractionCompleted, got {spy.count()}"
+
+    def test_comprehensive_auto_detect_emits_once(
+        self, loaded_model_with_sheet: SpriteModel
+    ) -> None:
+        """comprehensive_auto_detect must emit extractionCompleted exactly once."""
+        spy = QSignalSpy(loaded_model_with_sheet.extractionCompleted)
+
+        success, _result = loaded_model_with_sheet.comprehensive_auto_detect()
+
+        # Either success or failure - we only care emissions are bounded.
+        # On success, exactly one emit; on failure, zero.
+        if success:
+            assert spy.count() == 1, f"Expected 1 extractionCompleted, got {spy.count()}"
+        else:
+            assert spy.count() == 0, f"Expected 0 emissions on failure, got {spy.count()}"
+
+    def test_ccl_extraction_via_strategy_emits_once(
+        self, loaded_model_with_sheet: SpriteModel
+    ) -> None:
+        """Switching to CCL via the strategy path emits exactly once."""
+
+        def mock_detect_sprites(_path):
+            return CCLDetectionResult(
+                success=True,
+                ccl_sprite_bounds=[(0, 0, 32, 32), (32, 0, 32, 32)],
+            )
+
+        def mock_detect_background(_path):
+            return ((255, 255, 255), 10)
+
+        spy = QSignalSpy(loaded_model_with_sheet.extractionCompleted)
+        with (
+            patch("sprite_model.core.detect_sprites_ccl_enhanced", mock_detect_sprites),
+            patch("sprite_model.core.detect_background_color", mock_detect_background),
+        ):
+            result = loaded_model_with_sheet.set_extraction_mode(ExtractionMode.CCL)
+
+        assert result is True
+        assert spy.count() == 1, f"Expected 1 extractionCompleted, got {spy.count()}"

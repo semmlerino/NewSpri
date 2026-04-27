@@ -144,7 +144,6 @@ class SpriteModel(QObject):
         self._spacing_x = spacing_x
         self._spacing_y = spacing_y
 
-        # Settings are stored first so _re_extract_frames_tuple can use them; validation follows
         valid, msg = self.validate_frame_settings(
             width, height, offset_x, offset_y, spacing_x, spacing_y
         )
@@ -319,8 +318,7 @@ class SpriteModel(QObject):
         self.configurationChanged.emit()
 
         # Extract frames using detected grid parameters
-        self.set_extraction_mode(ExtractionMode.GRID)
-        extract_success, extract_msg, _count = self._re_extract_frames_tuple()
+        extract_success, extract_msg, _count = self.extract_frames_for_mode(ExtractionMode.GRID)
 
         if extract_success:
             result.messages.append(extract_msg)
@@ -473,17 +471,6 @@ class SpriteModel(QObject):
         return os.path.basename(self._file_path) if self._file_path else ""
 
     # Helper Methods
-    def _re_extract_frames_tuple(self) -> tuple[bool, str, int]:
-        """Re-extract frames using current settings, returning the extraction result."""
-        return self.extract_frames(
-            self._frame_width,
-            self._frame_height,
-            self._offset_x,
-            self._offset_y,
-            self._spacing_x,
-            self._spacing_y,
-        )
-
     def _current_grid_config(self) -> GridConfig:
         """Return the current grid extraction settings as a value object."""
         return GridConfig(
