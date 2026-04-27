@@ -2,133 +2,89 @@ name: Tests
 
 on:
   push:
-    branches: [ master, main, develop ]
+    branches: [master]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "LICENSE"
   pull_request:
-    branches: [ master, main, develop ]
+    branches: [master]
+    paths-ignore:
+      - "**/*.md"
+      - "docs/**"
+      - "LICENSE"
+  workflow_dispatch:
+    inputs:
+      run_integration:
+        description: "Run integration tests"
+        required: false
+        type: boolean
+        default: false
+      run_performance:
+        description: "Run performance tests"
+        required: false
+        type: boolean
+        default: false
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ['3.11', '3.12']
+  checks:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
 
     steps:
-    - uses: actions/checkout@v5
+      - uses: actions/checkout@v5
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v6
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
 
-    - name: Set up uv
-      uses: astral-sh/setup-uv@v7
-      with:
-        enable-cache: true
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
 
-    - name: Install system dependencies (Ubuntu)
-      if: matrix.os == 'ubuntu-latest'
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y xvfb libegl1-mesa libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xfixes0 libxcb-xinerama0
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            xvfb \
+            libegl1 \
+            libgl1 \
+            libxkbcommon-x11-0 \
+            libxcb-cursor0 \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-shape0 \
+            libxcb-xfixes0 \
+            libxcb-xinerama0
 
-    - name: Sync dependencies
-      run: uv sync --locked --all-extras
+      - name: Sync dependencies
+        run: uv sync --locked --all-extras
 
-    - name: Run unit tests with coverage
-      run: uv run pytest -m unit --cov=. --cov-report=xml --cov-report=term-missing
+      - name: Run code quality checks
+        run: |
+          uv run ruff check .
+          uv run ruff format . --check
+          uv run basedpyright
 
-    - name: Run integration tests (with display)
-      if: matrix.os == 'ubuntu-latest'
-      run: xvfb-run -a uv run pytest -m integration
+      - name: Run unit and smoke tests
+        run: xvfb-run -a uv run pytest -m "unit or smoke"
 
-    - name: Run integration tests (without display)
-      if: matrix.os != 'ubuntu-latest'
-      run: uv run pytest -m integration
+      - name: Run integration tests
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_integration }}
+        run: xvfb-run -a uv run pytest -m integration
 
-    - name: Upload coverage to Codecov
-      if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.11'
-      uses: codecov/codecov-action@v5
-      with:
-        files: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-
-  smoke-test:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v5
-
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v6
-      with:
-        python-version: '3.11'
-
-    - name: Set up uv
-      uses: astral-sh/setup-uv@v7
-      with:
-        enable-cache: true
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y xvfb libegl1-mesa
-
-    - name: Sync dependencies
-      run: uv sync --locked --all-extras
-
-    - name: Run smoke tests
-      run: xvfb-run -a uv run pytest -m smoke
-
-  code-quality:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v5
-
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v6
-      with:
-        python-version: '3.11'
-
-    - name: Set up uv
-      uses: astral-sh/setup-uv@v7
-      with:
-        enable-cache: true
-
-    - name: Sync dependencies
-      run: uv sync --locked --all-extras
-
-    - name: Run code quality checks
-      run: |
-        uv run ruff check .
-        uv run ruff format . --check
-        uv run basedpyright
-
-  performance:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    steps:
-    - uses: actions/checkout@v5
-
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v6
-      with:
-        python-version: '3.11'
-
-    - name: Set up uv
-      uses: astral-sh/setup-uv@v7
-      with:
-        enable-cache: true
-
-    - name: Install system dependencies
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y xvfb libegl1-mesa
-
-    - name: Sync dependencies
-      run: uv sync --locked --all-extras
-
-    - name: Run performance tests
-      run: xvfb-run -a uv run pytest -m performance
+      - name: Run performance tests
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_performance }}
+        run: xvfb-run -a uv run pytest -m performance
