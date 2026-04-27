@@ -404,10 +404,20 @@ class AnimationSegmentController(QObject):
                     seg.frame_holds,
                 )
 
-    def set_sprite_context_and_sync(self, sprite_path: str, frame_count: int) -> None:
-        """Set manager sprite context then synchronize all segment overlays."""
+    def set_sprite_context_and_sync(
+        self, sprite_path: str, frame_count: int, *, refresh_frames: bool = False
+    ) -> None:
+        """Set manager sprite context and resync overlays in one pass.
+
+        When refresh_frames=True, also push the model's current frames into
+        the grid + preview before syncing segments. This avoids the
+        update_grid_view_frames + set_sprite_context_and_sync sequence that
+        would otherwise clear preview overlays twice.
+        """
         if not self._segment_manager:
             return
+        if refresh_frames:
+            self.update_grid_view_frames()
         self._segment_manager.set_sprite_context(sprite_path, frame_count)
         self.sync_segments_from_manager()
 

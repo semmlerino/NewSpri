@@ -74,8 +74,7 @@ class SignalCoordinator(QObject):
         on_extraction_completed: object,
         on_playback_started: object,
         on_playback_paused: object,
-        on_playback_stopped: object,
-        on_playback_completed: object,
+        on_playback_ended: object,
         on_animation_error: object,
         on_frame_settings_detected: object,
         on_extraction_mode_changed: object,
@@ -105,8 +104,7 @@ class SignalCoordinator(QObject):
         self._on_extraction_completed = on_extraction_completed
         self._on_playback_started = on_playback_started
         self._on_playback_paused = on_playback_paused
-        self._on_playback_stopped = on_playback_stopped
-        self._on_playback_completed = on_playback_completed
+        self._on_playback_ended = on_playback_ended
         self._on_animation_error = on_animation_error
         self._on_frame_settings_detected = on_frame_settings_detected
         self._on_extraction_mode_changed = on_extraction_mode_changed
@@ -127,6 +125,7 @@ class SignalCoordinator(QObject):
         self._connect_model_signals()
         self._connect_animation_controller_signals()
         self._connect_auto_detection_signals()
+        self._connect_segment_controller_signals()
         self._connect_canvas_signals()
         self._connect_frame_extractor_signals()
         self._connect_playback_controls_signals()
@@ -165,8 +164,8 @@ class SignalCoordinator(QObject):
         """Connect AnimationController signals to handlers."""
         self._connect(self._animation_controller.animationStarted, self._on_playback_started)
         self._connect(self._animation_controller.animationPaused, self._on_playback_paused)
-        self._connect(self._animation_controller.animationStopped, self._on_playback_stopped)
-        self._connect(self._animation_controller.animationCompleted, self._on_playback_completed)
+        self._connect(self._animation_controller.animationStopped, self._on_playback_ended)
+        self._connect(self._animation_controller.animationCompleted, self._on_playback_ended)
         self._connect(self._animation_controller.errorOccurred, self._on_animation_error)
 
         if self._status_bar is not None:
@@ -302,6 +301,11 @@ class SignalCoordinator(QObject):
         )
 
         # Note: exportRequested is already connected internally by AnimationSegmentController
+
+    def _connect_segment_controller_signals(self) -> None:
+        """Forward segment controller status messages to the status bar."""
+        if self._status_bar is not None:
+            self._connect(self._segment_controller.statusMessage, self._status_bar.show_message)
 
     def _connect_action_callbacks(self) -> None:
         """Connect QAction triggers to handlers."""

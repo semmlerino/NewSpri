@@ -187,8 +187,7 @@ def mock_handlers():
         "on_extraction_completed": MagicMock(),
         "on_playback_started": MagicMock(),
         "on_playback_paused": MagicMock(),
-        "on_playback_stopped": MagicMock(),
-        "on_playback_completed": MagicMock(),
+        "on_playback_ended": MagicMock(),
         "on_animation_error": MagicMock(),
         "on_frame_settings_detected": MagicMock(),
         "on_extraction_mode_changed": MagicMock(),
@@ -233,8 +232,7 @@ def signal_coordinator(
         on_extraction_completed=mock_handlers["on_extraction_completed"],
         on_playback_started=mock_handlers["on_playback_started"],
         on_playback_paused=mock_handlers["on_playback_paused"],
-        on_playback_stopped=mock_handlers["on_playback_stopped"],
-        on_playback_completed=mock_handlers["on_playback_completed"],
+        on_playback_ended=mock_handlers["on_playback_ended"],
         on_animation_error=mock_handlers["on_animation_error"],
         on_frame_settings_detected=mock_handlers["on_frame_settings_detected"],
         on_extraction_mode_changed=mock_handlers["on_extraction_mode_changed"],
@@ -288,8 +286,7 @@ class TestSignalCoordinatorConstruction:
             on_extraction_completed=mock_handlers["on_extraction_completed"],
             on_playback_started=mock_handlers["on_playback_started"],
             on_playback_paused=mock_handlers["on_playback_paused"],
-            on_playback_stopped=mock_handlers["on_playback_stopped"],
-            on_playback_completed=mock_handlers["on_playback_completed"],
+            on_playback_ended=mock_handlers["on_playback_ended"],
             on_animation_error=mock_handlers["on_animation_error"],
             on_frame_settings_detected=mock_handlers["on_frame_settings_detected"],
             on_extraction_mode_changed=mock_handlers["on_extraction_mode_changed"],
@@ -335,8 +332,7 @@ class TestSignalCoordinatorConstruction:
             on_extraction_completed=mock_handlers["on_extraction_completed"],
             on_playback_started=mock_handlers["on_playback_started"],
             on_playback_paused=mock_handlers["on_playback_paused"],
-            on_playback_stopped=mock_handlers["on_playback_stopped"],
-            on_playback_completed=mock_handlers["on_playback_completed"],
+            on_playback_ended=mock_handlers["on_playback_ended"],
             on_animation_error=mock_handlers["on_animation_error"],
             on_frame_settings_detected=mock_handlers["on_frame_settings_detected"],
             on_extraction_mode_changed=mock_handlers["on_extraction_mode_changed"],
@@ -472,19 +468,19 @@ class TestAnimationControllerSignalConnections:
     def test_animation_stopped_connected(
         self, signal_coordinator, mock_animation_controller, mock_handlers
     ):
-        """AnimationController.animationStopped is connected."""
+        """AnimationController.animationStopped routes to the shared playback-ended handler."""
         signal_coordinator.connect_all()
         mock_animation_controller.animationStopped.connect.assert_called_once_with(
-            mock_handlers["on_playback_stopped"]
+            mock_handlers["on_playback_ended"]
         )
 
     def test_animation_completed_connected(
         self, signal_coordinator, mock_animation_controller, mock_handlers
     ):
-        """AnimationController.animationCompleted is connected."""
+        """AnimationController.animationCompleted routes to the shared playback-ended handler."""
         signal_coordinator.connect_all()
         mock_animation_controller.animationCompleted.connect.assert_called_once_with(
-            mock_handlers["on_playback_completed"]
+            mock_handlers["on_playback_ended"]
         )
 
     def test_error_occurred_connected(
@@ -695,8 +691,7 @@ class TestGridViewSignalConnections:
             on_extraction_completed=mock_handlers["on_extraction_completed"],
             on_playback_started=mock_handlers["on_playback_started"],
             on_playback_paused=mock_handlers["on_playback_paused"],
-            on_playback_stopped=mock_handlers["on_playback_stopped"],
-            on_playback_completed=mock_handlers["on_playback_completed"],
+            on_playback_ended=mock_handlers["on_playback_ended"],
             on_animation_error=mock_handlers["on_animation_error"],
             on_frame_settings_detected=mock_handlers["on_frame_settings_detected"],
             on_extraction_mode_changed=mock_handlers["on_extraction_mode_changed"],
@@ -893,8 +888,7 @@ class TestOptionalComponents:
             on_extraction_completed=mock_handlers["on_extraction_completed"],
             on_playback_started=mock_handlers["on_playback_started"],
             on_playback_paused=mock_handlers["on_playback_paused"],
-            on_playback_stopped=mock_handlers["on_playback_stopped"],
-            on_playback_completed=mock_handlers["on_playback_completed"],
+            on_playback_ended=mock_handlers["on_playback_ended"],
             on_animation_error=mock_handlers["on_animation_error"],
             on_frame_settings_detected=mock_handlers["on_frame_settings_detected"],
             on_extraction_mode_changed=mock_handlers["on_extraction_mode_changed"],

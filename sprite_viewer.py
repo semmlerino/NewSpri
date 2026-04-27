@@ -207,8 +207,9 @@ class SpriteViewer(QMainWindow):
         # Initialize controllers with all dependencies
         self._init_controllers()
 
-        # Set up managers with UI components
-        self._setup_managers()
+        # Initial action enabled state — coordinator wires the rest of the
+        # cross-component signals below.
+        self._update_has_frames_actions()
 
         # Debounce timer for frame slicing (prevents per-keystroke extraction)
         self._slicing_debounce_timer = QTimer(self)
@@ -298,8 +299,7 @@ class SpriteViewer(QMainWindow):
             on_extraction_completed=self._on_extraction_completed,
             on_playback_started=self._on_playback_started,
             on_playback_paused=self._on_playback_paused,
-            on_playback_stopped=self._on_playback_stopped,
-            on_playback_completed=self._on_playback_completed,
+            on_playback_ended=self._on_playback_ended,
             on_animation_error=self._on_animation_error,
             on_frame_settings_detected=self._on_frame_settings_detected,
             on_extraction_mode_changed=self._on_extraction_mode_changed,
@@ -585,14 +585,6 @@ class SpriteViewer(QMainWindow):
 
         return controls_widget
 
-    def _setup_managers(self):
-        """Configure managers with application-specific settings."""
-        # Connect segment controller status messages
-        self._segment_controller.statusMessage.connect(self._status_bar.show_message)
-
-        # Update action states based on initial context
-        self._update_has_frames_actions()
-
     def _apply_settings(self):
         """Apply saved settings."""
         # Restore window geometry
@@ -797,16 +789,8 @@ class SpriteViewer(QMainWindow):
         )
 
     def _on_playback_ended(self):
-        """Shared handler for playback stop and completion."""
+        """Handle playback stop and completion."""
         self._playback_controls.update_button_states(has_frames=True, at_start=True, at_end=False)
-
-    def _on_playback_stopped(self):
-        """Handle playback stop."""
-        self._on_playback_ended()
-
-    def _on_playback_completed(self):
-        """Handle playback completion."""
-        self._on_playback_ended()
 
     def _on_animation_error(self, error_message: str):
         """Handle animation controller error."""
@@ -834,14 +818,13 @@ class SpriteViewer(QMainWindow):
             current_frame = self._sprite_model.current_frame
             self._canvas.set_frame_info(current_frame, frame_count)
 
-            # Update grid view with new frames
-            self._segment_controller.update_grid_view_frames()
-
-            # Apply sprite context and synchronize segment state in one place.
+            # Single combined call: refresh grid frames, set context, sync segments.
             if self._sprite_model.file_path:
                 self._segment_controller.set_sprite_context_and_sync(
-                    self._sprite_model.file_path, frame_count
+                    self._sprite_model.file_path, frame_count, refresh_frames=True
                 )
+            else:
+                self._segment_controller.update_grid_view_frames()
         else:
             self._clear_extracted_frame_views()
 
