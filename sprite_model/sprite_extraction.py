@@ -902,7 +902,7 @@ def _analyze_irregular_sprites(
     # Find most common sprite size
     size_frequency: dict[tuple[int, int], int] = {}
     for w, h in zip(widths, heights, strict=False):
-        size_frequency[(w, h)] = size_frequency.get((w, h), 0) + 1
+        size_frequency[w, h] = size_frequency.get((w, h), 0) + 1
 
     (common_width, common_height), frequency = max(size_frequency.items(), key=lambda x: x[1])
 

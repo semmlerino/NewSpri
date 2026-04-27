@@ -324,7 +324,7 @@ class ExportWorker(QThread):
             filepath = self.task.output_dir / filename
 
             # Scale if needed (frame is QImage, thread-safe)
-            if self.task.scale_factor != 1.0:
+            if not math.isclose(self.task.scale_factor, 1.0):
                 frame = self._scale_image(frame, self.task.scale_factor)
 
             # Save frame - Qt infers format from file extension
@@ -377,7 +377,7 @@ class ExportWorker(QThread):
         original_frame_height = self.task.frames[0].height()
 
         # Apply scaling to frame dimensions
-        if self.task.scale_factor != 1.0:
+        if not math.isclose(self.task.scale_factor, 1.0):
             frame_width = int(original_frame_width * self.task.scale_factor)
             frame_height = int(original_frame_height * self.task.scale_factor)
         else:
@@ -707,7 +707,7 @@ class ExportWorker(QThread):
 
     def _draw_frame(self, painter: QPainter, frame: QImage, x: int, y: int) -> None:
         """Scale (if needed) and draw a single frame onto painter at (x, y)."""
-        if self.task.scale_factor != 1.0:
+        if not math.isclose(self.task.scale_factor, 1.0):
             painter.drawImage(x, y, self._scale_image(frame, self.task.scale_factor))
         else:
             painter.drawImage(x, y, frame)

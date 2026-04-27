@@ -6,6 +6,7 @@ Redesigned for better usability and modern aesthetics.
 import logging
 import math
 import os
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
@@ -147,11 +148,11 @@ class CompactLivePreview(QGraphicsView):
         self._zoom_level = 1.0
 
 
+@dataclass
 class _SettingsPanelBase:
     """Common boilerplate shared by sheet/individual/selected settings panels."""
 
-    def __init__(self, parent: "ModernExportSettings"):
-        self._parent = parent
+    _parent: "ModernExportSettings"
 
     def _create_panel(self) -> tuple[QWidget, QVBoxLayout]:
         """Create the standard widget + vertical layout with shared chrome."""

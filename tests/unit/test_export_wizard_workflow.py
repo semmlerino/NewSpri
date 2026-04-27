@@ -315,7 +315,7 @@ class TestExportConfigPreparation:
         assert config.format == ExportFormat.PNG
         assert config.mode == ExportMode.INDIVIDUAL_FRAMES
         assert config.base_name == "frame"
-        assert config.scale_factor == 1.0
+        assert config.scale_factor == pytest.approx(1.0)
 
     def test_prepare_export_config_sheet_mode(self, qapp, sample_sprites: list[QPixmap]) -> None:
         """_prepare_export_config should handle sheet mode."""
@@ -375,7 +375,7 @@ class TestExportConfigPreparation:
         config = dialog._prepare_export_config(preset, settings)
 
         assert hasattr(config, "scale_factor")
-        assert config.scale_factor == 2.0
+        assert config.scale_factor == pytest.approx(2.0)
 
     def test_prepare_export_config_selected_frames(
         self, qapp, sample_sprites: list[QPixmap]

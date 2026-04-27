@@ -392,7 +392,7 @@ def test_export_frames_calls_exporter(
     assert forwarded_config.base_name == "test"
     assert forwarded_config.format is ExportFormat.PNG
     assert forwarded_config.mode is ExportMode.INDIVIDUAL_FRAMES
-    assert forwarded_config.scale_factor == 1.0
+    assert forwarded_config.scale_factor == pytest.approx(1.0)
 
 
 @patch("core.export_coordinator.ExportProgressDialog")

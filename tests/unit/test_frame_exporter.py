@@ -69,7 +69,7 @@ class TestExportTask:
         assert task.base_name == "test"
         assert task.format == ExportFormat.PNG
         assert task.mode == ExportMode.INDIVIDUAL_FRAMES
-        assert task.scale_factor == 1.0
+        assert task.scale_factor == pytest.approx(1.0)
 
     def test_export_task_validation(self):
         """Test export task validation."""

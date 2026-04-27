@@ -67,15 +67,15 @@ def loaded_model(sprite_model: SpriteModel, test_sprite_sheet: QPixmap, tmp_path
     sprite_path = tmp_path / "test_sprite.png"
     test_sprite_sheet.save(str(sprite_path), "PNG")
 
-    success, _error = sprite_model.load_sprite_sheet(str(sprite_path))
-    assert success, f"Failed to load test sprite: {_error}"
+    success, error = sprite_model.load_sprite_sheet(str(sprite_path))
+    assert success, f"Failed to load test sprite: {error}"
 
     # GRID is the default mode; verify it
     assert sprite_model.get_extraction_mode() == ExtractionMode.GRID
 
     # Extract frames using grid mode
-    success, _msg, frame_count = sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
-    assert success, f"Failed to extract frames: {_msg}"
+    success, message, frame_count = sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
+    assert success, f"Failed to extract frames: {message}"
     assert frame_count == 8  # 256 / 32 = 8 frames
 
     return sprite_model

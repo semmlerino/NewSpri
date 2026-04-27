@@ -27,7 +27,7 @@ class TestSpriteCanvasInitialization:
         assert min_size.height() >= Config.Canvas.MIN_HEIGHT
 
         # Initial state
-        assert canvas._zoom_factor == 1.0
+        assert canvas._zoom_factor == pytest.approx(1.0)
         assert canvas._pan_offset == [0, 0]
         assert canvas._pixmap is None
         assert canvas._show_checkerboard
@@ -114,7 +114,7 @@ class TestSpriteCanvasZoom:
         # Reset zoom to 1.0
         canvas.set_zoom(1.0)
 
-        assert canvas._zoom_factor == 1.0
+        assert canvas._zoom_factor == pytest.approx(1.0)
 
 
 class TestSpriteCanvasDisplay:

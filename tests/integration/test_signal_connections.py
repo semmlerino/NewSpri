@@ -127,7 +127,7 @@ class TestSignalDataFlow:
 
             assert captured_settings is not None, "Export settings not captured"
             assert captured_settings["format"] == "PNG", "Format not passed correctly"
-            assert captured_settings["scale"] == 2.0, "Scale not passed correctly"
+            assert captured_settings["scale"] == pytest.approx(2.0), "Scale not passed correctly"
 
     def test_animation_control_signal_chain(self, qapp):
         """Test signal chain for animation control."""

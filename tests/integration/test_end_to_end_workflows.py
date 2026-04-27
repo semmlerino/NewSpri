@@ -165,7 +165,7 @@ class TestCompleteApplicationLifecycle:
             (Qt.Key_G, lambda: viewer._canvas._show_grid),  # Toggle grid
             (Qt.Key_Plus, lambda: viewer._canvas._zoom_factor),  # Zoom in
             (Qt.Key_Minus, lambda: viewer._canvas._zoom_factor),  # Zoom out
-            (Qt.Key_0, lambda: viewer._canvas._zoom_factor == 1.0),  # Reset zoom
+            (Qt.Key_0, lambda: viewer._canvas._zoom_factor == pytest.approx(1.0)),  # Reset zoom
         ]
 
         for key, check_func in shortcuts:
