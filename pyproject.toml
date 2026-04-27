@@ -232,9 +232,19 @@ max_lines = 50
 duplicate_strings = 3
 model = "gpt-4.1"
 exclude = [
-    ".skylos/cache",
+    ".benchmarks",
+    ".claude",
+    ".ruff_cache",
+    ".serena",
+    ".skylos",
+    ".sprite_segments",
+    "SpriteSheets",
     "archive",
+    "docs",
+    "htmlcov",
+    "spritetests",
     "sprite_exports",
+    "tests",
     "tools",
     "web_backend",
     "web_frontend",

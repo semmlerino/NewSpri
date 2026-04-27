@@ -21,7 +21,8 @@ uv run ruff check .                        # Lint
 uv run ruff check . --fix                  # Lint and auto-fix
 uv run ruff format .                       # Format code
 uv run basedpyright                        # Type check
-uv run skylos agent pre-commit .           # Skylos staged-file audit
+uv run skylos agent pre-commit .           # Skylos staged-file security/secrets/quality audit
+uv run skylos . --quality --no-upload --no-provenance --no-grep-verify  # Skylos source quality audit
 
 # Install dev dependencies
 uv sync --all-extras
@@ -215,7 +216,10 @@ uv run ruff check . && uv run ruff format . && uv run basedpyright && uv run pyt
 ```
 
 Run `uv run skylos agent pre-commit .` for Skylos' staged-file security,
-secrets, and quality audit.
+secrets, and quality audit. For a source-wide Skylos quality audit, run
+`uv run skylos . --quality --no-upload --no-provenance --no-grep-verify`.
+The Skylos config excludes tests, fixtures, generated assets, docs, and local
+tool caches so `.` stays focused on production code.
 
 ### Adding Features
 1. Identify layer (Model/View/Controller)

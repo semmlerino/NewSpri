@@ -114,7 +114,8 @@ uv run basedpyright
 ```bash
 uvx deptry .            # Detect dependency hygiene issues
 uvx pip-audit           # Vulnerability audit
-uv run skylos agent pre-commit .  # Skylos staged-file audit
+uv run skylos agent pre-commit .  # Skylos staged-file security/secrets/quality audit
+uv run skylos . --quality --no-upload --no-provenance --no-grep-verify  # Skylos source quality audit
 uv tool install pre-commit
 pre-commit install
 pre-commit run --all-files
