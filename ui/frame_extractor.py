@@ -24,6 +24,7 @@ from PySide6.QtWidgets import (
 
 from config import Config
 from sprite_model.extraction_mode import ExtractionMode
+from sprite_model.sprite_extraction import GridConfig
 from utils.styles import StyleManager
 from utils.ui_common import AutoButtonManager
 
@@ -391,6 +392,20 @@ class FrameExtractor(QGroupBox):
     def get_spacing(self) -> tuple[int, int]:
         """Get current frame spacing."""
         return self.spacing_x.value(), self.spacing_y.value()
+
+    def get_grid_config(self) -> GridConfig:
+        """Get current grid extraction settings."""
+        frame_width, frame_height = self.get_frame_size()
+        offset_x, offset_y = self.get_offset()
+        spacing_x, spacing_y = self.get_spacing()
+        return GridConfig(
+            width=frame_width,
+            height=frame_height,
+            offset_x=offset_x,
+            offset_y=offset_y,
+            spacing_x=spacing_x,
+            spacing_y=spacing_y,
+        )
 
     def set_frame_size(self, width: int, height: int):
         """Set frame size programmatically."""

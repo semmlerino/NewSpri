@@ -46,7 +46,7 @@ from managers import (
     get_settings_manager,
 )
 from sprite_model import SpriteModel
-from sprite_model.extraction_mode import ExtractionMode
+from sprite_model.extraction_mode import ExtractionMode, extraction_mode_label
 from ui import (
     AnimationGridView,
     EnhancedStatusBar,
@@ -898,8 +898,9 @@ class SpriteViewer(QMainWindow):
         self._update_frame_slicing()
 
         # Update status
-        mode_name = "CCL" if mode is ExtractionMode.CCL else "Grid"
-        self._status_manager.show_message(f"Switched to {mode_name} extraction mode")
+        self._status_manager.show_message(
+            f"Switched to {extraction_mode_label(mode)} extraction mode"
+        )
 
     def _on_settings_changed_debounced(self):
         """Restart debounce timer on settings change (prevents per-keystroke extraction)."""
@@ -933,15 +934,10 @@ class SpriteViewer(QMainWindow):
         QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
         QApplication.processEvents()
         try:
-            if mode is ExtractionMode.CCL:
-                return self._sprite_model.extract_ccl_frames()
-
-            frame_width, frame_height = self._frame_extractor.get_frame_size()
-            offset_x, offset_y = self._frame_extractor.get_offset()
-            spacing_x, spacing_y = self._frame_extractor.get_spacing()
-            return self._sprite_model.extract_frames(
-                frame_width, frame_height, offset_x, offset_y, spacing_x, spacing_y
+            grid_config = (
+                self._frame_extractor.get_grid_config() if mode is ExtractionMode.GRID else None
             )
+            return self._sprite_model.extract_frames_for_mode(mode, grid_config)
         finally:
             QApplication.restoreOverrideCursor()
 

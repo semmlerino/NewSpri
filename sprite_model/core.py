@@ -10,6 +10,7 @@ from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QPixmap
 
 from sprite_model.extraction_mode import ExtractionMode
+from sprite_model.extraction_strategies import ExtractionContext, get_extraction_strategy
 from sprite_model.sprite_animation import AnimationStateManager
 from sprite_model.sprite_ccl import CCLOperations
 from sprite_model.sprite_detection import (
@@ -23,7 +24,6 @@ from sprite_model.sprite_extraction import (
     GridConfig,
     detect_background_color,
     detect_sprites_ccl_enhanced,
-    extract_grid_frames,
 )
 from sprite_model.sprite_extraction import (
     validate_frame_settings as validate_grid_frame_settings,
@@ -151,11 +151,6 @@ class SpriteModel(QObject):
         if not valid:
             return False, msg, 0
 
-        if self._original_sprite_sheet is None:
-            return False, "No sprite sheet loaded", 0
-
-        self._ccl_operations.set_current_mode(ExtractionMode.GRID)
-
         config = GridConfig(
             width=width,
             height=height,
@@ -165,28 +160,7 @@ class SpriteModel(QObject):
             spacing_y=spacing_y,
         )
 
-        success, message, frames, skipped = extract_grid_frames(self._original_sprite_sheet, config)
-
-        if not success:
-            return False, message, 0
-
-        if len(frames) == 0:
-            return (
-                False,
-                "No frames could be extracted with current settings. Check frame size and offsets.",
-                0,
-            )
-
-        self._store_frames(frames)
-        self.extractionCompleted.emit(len(frames))
-
-        if skipped > 0:
-            result_msg = (
-                f"Extracted {len(frames)} frames ({skipped} skipped - exceeded sheet boundaries)"
-            )
-        else:
-            result_msg = f"Extracted {len(frames)} frames"
-        return True, result_msg, len(frames)
+        return self.extract_frames_for_mode(ExtractionMode.GRID, config)
 
     def validate_frame_settings(
         self,
@@ -215,24 +189,32 @@ class SpriteModel(QObject):
 
     def extract_ccl_frames(self) -> tuple[bool, str, int]:
         """Extract frames using Connected Component Labeling."""
+        return self.extract_frames_for_mode(ExtractionMode.CCL)
+
+    def extract_frames_for_mode(
+        self,
+        mode: ExtractionMode,
+        grid_config: GridConfig | None = None,
+    ) -> tuple[bool, str, int]:
+        """Extract frames using the strategy registered for the requested mode."""
         if self._original_sprite_sheet is None:
             return False, "No sprite sheet loaded", 0
 
-        sprite_sheet = self._original_sprite_sheet
+        if mode is ExtractionMode.GRID and grid_config is not None:
+            self._apply_grid_config(grid_config)
 
-        # Call CCLOperations with direct parameters
-        success, message, frame_count, frames, _info = self._ccl_operations.extract_ccl_frames(
-            sprite_sheet=sprite_sheet,
-            sprite_sheet_path=self._file_path,
-            detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
-            detect_background_color=detect_background_color,
-        )
+        if mode is ExtractionMode.GRID and grid_config is None:
+            grid_config = self._current_grid_config()
 
-        if success:
-            self._store_frames(frames)
-            self.extractionCompleted.emit(len(frames))
+        context = self._extraction_context(self._original_sprite_sheet)
+        strategy = get_extraction_strategy(mode)
+        result = strategy.extract(context, grid_config)
 
-        return success, message, frame_count
+        if result.success:
+            self._store_frames(result.frames)
+            self.extractionCompleted.emit(len(result.frames))
+
+        return result.success, result.message, result.frame_count
 
     def set_extraction_mode(self, mode: object) -> bool:
         """Set extraction mode (grid or ccl)."""
@@ -241,24 +223,9 @@ class SpriteModel(QObject):
         if not isinstance(mode, ExtractionMode):
             return False
 
-        sprite_sheet = self._original_sprite_sheet
         old_mode = self.get_extraction_mode()
-
-        success = self._ccl_operations.set_extraction_mode(
-            mode=mode,
-            sprite_sheet=sprite_sheet,
-            sprite_sheet_path=self._file_path,
-            extract_grid_frames_callback=self._re_extract_frames_tuple,
-            detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
-            detect_background_color=detect_background_color,
-        )
-
-        # If CCL mode succeeded, retrieve and store the extracted frames
-        if success and mode is ExtractionMode.CCL:
-            ccl_frames = self._ccl_operations.get_last_extracted_frames()
-            self._store_frames(ccl_frames)
-            self.extractionCompleted.emit(len(ccl_frames))
-        elif not success:
+        success, _message, _frame_count = self.extract_frames_for_mode(mode)
+        if not success:
             self._ccl_operations.set_current_mode(old_mode)
 
         return success
@@ -515,6 +482,36 @@ class SpriteModel(QObject):
             self._offset_y,
             self._spacing_x,
             self._spacing_y,
+        )
+
+    def _current_grid_config(self) -> GridConfig:
+        """Return the current grid extraction settings as a value object."""
+        return GridConfig(
+            width=self._frame_width,
+            height=self._frame_height,
+            offset_x=self._offset_x,
+            offset_y=self._offset_y,
+            spacing_x=self._spacing_x,
+            spacing_y=self._spacing_y,
+        )
+
+    def _apply_grid_config(self, config: GridConfig) -> None:
+        """Store grid extraction settings for later re-extraction."""
+        self._frame_width = config.width
+        self._frame_height = config.height
+        self._offset_x = config.offset_x
+        self._offset_y = config.offset_y
+        self._spacing_x = config.spacing_x
+        self._spacing_y = config.spacing_y
+
+    def _extraction_context(self, sprite_sheet: QPixmap) -> ExtractionContext:
+        """Build the shared dependency bundle for extraction strategies."""
+        return ExtractionContext(
+            sprite_sheet=sprite_sheet,
+            sprite_sheet_path=self._file_path,
+            ccl_operations=self._ccl_operations,
+            detect_sprites_ccl_enhanced=detect_sprites_ccl_enhanced,
+            detect_background_color=detect_background_color,
         )
 
     def _store_frames(self, frames: list[QPixmap]) -> None:

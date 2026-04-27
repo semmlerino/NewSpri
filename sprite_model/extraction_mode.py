@@ -14,3 +14,8 @@ class ExtractionMode(Enum):
 
     GRID = "grid"
     CCL = "ccl"
+
+
+def extraction_mode_label(mode: ExtractionMode) -> str:
+    """Return a user-facing label for an extraction mode."""
+    return "CCL" if mode is ExtractionMode.CCL else "Grid"
