@@ -3,8 +3,6 @@ Integration tests for complete sprite loading workflows.
 Tests end-to-end functionality across multiple components.
 """
 
-from unittest.mock import Mock
-
 import pytest
 from PySide6.QtGui import QPixmap
 from PySide6.QtTest import QSignalSpy
@@ -26,10 +24,8 @@ class TestSpriteLoadingWorkflow:
         sprite_model = SpriteModel()
 
         # Initialize controllers with minimal mock viewer (single-step constructor DI)
-        mock_viewer = Mock()
         animation_controller = AnimationController(
             sprite_model=sprite_model,
-            sprite_viewer=mock_viewer,
         )
         auto_detection_controller = AutoDetectionController(
             sprite_model=sprite_model,
@@ -204,7 +200,6 @@ class TestComponentInteraction:
         # Initialize with sprite model (single-step constructor DI)
         animation_controller = AnimationController(
             sprite_model=configured_sprite_model,
-            sprite_viewer=Mock(),
         )
 
         # Signal spies
@@ -233,7 +228,6 @@ class TestComponentInteraction:
         # Initialize components (single-step constructor DI)
         animation_controller = AnimationController(
             sprite_model=sprite_model,
-            sprite_viewer=Mock(),
         )
         auto_detection_controller = AutoDetectionController(
             sprite_model=sprite_model,

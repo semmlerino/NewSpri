@@ -7,7 +7,6 @@ import pytest
 
 # Mark all tests as integration tests (most create full SpriteViewer instances)
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
-from unittest.mock import Mock
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPixmap
@@ -106,11 +105,9 @@ class TestModelViewControllerIntegration:
         """Test coordination between different controllers."""
 
         model = SpriteModel()
-        mock_viewer = Mock()
 
         animation_controller = AnimationController(
             sprite_model=model,
-            sprite_viewer=mock_viewer,
         )
         detection_controller = AutoDetectionController(
             sprite_model=model,
@@ -350,10 +347,8 @@ class TestUIComponentIntegration:
         qtbot.addWidget(playback)
 
         # Initialize controller with model (single-step constructor DI)
-        mock_viewer = Mock()
         controller = AnimationController(
             sprite_model=model,
-            sprite_viewer=mock_viewer,
         )
 
         # Connect components using current signal names

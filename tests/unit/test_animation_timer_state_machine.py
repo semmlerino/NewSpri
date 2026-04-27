@@ -69,23 +69,10 @@ def mock_sprite_model() -> MagicMock:
 
 
 @pytest.fixture
-def mock_sprite_viewer() -> MagicMock:
-    """Create a mock SpriteViewer with basic functionality."""
-    viewer = MagicMock()
-    # Mock the closing signal
-    viewer.closing = MagicMock()
-    viewer.closing.connect = MagicMock()
-    return viewer
-
-
-@pytest.fixture
-def animation_controller(
-    qapp, mock_sprite_model: MagicMock, mock_sprite_viewer: MagicMock
-) -> AnimationController:
-    """Create an AnimationController with mock model and viewer."""
+def animation_controller(qapp, mock_sprite_model: MagicMock) -> AnimationController:
+    """Create an AnimationController with a mock model."""
     return AnimationController(
         sprite_model=mock_sprite_model,
-        sprite_viewer=mock_sprite_viewer,
     )
 
 
@@ -376,11 +363,9 @@ class TestEdgeCases:
         mock_model.extractionCompleted = MagicMock()
         mock_model.frameChanged = MagicMock()
         mock_model.errorOccurred = MagicMock()
-        mock_viewer = MagicMock()
 
         controller = AnimationController(
             sprite_model=mock_model,
-            sprite_viewer=mock_viewer,
         )
 
         error_spy = []
@@ -402,11 +387,9 @@ class TestEdgeCases:
         mock_model.extractionCompleted = MagicMock()
         mock_model.frameChanged = MagicMock()
         mock_model.errorOccurred = MagicMock()
-        mock_viewer = MagicMock()
 
         controller = AnimationController(
             sprite_model=mock_model,
-            sprite_viewer=mock_viewer,
         )
 
         result = controller.start_animation()

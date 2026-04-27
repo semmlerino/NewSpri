@@ -406,19 +406,12 @@ class TestAnimationControllerIntegration:
         mock_sprite_model.frameChanged = Mock()
         mock_sprite_model.errorOccurred = Mock()
 
-        mock_sprite_viewer = Mock()
-        # Add viewer signal mocks
-        mock_sprite_viewer.closing = Mock()
-        mock_sprite_viewer.frame_display_changed = Mock()
-
         # Create controller with dependencies (single-step init)
         controller = AnimationController(
             sprite_model=mock_sprite_model,
-            sprite_viewer=mock_sprite_viewer,
         )
 
         assert controller._sprite_model == mock_sprite_model
-        assert controller._sprite_viewer == mock_sprite_viewer
         assert controller._is_active
 
     def test_sprite_model_coordination(self):
@@ -434,13 +427,8 @@ class TestAnimationControllerIntegration:
         mock_sprite_model.frameChanged = Mock()
         mock_sprite_model.errorOccurred = Mock()
 
-        mock_sprite_viewer = Mock()
-        mock_sprite_viewer.closing = Mock()
-        mock_sprite_viewer.frame_display_changed = Mock()
-
         controller = AnimationController(
             sprite_model=mock_sprite_model,
-            sprite_viewer=mock_sprite_viewer,
         )
         assert controller.start_animation() is True
         controller._animation_timer.stop()
@@ -494,13 +482,8 @@ class TestAnimationControllerErrorHandling:
         mock_model.frameChanged = Mock()
         mock_model.errorOccurred = Mock()
 
-        mock_viewer = Mock()
-        mock_viewer.closing = Mock()
-        mock_viewer.frame_display_changed = Mock()
-
         controller = AnimationController(
             sprite_model=mock_model,
-            sprite_viewer=mock_viewer,
         )
         result = controller.start_animation()
 

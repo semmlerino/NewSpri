@@ -210,8 +210,7 @@ class TestRunner:
         print("\nRunning tests in watch mode...")
         if not shutil.which("ptw"):
             print(
-                "pytest-watcher is not installed. Run "
-                "`pip install -r tests/requirements-test.txt`."
+                "pytest-watcher is not installed. Run `pip install -r tests/requirements-test.txt`."
             )
             return 1
 

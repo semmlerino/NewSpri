@@ -5,8 +5,6 @@ Custom canvas widget for displaying sprites with zoom and pan capabilities.
 Part of Python Sprite Viewer - Phase 5: UI Component Extraction.
 """
 
-from typing import Any
-
 from PySide6.QtCore import QPoint, QRect, Qt, Signal
 from PySide6.QtGui import (
     QColor,
@@ -84,10 +82,6 @@ class SpriteCanvas(QLabel):
         self._pixmap = None
         self._cached_padded_pixmap = None
         self.update()
-
-    def update(self, *args: Any, **kwargs: Any):
-        """Standard update - just trigger repaint without fetching frame."""
-        super().update(*args, **kwargs)
 
     def set_frame_info(self, current: int, total: int):
         """Update frame information."""

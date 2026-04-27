@@ -162,7 +162,6 @@ class TestInvalidDataHandling:
         # Initialize controller (single-step constructor DI)
         controller = AnimationController(
             sprite_model=mock_model,
-            sprite_viewer=Mock(),
         )
 
         # Set initial valid FPS
@@ -404,7 +403,6 @@ class TestRecoveryScenarios:
         # Initialize controller (single-step constructor DI)
         controller = AnimationController(
             sprite_model=model,
-            sprite_viewer=Mock(),
         )
 
         # Start with working state

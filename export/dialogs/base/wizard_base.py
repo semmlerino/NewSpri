@@ -69,7 +69,6 @@ class WizardWidget(QWidget):
     # Signals
     wizardFinished = Signal(dict)  # Emitted when wizard completes with all data
     wizardCancelled = Signal()  # Emitted when wizard is cancelled
-    currentStepChanged = Signal(int)  # Emitted when step changes
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
@@ -208,8 +207,6 @@ class WizardWidget(QWidget):
 
             # Notify new step it's being entered
             self.steps[self.current_step_index].on_entering()
-
-            self.currentStepChanged.emit(index)
 
     def _update_current_step(self):
         """Update UI to reflect current step."""

@@ -179,7 +179,6 @@ class UIConfig:
         MODE_CCL = StyleManager.Colors.SELECTION_BORDER  # Material Blue 500
 
         # Selection and highlighting
-        SELECTION_HIGHLIGHT = StyleManager.Colors.SELECTION_BORDER  # Blue for selected items
         SELECTION_BORDER = StyleManager.Colors.PRIMARY
 
         # Segment colors (Material Design palette for animation segments)
@@ -208,11 +207,6 @@ class UIConfig:
 
     class Slider:
         """Slider and control widget settings."""
-
-        # Zoom slider
-        ZOOM_SLIDER_MIN = 10  # 0.1x zoom (10%)
-        ZOOM_SLIDER_MAX = 1000  # 10x zoom (1000%)
-        ZOOM_SLIDER_DEFAULT = 100  # 1x zoom (100%)
 
         # FPS slider
         FPS_SLIDER_TICK_INTERVAL = 10

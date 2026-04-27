@@ -180,7 +180,9 @@ class TestConcurrentOperations:
 
         # Set sprite context for segment manager inside this test's temp directory.
         sprite_path = tmp_path / "segment_during_playback.png"
-        segment_manager.set_sprite_context(str(sprite_path), len(viewer._sprite_model.sprite_frames))
+        segment_manager.set_sprite_context(
+            str(sprite_path), len(viewer._sprite_model.sprite_frames)
+        )
 
         # Create segment during playback using correct API (individual args, not object)
         from PySide6.QtGui import QColor

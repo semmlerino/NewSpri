@@ -16,8 +16,6 @@ class ExportPreset:
     mode: ExportMode
     format: str
     scale: float
-    default_pattern: str
-    tooltip: str
     use_cases: list[str]  # Examples of when to use this preset
     sprite_sheet_layout: SpriteSheetLayout | None = None
     short_description: str | None = None
@@ -33,8 +31,6 @@ PRESETS: dict[str, ExportPreset] = {
         mode=ExportMode.INDIVIDUAL_FRAMES,
         format="PNG",
         scale=1.0,
-        default_pattern="{name}_{index:03d}",
-        tooltip="Export frames individually - choose all frames or selected frames in the dialog",
         use_cases=[
             "Game assets",
             "Video editing",
@@ -53,8 +49,6 @@ PRESETS: dict[str, ExportPreset] = {
         mode=ExportMode.SPRITE_SHEET,
         format="PNG",
         scale=1.0,
-        default_pattern="{name}_sheet",
-        tooltip="Ideal for web games, texture atlases, and reducing file count",
         use_cases=["Web games", "Texture atlases", "CSS sprites", "Unity animations"],
         sprite_sheet_layout=SpriteSheetLayout(
             mode=LayoutMode.AUTO, spacing=0, padding=0, background_mode=BackgroundMode.TRANSPARENT
@@ -69,8 +63,6 @@ PRESETS: dict[str, ExportPreset] = {
         mode=ExportMode.SELECTED_FRAMES,
         format="PNG",
         scale=1.0,
-        default_pattern="{name}_selected_{index:03d}",
-        tooltip="Choose specific frames to export - perfect for key frames or specific poses",
         use_cases=["Key frames", "Specific poses", "Reference frames", "Partial exports"],
         short_description="Export specific frames",
     ),
@@ -82,8 +74,6 @@ PRESETS: dict[str, ExportPreset] = {
         mode=ExportMode.SEGMENTS_SHEET,
         format="PNG",
         scale=1.0,
-        default_pattern="{name}_segments_sheet",
-        tooltip="Creates a sprite sheet where each animation segment (walk, run, jump) is on its own row",
         use_cases=[
             "Game engines",
             "Animation tools",

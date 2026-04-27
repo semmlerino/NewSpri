@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QFont, QMouseEvent
-from PySide6.QtWidgets import QButtonGroup, QFrame, QLabel, QRadioButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QFrame, QLabel, QRadioButton, QVBoxLayout, QWidget
 
 from utils.styles import StyleManager
 
@@ -94,9 +94,6 @@ class ExportTypeStep(WizardStep):
     Clean, focused interface without clutter.
     """
 
-    # Signal emitted when a preset is selected
-    presetSelected = Signal(ExportPreset)
-
     def __init__(
         self,
         frame_count: int = 0,
@@ -112,7 +109,6 @@ class ExportTypeStep(WizardStep):
         self.segment_manager = segment_manager
         self._selected_preset: ExportPreset | None = None
         self._options: list[SimpleExportOption] = []
-        self._button_group = QButtonGroup()
         self._has_segments = False
 
         self._setup_ui()
@@ -211,10 +207,6 @@ class ExportTypeStep(WizardStep):
                         self._select_preset(preset)
 
                 layout.addWidget(option)
-
-                # Add radio button to group
-                if option._radio_button is not None:
-                    self._button_group.addButton(option._radio_button)
                 first_option = False
 
         layout.addStretch()
@@ -238,7 +230,6 @@ class ExportTypeStep(WizardStep):
         logger.debug("Emitting stepValidated(True) and preset data")
         self.stepValidated.emit(True)
         self.dataChanged.emit(self.get_data())
-        self.presetSelected.emit(preset)
 
     def validate(self) -> bool:
         """Validate that a preset is selected."""

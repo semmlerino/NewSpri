@@ -201,8 +201,6 @@ class TestExportPreset:
             mode=ExportMode.INDIVIDUAL_FRAMES,
             format="PNG",
             scale=1.0,
-            default_pattern="{base}_{index}",
-            tooltip="Test tooltip",
             use_cases=["Testing"],
         )
 
@@ -301,8 +299,6 @@ class TestExportConfigPreparation:
             mode=ExportMode.INDIVIDUAL_FRAMES,
             format="PNG",
             scale=1.0,
-            default_pattern="{base}_{index}",
-            tooltip="Test",
             use_cases=[],
         )
 
@@ -335,8 +331,6 @@ class TestExportConfigPreparation:
             mode=ExportMode.SPRITE_SHEET,
             format="PNG",
             scale=1.0,
-            default_pattern="{base}",
-            tooltip="Test",
             use_cases=[],
         )
 
@@ -373,8 +367,6 @@ class TestExportConfigPreparation:
             mode=ExportMode.INDIVIDUAL_FRAMES,
             format="PNG",
             scale=2.0,
-            default_pattern="{base}",
-            tooltip="Test",
             use_cases=[],
         )
 
@@ -401,8 +393,6 @@ class TestExportConfigPreparation:
             mode=ExportMode.SELECTED_FRAMES,
             format="PNG",
             scale=1.0,
-            default_pattern="{base}_{index}",
-            tooltip="Test",
             use_cases=[],
         )
 
@@ -433,8 +423,6 @@ class TestExportConfigPreparation:
             mode=ExportMode.INDIVIDUAL_FRAMES,
             format="PNG",
             scale=1.0,
-            default_pattern="{base}",
-            tooltip="Test",
             use_cases=[],
         )
 
@@ -551,8 +539,6 @@ class TestEdgeCases:
             mode=ExportMode.INDIVIDUAL_FRAMES,
             format="PNG",
             scale=1.0,
-            default_pattern="{base}",
-            tooltip="Test",
             use_cases=[],
             # short_description not provided
         )

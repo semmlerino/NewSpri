@@ -66,10 +66,8 @@ class TestCriticalSignalConnections:
         frame_spy = QSignalSpy(sprite_model.frameChanged)
 
         # Initialize controller with model (single-step constructor DI)
-        mock_viewer = Mock()
         animation_controller = AnimationController(
             sprite_model=sprite_model,
-            sprite_viewer=mock_viewer,
         )
 
         assert hasattr(animation_controller, "frameAdvanced"), (
@@ -147,7 +145,6 @@ class TestSignalDataFlow:
         # Initialize controller (single-step constructor DI)
         controller = AnimationController(
             sprite_model=model,
-            sprite_viewer=Mock(),
         )
 
         # Track signal emissions

@@ -41,7 +41,6 @@ class AnimationSegmentController(QObject):
 
     # Signals for status updates
     statusMessage = Signal(str)
-    exportRequested = Signal(dict)  # Export settings
 
     def __init__(
         self,

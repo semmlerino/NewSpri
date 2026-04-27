@@ -200,7 +200,6 @@ class ExportDialog(QDialog):
             mode=preset.mode,
             scale_factor=float(scale),
             pattern=settings.get("pattern", Config.Export.DEFAULT_PATTERN),
-            preset_name=preset.name,
             sprite_sheet_layout=sprite_sheet_layout,
             selected_indices=selected_indices,
         )

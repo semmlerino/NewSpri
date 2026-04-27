@@ -77,12 +77,10 @@ class RealSpriteSystem:
         self.setup_sprite_model(frame_count, frame_size)
 
         # Create minimal mock viewer (heavy UI component)
-        mock_viewer = Mock()
 
         # Create real controller with real sprite model (single-step init)
         self.animation_controller = AnimationController(
             sprite_model=self.sprite_model,
-            sprite_viewer=mock_viewer,
         )
 
         self._initialized = True

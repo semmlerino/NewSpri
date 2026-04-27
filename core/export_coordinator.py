@@ -8,7 +8,7 @@ and AnimationSegmentController.
 import contextlib
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QMessageBox, QWidget
 
 from export.core.frame_exporter import (
@@ -35,10 +35,6 @@ class ExportCoordinator(QObject):
     - Progress dialog management
     - Error/warning/info dialogs
     """
-
-    # Signals for status reporting
-    exportCompleted = Signal(str)  # success message
-    exportFailed = Signal(str)  # error message
 
     def __init__(
         self,
@@ -253,14 +249,12 @@ class ExportCoordinator(QObject):
                 "Export Complete",
                 f"Export completed successfully!\n\n{message}",
             )
-            self.exportCompleted.emit(message)
         else:
             QMessageBox.warning(
                 self._parent_widget,
                 "Export Failed",
                 f"Export failed:\n\n{message}",
             )
-            self.exportFailed.emit(message)
 
     def _on_export_error(self, error_message: str) -> None:
         """Handle export error."""
@@ -271,7 +265,6 @@ class ExportCoordinator(QObject):
             "Export Error",
             f"Export failed:\n\n{error_message}",
         )
-        self.exportFailed.emit(error_message)
 
     def _cleanup_progress_dialog(self) -> None:
         """Disconnect signals and close progress dialog."""

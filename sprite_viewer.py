@@ -253,7 +253,6 @@ class SpriteViewer(QMainWindow):
         """Initialize controllers with all dependencies (single-step init)."""
         self._animation_controller = AnimationController(
             sprite_model=self._sprite_model,
-            sprite_viewer=self,
         )
 
         self._auto_detection_controller = AutoDetectionController(

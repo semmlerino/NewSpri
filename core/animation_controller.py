@@ -13,7 +13,6 @@ from config import Config
 
 if TYPE_CHECKING:
     from sprite_model.core import SpriteModel
-    from sprite_viewer import SpriteViewer
 
 
 class AnimationController(QObject):
@@ -47,14 +46,12 @@ class AnimationController(QObject):
     def __init__(
         self,
         sprite_model: "SpriteModel",
-        sprite_viewer: "SpriteViewer",
     ):
         """
-        Initialize controller with Model and View components.
+        Initialize controller with the sprite model.
 
         Args:
             sprite_model: The sprite data model
-            sprite_viewer: The main application window
         """
         super().__init__()
 
@@ -63,7 +60,6 @@ class AnimationController(QObject):
         # ============================================================================
 
         self._sprite_model: SpriteModel = sprite_model
-        self._sprite_viewer: SpriteViewer = sprite_viewer
 
         # ============================================================================
         # TIMER MANAGEMENT

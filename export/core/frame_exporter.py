@@ -200,7 +200,6 @@ class ExportConfig:
     mode: ExportMode
     scale_factor: float
     pattern: str = ""
-    preset_name: str = ""
     sprite_sheet_layout: SpriteSheetLayout | None = None
     selected_indices: list[int] | None = None
 

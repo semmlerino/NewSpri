@@ -149,9 +149,8 @@ def sprite_model(qapp) -> SpriteModel:
 
 @pytest.fixture
 def animation_controller(sprite_model) -> AnimationController:
-    """Fresh AnimationController instance for testing with mock dependencies."""
-    mock_viewer = MagicMock()
-    return AnimationController(sprite_model=sprite_model, sprite_viewer=mock_viewer)
+    """Fresh AnimationController instance for testing."""
+    return AnimationController(sprite_model=sprite_model)
 
 
 @pytest.fixture
@@ -739,6 +738,7 @@ def keyboard_test_helper(qapp):
 @pytest.fixture
 def menu_test_helper(qapp):
     """Helper for testing menu actions and structure."""
+
     class MenuTestHelper:
         def __init__(self, app):
             self.app = app

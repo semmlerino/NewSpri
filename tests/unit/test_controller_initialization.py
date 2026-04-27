@@ -54,16 +54,12 @@ class TestAnimationControllerInitialization:
         mock_model.frameChanged = Mock()
         mock_model.errorOccurred = Mock()
 
-        mock_viewer = Mock()
-
         controller = AnimationController(
             sprite_model=mock_model,
-            sprite_viewer=mock_viewer,
         )
 
         assert controller is not None
         assert controller._sprite_model is mock_model
-        assert controller._sprite_viewer is mock_viewer
         assert controller._is_active is True
 
     def test_controller_connects_model_signals_at_construction(self):
@@ -76,11 +72,8 @@ class TestAnimationControllerInitialization:
         mock_model.frameChanged = Mock()
         mock_model.errorOccurred = Mock()
 
-        mock_viewer = Mock()
-
         controller = AnimationController(
             sprite_model=mock_model,
-            sprite_viewer=mock_viewer,
         )
 
         # Verify model signals were connected

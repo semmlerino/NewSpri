@@ -3,7 +3,7 @@ Common UI components and utilities for reducing code duplication.
 Part of Phase 2 refactoring: Code Deduplication.
 """
 
-from PySide6.QtCore import QObject, Signal
+from PySide6.QtCore import QObject
 from PySide6.QtWidgets import QPushButton
 
 from utils.styles import StyleManager
@@ -11,9 +11,6 @@ from utils.styles import StyleManager
 
 class AutoButtonManager(QObject):
     """Manages auto-detection button states and styles."""
-
-    # Signals
-    buttonStateChanged = Signal(str, str, str)  # button_type, confidence, message
 
     # Button types
     BUTTON_TYPES = ["frame", "margins", "spacing"]
@@ -86,9 +83,8 @@ class AutoButtonManager(QObject):
         # Update tooltip
         self._update_tooltip(button, button_type, confidence, message)
 
-        # Track state and emit signal
+        # Track state
         self._current_states[button_type] = confidence
-        self.buttonStateChanged.emit(button_type, confidence, message)
 
     def reset_button(self, button_type: str):
         """Reset button to default appearance."""
@@ -103,7 +99,6 @@ class AutoButtonManager(QObject):
 
         # Track state
         self._current_states[button_type] = "default"
-        self.buttonStateChanged.emit(button_type, "default", "")
 
     def reset_all_buttons(self):
         """Reset all managed buttons to default."""
