@@ -148,7 +148,7 @@ class TestModelViewControllerIntegration:
 
         # Animation should update model - wait for frame to advance
         initial_frame = model.current_frame
-        with qtbot.waitSignal(animation_controller.frameAdvanced, timeout=500):
+        with qtbot.waitSignal(model.frameChanged, timeout=500):
             pass  # Wait for at least one frame advance
         assert model.current_frame != initial_frame
 

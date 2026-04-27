@@ -78,7 +78,7 @@ class TestCompleteApplicationLifecycle:
         assert viewer._animation_controller.is_playing is True
 
         # Wait for at least one frame to advance
-        with qtbot.waitSignal(viewer._animation_controller.frameAdvanced, timeout=500):
+        with qtbot.waitSignal(viewer._sprite_model.frameChanged, timeout=500):
             pass
 
         viewer._animation_controller.stop_animation()

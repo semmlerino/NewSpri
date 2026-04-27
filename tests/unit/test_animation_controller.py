@@ -35,10 +35,6 @@ class TestAnimationControllerInitialization:
             "animationPaused",
             "animationStopped",
             "animationCompleted",
-            "frameAdvanced",
-            "playbackStateChanged",
-            "fpsChanged",
-            "loopModeChanged",
             "errorOccurred",
             "statusChanged",
         ]
@@ -82,14 +78,11 @@ class TestAnimationControllerState:
 
     def test_loop_mode_toggle(self, animation_controller):
         """Test toggling loop mode."""
-        spy = QSignalSpy(animation_controller.loopModeChanged)
-
         animation_controller.set_loop_mode(False)
-        animation_controller.set_loop_mode(True)
+        assert animation_controller._loop_enabled is False
 
-        assert spy.count() == 2
-        assert spy.at(0)[0] is False
-        assert spy.at(1)[0] is True
+        animation_controller.set_loop_mode(True)
+        assert animation_controller._loop_enabled is True
 
 
 class TestAnimationControllerTiming:
@@ -203,73 +196,6 @@ class TestAnimationControllerPlayback:
 class TestAnimationControllerRealSignals:
     """Test animation controller signal emission with REAL Qt signal mechanisms."""
 
-    @pytest.mark.parametrize(
-        "signal_attr,trigger_method,trigger_args,expected_value",
-        [
-            ("fpsChanged", "set_fps", (25,), 25),
-            ("loopModeChanged", "set_loop_mode", (True,), True),
-            ("loopModeChanged", "set_loop_mode", (False,), False),
-        ],
-    )
-    def test_real_signal_emission(
-        self,
-        animation_controller,
-        real_signal_tester,
-        signal_attr,
-        trigger_method,
-        trigger_args,
-        expected_value,
-    ):
-        """Test signal emission with real QSignalSpy - parametrized for multiple signal types."""
-        # Get the signal and connect spy
-        signal = getattr(animation_controller, signal_attr)
-        spy = real_signal_tester.connect_spy(signal, "test_signal")
-
-        # Trigger the action
-        method = getattr(animation_controller, trigger_method)
-        method(*trigger_args)
-
-        # Verify signal emission
-        assert real_signal_tester.verify_emission("test_signal", count=1)
-
-        # Verify signal arguments
-        args = real_signal_tester.get_signal_args("test_signal", 0)
-        assert len(args) >= 1
-        assert args[0] == expected_value
-
-    def test_real_playback_state_signal_with_integration(
-        self, real_sprite_system, real_signal_tester
-    ):
-        """Test playback state changes with real sprite system integration."""
-        # Initialize real system
-        success = real_sprite_system.initialize_system(frame_count=4)
-        assert success
-
-        controller = real_sprite_system.animation_controller
-
-        # Connect real signal spy
-        state_spy = real_signal_tester.connect_spy(controller.playbackStateChanged, "state_changed")
-
-        # Test animation start
-        start_success = controller.start_animation()
-        assert start_success
-
-        # Verify real signal emission
-        assert real_signal_tester.verify_emission("state_changed", count=1, timeout=1000)
-
-        args = real_signal_tester.get_signal_args("state_changed", 0)
-        assert len(args) >= 1
-        assert args[0] is True  # Should emit True when starting
-
-        # Test animation pause
-        pause_spy = real_signal_tester.connect_spy(controller.playbackStateChanged, "pause_state")
-        controller.pause_animation()
-
-        assert real_signal_tester.verify_emission("pause_state", count=1)
-        pause_args = real_signal_tester.get_signal_args("pause_state", 0)
-        assert len(pause_args) >= 1
-        assert pause_args[0] is False  # Should emit False when pausing
-
     def test_real_animation_lifecycle_signals(self, real_sprite_system, real_signal_tester):
         """Test complete animation lifecycle with real signal tracking."""
         # Initialize real system
@@ -307,36 +233,6 @@ class TestAnimationControllerRealSignals:
         assert state_checks["has_sprite_model"]
         assert state_checks["timer_exists"]
 
-    def test_real_signal_timing_accuracy(self, real_sprite_system, real_signal_tester):
-        """Test signal timing accuracy with real Qt timer mechanisms."""
-        real_sprite_system.initialize_system(frame_count=3)
-        controller = real_sprite_system.animation_controller
-
-        # Set specific FPS for timing test
-        controller.set_fps(20)  # 50ms intervals
-
-        # Connect frame advancement spy
-        signals = real_sprite_system.get_real_signal_connections()
-        frame_spy = real_signal_tester.connect_spy(signals["frame_advanced"], "frame_advanced")
-
-        # Start animation and wait for frame advancements
-        controller.start_animation()
-
-        # Wait longer to allow multiple frames
-        # At 20 FPS with 200ms wait, we expect ~4 frame advances
-        signal_received = real_signal_tester.wait_for_signal("frame_advanced", timeout=200)
-        controller.stop_animation()
-
-        if signal_received:
-            frame_count = real_signal_tester.get_spy_count("frame_advanced")
-            # Should have at least 1 frame advancement if signal was received
-            assert frame_count >= 1, "Animation timer should have advanced at least one frame"
-        else:
-            # If no signal received in 200ms at 20 FPS, something is wrong
-            import pytest
-
-            pytest.skip("Timing-dependent test: frame_advanced signal not received in time")
-
     def test_real_error_signal_handling(self, animation_controller, real_signal_tester):
         """Test error signal emission with real Qt mechanisms."""
         # Connect error signal spy
@@ -353,42 +249,6 @@ class TestAnimationControllerRealSignals:
         args = real_signal_tester.get_signal_args("error", 0)
         assert len(args) >= 1, "Error signal should have at least one argument"
         assert isinstance(args[0], str), "Error message should be a string"
-
-    def test_multiple_real_signals_coordination(self, real_sprite_system, real_signal_tester):
-        """Test coordination of multiple real signals in complex scenarios."""
-        real_sprite_system.initialize_system(frame_count=5)
-        controller = real_sprite_system.animation_controller
-
-        signals = real_sprite_system.get_real_signal_connections()
-
-        # Connect multiple spies
-        fps_spy = real_signal_tester.connect_spy(signals["fps_changed"], "fps")
-        loop_spy = real_signal_tester.connect_spy(signals["loop_mode_changed"], "loop")
-        state_spy = real_signal_tester.connect_spy(signals["playback_state_changed"], "state")
-        status_spy = real_signal_tester.connect_spy(signals["status_changed"], "status")
-
-        # Perform complex sequence
-        controller.set_fps(15)
-        controller.set_loop_mode(False)
-        controller.start_animation()
-        controller.pause_animation()
-
-        # Verify all signals were emitted
-        assert real_signal_tester.verify_emission("fps", count=1)
-        assert real_signal_tester.verify_emission("loop", count=1)
-        assert real_signal_tester.verify_emission_range(
-            "state", min_count=1
-        )  # Multiple state changes
-        assert real_signal_tester.verify_emission_range(
-            "status", min_count=1
-        )  # Multiple status updates
-
-        # Verify signal arguments
-        fps_args = real_signal_tester.get_signal_args("fps", 0)
-        loop_args = real_signal_tester.get_signal_args("loop", 0)
-
-        assert fps_args[0] == 15
-        assert loop_args[0] is False
 
 
 class TestAnimationControllerIntegration:

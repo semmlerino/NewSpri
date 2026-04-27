@@ -66,13 +66,7 @@ class TestCriticalSignalConnections:
         frame_spy = QSignalSpy(sprite_model.frameChanged)
 
         # Initialize controller with model (single-step constructor DI)
-        animation_controller = AnimationController(
-            sprite_model=sprite_model,
-        )
-
-        assert hasattr(animation_controller, "frameAdvanced"), (
-            "AnimationController missing frameAdvanced signal"
-        )
+        AnimationController(sprite_model=sprite_model)
 
         # Trigger frame change by emitting the signal directly
         # since set_current_frame takes only 1 argument (frame index)
@@ -88,23 +82,20 @@ class TestCriticalSignalConnections:
         segment_manager.set_auto_save_enabled(False)
 
         # Verify segment manager has expected signals (camelCase naming)
-        expected_signals = ["segmentAdded", "segmentRemoved", "segmentUpdated", "segmentsCleared"]
+        expected_signals = ["segmentRemoved", "segmentRenamed", "segmentsCleared"]
         for signal_name in expected_signals:
             assert hasattr(segment_manager, signal_name), (
                 f"AnimationSegmentManager missing {signal_name} signal"
             )
 
-        # Test signal emission
-        spy = QSignalSpy(segment_manager.segmentAdded)
-
-        # Set sprite context and add a segment using the actual API
+        # Adding a segment populates the manager's storage
         import uuid
 
         segment_manager.set_sprite_context(f"test_{uuid.uuid4().hex[:8]}.png", 20)
-        segment_manager.add_segment("TestSignal", 0, 5)
+        success, _ = segment_manager.add_segment("TestSignal", 0, 5)
 
-        # Verify signal was emitted
-        assert spy.count() > 0, "segmentAdded signal not emitted"
+        assert success
+        assert segment_manager.get_segment("TestSignal") is not None
 
 
 @pytest.mark.integration
@@ -141,34 +132,17 @@ class TestSignalDataFlow:
     def test_animation_control_signal_chain(self, qapp):
         """Test signal chain for animation control."""
         model = SpriteModel()
+        controller = AnimationController(sprite_model=model)
 
-        # Initialize controller (single-step constructor DI)
-        controller = AnimationController(
-            sprite_model=model,
-        )
-
-        # Track signal emissions
-        fps_changes = []
-        status_changes = []
-
-        def track_fps(fps):
-            fps_changes.append(fps)
-
-        def track_status(status):
-            status_changes.append(status)
-
-        if hasattr(controller, "fpsChanged"):
-            controller.fpsChanged.connect(track_fps)
-        if hasattr(controller, "statusChanged"):
-            controller.statusChanged.connect(track_status)
+        status_changes: list[str] = []
+        controller.statusChanged.connect(status_changes.append)
 
         # Change FPS
         controller.set_fps(15)
 
-        # Verify signals were emitted
-        assert len(fps_changes) > 0, "FPS change signal not emitted"
-        assert 15 in fps_changes, "Correct FPS value not emitted"
-        assert len(status_changes) > 0, "Status change signal not emitted"
+        # Status emits should describe the FPS change; controller state should reflect it
+        assert controller.current_fps == 15
+        assert any("15" in msg for msg in status_changes)
 
 
 @pytest.mark.integration

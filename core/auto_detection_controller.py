@@ -29,8 +29,6 @@ class AutoDetectionController(QObject):
     # ============================================================================
 
     # Detection workflow signals
-    detectionStarted = Signal(str)  # workflow_type: "comprehensive", "frame", "margins", "spacing"
-    detectionCompleted = Signal(str, bool, str)  # workflow_type, success, message
     detectionFailed = Signal(str, str)  # workflow_type, error_message
 
     # Detection results dialog signal
@@ -65,8 +63,6 @@ class AutoDetectionController(QObject):
             self.statusUpdate.emit("No sprite sheet loaded", 3000)
             return
 
-        self.detectionStarted.emit("comprehensive")
-
         try:
             # Run the comprehensive workflow
             success, result = self._sprite_model.comprehensive_auto_detect()
@@ -80,15 +76,6 @@ class AutoDetectionController(QObject):
             # Show detailed results dialog
             self._emit_detection_results(success, result)
 
-            if success:
-                self.detectionCompleted.emit(
-                    "comprehensive", True, "Auto-detection completed successfully"
-                )
-            else:
-                self.detectionCompleted.emit(
-                    "comprehensive", False, "Auto-detection completed with issues"
-                )
-
         except Exception as e:
             logger.warning("Comprehensive auto-detection failed: %s", e, exc_info=True)
             self.detectionFailed.emit("comprehensive", str(e))
@@ -98,8 +85,6 @@ class AutoDetectionController(QObject):
         if not self._sprite_model or not self._sprite_model.original_sprite_sheet:
             self.statusUpdate.emit("No sprite sheet loaded", 3000)
             return
-
-        self.detectionStarted.emit("frame")
 
         try:
             # Try enhanced rectangular detection first
@@ -111,7 +96,6 @@ class AutoDetectionController(QObject):
                 confidence = "medium"
                 self.buttonConfidenceUpdate.emit("frame", confidence, message)
                 self.statusUpdate.emit(message, 3000)
-                self.detectionCompleted.emit("frame", True, message)
             else:
                 self.buttonConfidenceUpdate.emit("frame", "failed", message)
                 self.statusUpdate.emit(f"Frame detection failed: {message}", 3000)
@@ -127,8 +111,6 @@ class AutoDetectionController(QObject):
             self.statusUpdate.emit("No sprite sheet loaded", 3000)
             return
 
-        self.detectionStarted.emit("margins")
-
         try:
             success, offset_x, offset_y, message = self._sprite_model.auto_detect_margins()
 
@@ -139,7 +121,6 @@ class AutoDetectionController(QObject):
                 confidence = "high" if offset_x > 0 or offset_y > 0 else "medium"
                 self.buttonConfidenceUpdate.emit("margins", confidence, message)
                 self.statusUpdate.emit(message, 3000)
-                self.detectionCompleted.emit("margins", True, message)
             else:
                 self.buttonConfidenceUpdate.emit("margins", "failed", message)
                 self.statusUpdate.emit(f"Margin detection failed: {message}", 3000)
@@ -155,8 +136,6 @@ class AutoDetectionController(QObject):
             self.statusUpdate.emit("No sprite sheet loaded", 3000)
             return
 
-        self.detectionStarted.emit("spacing")
-
         try:
             success, spacing_x, spacing_y, message = (
                 self._sprite_model.auto_detect_spacing_enhanced()
@@ -168,7 +147,6 @@ class AutoDetectionController(QObject):
                 confidence = "medium"
                 self.buttonConfidenceUpdate.emit("spacing", confidence, message)
                 self.statusUpdate.emit(message, 3000)
-                self.detectionCompleted.emit("spacing", True, message)
             else:
                 self.buttonConfidenceUpdate.emit("spacing", "failed", message)
                 self.statusUpdate.emit(f"Spacing detection failed: {message}", 3000)

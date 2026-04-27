@@ -150,10 +150,8 @@ class AnimationSegmentManager(QObject):
     """Manages animation segments with persistence and validation."""
 
     # Signals
-    segmentAdded = Signal(AnimationSegment)
     segmentRemoved = Signal(str)  # segment_name
     segmentRenamed = Signal(str, str)  # (old_name, new_name)
-    segmentUpdated = Signal(AnimationSegment)
     segmentsCleared = Signal()
 
     def __init__(self):
@@ -267,7 +265,6 @@ class AnimationSegmentManager(QObject):
 
         # Add segment
         self._segments[name] = segment
-        self.segmentAdded.emit(segment)
 
         # Auto-save if enabled
         if self._auto_save_enabled:
@@ -375,8 +372,6 @@ class AnimationSegmentManager(QObject):
             del self._segments[name]
             self._segments[new_name] = segment
             self.segmentRenamed.emit(name, new_name)
-        else:
-            self.segmentUpdated.emit(segment)
 
         # Auto-save if enabled
         if self._auto_save_enabled:
@@ -600,7 +595,6 @@ class AnimationSegmentManager(QObject):
                 is_valid, error = segment.validate(self._max_frames)
                 if is_valid:
                     self._segments[segment.name] = segment
-                    self.segmentAdded.emit(segment)
                     loaded_count += 1
                 else:
                     skipped_segments.append((segment.name, error))

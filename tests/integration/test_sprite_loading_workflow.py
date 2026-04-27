@@ -202,8 +202,8 @@ class TestComponentInteraction:
             sprite_model=configured_sprite_model,
         )
 
-        # Signal spies
-        frame_advanced_spy = QSignalSpy(animation_controller.frameAdvanced)
+        # Signal spy on the model's frameChanged (the canonical frame-advance signal)
+        frame_changed_spy = QSignalSpy(configured_sprite_model.frameChanged)
 
         # Start animation
         animation_controller.start_animation()
@@ -212,8 +212,8 @@ class TestComponentInteraction:
         # Simulate frame advancement (call internal timer callback)
         animation_controller._on_timer_timeout()
 
-        # Verify frame advancement signal was emitted
-        assert frame_advanced_spy.count() > 0
+        # Verify the model emitted frameChanged from next_frame()
+        assert frame_changed_spy.count() > 0
 
         # Stop animation
         animation_controller.stop_animation()
@@ -275,21 +275,12 @@ class TestRealComponentIntegration:
         signals = real_sprite_system.get_real_signal_connections()
         assert len(signals) > 0
 
-        # Connect real signal spies
-        animation_spy = real_signal_tester.connect_spy(
-            signals["animation_started"], "animation_started"
-        )
-        fps_spy = real_signal_tester.connect_spy(signals["fps_changed"], "fps_changed")
-        state_spy = real_signal_tester.connect_spy(
-            signals["playback_state_changed"], "state_changed"
-        )
+        # Connect real signal spies on live signals only
+        real_signal_tester.connect_spy(signals["animation_started"], "animation_started")
 
-        # Test real FPS change workflow
+        # FPS change should be reflected in controller state (signal was test-only)
         real_sprite_system.animation_controller.set_fps(20)
-        assert real_signal_tester.verify_emission("fps_changed", count=1)
-
-        fps_args = real_signal_tester.get_signal_args("fps_changed", 0)
-        assert fps_args[0] == 20
+        assert real_sprite_system.animation_controller.current_fps == 20
 
         # Test real animation workflow
         start_success = real_sprite_system.animation_controller.start_animation()
@@ -297,10 +288,6 @@ class TestRealComponentIntegration:
 
         # Verify real signals were emitted
         assert real_signal_tester.verify_emission("animation_started", count=1)
-        assert real_signal_tester.verify_emission("state_changed", count=1)
-
-        state_args = real_signal_tester.get_signal_args("state_changed", 0)
-        assert state_args[0] is True  # Should emit True when starting
 
         # Test animation is actually running
         assert real_sprite_system.animation_controller.is_playing
@@ -349,24 +336,23 @@ class TestRealComponentIntegration:
         # Set specific timing
         controller.set_fps(30)  # 33ms intervals
 
-        # Get real signals
+        # Spy on the model's frameChanged (canonical frame-advance signal)
+        frame_spy = QSignalSpy(real_sprite_system.sprite_model.frameChanged)
         signals = real_sprite_system.get_real_signal_connections()
-        frame_spy = real_signal_tester.connect_spy(signals["frame_advanced"], "frame_advanced")
-        timing_spy = real_signal_tester.connect_spy(signals["status_changed"], "status")
+        real_signal_tester.connect_spy(signals["status_changed"], "status")
 
         # Start real animation
         controller.start_animation()
 
         # Wait for real frame advancement
-        frame_advanced = real_signal_tester.wait_for_signal("frame_advanced", timeout=100)
+        frame_advanced = frame_spy.wait(100)
 
         # Verify real timing behavior
         if frame_advanced:
-            frame_count = real_signal_tester.get_spy_count("frame_advanced")
             status_count = real_signal_tester.get_spy_count("status")
 
             # Should have some activity
-            assert frame_count >= 0  # Accept any result due to timing
+            assert frame_spy.count() >= 0  # Accept any result due to timing
             assert status_count >= 1  # Should have status messages
 
         # Test actual timer interval calculation

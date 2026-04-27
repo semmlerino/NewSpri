@@ -91,19 +91,11 @@ class TestTimerTimeout:
         # Start animation
         animation_controller.start_animation()
 
-        # Capture signal emission
-        frame_advanced_spy = []
-        animation_controller.frameAdvanced.connect(lambda idx: frame_advanced_spy.append(idx))
-
         # Simulate timer timeout
         animation_controller._on_timer_timeout()
 
         # Verify next_frame was called
         mock_sprite_model.next_frame.assert_called_once()
-
-        # Verify frameAdvanced signal was emitted
-        assert len(frame_advanced_spy) == 1
-        assert frame_advanced_spy[0] == 1  # next_frame returns (1, True)
 
     def test_timer_timeout_animation_completion(
         self, animation_controller: AnimationController, mock_sprite_model: MagicMock
@@ -179,15 +171,12 @@ class TestSignalOrdering:
         animation_controller.animationStarted.connect(
             lambda: signal_order.append("animationStarted")
         )
-        animation_controller.playbackStateChanged.connect(
-            lambda state: signal_order.append(f"playbackStateChanged({state})")
-        )
         animation_controller.statusChanged.connect(lambda msg: signal_order.append("statusChanged"))
 
         animation_controller.start_animation()
 
         # Verify signal order
-        assert signal_order == ["animationStarted", "playbackStateChanged(True)", "statusChanged"]
+        assert signal_order == ["animationStarted", "statusChanged"]
 
     def test_pause_animation_signal_order(self, animation_controller: AnimationController) -> None:
         """Pause animation should emit signals in correct order."""
@@ -197,15 +186,12 @@ class TestSignalOrdering:
         signal_order = []
 
         animation_controller.animationPaused.connect(lambda: signal_order.append("animationPaused"))
-        animation_controller.playbackStateChanged.connect(
-            lambda state: signal_order.append(f"playbackStateChanged({state})")
-        )
         animation_controller.statusChanged.connect(lambda msg: signal_order.append("statusChanged"))
 
         animation_controller.pause_animation()
 
         # Verify signal order
-        assert signal_order == ["animationPaused", "playbackStateChanged(False)", "statusChanged"]
+        assert signal_order == ["animationPaused", "statusChanged"]
 
 
 # ============================================================================

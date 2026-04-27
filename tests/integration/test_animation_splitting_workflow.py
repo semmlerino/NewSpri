@@ -490,7 +490,7 @@ class TestRealAnimationSplittingIntegration:
         assert controller.is_playing
 
         # Wait for at least one frame to advance
-        with qtbot.waitSignal(controller.frameAdvanced, timeout=500):
+        with qtbot.waitSignal(viewer._sprite_model.frameChanged, timeout=500):
             pass  # Signal should fire within timeout
 
         controller.stop_animation()
@@ -562,7 +562,7 @@ class TestRealAnimationSplittingIntegration:
         assert controller.is_playing
 
         # Wait for at least one frame to advance
-        with qtbot.waitSignal(controller.frameAdvanced, timeout=500):
+        with qtbot.waitSignal(viewer._sprite_model.frameChanged, timeout=500):
             pass  # Signal should fire within timeout
 
         controller.stop_animation()

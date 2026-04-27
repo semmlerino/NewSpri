@@ -561,8 +561,6 @@ class TestAutoDetectionController:
         )
 
         # Check workflow signals
-        assert hasattr(controller, "detectionStarted")
-        assert hasattr(controller, "detectionCompleted")
         assert hasattr(controller, "detectionFailed")
 
         # Check UI update signals
@@ -613,16 +611,10 @@ class TestAutoDetectionController:
             sprite_model=mock_sprite_model,
         )
 
-        # Test signals
-        started_spy = QSignalSpy(controller.detectionStarted)
-        completed_spy = QSignalSpy(controller.detectionCompleted)
         frame_spy = QSignalSpy(controller.frameSettingsDetected)
 
         controller.run_frame_detection()
 
-        assert started_spy.count() == 1
-        assert started_spy.at(0)[0] == "frame"
-        assert completed_spy.count() == 1
         assert frame_spy.count() == 1
         assert frame_spy.at(0)[0] == 32  # width
         assert frame_spy.at(0)[1] == 32  # height

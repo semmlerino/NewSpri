@@ -165,7 +165,6 @@ class AnimationGridView(QWidget):
     # Signals
     frameSelected = Signal(int)  # frame_index (for status updates)
     framePreviewRequested = Signal(int)  # frame_index (for double-click preview)
-    selectionChanged = Signal(list)  # selected_frame_indices
     segmentCreated = Signal(AnimationSegment)  # new_segment
     segmentDeleted = Signal(str)  # segment_name
     segmentRenameRequested = Signal(str, str)  # old_name, new_name (validate-first)
@@ -271,10 +270,7 @@ class AnimationGridView(QWidget):
 
     def set_frames(self, frames: list[QPixmap]):
         """Set the frames to display in the grid."""
-        had_selection = bool(self._selected_frames)
         self._clear_selection()
-        if had_selection:
-            self.selectionChanged.emit([])
         self._frames = frames
         self._clear_grid()
         self._populate_grid()
@@ -288,8 +284,7 @@ class AnimationGridView(QWidget):
         # Clear layout
         while self._grid_layout.count():
             item = self._grid_layout.takeAt(0)
-            widget = item.widget()
-            if widget is not None:
+            if item is not None and (widget := item.widget()) is not None:
                 widget.deleteLater()
 
     def _populate_grid(self):
@@ -346,9 +341,6 @@ class AnimationGridView(QWidget):
 
         # Emit signal for status updates
         self.frameSelected.emit(frame_index)
-
-        # Emit selection changed signal
-        self.selectionChanged.emit(list(self._selected_frames))
 
     def _on_frame_double_clicked(self, frame_index: int):
         """Handle frame double-click for preview."""
@@ -689,7 +681,6 @@ class AnimationGridView(QWidget):
             self._is_dragging = False
             self._drag_start_frame = None
             self._pre_drag_selection.clear()
-            self.selectionChanged.emit(list(self._selected_frames))
             self._update_selection_controls()
 
         super().mouseReleaseEvent(event)

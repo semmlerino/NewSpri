@@ -92,13 +92,9 @@ class RealSpriteSystem:
             return {}
 
         return {
-            "fps_changed": self.animation_controller.fpsChanged,
-            "playback_state_changed": self.animation_controller.playbackStateChanged,
-            "loop_mode_changed": self.animation_controller.loopModeChanged,
             "animation_started": self.animation_controller.animationStarted,
             "animation_paused": self.animation_controller.animationPaused,
             "animation_stopped": self.animation_controller.animationStopped,
-            "frame_advanced": self.animation_controller.frameAdvanced,
             "status_changed": self.animation_controller.statusChanged,
             "error_occurred": self.animation_controller.errorOccurred,
         }

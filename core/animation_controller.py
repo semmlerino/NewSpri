@@ -31,14 +31,6 @@ class AnimationController(QObject):
     animationStopped = Signal()  # Animation playback stopped
     animationCompleted = Signal()  # Animation completed (non-looping)
 
-    # Frame Control Signals
-    frameAdvanced = Signal(int)  # Frame advanced to index
-    playbackStateChanged = Signal(bool)  # Playing state changed
-
-    # Configuration Signals
-    fpsChanged = Signal(int)  # Animation speed changed
-    loopModeChanged = Signal(bool)  # Loop mode toggled
-
     # Error & Status Signals
     errorOccurred = Signal(str)  # Error in animation processing
     statusChanged = Signal(str)  # Status message updates
@@ -79,10 +71,6 @@ class AnimationController(QObject):
 
         # Timer precision tracking (for get_actual_fps)
         self._timer_precision: float = 0.0
-
-        # Guard flag: True while _on_timer_timeout is driving a frame advance.
-        # Used by _on_model_frame_changed to avoid double-emitting frameAdvanced.
-        self._timer_driving_frame: bool = False
 
         # Connect timer
         self._animation_timer.timeout.connect(self._on_timer_timeout)
@@ -131,7 +119,6 @@ class AnimationController(QObject):
 
         # Notify components
         self.animationStarted.emit()
-        self.playbackStateChanged.emit(True)
         self.statusChanged.emit(f"Animation started at {self._current_fps} FPS")
 
         return True
@@ -144,7 +131,6 @@ class AnimationController(QObject):
 
             # Notify components
             self.animationPaused.emit()
-            self.playbackStateChanged.emit(False)
             self.statusChanged.emit("Animation paused")
 
     def stop_animation(self) -> None:
@@ -159,7 +145,6 @@ class AnimationController(QObject):
 
             # Notify components
             self.animationStopped.emit()
-            self.playbackStateChanged.emit(False)
             self.statusChanged.emit("Animation stopped")
 
     def toggle_playback(self) -> bool:
@@ -215,7 +200,6 @@ class AnimationController(QObject):
             self._animation_timer.setInterval(interval_ms)
 
         # Notify components
-        self.fpsChanged.emit(fps)
         self.statusChanged.emit(f"Animation speed set to {fps} FPS")
 
         return True
@@ -228,7 +212,6 @@ class AnimationController(QObject):
         self._sync_state_to_model()
 
         # Notify components
-        self.loopModeChanged.emit(enabled)
         mode_text = "enabled" if enabled else "disabled"
         self.statusChanged.emit(f"Animation loop {mode_text}")
 
@@ -280,17 +263,7 @@ class AnimationController(QObject):
             return
 
         try:
-            # Set guard so _on_model_frame_changed knows this is timer-driven
-            # and skips its own frameAdvanced emit to prevent double-firing.
-            self._timer_driving_frame = True
-            try:
-                # Advance frame using model logic
-                frame_index, should_continue = self._sprite_model.next_frame()
-            finally:
-                self._timer_driving_frame = False
-
-            # Emit frame advanced signal
-            self.frameAdvanced.emit(frame_index)
+            _, should_continue = self._sprite_model.next_frame()
 
             # Handle animation completion (non-looping)
             if not should_continue:
@@ -391,26 +364,14 @@ class AnimationController(QObject):
             )
 
     def _on_model_frame_changed(self, current_frame: int, total_frames: int) -> None:
-        """
-        Handle frame change in model.
-        Distinguishes between timer-driven and manual frame changes.
-        """
-        # Check if this is a manual frame change (not timer-driven)
+        """Pause animation when a manual frame change is detected."""
+        # If we think we're playing but the timer is stopped, the frame change
+        # came from outside the timer loop — pause and report.
         if self._is_playing and not self._animation_timer.isActive():
-            # Timer is not active but we're supposed to be playing - this is manual
             self.pause_animation()
             self.statusChanged.emit(
                 f"Animation paused - manual frame change to {current_frame + 1}/{total_frames}"
             )
-
-        # Skip frameAdvanced here when the timer is already driving the frame change:
-        # _on_timer_timeout emits frameAdvanced after next_frame() returns, so emitting
-        # it again here would cause every animated frame to fire the signal twice.
-        if self._timer_driving_frame:
-            return
-
-        # Emit frame advanced signal for UI synchronization (manual / non-timer path)
-        self.frameAdvanced.emit(current_frame)
 
     def _on_model_error(self, error_message: str) -> None:
         """
