@@ -4,9 +4,6 @@ Integration tests for playback controls, including navigation buttons.
 Tests the complete integration of playback controls with sprite viewer.
 """
 
-import os
-import tempfile
-
 import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPainter, QPixmap
@@ -21,7 +18,7 @@ class TestPlaybackControlsIntegration:
     """Test playback controls integration with the main application."""
 
     @pytest.fixture
-    def sprite_viewer_with_frames(self, qtbot):
+    def sprite_viewer_with_frames(self, qtbot, tmp_path):
         """Create a sprite viewer with test frames loaded."""
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
@@ -36,19 +33,15 @@ class TestPlaybackControlsIntegration:
             painter.fillRect(i * 36 + 2, 2, 32, 32, color)
         painter.end()
 
-        # Save and load properly
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            sprite_sheet.save(tmp.name)
-            tmp_path = tmp.name
+        sprite_path = tmp_path / "playback_controls.png"
+        sprite_sheet.save(str(sprite_path), "PNG")
 
-        _success, _ = viewer._sprite_model.load_sprite_sheet(tmp_path)
+        _success, _ = viewer._sprite_model.load_sprite_sheet(str(sprite_path))
 
         # Extract frames if CCL didn't auto-detect
         if len(viewer._sprite_model.sprite_frames) == 0:
             viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
             viewer._sprite_model.extract_frames(32, 32, 2, 2, 4, 0)
-
-        os.unlink(tmp_path)
 
         # Update playback controls with frame range
         frame_count = len(viewer._sprite_model.sprite_frames)
@@ -127,18 +120,14 @@ class TestPlaybackControlsIntegration:
         if len(viewer._sprite_model.sprite_frames) < 3:
             pytest.skip("Need at least 3 frames")
 
-        # Start playback - click and wait for state
+        # Start playback. QPushButton.click() emits synchronously in these widget tests.
         viewer._playback_controls.play_button.click()
         QApplication.processEvents()
-        qtbot.waitUntil(lambda: viewer._animation_controller.is_playing, timeout=2000)
-
         assert viewer._animation_controller.is_playing
 
-        # Stop playback - use direct method for reliability
+        # Stop playback directly for deterministic cleanup.
         viewer._animation_controller.pause_animation()
         QApplication.processEvents()
-        qtbot.waitUntil(lambda: not viewer._animation_controller.is_playing, timeout=2000)
-
         assert not viewer._animation_controller.is_playing
 
         # Reset to a known position in the middle
@@ -232,10 +221,10 @@ class TestPlaybackControlsIntegration:
         if len(viewer._sprite_model.sprite_frames) < 2:
             pytest.skip("Need at least 2 frames")
 
-        # Start playback
+        # Start playback. QPushButton.click() emits synchronously in these widget tests.
         viewer._playback_controls.play_button.click()
         QApplication.processEvents()
-        qtbot.waitUntil(lambda: viewer._animation_controller.is_playing, timeout=2000)
+        assert viewer._animation_controller.is_playing
 
         # Change FPS while playing
         new_fps = 30
@@ -250,8 +239,6 @@ class TestPlaybackControlsIntegration:
         # Stop playback directly
         viewer._animation_controller.pause_animation()
         QApplication.processEvents()
-        qtbot.waitUntil(lambda: not viewer._animation_controller.is_playing, timeout=2000)
-
         assert not viewer._animation_controller.is_playing
 
     def _create_key_event(self, key, modifiers):
@@ -266,7 +253,7 @@ class TestPlaybackControlsErrorHandling:
     """Test error handling in playback controls integration."""
 
     @pytest.fixture
-    def sprite_viewer_with_frames(self, qtbot):
+    def sprite_viewer_with_frames(self, qtbot, tmp_path):
         """Create a sprite viewer with test frames loaded."""
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
@@ -281,17 +268,14 @@ class TestPlaybackControlsErrorHandling:
             painter.fillRect(i * 36 + 2, 2, 32, 32, color)
         painter.end()
 
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            sprite_sheet.save(tmp.name)
-            tmp_path = tmp.name
+        sprite_path = tmp_path / "playback_errors.png"
+        sprite_sheet.save(str(sprite_path), "PNG")
 
-        viewer._sprite_model.load_sprite_sheet(tmp_path)
+        viewer._sprite_model.load_sprite_sheet(str(sprite_path))
 
         if len(viewer._sprite_model.sprite_frames) == 0:
             viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
             viewer._sprite_model.extract_frames(32, 32, 2, 2, 4, 0)
-
-        os.unlink(tmp_path)
 
         frame_count = len(viewer._sprite_model.sprite_frames)
         if frame_count > 0:
@@ -301,7 +285,7 @@ class TestPlaybackControlsErrorHandling:
         return viewer
 
     @pytest.mark.integration
-    def test_invalid_frame_navigation(self, qtbot):
+    def test_invalid_frame_navigation(self, qtbot, tmp_path):
         """Test handling of invalid frame navigation attempts."""
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
@@ -315,17 +299,14 @@ class TestPlaybackControlsErrorHandling:
             painter.fillRect(i * 36 + 2, 2, 32, 32, Qt.red)
         painter.end()
 
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            sprite_sheet.save(tmp.name)
-            tmp_path = tmp.name
+        sprite_path = tmp_path / "invalid_navigation.png"
+        sprite_sheet.save(str(sprite_path), "PNG")
 
-        viewer._sprite_model.load_sprite_sheet(tmp_path)
+        viewer._sprite_model.load_sprite_sheet(str(sprite_path))
 
         if len(viewer._sprite_model.sprite_frames) == 0:
             viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
             viewer._sprite_model.extract_frames(32, 32, 2, 2, 4, 0)
-
-        os.unlink(tmp_path)
 
         frame_count = len(viewer._sprite_model.sprite_frames)
         if frame_count == 0:
@@ -349,27 +330,22 @@ class TestPlaybackControlsErrorHandling:
         if len(viewer._sprite_model.sprite_frames) < 3:
             pytest.skip("Need at least 3 frames")
 
-        # Start rapid playback
+        # Start rapid playback without waiting on timer events.
         viewer._playback_controls.fps_slider.setValue(60)
         viewer._playback_controls.play_button.click()
         QApplication.processEvents()
-        qtbot.waitUntil(lambda: viewer._animation_controller.is_playing, timeout=2000)
+        assert viewer._animation_controller.is_playing
 
-        # Navigate while playing - should stop playback
+        # Navigate while the animation timer is active.
         viewer._playback_controls.next_btn.click()
         QApplication.processEvents()
         viewer._playback_controls.prev_btn.click()
         QApplication.processEvents()
 
-        # Wait for playback to stop (navigation should stop it)
-        # Use longer timeout and direct check
-        try:
-            qtbot.waitUntil(lambda: not viewer._animation_controller.is_playing, timeout=2000)
-        except Exception:
-            # If timeout, stop directly
-            viewer._animation_controller.pause_animation()
-            QApplication.processEvents()
-
-        # Frame should be valid
+        # Manual navigation should leave playback and frame state coherent.
+        assert viewer._animation_controller.is_playing
         frame_count = len(viewer._sprite_model.sprite_frames)
         assert 0 <= viewer._sprite_model.current_frame < frame_count
+
+        viewer._animation_controller.pause_animation()
+        QApplication.processEvents()

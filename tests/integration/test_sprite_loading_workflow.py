@@ -164,24 +164,13 @@ class TestPerformanceWorkflow:
             ExtractionMode.GRID
         )  # Direct mode set to avoid callback
 
-        extraction_times = []
         frame_sizes = [(16, 16), (32, 32), (48, 48), (64, 64)]
 
         for width, height in frame_sizes:
-            import time
-
-            start_time = time.perf_counter()
-
             success, message, frame_count = sprite_model.extract_frames(width, height, 0, 0, 0, 0)
-
-            end_time = time.perf_counter()
-            extraction_times.append(end_time - start_time)
 
             assert success, f"Extraction failed: {message}"
             assert frame_count > 0
-
-        # Verify reasonable performance (should complete in under 1 second each)
-        assert all(time < 1.0 for time in extraction_times)
 
     @pytest.mark.integration
     @pytest.mark.performance

@@ -191,53 +191,5 @@ class TestSignalErrorHandling:
             dialog.exportCompleted.emit("test_path")  # Should not crash
 
 
-def test_signal_documentation():
-    """Meta-test: Verify all signals are documented."""
-    # This test helps maintain signal documentation
-
-    components = [
-        (SpriteModel, ["frameChanged", "dataLoaded", "errorOccurred"]),
-        (AnimationController, ["fpsChanged", "playbackStateChanged", "frameAdvanced"]),
-        (ExportDialog, ["exportRequested"]),  # Should have this signal
-    ]
-
-    missing_docs = [
-        f"{component_class.__name__}.{signal_name}"
-        for component_class, expected_signals in components
-        for signal_name in expected_signals
-        if not hasattr(component_class, signal_name)
-    ]
-
-    # This helps identify missing signals
-    if missing_docs:
-        pytest.skip(f"Missing signals (expected): {', '.join(missing_docs)}")
-
-
-# Signal connection verification fixture
-@pytest.fixture
-def signal_connection_tracker():
-    """Fixture to track signal connections for testing."""
-    connections = []
-
-    class ConnectionTracker:
-        def track_connection(self, signal, slot, connection_type="direct"):
-            connections.append({"signal": signal, "slot": slot, "type": connection_type})
-
-        def verify_connection_made(self, signal_name):
-            return any(
-                c["signal"].__name__ == signal_name
-                for c in connections
-                if hasattr(c["signal"], "__name__")
-            )
-
-        def get_connection_count(self):
-            return len(connections)
-
-        def reset(self):
-            connections.clear()
-
-    return ConnectionTracker()
-
-
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

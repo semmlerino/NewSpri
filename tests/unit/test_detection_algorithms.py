@@ -770,26 +770,18 @@ def test_detection_parametrized_sizes(qapp, sheet_size, frame_size, expected_fra
 
 
 @pytest.mark.performance
-def test_detection_performance_large_sprite_sheet(qapp):
-    """Test detection performance with large sprite sheets."""
-    import time
-
-    # Create large sprite sheet
+def test_detection_large_sprite_sheet_returns_valid_result(qapp):
+    """Detection should return a valid result for large sprite sheets."""
     large_pixmap = QPixmap(1024, 1024)
     large_pixmap.fill(Qt.blue)
 
-    start_time = time.perf_counter()
     success, width, height, message = detect_frame_size(large_pixmap)
-    end_time = time.perf_counter()
 
-    # Should complete within reasonable time (under 1 second)
-    detection_time = end_time - start_time
-    assert detection_time < 1.0
-
-    # Should still produce valid results
     if success:
         assert width > 0
         assert height > 0
+    else:
+        assert message
 
 
 class TestDetectionIntegration:

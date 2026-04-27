@@ -3,8 +3,6 @@ Integration tests for concurrent operations.
 Tests behavior when multiple operations happen simultaneously.
 """
 
-import os
-import tempfile
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -20,7 +18,7 @@ class TestConcurrentOperations:
     """Test behavior when multiple operations happen simultaneously."""
 
     @pytest.fixture
-    def sprite_viewer_with_frames(self, qtbot):
+    def sprite_viewer_with_frames(self, qtbot, tmp_path):
         """Create a sprite viewer with test frames loaded."""
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
@@ -35,17 +33,14 @@ class TestConcurrentOperations:
             painter.fillRect(i * 36 + 2, 2, 32, 32, color)
         painter.end()
 
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            sprite_sheet.save(tmp.name)
-            tmp_path = tmp.name
+        sprite_path = tmp_path / "concurrent_operations.png"
+        sprite_sheet.save(str(sprite_path), "PNG")
 
-        viewer._sprite_model.load_sprite_sheet(tmp_path)
+        viewer._sprite_model.load_sprite_sheet(str(sprite_path))
 
         if len(viewer._sprite_model.sprite_frames) == 0:
             viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
             viewer._sprite_model.extract_frames(32, 32, 2, 2, 4, 0)
-
-        os.unlink(tmp_path)
 
         frame_count = len(viewer._sprite_model.sprite_frames)
         if frame_count > 0:
@@ -62,11 +57,9 @@ class TestConcurrentOperations:
         if len(viewer._sprite_model.sprite_frames) < 2:
             pytest.skip("Need at least 2 frames")
 
-        # 1. Start playback
-        viewer._playback_controls.play_button.click()
+        # 1. Start playback without waiting on timer events.
+        assert viewer._animation_controller.start_animation()
         QApplication.processEvents()
-        qtbot.waitUntil(lambda: viewer._animation_controller.is_playing, timeout=2000)
-
         assert viewer._animation_controller.is_playing
 
         # 2. Trigger export while playing (mock the dialog and export)
@@ -112,13 +105,11 @@ class TestConcurrentOperations:
             painter.fillRect(i * 36 + 2, 2, 32, 32, QColor(255, 0, 0))
         painter.end()
 
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            sprite_sheet.save(tmp.name)
-            tmp_path_file = tmp.name
+        sprite_path = tmp_path / "mode_change.png"
+        sprite_sheet.save(str(sprite_path), "PNG")
 
         # Load sprite
-        viewer._sprite_model.load_sprite_sheet(tmp_path_file)
-        os.unlink(tmp_path_file)
+        viewer._sprite_model.load_sprite_sheet(str(sprite_path))
 
         # Initial extraction with grid mode
         viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
@@ -149,10 +140,9 @@ class TestConcurrentOperations:
         if len(viewer._sprite_model.sprite_frames) < 2:
             pytest.skip("Need at least 2 frames")
 
-        # Start playback
-        viewer._playback_controls.play_button.click()
+        # Start playback without waiting on timer events.
+        assert viewer._animation_controller.start_animation()
         QApplication.processEvents()
-        qtbot.waitUntil(lambda: viewer._animation_controller.is_playing, timeout=2000)
 
         initial_playing = viewer._animation_controller.is_playing
         assert initial_playing
@@ -161,32 +151,36 @@ class TestConcurrentOperations:
         viewer._sprite_model.extract_frames(32, 32, 2, 2, 4, 0)
         QApplication.processEvents()
 
-        # System should handle this gracefully (frames replaced, playback state may change)
-        # At minimum, no crash should occur
+        frame_count = len(viewer._sprite_model.sprite_frames)
+        assert frame_count > 0
+        assert 0 <= viewer._sprite_model.current_frame < frame_count
+
+        if frame_count > 1:
+            assert viewer._animation_controller.is_playing
+            viewer._animation_controller.pause_animation()
+        else:
+            assert not viewer._animation_controller.is_playing
+        QApplication.processEvents()
 
     @pytest.mark.integration
-    def test_segment_creation_during_playback(self, qtbot, sprite_viewer_with_frames):
+    def test_segment_creation_during_playback(self, qtbot, sprite_viewer_with_frames, tmp_path):
         """Creating segments while animation plays should work."""
         viewer = sprite_viewer_with_frames
 
         if len(viewer._sprite_model.sprite_frames) < 4:
             pytest.skip("Need at least 4 frames")
 
-        # Start playback
-        viewer._playback_controls.play_button.click()
+        # Start playback without waiting on timer events.
+        assert viewer._animation_controller.start_animation()
         QApplication.processEvents()
-        qtbot.waitUntil(lambda: viewer._animation_controller.is_playing, timeout=2000)
+        assert viewer._animation_controller.is_playing
 
         # Access segment manager through controller
         segment_manager = viewer._segment_manager
 
-        # Set sprite context for segment manager (use unique name to avoid pollution)
-        import uuid
-
-        unique_sprite_name = f"test_sprite_{uuid.uuid4().hex[:8]}.png"
-        segment_manager.set_sprite_context(
-            unique_sprite_name, len(viewer._sprite_model.sprite_frames)
-        )
+        # Set sprite context for segment manager inside this test's temp directory.
+        sprite_path = tmp_path / "segment_during_playback.png"
+        segment_manager.set_sprite_context(str(sprite_path), len(viewer._sprite_model.sprite_frames))
 
         # Create segment during playback using correct API (individual args, not object)
         from PySide6.QtGui import QColor

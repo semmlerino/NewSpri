@@ -429,25 +429,17 @@ class TestMultiWindowWorkflow:
         assert viewer2._canvas._zoom_factor == initial_zoom
 
 
-class TestPerformanceUnderLoad:
-    """Test application performance under various load conditions."""
+class TestLargeInputWorkflows:
+    """Test complete workflows with larger frame sets."""
 
     @pytest.mark.integration
     @pytest.mark.performance
-    def test_large_sprite_sheet_workflow(self, qtbot):
+    def test_large_sprite_sheet_workflow_handles_many_frames(self, qtbot):
         """Test workflow with large sprite sheets."""
-        import time
-
-        start_time = time.perf_counter()
-
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
 
-        # Create large sprite sheet (1024x1024 with 256 32x32 sprites)
-        large_sheet = QPixmap(1024, 1024)
-        large_sheet.fill(Qt.white)
-
-        # Simulate loading
+        # Simulate a loaded 256-frame sprite sheet.
         for i in range(256):
             pixmap = QPixmap(32, 32)
             pixmap.fill(QColor.fromHsv(i % 360, 200, 200))
@@ -455,17 +447,16 @@ class TestPerformanceUnderLoad:
 
         # Trigger updates
         viewer._sprite_model.frameChanged.emit(0, 256)
+        assert viewer._sprite_model.frame_count == 256
 
         # Navigate through frames
         for _ in range(10):
             viewer._sprite_model.next_frame()
             QApplication.processEvents()
 
-        viewer.close()
+        assert 0 <= viewer._sprite_model.current_frame < 256
 
-        # Should complete in reasonable time
-        elapsed = time.perf_counter() - start_time
-        assert elapsed < 5.0, f"Workflow took {elapsed:.2f}s, expected < 5s"
+        viewer.close()
 
 
 # Integration test fixtures

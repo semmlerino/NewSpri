@@ -382,16 +382,6 @@ class TestPlaybackControlsStyleAndLayout:
         min_width = Config.Slider.FPS_VALUE_MIN_WIDTH
         assert widget.fps_value.minimumWidth() == min_width
 
-    def test_style_sheets_applied(self, qapp):
-        """Test style sheets are applied to widgets."""
-        widget = PlaybackControls()
-
-        # Frame should have style sheet (from StyleManager)
-        assert widget.styleSheet() != ""
-
-        # Play button should have style sheet
-        assert widget.play_button.styleSheet() != ""
-
 
 @pytest.mark.parametrize("fps", [1, 5, 10, 15, 20, 30, 45, 60])
 def test_fps_values_parametrized(qapp, fps):

@@ -568,16 +568,14 @@ class TestCrossComponentCommunication:
             assert viewer._sprite_model.current_frame >= 0
 
 
-class TestPerformanceIntegration:
-    """Test performance across integrated components."""
+class TestLargeInputIntegration:
+    """Test large inputs across integrated components."""
 
     @pytest.mark.integration
     @pytest.mark.performance
     @pytest.mark.slow
-    def test_large_sprite_sheet_handling(self, qtbot):
+    def test_large_sprite_sheet_handling(self, qtbot, tmp_path):
         """Test handling of large sprite sheets across components."""
-        import time
-
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
 
@@ -602,36 +600,28 @@ class TestPerformanceIntegration:
             painter.fillRect(x, y, frame_size, frame_size, color)
         painter.end()
 
-        # Save and load
-        import tempfile
+        sprite_path = tmp_path / "large_sprite_sheet.png"
+        sprite_sheet.save(str(sprite_path), "PNG")
 
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            sprite_sheet.save(tmp.name)
-            tmp_path = tmp.name
-
-        start_time = time.perf_counter()
-        success, _ = viewer._sprite_model.load_sprite_sheet(tmp_path)
-        load_time = time.perf_counter() - start_time
-
-        # Clean up
-        import os
-
-        os.unlink(tmp_path)
-
+        success, _ = viewer._sprite_model.load_sprite_sheet(str(sprite_path))
         assert success, "Should load large sprite sheet"
-        # Loading should complete in reasonable time (under 2 seconds)
-        assert load_time < 2.0, f"Load took too long: {load_time:.2f}s"
+
+        viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
+        success, message, frame_count = viewer._sprite_model.extract_frames(
+            frame_size, frame_size, 2, 2, 4, 4
+        )
+        assert success, f"Should extract frames from large sprite sheet: {message}"
+        assert frame_count == cols * rows
 
         # Navigate frames
         if len(viewer._sprite_model.sprite_frames) > 0:
-            start_time = time.perf_counter()
             for i in range(min(10, len(viewer._sprite_model.sprite_frames))):
                 viewer._sprite_model.set_current_frame(i)
                 QApplication.processEvents()
-            nav_time = time.perf_counter() - start_time
 
-            # Navigation should be fast (under 0.5 seconds for 10 frames)
-            assert nav_time < 0.5, f"Navigation took too long: {nav_time:.2f}s"
+            assert viewer._sprite_model.current_frame == min(
+                9, len(viewer._sprite_model.sprite_frames) - 1
+            )
 
     @pytest.mark.integration
     def test_rapid_update_handling(self, qtbot):

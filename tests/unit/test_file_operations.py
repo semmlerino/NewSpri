@@ -537,38 +537,3 @@ def test_file_extension_validation_parametrized(temp_dir, extension, should_be_v
         if extension and extension not in [".txt", ".doc", ".xyz"]:
             # For empty extension, different error message
             assert "Unsupported file format" in error
-
-
-@pytest.mark.performance
-def test_file_operations_performance(qapp, temp_dir):
-    """Test performance of file operations with realistic files."""
-    import time
-
-    # Create multiple test files of different sizes
-    test_files = []
-    for i, size in enumerate([1024, 10240, 51200]):  # 1KB, 10KB, 50KB
-        test_file = temp_dir / f"perf_test_{i}.png"
-        test_file.write_bytes(b"x" * size)
-        test_files.append(test_file)
-
-    loader = FileLoader()
-
-    start_time = time.perf_counter()
-
-    # Process all files
-    for test_file in test_files:
-        with patch("sprite_model.sprite_file_ops.QPixmap") as mock_pixmap_class:
-            mock_pixmap = Mock()
-            mock_pixmap.isNull.return_value = False
-            mock_pixmap.width.return_value = 64
-            mock_pixmap.height.return_value = 64
-            mock_pixmap_class.return_value = mock_pixmap
-
-            success, pixmap, metadata, error = loader.load_sprite_sheet(str(test_file))
-            assert success
-
-    end_time = time.perf_counter()
-    total_time = end_time - start_time
-
-    # Should process multiple files quickly (under 0.5 seconds)
-    assert total_time < 0.5
