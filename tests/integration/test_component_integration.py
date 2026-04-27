@@ -29,7 +29,7 @@ class TestModelViewControllerIntegration:
     """Test MVC component integration."""
 
     @pytest.mark.integration
-    def test_model_view_sync(self, qtbot):
+    def test_model_view_sync(self, qtbot, tmp_path):
         """Test that model changes properly update all views."""
         # Create components
         model = SpriteModel()
@@ -64,35 +64,16 @@ class TestModelViewControllerIntegration:
             painter.fillRect(x, y, 32, 32, color)
         painter.end()
 
-        # Save to temp file and load it
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            sprite_sheet.save(tmp.name)
-            tmp_path = tmp.name
+        sprite_path = tmp_path / "model_view_sync.png"
+        assert sprite_sheet.save(str(sprite_path), "PNG")
 
         # Load the sprite sheet
-        success, msg = model.load_sprite_sheet(tmp_path)
+        success, msg = model.load_sprite_sheet(str(sprite_path))
         assert success, f"Failed to load sprite sheet: {msg}"
 
-        # The default mode is now CCL, which should work with our gapped sprites
-        # If CCL doesn't detect 10 frames, fall back to grid mode
-        if len(model.sprite_frames) != 10:
-            # Set extraction mode to grid and extract manually
-            model.set_extraction_mode(ExtractionMode.GRID)
-            success, msg, count = model.extract_frames(32, 32, 2, 2, 4, 5)
-            assert success, f"Failed to extract frames: {msg}"
-            assert count == 10, f"Expected 10 frames, got {count}"
-        else:
-            # CCL worked, we should have 10 frames
-            assert len(model.sprite_frames) == 10, (
-                f"Expected 10 frames, got {len(model.sprite_frames)}"
-            )
-
-        # Clean up temp file
-        import os
-
-        os.unlink(tmp_path)
+        success, msg, count = model.extract_frames(32, 32, 2, 2, 4, 5)
+        assert success, f"Failed to extract frames: {msg}"
+        assert count == 10, f"Expected 10 frames, got {count}"
 
         # Verify views updated
         # Canvas receives pixmap from controller (MVC pattern)
@@ -121,7 +102,7 @@ class TestModelViewControllerIntegration:
         assert playback.frame_slider.value() == 5
 
     @pytest.mark.integration
-    def test_controller_coordination(self, qtbot):
+    def test_controller_coordination(self, qtbot, tmp_path):
         """Test coordination between different controllers."""
 
         model = SpriteModel()
@@ -153,33 +134,16 @@ class TestModelViewControllerIntegration:
             painter.fillRect(x, y, 32, 32, color)
         painter.end()
 
-        # Save to temp file and load it
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            sprite_sheet.save(tmp.name)
-            tmp_path = tmp.name
+        sprite_path = tmp_path / "controller_coordination.png"
+        assert sprite_sheet.save(str(sprite_path), "PNG")
 
         # Load and extract frames
-        success, msg = model.load_sprite_sheet(tmp_path)
+        success, msg = model.load_sprite_sheet(str(sprite_path))
         assert success
 
-        # The default mode is now CCL, which should work with our gapped sprites
-        # If CCL doesn't detect 16 frames, fall back to grid mode
-        if len(model.sprite_frames) != 16:
-            # Set extraction mode to grid and extract manually
-            model.set_extraction_mode(ExtractionMode.GRID)
-            success, msg, count = model.extract_frames(32, 32, 2, 2, 4, 4)
-            assert success
-            assert count == 16
-        else:
-            # CCL worked, we should have 16 frames
-            assert len(model.sprite_frames) == 16
-
-        # Clean up temp file
-        import os
-
-        os.unlink(tmp_path)
+        success, msg, count = model.extract_frames(32, 32, 2, 2, 4, 4)
+        assert success, f"Failed to extract frames: {msg}"
+        assert count == 16
 
         # Test animation controller
         animation_controller.start_animation()
@@ -199,7 +163,7 @@ class TestModelViewControllerIntegration:
         assert detection_controller._sprite_model == model
 
     @pytest.mark.integration
-    def test_signal_propagation_chain(self, qtbot):
+    def test_signal_propagation_chain(self, qtbot, tmp_path):
         """Test complex signal propagation chains."""
         # Create full component hierarchy
         model = SpriteModel()
@@ -245,21 +209,12 @@ class TestModelViewControllerIntegration:
         sprite_sheet = QPixmap(64, 64)
         sprite_sheet.fill(Qt.blue)
 
-        # Save to temp file and load it
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            sprite_sheet.save(tmp.name)
-            tmp_path = tmp.name
+        sprite_path = tmp_path / "signal_propagation.png"
+        assert sprite_sheet.save(str(sprite_path), "PNG")
 
         # Load the sprite sheet which should emit signals
-        success, msg = model.load_sprite_sheet(tmp_path)
+        success, msg = model.load_sprite_sheet(str(sprite_path))
         assert success, f"Failed to load sprite: {msg}"
-
-        # Clean up temp file
-        import os
-
-        os.unlink(tmp_path)
 
         # The test is really about signal propagation, not frame loading
         # Test the signals we can easily trigger
@@ -384,7 +339,7 @@ class TestUIComponentIntegration:
     """Test UI component integration."""
 
     @pytest.mark.integration
-    def test_canvas_playback_integration(self, qtbot):
+    def test_canvas_playback_integration(self, qtbot, tmp_path):
         """Test canvas and playback controls work together."""
 
         model = SpriteModel()
@@ -419,25 +374,15 @@ class TestUIComponentIntegration:
             painter.fillRect(i * 32 + 2, 2, 28, 28, color)
         painter.end()
 
-        # Save to temp file and load
-        import tempfile
+        sprite_path = tmp_path / "canvas_playback.png"
+        assert sprite_sheet.save(str(sprite_path), "PNG")
 
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            sprite_sheet.save(tmp.name)
-            tmp_path = tmp.name
-
-        success, _ = model.load_sprite_sheet(tmp_path)
+        success, msg = model.load_sprite_sheet(str(sprite_path))
         assert success, "Failed to load sprite sheet"
 
-        # Extract frames if needed
-        if len(model.sprite_frames) == 0:
-            model.set_extraction_mode(ExtractionMode.GRID)
-            model.extract_frames(32, 32, 0, 0, 0, 0)
-
-        # Clean up temp file
-        import os
-
-        os.unlink(tmp_path)
+        success, msg, count = model.extract_frames(32, 32, 0, 0, 0, 0)
+        assert success, f"Failed to extract frames: {msg}"
+        assert count == 8
 
         # Test playback control - use public API
         assert controller.is_playing is False
@@ -483,7 +428,7 @@ class TestCrossComponentCommunication:
     """Test communication across multiple component boundaries."""
 
     @pytest.mark.integration
-    def test_full_signal_flow(self, qtbot):
+    def test_full_signal_flow(self, qtbot, tmp_path):
         """Test signals flow through entire component hierarchy."""
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
@@ -515,28 +460,18 @@ class TestCrossComponentCommunication:
             painter.fillRect(i * 32 + 2, 2, 28, 28, color)
         painter.end()
 
-        # Save to temp file and load
-        import tempfile
+        sprite_path = tmp_path / "full_signal_flow.png"
+        assert sprite_sheet.save(str(sprite_path), "PNG")
 
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            sprite_sheet.save(tmp.name)
-            tmp_path = tmp.name
+        success, msg = viewer._sprite_model.load_sprite_sheet(str(sprite_path))
+        assert success, f"Failed to load sprite sheet: {msg}"
 
-        success, _ = viewer._sprite_model.load_sprite_sheet(tmp_path)
-
-        # Extract frames if CCL didn't work
-        if len(viewer._sprite_model.sprite_frames) == 0:
-            viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
-            viewer._sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
-
-        # Clean up temp file
-        import os
-
-        os.unlink(tmp_path)
+        success, msg, count = viewer._sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
+        assert success, f"Failed to extract frames: {msg}"
+        assert count == 5
 
         # Now trigger actions that cascade signals
-        if len(viewer._sprite_model.sprite_frames) > 2:
-            viewer._sprite_model.set_current_frame(2)
+        viewer._sprite_model.set_current_frame(2)
 
         viewer._canvas.set_zoom(2.0)
         viewer._frame_extractor.width_spin.setValue(48)
@@ -558,14 +493,11 @@ class TestCrossComponentCommunication:
 
         # Test setting invalid frame - should be clamped or rejected
         initial_frame = viewer._sprite_model.current_frame
-        viewer._sprite_model.set_current_frame(999)
+        result = viewer._sprite_model.set_current_frame(999)
 
-        # Frame should either be unchanged or clamped to valid range
-        if len(viewer._sprite_model.sprite_frames) > 0:
-            assert viewer._sprite_model.current_frame < len(viewer._sprite_model.sprite_frames)
-        else:
-            # No frames loaded, should stay at 0 or initial
-            assert viewer._sprite_model.current_frame >= 0
+        assert result is False
+        assert viewer._sprite_model.sprite_frames == []
+        assert viewer._sprite_model.current_frame == initial_frame
 
 
 class TestLargeInputIntegration:
@@ -614,17 +546,14 @@ class TestLargeInputIntegration:
         assert frame_count == cols * rows
 
         # Navigate frames
-        if len(viewer._sprite_model.sprite_frames) > 0:
-            for i in range(min(10, len(viewer._sprite_model.sprite_frames))):
-                viewer._sprite_model.set_current_frame(i)
-                QApplication.processEvents()
+        for i in range(10):
+            viewer._sprite_model.set_current_frame(i)
+            QApplication.processEvents()
 
-            assert viewer._sprite_model.current_frame == min(
-                9, len(viewer._sprite_model.sprite_frames) - 1
-            )
+        assert viewer._sprite_model.current_frame == 9
 
     @pytest.mark.integration
-    def test_rapid_update_handling(self, qtbot):
+    def test_rapid_update_handling(self, qtbot, tmp_path):
         """Test handling of rapid updates across components."""
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
@@ -643,27 +572,15 @@ class TestLargeInputIntegration:
             painter.fillRect(col * 32 + 2, row * 32 + 2, 28, 28, color)
         painter.end()
 
-        import tempfile
+        sprite_path = tmp_path / "rapid_update.png"
+        assert sprite_sheet.save(str(sprite_path), "PNG")
 
-        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp:
-            sprite_sheet.save(tmp.name)
-            tmp_path = tmp.name
+        success, msg = viewer._sprite_model.load_sprite_sheet(str(sprite_path))
+        assert success, f"Failed to load sprite sheet: {msg}"
 
-        success, _ = viewer._sprite_model.load_sprite_sheet(tmp_path)
-
-        # Extract frames if CCL didn't work
-        if len(viewer._sprite_model.sprite_frames) == 0:
-            viewer._sprite_model.set_extraction_mode(ExtractionMode.GRID)
-            viewer._sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
-
-        import os
-
-        os.unlink(tmp_path)
-
-        # Skip if no frames were loaded
-        frame_count = len(viewer._sprite_model.sprite_frames)
-        if frame_count == 0:
-            return
+        success, msg, frame_count = viewer._sprite_model.extract_frames(32, 32, 0, 0, 0, 0)
+        assert success, f"Failed to extract frames: {msg}"
+        assert frame_count == 50
 
         # Track frame changes
         frame_changes = []

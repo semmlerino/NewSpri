@@ -4,24 +4,21 @@ Provides reusable fixtures, test utilities, and setup/teardown for all test modu
 Configured for proper PySide6 integration with error suppression.
 """
 
+# ruff: noqa: I001
+
 import os
 import sys
 import tempfile
 import warnings
 from collections.abc import Generator
 from pathlib import Path
-from typing import Optional
 from unittest.mock import MagicMock, Mock
 
 import pytest
 
-# Import Qt mock fixtures
-from tests.fixtures.qt_mocks import (
-    QtButtons,
-    auto_mock_qmessagebox,
-    mock_qfiledialog,
-    mock_qinputdialog,
-    mock_qmessagebox,
+pytest_plugins = (
+    "tests.fixtures.common_fixtures",
+    "tests.fixtures.qt_mocks",
 )
 
 # Configure Qt environment BEFORE importing PySide6
@@ -36,115 +33,19 @@ warnings.filterwarnings("ignore", category=DeprecationWarning, module=".*qt.*")
 warnings.filterwarnings("ignore", category=DeprecationWarning, module=".*pyside.*")
 warnings.filterwarnings("ignore", category=RuntimeWarning, module=".*qt.*")
 
-# Now safely import PySide6
-try:
-    from PySide6.QtCore import Qt
-    from PySide6.QtGui import QImage, QPixmap
-    from PySide6.QtTest import QSignalSpy
-    from PySide6.QtWidgets import QApplication
-
-    PYSIDE6_AVAILABLE = True
-except ImportError:
-    PYSIDE6_AVAILABLE = False
-
-    # Create mock classes for when PySide6 is not available
-    class QApplication:
-        def __init__(self, args=None):
-            pass
-
-        @staticmethod
-        def instance():
-            return None
-
-        def setAttribute(self, attr, value):
-            pass
-
-        def setQuitOnLastWindowClosed(self, value):
-            pass
-
-        def processEvents(self):
-            pass
-
-        def quit(self):
-            pass
-
-    class QPixmap:
-        def __init__(self, width=100, height=100):
-            self._width, self._height = width, height
-
-        def width(self):
-            return self._width
-
-        def height(self):
-            return self._height
-
-        def isNull(self):
-            return False
-
-        def fill(self, color=None):
-            pass
-
-    class Qt:
-        AA_DontShowIconsInMenus = 1
-        AA_DontUseNativeMenuBar = 2
-        AA_DontUseNativeDialogs = 3
-        red = 4
-        green = 5
-        blue = 6
-        yellow = 7
-        white = 8
-        OpenHandCursor = 9
-
-    class QSignalSpy:
-        def __init__(self, signal):
-            self.signal = signal
-            self._calls = []
-
-        def __len__(self):
-            return len(self._calls)
-
-        def __getitem__(self, index):
-            return self._calls[index]
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QApplication
 
 
 # Add project root to Python path for imports
 PROJECT_ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
-# Import project modules for testing
-try:
-    from config import Config
-    from core.animation_controller import AnimationController
-    from core.auto_detection_controller import AutoDetectionController
-    from sprite_model import SpriteModel
-except ImportError:
-    # Create mock versions if imports fail
-    class Config:
-        class Canvas:
-            MIN_WIDTH = 600
-            MIN_HEIGHT = 400
-
-        class Animation:
-            DEFAULT_FPS = 10
-
-    class SpriteModel:
-        def __init__(self):
-            pass
-
-    class AnimationController:
-        def __init__(self):
-            pass
-
-    class AutoDetectionController:
-        def __init__(self):
-            pass
-
-
-# Import common fixtures from fixture modules
-try:
-    from tests.fixtures.common_fixtures import *  # noqa: F403
-except ImportError:
-    pass  # Fixtures may not be available in all environments
+from config import Config
+from core.animation_controller import AnimationController
+from core.auto_detection_controller import AutoDetectionController
+from sprite_model import SpriteModel
 
 
 # ============================================================================
@@ -158,10 +59,6 @@ def qapp() -> Generator[QApplication, None, None]:
     Session-scoped QApplication fixture for Qt-based tests.
     Ensures single QApplication instance across all tests with proper Qt configuration.
     """
-    if not PYSIDE6_AVAILABLE:
-        yield QApplication()
-        return
-
     app = QApplication.instance()
     if app is None:
         app = QApplication(["pytest"])
@@ -212,20 +109,14 @@ def sample_sprite_paths() -> dict:
 @pytest.fixture
 def mock_pixmap() -> QPixmap:
     """Mock QPixmap for testing."""
-    if PYSIDE6_AVAILABLE:
-        pixmap = QPixmap(256, 256)
-        pixmap.fill(Qt.red)
-        return pixmap
-    else:
-        return QPixmap(256, 256)
+    pixmap = QPixmap(256, 256)
+    pixmap.fill(Qt.red)
+    return pixmap
 
 
 @pytest.fixture
 def test_sprite_sheet(sample_sprite_paths) -> QPixmap | None:
     """Load a real test sprite sheet if available."""
-    if not PYSIDE6_AVAILABLE:
-        return QPixmap(512, 512)
-
     test_path = sample_sprite_paths["test_sheet"]
     if test_path.exists():
         return QPixmap(str(test_path))
@@ -236,14 +127,11 @@ def test_sprite_sheet(sample_sprite_paths) -> QPixmap | None:
 def mock_sprite_frames(qapp) -> list[QPixmap]:
     """Generate mock sprite frames for testing."""
     frames = []
-    if PYSIDE6_AVAILABLE:
-        colors = [Qt.red, Qt.green, Qt.blue, Qt.yellow]
-        for _i, color in enumerate(colors):
-            pixmap = QPixmap(64, 64)
-            pixmap.fill(color)
-            frames.append(pixmap)
-    else:
-        frames = [QPixmap(64, 64) for _ in range(4)]
+    colors = [Qt.red, Qt.green, Qt.blue, Qt.yellow]
+    for _i, color in enumerate(colors):
+        pixmap = QPixmap(64, 64)
+        pixmap.fill(color)
+        frames.append(pixmap)
 
     return frames
 
@@ -262,8 +150,6 @@ def sprite_model(qapp) -> SpriteModel:
 @pytest.fixture
 def animation_controller(sprite_model) -> AnimationController:
     """Fresh AnimationController instance for testing with mock dependencies."""
-    from unittest.mock import MagicMock
-
     mock_viewer = MagicMock()
     return AnimationController(sprite_model=sprite_model, sprite_viewer=mock_viewer)
 
@@ -363,9 +249,6 @@ def real_event_helpers(qapp):
     Utilities for creating REAL Qt events instead of mocks.
     Provides authentic Qt event simulation for accurate UI testing.
     """
-    if not PYSIDE6_AVAILABLE:
-        return MagicMock()
-
     from PySide6.QtCore import QPoint, QPointF, Qt
     from PySide6.QtGui import QKeyEvent, QMouseEvent, QWheelEvent
     from PySide6.QtTest import QTest
@@ -487,9 +370,6 @@ def real_signal_tester(qapp):
     Enhanced signal testing with REAL Qt signal mechanisms.
     Replaces mock signal testing with authentic QSignalSpy usage.
     """
-    if not PYSIDE6_AVAILABLE:
-        return MagicMock()
-
     from PySide6.QtTest import QSignalSpy
 
     class RealSignalTester:
@@ -651,9 +531,6 @@ def real_image_factory(qapp):
     Factory for creating REAL test images instead of mocks.
     Generates authentic QPixmap objects with various patterns for testing.
     """
-    if not PYSIDE6_AVAILABLE:
-        return MagicMock()
-
     from tests.fixtures.real_image_factory import RealImageFactory
 
     return RealImageFactory()
@@ -665,9 +542,6 @@ def real_sprite_system(qapp):
     Real component integration fixture for Phase 2/3 conversions.
     Creates authentic SpriteModel + AnimationController integration instead of mocks.
     """
-    if not PYSIDE6_AVAILABLE:
-        return MagicMock()
-
     from tests.fixtures.real_sprite_system import RealSpriteSystem
 
     system = RealSpriteSystem()
@@ -772,13 +646,6 @@ def fps_values(request):
 # ============================================================================
 
 
-@pytest.fixture(autouse=True)
-def cleanup_globals():
-    """Auto-cleanup for any global state changes."""
-    yield
-    # Add any global cleanup here if needed
-
-
 def pytest_configure(config):
     """Pytest configuration hook for Qt environment setup."""
     import logging
@@ -799,22 +666,10 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.integration)
         elif "ui" in str(item.fspath):
             item.add_marker(pytest.mark.ui)
-            if PYSIDE6_AVAILABLE:
-                item.add_marker(pytest.mark.requires_display)
+            item.add_marker(pytest.mark.requires_display)
         elif "performance" in str(item.fspath):
             item.add_marker(pytest.mark.performance)
             item.add_marker(pytest.mark.slow)
-
-        # Skip UI tests if PySide6 not available
-        if not PYSIDE6_AVAILABLE and "ui" in str(item.fspath):
-            item.add_marker(pytest.mark.skip(reason="PySide6 not available"))
-
-
-def pytest_runtest_setup(item):
-    """Setup hook for individual test items."""
-    # Skip tests requiring PySide6 if not available
-    if item.get_closest_marker("requires_display") and not PYSIDE6_AVAILABLE:
-        pytest.skip("PySide6 not available for UI tests")
 
 
 # ============================================================================
@@ -833,9 +688,6 @@ def export_temp_dir(temp_dir) -> Path:
 @pytest.fixture
 def keyboard_test_helper(qapp):
     """Helper for simulating keyboard events in tests."""
-    if not PYSIDE6_AVAILABLE:
-        return MagicMock()
-
     from PySide6.QtCore import Qt
     from PySide6.QtGui import QKeyEvent
 
@@ -887,9 +739,6 @@ def keyboard_test_helper(qapp):
 @pytest.fixture
 def menu_test_helper(qapp):
     """Helper for testing menu actions and structure."""
-    if not PYSIDE6_AVAILABLE:
-        return MagicMock()
-
     class MenuTestHelper:
         def __init__(self, app):
             self.app = app
@@ -939,9 +788,6 @@ def menu_test_helper(qapp):
 @pytest.fixture
 def settings_test_helper(temp_dir):
     """Helper for testing settings persistence."""
-    if not PYSIDE6_AVAILABLE:
-        return MagicMock()
-
     from PySide6.QtCore import QSettings
 
     class SettingsTestHelper:
@@ -973,9 +819,6 @@ def settings_test_helper(temp_dir):
 @pytest.fixture
 def signal_test_helper():
     """Helper for testing Qt signals and slots."""
-    if not PYSIDE6_AVAILABLE:
-        return MagicMock()
-
     from PySide6.QtCore import QObject, Signal
     from PySide6.QtTest import QSignalSpy
 

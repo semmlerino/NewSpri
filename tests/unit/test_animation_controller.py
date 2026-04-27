@@ -20,9 +20,8 @@ class TestAnimationControllerInitialization:
         """Test controller starts in proper initial state after construction."""
         # After single-step init, controller is active but not playing
         assert animation_controller._is_active
-        assert not animation_controller._is_playing
-        assert animation_controller._current_fps == Config.Animation.DEFAULT_FPS
-        assert animation_controller._loop_enabled
+        assert not animation_controller.is_playing
+        assert animation_controller.current_fps == Config.Animation.DEFAULT_FPS
 
     def test_timer_initialization(self, animation_controller):
         """Test animation timer is properly initialized."""
@@ -54,38 +53,43 @@ class TestAnimationControllerState:
     def test_set_fps(self, animation_controller):
         """Test setting FPS value."""
         test_fps = 30
-        animation_controller.set_fps(test_fps)
+        result = animation_controller.set_fps(test_fps)
 
-        assert animation_controller._current_fps == test_fps
+        assert result is True
         assert animation_controller.current_fps == test_fps
 
     @pytest.mark.parametrize("fps", [1, 5, 10, 15, 24, 30, 60])
     def test_fps_validation(self, animation_controller, fps):
         """Test FPS validation with various values."""
-        animation_controller.set_fps(fps)
-        assert (
-            Config.Animation.MIN_FPS <= animation_controller.current_fps <= Config.Animation.MAX_FPS
-        )
+        result = animation_controller.set_fps(fps)
+
+        assert result is True
+        assert animation_controller.current_fps == fps
 
     def test_fps_bounds_clamping(self, animation_controller):
-        """Test FPS values are clamped to valid bounds."""
+        """Test FPS values outside the valid range are rejected."""
+        original_fps = animation_controller.current_fps
+
         # Test below minimum
-        animation_controller.set_fps(0)
-        assert animation_controller.current_fps >= Config.Animation.MIN_FPS
+        result = animation_controller.set_fps(0)
+        assert result is False
+        assert animation_controller.current_fps == original_fps
 
         # Test above maximum
-        animation_controller.set_fps(1000)
-        assert animation_controller.current_fps <= Config.Animation.MAX_FPS
+        result = animation_controller.set_fps(1000)
+        assert result is False
+        assert animation_controller.current_fps == original_fps
 
     def test_loop_mode_toggle(self, animation_controller):
         """Test toggling loop mode."""
-        initial_state = animation_controller._loop_enabled
+        spy = QSignalSpy(animation_controller.loopModeChanged)
 
-        animation_controller.set_loop_mode(not initial_state)
-        assert animation_controller._loop_enabled != initial_state
+        animation_controller.set_loop_mode(False)
+        animation_controller.set_loop_mode(True)
 
-        animation_controller.set_loop_mode(initial_state)
-        assert animation_controller._loop_enabled == initial_state
+        assert spy.count() == 2
+        assert spy.at(0)[0] is False
+        assert spy.at(1)[0] is True
 
 
 class TestAnimationControllerTiming:
@@ -130,7 +134,7 @@ class TestAnimationControllerPlayback:
         result = animation_controller.start_animation()
 
         assert result is True
-        assert animation_controller._is_playing
+        assert animation_controller.is_playing
         assert animation_controller._animation_timer.isActive()
         assert spy.count() > 0
 
@@ -150,7 +154,7 @@ class TestAnimationControllerPlayback:
         animation_controller.start_animation()
         animation_controller.pause_animation()
 
-        assert not animation_controller._is_playing
+        assert not animation_controller.is_playing
         assert not animation_controller._animation_timer.isActive()
         assert spy.count() > 0
 
@@ -171,7 +175,7 @@ class TestAnimationControllerPlayback:
         animation_controller.start_animation()
         animation_controller.stop_animation()
 
-        assert not animation_controller._is_playing
+        assert not animation_controller.is_playing
         assert not animation_controller._animation_timer.isActive()
         assert spy.count() > 0
 
@@ -186,14 +190,14 @@ class TestAnimationControllerPlayback:
         animation_controller._sprite_model = mock_sprite_model
         animation_controller._is_active = True
 
-        initial_state = animation_controller._is_playing
+        initial_state = animation_controller.is_playing
 
         result = animation_controller.toggle_playback()
         assert result is True  # Should succeed
-        assert animation_controller._is_playing != initial_state
+        assert animation_controller.is_playing != initial_state
 
         animation_controller.toggle_playback()
-        assert animation_controller._is_playing == initial_state
+        assert animation_controller.is_playing == initial_state
 
 
 class TestAnimationControllerRealSignals:
@@ -438,7 +442,8 @@ class TestAnimationControllerIntegration:
             sprite_model=mock_sprite_model,
             sprite_viewer=mock_sprite_viewer,
         )
-        controller._is_playing = True  # Manually set playing state
+        assert controller.start_animation() is True
+        controller._animation_timer.stop()
 
         # Test frame advancement via timer timeout
         controller._on_timer_timeout()
@@ -453,17 +458,17 @@ class TestAnimationControllerErrorHandling:
     def test_invalid_fps_handling(self, animation_controller):
         """Test handling of invalid FPS values."""
         # Store original FPS
-        original_fps = animation_controller._current_fps
+        original_fps = animation_controller.current_fps
 
         # Test with values outside valid range
         result = animation_controller.set_fps(0)  # Below minimum
         assert result is False
-        assert animation_controller._current_fps == original_fps
+        assert animation_controller.current_fps == original_fps
 
         # Test with very high value
         result = animation_controller.set_fps(1000)  # Above maximum
         assert result is False
-        assert animation_controller._current_fps == original_fps
+        assert animation_controller.current_fps == original_fps
 
     def test_timer_error_handling(self, animation_controller):
         """Test timer error handling."""
@@ -501,11 +506,11 @@ class TestAnimationControllerErrorHandling:
 
         # Check that start_animation succeeded
         assert result is True
-        assert controller._is_playing is True
+        assert controller.is_playing is True
 
         # Shutdown (not cleanup)
         controller.shutdown()
 
         # After shutdown, timer and playing state should be false
         assert not controller._animation_timer.isActive()
-        assert not controller._is_playing
+        assert not controller.is_playing

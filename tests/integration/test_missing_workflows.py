@@ -227,7 +227,7 @@ class TestRecentFilesWorkflow:
 
         # Verify the first recent file was loaded
         # The file controller should handle this through the recent files manager
-        assert viewer._sprite_model._file_path == str(sprite_path2)
+        assert viewer._sprite_model.file_path == str(sprite_path2)
 
 
 class TestMouseZoomPanWorkflow:
@@ -375,7 +375,7 @@ class TestAdvancedKeyboardShortcuts:
             QApplication.processEvents()
 
         # Verify file was loaded
-        assert viewer._sprite_model._file_path == str(sprite_path)
+        assert viewer._sprite_model.file_path == str(sprite_path)
 
         # Test Ctrl+S (Save) - mainly tests that shortcut is handled
         event = QKeyEvent(QKeyEvent.KeyPress, Qt.Key_S, Qt.ControlModifier)
@@ -419,19 +419,19 @@ class TestAdvancedKeyboardShortcuts:
         assert viewer._sprite_model.current_frame == 0
 
         # Test bracket keys for speed control
-        initial_fps = viewer._animation_controller._current_fps
+        initial_fps = viewer._animation_controller.current_fps
 
         # '[' decreases speed
         event = QKeyEvent(QKeyEvent.KeyPress, Qt.Key_BracketLeft, Qt.NoModifier)
         viewer.keyPressEvent(event)
-        assert viewer._animation_controller._current_fps < initial_fps
+        assert viewer._animation_controller.current_fps < initial_fps
 
         # ']' increases speed
         event = QKeyEvent(QKeyEvent.KeyPress, Qt.Key_BracketRight, Qt.NoModifier)
         viewer.keyPressEvent(event)
         event = QKeyEvent(QKeyEvent.KeyPress, Qt.Key_BracketRight, Qt.NoModifier)
         viewer.keyPressEvent(event)
-        assert viewer._animation_controller._current_fps > initial_fps
+        assert viewer._animation_controller.current_fps > initial_fps
 
 
 # Test fixtures

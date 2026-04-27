@@ -329,9 +329,14 @@ class TestFrameExtractorAutoButtons:
 
         # Update confidence then reset
         widget.update_auto_button_confidence("frame", "high", "Test")
+        assert widget._button_manager.get_button_state("frame") == "high"
+        assert "High confidence: Test" in widget.auto_btn.toolTip()
+
         widget.reset_auto_button_style("frame")
 
-        # Should not raise exception
+        assert widget._button_manager.get_button_state("frame") == "default"
+        assert widget.auto_btn.text() == "Auto"
+        assert widget.auto_btn.toolTip() == "Auto-detect frame size"
 
 
 class TestFrameExtractorCollapsibleSections:

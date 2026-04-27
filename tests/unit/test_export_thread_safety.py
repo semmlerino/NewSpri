@@ -138,16 +138,18 @@ class TestExportWorkerCancellation:
         worker = ExportWorker(basic_export_task)
 
         # Track signals
+        progress_values = []
         finished_results = []
+        worker.progress.connect(lambda *args: progress_values.append(args))
         worker.finished.connect(lambda success, msg: finished_results.append((success, msg)))
 
         # Cancel and run
         worker.cancel()
         worker.run()
 
-        # Should emit with cancelled status
-        # Note: actual behavior depends on implementation - may not emit at all
-        # or may emit with success=False
+        assert finished_results == [(False, "Export cancelled")]
+        assert progress_values == []
+        assert list(basic_export_task.output_dir.glob("*.png")) == []
 
 
 # ============================================================================
@@ -286,12 +288,17 @@ class TestResourceCleanup:
         worker = ExportWorker(task)
 
         error_messages = []
+        finished_results = []
         worker.error.connect(lambda msg: error_messages.append(msg))
+        worker.finished.connect(lambda success, msg: finished_results.append((success, msg)))
 
         worker.run()
 
-        # Should have error
-        assert len(error_messages) >= 1 or not invalid_path.exists()
+        assert error_messages
+        assert finished_results
+        assert finished_results[-1][0] is False
+        assert "failed" in finished_results[-1][1].lower()
+        assert not invalid_path.exists()
 
 
 # ============================================================================
