@@ -212,17 +212,17 @@ class SpriteModel(QObject):
         return result.success, result.message, result.frame_count
 
     def set_extraction_mode(self, mode: object) -> bool:
-        """Set extraction mode (grid or ccl)."""
+        """Set extraction mode (grid or ccl).
+
+        Strategies only mutate the current mode on success, so a failed
+        extraction leaves the previous mode in place.
+        """
         if self._original_sprite_sheet is None:
             return False
         if not isinstance(mode, ExtractionMode):
             return False
 
-        old_mode = self.get_extraction_mode()
         success, _message, _frame_count = self.extract_frames_for_mode(mode)
-        if not success:
-            self._ccl_operations.set_current_mode(old_mode)
-
         return success
 
     def get_extraction_mode(self) -> ExtractionMode:

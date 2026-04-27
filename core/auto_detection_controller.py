@@ -78,7 +78,7 @@ class AutoDetectionController(QObject):
             self._update_button_confidence_from_result(result)
 
             # Show detailed results dialog
-            self._show_detection_results_dialog(success, result)
+            self._emit_detection_results(success, result)
 
             if success:
                 self.detectionCompleted.emit(
@@ -225,7 +225,7 @@ class AutoDetectionController(QObject):
                 level = step.confidence_level if step.success else "failed"
                 self.buttonConfidenceUpdate.emit(button, level, step.description)
 
-    def _show_detection_results_dialog(self, success: bool, result: DetectionResult) -> None:
+    def _emit_detection_results(self, success: bool, result: DetectionResult) -> None:
         """Emit detection results for UI display."""
         if success:
             summary = self._create_detection_summary()

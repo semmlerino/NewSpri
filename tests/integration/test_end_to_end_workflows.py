@@ -7,6 +7,7 @@ import pytest
 
 # Mark all tests as slow integration tests - they create full SpriteViewer windows
 pytestmark = [pytest.mark.integration, pytest.mark.slow]
+from pathlib import Path
 from unittest.mock import patch
 
 from PySide6.QtCore import Qt
@@ -14,7 +15,12 @@ from PySide6.QtGui import QColor, QKeyEvent, QPixmap
 from PySide6.QtWidgets import QApplication
 
 from export import ExportDialog
-from export.core.frame_exporter import get_frame_exporter
+from export.core.frame_exporter import (
+    ExportConfig,
+    ExportFormat,
+    ExportMode,
+    get_frame_exporter,
+)
 from sprite_viewer import SpriteViewer
 
 
@@ -103,13 +109,16 @@ class TestCompleteApplicationLifecycle:
         exporter.exportFinished.connect(on_export_finished)
 
         # Execute the export
+        export_config = ExportConfig(
+            output_dir=Path(export_dir),
+            base_name="exported",
+            format=ExportFormat.PNG,
+            mode=ExportMode.INDIVIDUAL_FRAMES,
+            scale_factor=1.0,
+        )
         success = exporter.export_frames(
             frames=viewer._sprite_model.sprite_frames,
-            output_dir=str(export_dir),
-            base_name="exported",
-            format="PNG",
-            mode="individual",
-            scale_factor=1.0,
+            config=export_config,
         )
         assert success, "Export should succeed"
 
@@ -187,12 +196,16 @@ class TestCompleteApplicationLifecycle:
         # 2. Test export with no sprites loaded
         # Export should fail gracefully with no frames
         exporter = get_frame_exporter()
+        empty_config = ExportConfig(
+            output_dir=Path("/tmp"),
+            base_name="test",
+            format=ExportFormat.PNG,
+            mode=ExportMode.INDIVIDUAL_FRAMES,
+            scale_factor=1.0,
+        )
         success = exporter.export_frames(
             frames=[],  # No frames
-            output_dir="/tmp",
-            base_name="test",
-            format="PNG",
-            mode="individual",
+            config=empty_config,
         )
         # Should handle empty frame list gracefully
         assert not success, "Export should fail with no frames"

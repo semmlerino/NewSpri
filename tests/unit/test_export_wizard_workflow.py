@@ -339,7 +339,7 @@ class TestExportConfigPreparation:
             "format": "PNG",
             "scale": 1.0,
             "single_filename": "spritesheet",
-            "layout_mode": "auto",
+            "layout_mode": LayoutMode.AUTO,
             "columns": 4,
             "rows": 2,
         }

@@ -152,17 +152,8 @@ class ExportDialog(QDialog):
             if preset.mode is ExportMode.SEGMENTS_SHEET:
                 sprite_sheet_layout = preset.sprite_sheet_layout
             else:
-                layout_mode_str = settings.get("layout_mode", "auto")
-                try:
-                    layout_mode = LayoutMode(layout_mode_str)
-                except ValueError:
-                    layout_mode = LayoutMode.AUTO
-
-                bg_mode_str = settings.get("background_mode", "transparent")
-                try:
-                    bg_mode = BackgroundMode(bg_mode_str)
-                except ValueError:
-                    bg_mode = BackgroundMode.TRANSPARENT
+                layout_mode = settings.get("layout_mode", LayoutMode.AUTO)
+                bg_mode = settings.get("background_mode", BackgroundMode.TRANSPARENT)
 
                 sprite_sheet_layout = SpriteSheetLayout(
                     mode=layout_mode,

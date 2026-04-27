@@ -112,7 +112,7 @@ def test_comprehensive_auto_detect_syncs_ui_to_grid_mode(qtbot, tmp_path) -> Non
             "comprehensive_auto_detect",
             side_effect=fake_comprehensive_auto_detect,
         ),
-        patch.object(viewer._auto_detection_controller, "_show_detection_results_dialog"),
+        patch.object(viewer._auto_detection_controller, "_emit_detection_results"),
     ):
         viewer._auto_detection_controller.run_comprehensive_detection_with_dialog()
 

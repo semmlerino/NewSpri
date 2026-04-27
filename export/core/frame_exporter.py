@@ -10,13 +10,15 @@ import math
 import re
 from dataclasses import dataclass
 from enum import Enum
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtCore import QObject, Qt, QThread, Signal
 from PySide6.QtGui import QColor, QImage, QPainter, QPixmap
 
 from config import Config
+
+if TYPE_CHECKING:
+    from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -753,43 +755,30 @@ class FrameExporter(QObject):
     def export_frames(
         self,
         frames: list[QPixmap],
-        output_dir: str,
-        base_name: str = "frame",
-        format: str = "PNG",
-        mode: str = "individual",
-        scale_factor: float = 1.0,
-        pattern: str | None = None,
-        sprite_sheet_layout: SpriteSheetLayout | None = None,
+        config: ExportConfig,
         segment_info: list[dict[str, Any]] | None = None,
     ) -> bool:
         """
-        Export frames with the specified settings.
+        Export frames using a fully-typed ExportConfig.
 
         Note: If a previous export is still running, this method rejects the new export.
         This prevents concurrent workers from writing into the same exporter state.
 
         Args:
             frames: List of frames to export
-            output_dir: Output directory path
-            base_name: Base name for exported files
-            format: Export format (PNG, JPG, BMP)
-            mode: Export mode (individual, sheet, selected, segments_sheet)
-            scale_factor: Scale factor for output
-            pattern: Naming pattern for individual frames
-            sprite_sheet_layout: Layout configuration for sprite sheet export
-            segment_info: List of segment dictionaries with 'name', 'start_frame', 'end_frame'
+            config: Typed export configuration (output dir, format, mode, etc.)
+            segment_info: Optional list of segment dicts for segments_sheet mode
 
         Returns:
             True if export started successfully
         """
         logger.debug("FrameExporter.export_frames called")
-        logger.debug("Mode: %s, Format: %s, Frame count: %d", mode, format, len(frames))
-        logger.debug("Base name: %s, Scale factor: %s", base_name, scale_factor)
-        logger.debug("Segment info provided: %s", segment_info is not None)
+        logger.debug(
+            "Mode: %s, Format: %s, Frame count: %d", config.mode, config.format, len(frames)
+        )
+        logger.debug("Base name: %s, Scale factor: %s", config.base_name, config.scale_factor)
         if segment_info:
             logger.debug("Segment count: %d", len(segment_info))
-            for i, seg in enumerate(segment_info):
-                logger.debug("  Segment %d: %s", i, seg)
 
         # Reject export if previous worker is still running
         if self._worker is not None and self._worker.isRunning():
@@ -797,17 +786,7 @@ class FrameExporter(QObject):
             self.exportError.emit("An export is already in progress")
             return False
 
-        task = self._prepare_export(
-            frames,
-            output_dir,
-            base_name,
-            format,
-            mode,
-            scale_factor,
-            pattern,
-            sprite_sheet_layout,
-            segment_info,
-        )
+        task = self._prepare_export(frames, config, segment_info)
         if task is None:
             return False
 
@@ -818,16 +797,10 @@ class FrameExporter(QObject):
     def _prepare_export(
         self,
         frames: list[QPixmap],
-        output_dir: str,
-        base_name: str,
-        format: str,
-        mode: str,
-        scale_factor: float,
-        pattern: str | None,
-        sprite_sheet_layout: SpriteSheetLayout | None,
+        config: ExportConfig,
         segment_info: list[dict[str, Any]] | None,
     ) -> ExportTask | None:
-        """Validate inputs, parse settings, convert frames, and build an ExportTask.
+        """Validate inputs, convert frames, and build an ExportTask.
 
         Returns None (and emits exportError) on any validation failure.
         """
@@ -837,29 +810,16 @@ class FrameExporter(QObject):
             return None
 
         # Create output directory if needed
-        output_path = Path(output_dir)
         try:
-            output_path.mkdir(parents=True, exist_ok=True)
+            config.output_dir.mkdir(parents=True, exist_ok=True)
         except OSError as e:
             self.exportError.emit(f"Failed to create output directory: {e!s}")
             return None
 
-        # Parse format and mode
-        try:
-            export_format = ExportFormat.from_string(format)
-            logger.debug("Parsed export format: %s", export_format)
-
-            export_mode = ExportMode(mode)
-            logger.debug("Parsed export mode: %s", export_mode)
-        except ValueError as e:
-            self.exportError.emit(f"Invalid export settings: {e!s}")
-            return None
-
-        if pattern is None:
-            pattern = Config.Export.DEFAULT_PATTERN
+        pattern = config.pattern or Config.Export.DEFAULT_PATTERN
 
         # Sanitize base_name to remove characters illegal in file paths
-        base_name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", base_name)
+        safe_base_name = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", config.base_name)
 
         # Convert QPixmap frames to QImage for thread-safe processing
         # QPixmap is NOT thread-safe; QImage IS thread-safe for worker threads
@@ -870,13 +830,13 @@ class FrameExporter(QObject):
         try:
             return ExportTask(
                 frames=image_frames,
-                output_dir=output_path,
-                base_name=base_name,
-                format=export_format,
-                mode=export_mode,
-                scale_factor=scale_factor,
+                output_dir=config.output_dir,
+                base_name=safe_base_name,
+                format=config.format,
+                mode=config.mode,
+                scale_factor=config.scale_factor,
                 pattern=pattern,
-                sprite_sheet_layout=sprite_sheet_layout,
+                sprite_sheet_layout=config.sprite_sheet_layout,
                 segment_info=segment_info,
             )
         except ValueError as e:

@@ -181,9 +181,6 @@ class CCLOperations:
             if null_frame_count > 0:
                 logger.debug("CCL had %d null sprite frames", null_frame_count)
 
-            # Set extraction mode
-            self._extraction_mode = ExtractionMode.CCL
-
             return True, "", len(sprite_frames), sprite_frames
 
         except Exception as e:

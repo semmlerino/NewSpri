@@ -12,6 +12,7 @@ from PySide6.QtWidgets import QApplication
 
 from export import ExportDialog
 from export.core.export_presets import get_preset
+from export.core.frame_exporter import LayoutMode
 
 
 class TestIntegratedExportWorkflow:
@@ -208,7 +209,7 @@ class TestIntegratedExportWorkflow:
         assert data["output_dir"] == "/tmp/sheets"
         assert data["single_filename"] == "atlas"
         assert data["spacing"] == 2
-        assert data["layout_mode"] == "columns"
+        assert data["layout_mode"] is LayoutMode.COLUMNS
 
     @pytest.mark.integration
     def test_selected_frames_workflow(self, qtbot, export_dialog):

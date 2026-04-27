@@ -164,17 +164,18 @@ class TestConcurrentExportPrevention:
         self, qapp, sample_pixmaps: list[QPixmap], export_dir: Path
     ) -> None:
         """Starting export should set exporting state."""
+        from export.core.frame_exporter import ExportConfig, ExportFormat, ExportMode
+
         exporter = get_frame_exporter()
 
-        # Start export (uses QPixmap which is converted internally)
-        result = exporter.export_frames(
-            frames=sample_pixmaps,
-            output_dir=str(export_dir),
+        config = ExportConfig(
+            output_dir=Path(export_dir),
             base_name="test",
-            format="PNG",
-            mode="individual",
+            format=ExportFormat.PNG,
+            mode=ExportMode.INDIVIDUAL_FRAMES,
             scale_factor=1.0,
         )
+        result = exporter.export_frames(frames=sample_pixmaps, config=config)
 
         # Should have started successfully
         assert result is True

@@ -384,14 +384,15 @@ def test_export_frames_calls_exporter(
 
     coordinator.handle_export_request(basic_settings)
 
-    # Verify exporter was called
+    # Verify exporter was called with the typed config
     mock_exporter.export_frames.assert_called_once()
-    call_kwargs = mock_exporter.export_frames.call_args[1]
-    assert call_kwargs["output_dir"] == "/tmp/export"
-    assert call_kwargs["base_name"] == "test"
-    assert call_kwargs["format"] == "PNG"
-    assert call_kwargs["mode"] == "individual"
-    assert call_kwargs["scale_factor"] == 1.0
+    args, _kwargs = mock_exporter.export_frames.call_args
+    forwarded_config = args[1]
+    assert str(forwarded_config.output_dir) == "/tmp/export"
+    assert forwarded_config.base_name == "test"
+    assert forwarded_config.format is ExportFormat.PNG
+    assert forwarded_config.mode is ExportMode.INDIVIDUAL_FRAMES
+    assert forwarded_config.scale_factor == 1.0
 
 
 @patch("core.export_coordinator.ExportProgressDialog")
@@ -419,7 +420,8 @@ def test_export_segments_per_row_calls_exporter(
     # Verify exporter was called with segment info
     mock_exporter.export_frames.assert_called_once()
     call_kwargs = mock_exporter.export_frames.call_args[1]
-    assert call_kwargs["mode"] == "segments_sheet"
+    forwarded_config = call_kwargs["config"]
+    assert forwarded_config.mode is ExportMode.SEGMENTS_SHEET
     assert "segment_info" in call_kwargs
     segment_info = call_kwargs["segment_info"]
     assert len(segment_info) == 1
@@ -449,8 +451,9 @@ def test_export_frames_with_selected_indices(mock_dialog_class, mock_sprite_mode
 
     # Verify mode changed to individual and indices passed
     mock_exporter.export_frames.assert_called_once()
-    call_kwargs = mock_exporter.export_frames.call_args[1]
-    assert call_kwargs["mode"] == "individual"
+    args, _kwargs = mock_exporter.export_frames.call_args
+    forwarded_config = args[1]
+    assert forwarded_config.mode is ExportMode.INDIVIDUAL_FRAMES
 
 
 @patch("core.export_coordinator.ExportProgressDialog")

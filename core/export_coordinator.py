@@ -174,15 +174,17 @@ class ExportCoordinator(QObject):
 
     def _export_frames(self, config: ExportConfig, frames: list | None = None) -> None:
         """Handle standard frame export (individual or sheet)."""
+        from dataclasses import replace
+
         all_frames = frames if frames is not None else self._sprite_model.sprite_frames
         frames_to_export = all_frames
-        export_mode = config.mode
+        effective_config = config
         selected_indices = config.selected_indices or []
 
         if selected_indices:
             valid_indices = [i for i in selected_indices if 0 <= i < len(all_frames)]
             frames_to_export = [all_frames[i] for i in valid_indices]
-            export_mode = ExportMode.INDIVIDUAL_FRAMES
+            effective_config = replace(config, mode=ExportMode.INDIVIDUAL_FRAMES)
 
             if len(valid_indices) != len(selected_indices):
                 invalid_count = len(selected_indices) - len(valid_indices)
@@ -191,19 +193,7 @@ class ExportCoordinator(QObject):
                     f"{invalid_count} invalid selection(s) skipped."
                 )
 
-        # Use sprite_sheet_layout from config (wizard already built it)
-        sprite_sheet_layout = config.sprite_sheet_layout
-
-        success = self._exporter.export_frames(
-            frames=frames_to_export,
-            output_dir=str(config.output_dir),
-            base_name=config.base_name,
-            format=config.format.value,
-            mode=export_mode.value,
-            scale_factor=config.scale_factor,
-            pattern=config.pattern or None,
-            sprite_sheet_layout=sprite_sheet_layout,
-        )
+        success = self._exporter.export_frames(frames_to_export, effective_config)
 
         if not success:
             self._show_error("Failed to start export.")
@@ -221,14 +211,12 @@ class ExportCoordinator(QObject):
             key=lambda x: x["start_frame"],
         )
 
+        from dataclasses import replace
+
+        segments_config = replace(config, mode=ExportMode.SEGMENTS_SHEET)
         success = self._exporter.export_frames(
             frames=self._sprite_model.sprite_frames,
-            output_dir=str(config.output_dir),
-            base_name=config.base_name,
-            format=config.format.value,
-            mode=ExportMode.SEGMENTS_SHEET.value,
-            scale_factor=config.scale_factor,
-            sprite_sheet_layout=config.sprite_sheet_layout,
+            config=segments_config,
             segment_info=segment_info,
         )
 

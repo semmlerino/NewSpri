@@ -67,15 +67,28 @@ class TestConcurrentOperations:
             mock_worker = MagicMock()
             mock_worker_class.return_value = mock_worker
 
-            from export.core.frame_exporter import FrameExporter
+            from pathlib import Path
+
+            from export.core.frame_exporter import (
+                ExportConfig,
+                ExportFormat,
+                ExportMode,
+                FrameExporter,
+            )
 
             exporter = FrameExporter()
 
             # Export frames while animation is playing
+            config = ExportConfig(
+                output_dir=Path(tmp_path),
+                base_name="test",
+                format=ExportFormat.PNG,
+                mode=ExportMode.INDIVIDUAL_FRAMES,
+                scale_factor=1.0,
+            )
             success = exporter.export_frames(
                 frames=viewer._sprite_model.sprite_frames,
-                output_dir=str(tmp_path),
-                base_name="test",
+                config=config,
             )
 
             # Export should succeed

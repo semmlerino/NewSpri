@@ -120,6 +120,9 @@ class CclExtractionStrategy:
             detect_background_color=context.detect_background_color,
         )
 
+        if success:
+            context.ccl_operations.set_current_mode(self.mode)
+
         return ExtractionResult(success, message, frame_count, frames if success else [])
 
 

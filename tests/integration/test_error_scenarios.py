@@ -72,13 +72,18 @@ class TestFileOperationErrors:
 
             # Attempt to export to read-only directory
             # The export_frames method creates subdirectory, which should fail
-            result = exporter.export_frames(
-                frames=[test_pixmap],
-                output_dir=str(readonly_dir / "subdir"),  # Creating subdir should fail
+            from pathlib import Path
+
+            from export.core.frame_exporter import ExportConfig, ExportFormat, ExportMode
+
+            config = ExportConfig(
+                output_dir=Path(readonly_dir / "subdir"),  # Creating subdir should fail
                 base_name="test",
-                format="PNG",
-                mode="individual",
+                format=ExportFormat.PNG,
+                mode=ExportMode.INDIVIDUAL_FRAMES,
+                scale_factor=1.0,
             )
+            result = exporter.export_frames(frames=[test_pixmap], config=config)
 
             # Export should fail or error should be emitted
             assert result is False or len(error_messages) > 0
@@ -97,13 +102,18 @@ class TestFileOperationErrors:
         exporter.exportError.connect(lambda msg: error_messages.append(msg))
 
         # Test with empty frames - should emit error
-        result = exporter.export_frames(
-            frames=[],  # Empty frames should fail
-            output_dir=str(tmp_path),
+        from pathlib import Path
+
+        from export.core.frame_exporter import ExportConfig, ExportFormat, ExportMode
+
+        empty_config = ExportConfig(
+            output_dir=Path(tmp_path),
             base_name="test",
-            format="PNG",
-            mode="individual",
+            format=ExportFormat.PNG,
+            mode=ExportMode.INDIVIDUAL_FRAMES,
+            scale_factor=1.0,
         )
+        result = exporter.export_frames(frames=[], config=empty_config)
 
         assert result is False, "Export should fail with empty frames"
         assert len(error_messages) > 0, "Error should be emitted"
@@ -319,9 +329,18 @@ class TestExportFailureRecovery:
             mock_worker = MagicMock()
             mock_worker_class.return_value = mock_worker
 
-            success = exporter.export_frames(
-                frames=test_frames, output_dir=str(output_dir), base_name="test"
+            from pathlib import Path
+
+            from export.core.frame_exporter import ExportConfig, ExportFormat, ExportMode
+
+            success_config = ExportConfig(
+                output_dir=Path(output_dir),
+                base_name="test",
+                format=ExportFormat.PNG,
+                mode=ExportMode.INDIVIDUAL_FRAMES,
+                scale_factor=1.0,
             )
+            success = exporter.export_frames(frames=test_frames, config=success_config)
 
             # Should succeed in starting (directory exists at start time)
             assert success

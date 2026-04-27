@@ -312,14 +312,19 @@ class TestExportSystemIntegration:
 
         exporter.exportFinished.connect(on_finished)
 
-        # Export frames using current API (frames, not sprites)
-        success = exporter.export_frames(
-            frames=sprites,
-            output_dir=str(tmp_path),
+        # Export frames using current API (typed ExportConfig)
+        from pathlib import Path
+
+        from export.core.frame_exporter import ExportConfig, ExportFormat, ExportMode
+
+        config = ExportConfig(
+            output_dir=Path(tmp_path),
             base_name="test",
-            format="PNG",
-            mode="individual",
+            format=ExportFormat.PNG,
+            mode=ExportMode.INDIVIDUAL_FRAMES,
+            scale_factor=1.0,
         )
+        success = exporter.export_frames(frames=sprites, config=config)
 
         assert success, "Export should start successfully"
 

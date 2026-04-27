@@ -11,6 +11,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QImage, QPixmap
 
 from export.core.frame_exporter import (
+    ExportConfig,
     ExportFormat,
     ExportMode,
     ExportTask,
@@ -107,14 +108,23 @@ class TestFrameExporter:
 
     def test_export_frames_validation(self):
         """Test export_frames validation."""
+        from pathlib import Path
+
         exporter = FrameExporter()
 
         # Test with no frames
-        success = exporter.export_frames(frames=[], output_dir="/tmp/test", base_name="test")
+        config = ExportConfig(
+            output_dir=Path("/tmp/test"),
+            base_name="test",
+            format=ExportFormat.PNG,
+            mode=ExportMode.INDIVIDUAL_FRAMES,
+            scale_factor=1.0,
+        )
+        success = exporter.export_frames(frames=[], config=config)
         assert not success
 
     @patch("export.core.frame_exporter.ExportWorker")
-    @patch("export.core.frame_exporter.Path.mkdir")
+    @patch("pathlib.Path.mkdir")
     def test_export_frames_creates_directory(self, mock_mkdir, mock_worker_class):
         """Test that export creates output directory if needed."""
         # Mock the worker to avoid actual thread creation
@@ -130,9 +140,14 @@ class TestFrameExporter:
         mock_pixmap.toImage.return_value = mock_image
 
         frames = [mock_pixmap]
-        success = exporter.export_frames(
-            frames=frames, output_dir="/tmp/test_export", base_name="test"
+        config = ExportConfig(
+            output_dir=Path("/tmp/test_export"),
+            base_name="test",
+            format=ExportFormat.PNG,
+            mode=ExportMode.INDIVIDUAL_FRAMES,
+            scale_factor=1.0,
         )
+        exporter.export_frames(frames=frames, config=config)
 
         mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
         mock_worker.start.assert_called_once()
@@ -309,7 +324,14 @@ class TestExportIntegration:
         mock_image.isNull.return_value = False
         mock_pixmap.toImage.return_value = mock_image
         frames = [mock_pixmap]
-        success = exporter.export_frames(frames=frames, output_dir="/tmp/test", base_name="test")
+        config = ExportConfig(
+            output_dir=Path("/tmp/test"),
+            base_name="test",
+            format=ExportFormat.PNG,
+            mode=ExportMode.INDIVIDUAL_FRAMES,
+            scale_factor=1.0,
+        )
+        success = exporter.export_frames(frames=frames, config=config)
 
         assert success
         assert len(started) == 1

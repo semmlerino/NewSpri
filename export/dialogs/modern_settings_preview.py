@@ -43,14 +43,19 @@ from config import Config
 from utils.styles import StyleManager
 
 from ..core.export_presets import ExportPreset
-from ..core.frame_exporter import ExportFormat, ExportMode
+from ..core.frame_exporter import BackgroundMode, ExportFormat, ExportMode, LayoutMode
 from ..dialogs.base.wizard_base import WizardStep, WizardWidget
 
 logger = logging.getLogger(__name__)
 
-# Ordered layout mode identifiers. Index matches the QButtonGroup id used in
+# Ordered layout modes. Index matches the QButtonGroup id used in
 # _SheetSettingsPanel._create_layout_tab and _get_layout_mode.
-_LAYOUT_MODES: tuple[str, ...] = ("auto", "columns", "rows", "square")
+_LAYOUT_MODES: tuple[LayoutMode, ...] = (
+    LayoutMode.AUTO,
+    LayoutMode.COLUMNS,
+    LayoutMode.ROWS,
+    LayoutMode.SQUARE,
+)
 
 
 class CompactLivePreview(QGraphicsView):
@@ -207,7 +212,7 @@ class _SheetSettingsPanel:
         for i, (label, value, tooltip) in enumerate(modes):
             radio = QRadioButton(label)
             radio.setToolTip(tooltip)
-            if value == "auto":
+            if value is LayoutMode.AUTO:
                 radio.setChecked(True)
             mode_group.addButton(radio, i)
             mode_layout.addWidget(radio, i // 2, i % 2)
@@ -283,7 +288,11 @@ class _SheetSettingsPanel:
         bg_layout.addWidget(bg_label)
 
         self._parent.bg_combo = QComboBox()
-        self._parent.bg_combo.addItems(["Transparent", "White", "Black", "Custom..."])
+        # Each entry stores its (BackgroundMode, fill_rgba) so consumers don't
+        # have to pattern-match on the visible label or combo index.
+        self._parent.bg_combo.addItem("Transparent", (BackgroundMode.TRANSPARENT, None))
+        self._parent.bg_combo.addItem("White", (BackgroundMode.SOLID, (255, 255, 255, 255)))
+        self._parent.bg_combo.addItem("Black", (BackgroundMode.SOLID, (0, 0, 0, 255)))
         bg_layout.addWidget(self._parent.bg_combo, 1)
 
         layout.addLayout(bg_layout)
@@ -713,13 +722,20 @@ class _PreviewGenerator:
     def _fill_background(self, pixmap: QPixmap) -> None:
         """Fill pixmap background based on the current background combo selection."""
         bg_widget = self._parent._settings_widgets.get("background")
-        bg_index = bg_widget.currentIndex() if bg_widget is not None else 0
-        if bg_index == 0:  # Transparent
+        if bg_widget is None:
             pixmap.fill(Qt.GlobalColor.transparent)
-        elif bg_index == 1:  # White
-            pixmap.fill(Qt.GlobalColor.white)
-        elif bg_index == 2:  # Black
-            pixmap.fill(Qt.GlobalColor.black)
+            return
+
+        data = bg_widget.currentData()
+        if data is None:
+            pixmap.fill(Qt.GlobalColor.transparent)
+            return
+
+        mode, fill_rgba = data
+        if mode is BackgroundMode.SOLID and fill_rgba is not None:
+            pixmap.fill(QColor(*fill_rgba))
+        else:
+            pixmap.fill(Qt.GlobalColor.transparent)
 
     def _placeholder_pixmap(self, text: str, info: str) -> QPixmap:
         """Create a 400x200 placeholder pixmap with centered text and update preview info."""
@@ -748,18 +764,18 @@ class _PreviewGenerator:
             return self._parent._sprites[0].width(), self._parent._sprites[0].height()
         return 32, 32
 
-    def _calculate_grid(self, layout_mode: str, sprite_count: int) -> tuple[int, int]:
+    def _calculate_grid(self, layout_mode: LayoutMode, sprite_count: int) -> tuple[int, int]:
         """Calculate (cols, rows) for the given layout mode and sprite count."""
-        if layout_mode == "columns":
+        if layout_mode is LayoutMode.COLUMNS:
             cols = self._parent.cols_spin.value()
             rows = math.ceil(sprite_count / cols)
-        elif layout_mode == "rows":
+        elif layout_mode is LayoutMode.ROWS:
             rows = self._parent.rows_spin.value()
             cols = math.ceil(sprite_count / rows)
-        elif layout_mode == "square":
+        elif layout_mode is LayoutMode.SQUARE:
             side = math.ceil(math.sqrt(sprite_count))
             cols = rows = side
-        else:  # auto
+        else:  # auto / fallback
             cols = math.ceil(math.sqrt(sprite_count))
             rows = math.ceil(sprite_count / cols)
         return cols, rows
@@ -1133,7 +1149,11 @@ class ModernExportSettings(WizardStep):
 
     def _update_transparency_warning(self, format: str):
         """Show warning when exporting transparent sprites to JPG."""
-        show_warning = format.upper() == "JPG" and any(
+        try:
+            export_format = ExportFormat.from_string(format)
+        except ValueError:
+            export_format = None
+        show_warning = export_format is ExportFormat.JPG and any(
             sprite and not sprite.isNull() and sprite.hasAlphaChannel() for sprite in self._sprites
         )
         self._transparency_warning.setVisible(show_warning)
@@ -1142,10 +1162,10 @@ class ModernExportSettings(WizardStep):
         """Handle scale change."""
         self._on_setting_changed()
 
-    def _on_layout_mode_changed(self, mode: str):
+    def _on_layout_mode_changed(self, mode: LayoutMode):
         """Handle layout mode change."""
-        self.cols_spin.setEnabled(mode == "columns")
-        self.rows_spin.setEnabled(mode == "rows")
+        self.cols_spin.setEnabled(mode is LayoutMode.COLUMNS)
+        self.rows_spin.setEnabled(mode is LayoutMode.ROWS)
         self._on_setting_changed()
 
     def _on_setting_changed(self):
@@ -1192,14 +1212,14 @@ class ModernExportSettings(WizardStep):
 
         self.preview_view.update_preview(pixmap)
 
-    def _get_layout_mode(self) -> str:
-        """Return the currently selected layout mode string."""
+    def _get_layout_mode(self) -> LayoutMode:
+        """Return the currently selected layout mode."""
         mode_group = self._settings_widgets.get("layout_mode")
         if mode_group is not None:
             checked_id = mode_group.checkedId()
             if 0 <= checked_id < len(_LAYOUT_MODES):
                 return _LAYOUT_MODES[checked_id]
-        return "auto"
+        return LayoutMode.AUTO
 
     def _update_preview_info(self, text: str):
         """Update preview info overlay."""
@@ -1321,15 +1341,14 @@ class ModernExportSettings(WizardStep):
         data["spacing"] = spacing_widget.value() if spacing_widget is not None else 0
 
         bg_widget = self._settings_widgets.get("background")
-        bg_index = bg_widget.currentIndex() if bg_widget is not None else 0
-        if bg_index == 0:
-            data["background_mode"] = "transparent"
-        elif bg_index == 1:
-            data["background_mode"] = "solid"
-            data["background_color"] = (255, 255, 255, 255)
+        bg_data = bg_widget.currentData() if bg_widget is not None else None
+        if bg_data is not None:
+            mode, fill_rgba = bg_data
+            data["background_mode"] = mode
+            if fill_rgba is not None:
+                data["background_color"] = fill_rgba
         else:
-            data["background_mode"] = "solid"
-            data["background_color"] = (0, 0, 0, 255)
+            data["background_mode"] = BackgroundMode.TRANSPARENT
 
         return data
 
