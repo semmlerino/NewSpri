@@ -23,6 +23,17 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "BackgroundMode",
+    "ExportConfig",
+    "ExportFormat",
+    "ExportMode",
+    "FrameExporter",
+    "LayoutMode",
+    "SpriteSheetLayout",
+    "get_frame_exporter",
+]
+
 
 class LayoutMode(Enum):
     """Layout modes for sprite sheet export."""

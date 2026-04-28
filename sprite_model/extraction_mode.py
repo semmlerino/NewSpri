@@ -8,6 +8,8 @@ Defines extraction modes for sprite frame detection.
 
 from enum import Enum
 
+__all__ = ["ExtractionMode", "extraction_mode_label"]
+
 
 class ExtractionMode(Enum):
     """Extraction mode for sprite frame detection."""

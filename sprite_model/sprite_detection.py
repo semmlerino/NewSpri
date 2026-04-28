@@ -23,6 +23,17 @@ from config import Config
 
 logger = logging.getLogger(__name__)
 
+__all__ = [
+    "DetectionResult",
+    "DetectionStepResult",
+    "comprehensive_auto_detect",
+    "detect_content_based",
+    "detect_frame_size",
+    "detect_margins",
+    "detect_rectangular_frames",
+    "detect_spacing",
+]
+
 # ---------------------------------------------------------------------------
 # Confidence score constants — sourced from Config.Detection so tuning is one file
 # ---------------------------------------------------------------------------

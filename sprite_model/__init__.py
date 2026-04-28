@@ -12,7 +12,15 @@ Refactored from a 2,530-line monolithic file into clean, testable modules:
 """
 
 from .core import SpriteModel
+from .extraction_mode import ExtractionMode, extraction_mode_label
+from .sprite_detection import DetectionResult
+from .sprite_extraction import CCLDetectionResult, GridConfig
 
 __all__ = [
+    "CCLDetectionResult",
+    "DetectionResult",
+    "ExtractionMode",
+    "GridConfig",
     "SpriteModel",
+    "extraction_mode_label",
 ]

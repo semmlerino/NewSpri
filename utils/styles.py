@@ -5,6 +5,8 @@ Provides color constants, pre-built stylesheets, and dynamic style builders
 to ensure consistent theming across the application.
 """
 
+__all__ = ["StyleManager"]
+
 
 class StyleManager:
     """Centralized style management for consistent theming."""
