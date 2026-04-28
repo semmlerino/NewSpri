@@ -15,6 +15,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from managers.animation_segment_manager import AnimationSegmentManager
+    from managers.settings_manager import SettingsManager
 
 from config import Config
 
@@ -50,6 +51,7 @@ class ExportDialog(QDialog):
         current_frame: int = 0,
         sprites: "Sequence[QPixmap] | None" = None,
         segment_manager: "AnimationSegmentManager | None" = None,
+        settings_manager: "SettingsManager | None" = None,
     ):
         super().__init__(parent)
 
@@ -57,6 +59,7 @@ class ExportDialog(QDialog):
         self.current_frame = current_frame
         self.sprites: list[QPixmap] = list(sprites) if sprites else []
         self.segment_manager = segment_manager  # Store for compatibility
+        self._settings_manager = settings_manager
 
         # Dialog settings
         self.setWindowTitle("Export Sprites")
@@ -99,6 +102,7 @@ class ExportDialog(QDialog):
             sprites=self.sprites,
             segment_manager=self.segment_manager,
             parent=self.wizard,
+            settings_manager=self._settings_manager,
         )
         self.wizard.add_step(self.settings_preview_step)
 

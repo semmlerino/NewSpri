@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from managers.animation_segment_manager import AnimationSegmentManager
+    from managers.settings_manager import SettingsManager
 
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPixmap, QWheelEvent
@@ -786,12 +787,20 @@ class ModernExportSettings(WizardStep):
         sprites: list[QPixmap] | None = None,
         segment_manager: "AnimationSegmentManager | None" = None,
         parent: QWidget | None = None,
+        settings_manager: "SettingsManager | None" = None,
     ):
         super().__init__(title="Export Settings", subtitle="Configure your export", parent=parent)
         self.frame_count = frame_count
         self.current_frame = current_frame
         self._sprites = sprites or []
         self._segment_manager = segment_manager
+        # Constructor-injected settings manager (singleton fallback for tests
+        # that build the wizard standalone without going through SpriteViewer).
+        if settings_manager is None:
+            from managers.settings_manager import get_settings_manager
+
+            settings_manager = get_settings_manager()
+        self._settings_manager = settings_manager
         self._current_preset: ExportPreset | None = None
         self._settings_widgets: dict[str, Any] = {}
         self._pattern_radios: list[QRadioButton] = []  # Track pattern radio buttons for updates
@@ -903,10 +912,7 @@ class ModernExportSettings(WizardStep):
         self.path_edit.setStyleSheet(StyleManager.line_edit_readonly())
 
         # Load last used export directory from settings
-        from managers.settings_manager import get_settings_manager
-
-        settings_manager = get_settings_manager()
-        last_export_dir = settings_manager.get_value("export/last_directory")
+        last_export_dir = self._settings_manager.get_value("export/last_directory")
 
         if last_export_dir and os.path.exists(last_export_dir):
             self.path_edit.setText(last_export_dir)
@@ -1100,10 +1106,7 @@ class ModernExportSettings(WizardStep):
             self.path_edit.setToolTip(directory)
 
             # Save last used directory to settings
-            from managers.settings_manager import get_settings_manager
-
-            settings_manager = get_settings_manager()
-            settings_manager.set_value("export/last_directory", directory)
+            self._settings_manager.set_value("export/last_directory", directory)
 
             self._on_setting_changed()
 

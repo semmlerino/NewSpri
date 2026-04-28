@@ -43,6 +43,8 @@ from core import (
 from export import ExportDialog
 from managers import (
     AnimationSegmentManager,
+    RecentFilesManager,
+    SettingsManager,
     get_recent_files_manager,
     get_settings_manager,
 )
@@ -173,12 +175,24 @@ class SpriteViewer(QMainWindow):
         Qt.Key.Key_BracketRight: "]",
     }
 
-    def __init__(self):
+    def __init__(
+        self,
+        settings_manager: "SettingsManager | None" = None,
+        recent_files_manager: "RecentFilesManager | None" = None,
+    ):
         """
         Initialize sprite viewer with manager-based architecture.
 
+        Args:
+            settings_manager: SettingsManager instance to use; defaults to the
+                global singleton via ``get_settings_manager()`` for backwards
+                compatibility with ``python sprite_viewer.py``. Tests should
+                pass an explicit instance to keep state isolated.
+            recent_files_manager: RecentFilesManager instance to use; defaults
+                to the global singleton via ``get_recent_files_manager()``.
+
         Initialization order:
-        1. Managers (singletons)
+        1. Managers (constructor-injected, with singleton fallback)
         2. Core components (model, controllers)
         3. UI setup (all widgets)
         4. Controller/coordinator initialization (with constructor DI)
@@ -186,6 +200,10 @@ class SpriteViewer(QMainWindow):
         6. Final setup (settings, welcome message)
         """
         super().__init__()
+
+        # Resolve injected managers (fall back to singletons for the entrypoint)
+        self._settings_manager = settings_manager or get_settings_manager()
+        self._recent_files = recent_files_manager or get_recent_files_manager()
 
         # Initialize managers first
         self._init_managers()
@@ -226,10 +244,11 @@ class SpriteViewer(QMainWindow):
         self._show_welcome_message()
 
     def _init_managers(self):
-        """Initialize all centralized managers."""
-        # Utility managers (keep using factories - used by dialogs etc.)
-        self._settings_manager = get_settings_manager()
+        """Allocate per-instance manager scratch state.
 
+        ``self._settings_manager`` and ``self._recent_files`` are set in
+        ``__init__`` from the constructor arguments (with singleton fallback).
+        """
         # Actions storage
         self._actions: dict[str, QAction] = {}
         self._shortcut_to_action: dict[str, str] = {}  # Key sequence -> action_id
@@ -243,8 +262,7 @@ class SpriteViewer(QMainWindow):
         self._segment_manager = AnimationSegmentManager()
 
         # Recent files manager setup - handle clicks on recent file menu items
-        self._recent_files = get_recent_files_manager()
-
+        # (manager itself is injected via __init__)
         def on_recent_file(path: str) -> None:
             self._load_sprite_file(path)
 
@@ -1108,6 +1126,7 @@ class SpriteViewer(QMainWindow):
             current_frame=current_frame,
             sprites=sprites,
             segment_manager=self._segment_manager,
+            settings_manager=self._settings_manager,
         )
         dialog.exportRequested.connect(self._export_coordinator.handle_export_request)
         dialog.exec()
