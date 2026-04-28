@@ -33,7 +33,7 @@ from PySide6.QtWidgets import (
 )
 
 from config import Config
-from coordinators import SignalCoordinator, SpriteLoadCoordinator
+from coordinators import SignalCoordinator, SpriteLoadCoordinator, SpriteLoadDependencies
 from core import (
     AnimationController,
     AnimationSegmentController,
@@ -222,24 +222,38 @@ class SpriteViewer(QMainWindow):
 
         # Set up canvas zoom label connection and grid state
         self._grid_enabled = False
-        self._loading_in_progress = False
 
         # Initialize controllers with all dependencies
         self._init_controllers()
 
         # Debounce timer for frame slicing (prevents per-keystroke extraction).
-        # Must exist BEFORE SpriteLoadCoordinator is created — coordinator
-        # methods reach for ``view._slicing_debounce_timer`` from their first
-        # invocation onward.
         self._slicing_debounce_timer = QTimer(self)
         self._slicing_debounce_timer.setSingleShot(True)
         self._slicing_debounce_timer.setInterval(300)
         self._slicing_debounce_timer.timeout.connect(self._update_frame_slicing)
 
-        # Sprite-load + extraction cascade collaborator. Created after the
-        # debounce timer (which it reads) and before the signal coordinator
-        # (which wires the load handlers).
-        self._load_coordinator = SpriteLoadCoordinator(self)
+        # Sprite-load + extraction cascade collaborator. Created before the
+        # signal coordinator wires the load handlers.
+        self._load_coordinator = SpriteLoadCoordinator(
+            SpriteLoadDependencies(
+                parent=self,
+                sprite_model=self._sprite_model,
+                frame_extractor=self._frame_extractor,
+                auto_detection_controller=self._auto_detection_controller,
+                segment_manager=self._segment_manager,
+                segment_controller=self._segment_controller,
+                canvas=self._canvas,
+                grid_view=self._grid_view,
+                segment_preview=self._segment_preview,
+                status_bar=self._status_bar,
+                info_label=self._info_label,
+                slicing_debounce_timer=self._slicing_debounce_timer,
+                add_recent_file=self._recent_files.add_file_to_recent,
+                update_recent_files_menu=self._update_recent_files_menu,
+                update_has_frames_actions=self._update_has_frames_actions,
+                update_playback_for_extraction=self._update_playback_for_extraction,
+            )
+        )
 
         # Initial action enabled state — coordinator wires the rest of the
         # cross-component signals below.

@@ -12,6 +12,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from export.core.frame_exporter import ExportMode
+from export.dialogs.export_settings_data import ExportSettingsDataCollector
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget
@@ -61,15 +62,15 @@ def _selected_panel(parent: _ModernExportSettings) -> _SettingsPanelBase:
 
 
 def _sheet_data(parent: _ModernExportSettings) -> dict[str, Any]:
-    return parent._get_sheet_data()
+    return ExportSettingsDataCollector(parent).sheet_data()
 
 
 def _individual_data(parent: _ModernExportSettings) -> dict[str, Any]:
-    return parent._get_individual_frames_data()
+    return ExportSettingsDataCollector(parent).individual_frames_data()
 
 
 def _selected_data(parent: _ModernExportSettings) -> dict[str, Any]:
-    return parent._get_selected_frames_data()
+    return ExportSettingsDataCollector(parent).selected_frames_data()
 
 
 UI_MODE_SPECS: dict[ExportMode, ExportModeUiSpec] = {

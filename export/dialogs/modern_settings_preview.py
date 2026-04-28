@@ -48,17 +48,14 @@ from ..core.export_presets import ExportPreset
 from ..core.frame_exporter import BackgroundMode, ExportFormat, ExportMode, LayoutMode
 from ..dialogs.base.wizard_base import _WizardStep, _WizardWidget
 from .export_mode_ui_registry import get_ui_mode_spec
+from .export_settings_data import (
+    LAYOUT_MODES,
+    NAMING_PATTERNS,
+    ExportSettingsDataCollector,
+    ExportSettingsSummary,
+)
 
 logger = logging.getLogger(__name__)
-
-# Ordered layout modes. Index matches the QButtonGroup id used in
-# _SheetSettingsPanel._create_layout_tab and _get_layout_mode.
-_LAYOUT_MODES: tuple[LayoutMode, ...] = (
-    LayoutMode.AUTO,
-    LayoutMode.COLUMNS,
-    LayoutMode.ROWS,
-    LayoutMode.SQUARE,
-)
 
 
 class _CompactLivePreview(QGraphicsView):
@@ -223,10 +220,10 @@ class _SheetSettingsPanel(_SettingsPanelBase):
         mode_layout.setSpacing(8)
 
         modes = [
-            ("Auto", _LAYOUT_MODES[0], "Best fit"),
-            ("Fixed Columns", _LAYOUT_MODES[1], "Set columns"),
-            ("Fixed Rows", _LAYOUT_MODES[2], "Set rows"),
-            ("Square", _LAYOUT_MODES[3], "Force square"),
+            ("Auto", LAYOUT_MODES[0], "Best fit"),
+            ("Fixed Columns", LAYOUT_MODES[1], "Set columns"),
+            ("Fixed Rows", LAYOUT_MODES[2], "Set rows"),
+            ("Square", LAYOUT_MODES[3], "Force square"),
         ]
 
         for i, (label, value, tooltip) in enumerate(modes):
@@ -360,9 +357,7 @@ class _IndividualSettingsPanel(_SettingsPanelBase):
         # Clear any existing pattern radios before adding new ones
         self._parent._pattern_radios.clear()
 
-        patterns = ["{name}_{index:03d}", "{name}-{index}", "{name}{index}"]
-
-        for i, pattern in enumerate(patterns):
+        for i, pattern in enumerate(NAMING_PATTERNS):
             # Generate initial display text
             display_text = self._parent._generate_pattern_display(pattern, "frame")
             radio = QRadioButton(display_text)
@@ -502,7 +497,7 @@ class _PreviewGenerator:
                 logger.debug("Falling back to regular sheet preview")
 
         # Get layout settings
-        layout_mode = self._parent._get_layout_mode()
+        layout_mode = self._parent._data_collector.layout_mode()
         sprite_count = len(self._parent._sprites)
         cols, rows = self._calculate_grid(layout_mode, sprite_count)
 
@@ -903,6 +898,8 @@ class _ModernExportSettings(_WizardStep):
         # to be inlined into _validate_settings / _update_preview / _on_setting_changed).
         self._validator = _SettingsValidator(self)
         self._preview = _PreviewOrchestrator(self)
+        self._data_collector = ExportSettingsDataCollector(self)
+        self._summary_builder = ExportSettingsSummary(self)
         # Backwards-compat aliases for code/tests that reach for the underlying
         # generator or the preview-debounce timer.
         self._preview_generator = self._preview.generator
@@ -1262,15 +1259,6 @@ class _ModernExportSettings(_WizardStep):
         """Update preview based on settings (delegated to _PreviewOrchestrator)."""
         self._preview.update_now()
 
-    def _get_layout_mode(self) -> LayoutMode:
-        """Return the currently selected layout mode."""
-        mode_group = self._settings_widgets.get("layout_mode")
-        if mode_group is not None:
-            checked_id = mode_group.checkedId()
-            if 0 <= checked_id < len(_LAYOUT_MODES):
-                return _LAYOUT_MODES[checked_id]
-        return LayoutMode.AUTO
-
     def _update_preview_info(self, text: str):
         """Update preview info overlay."""
         self.info_label.setText(text)
@@ -1283,32 +1271,7 @@ class _ModernExportSettings(_WizardStep):
 
     def _update_summary(self):
         """Update export summary."""
-        parts = []
-
-        # Output path
-        output = self.path_edit.text()
-        if output:
-            if len(output) > 40:
-                output = "..." + output[-37:]
-            parts.append(f"📁 {output}")
-
-        # Format and scale
-        fmt: str = self.format_combo.currentText()
-        scale = self.scale_group.checkedId() if self.scale_group.checkedButton() else 1
-        parts.append(f"{fmt} @ {scale}x")
-
-        # Mode specific
-        if self._current_preset:
-            if self._current_preset.mode is ExportMode.SPRITE_SHEET:
-                w = self._settings_widgets.get("sheet_filename")
-                filename = w.text() if w is not None else ""
-                if filename:
-                    parts.append(f"→ {filename}.{fmt.lower()}")
-            elif self._current_preset.mode is ExportMode.SELECTED_FRAMES:
-                count = len(self.frame_list.selectedItems()) if hasattr(self, "frame_list") else 0
-                parts.append(f"({count} frames)")
-
-        self.summary_label.setText(" • ".join(parts))
+        self.summary_label.setText(self._summary_builder.text(self._current_preset))
 
     def on_entering(self):
         """Called when entering this step."""
@@ -1350,11 +1313,7 @@ class _ModernExportSettings(_WizardStep):
             "Current preset mode: %s", self._current_preset.mode if self._current_preset else "None"
         )
 
-        data: dict[str, Any] = {
-            "output_dir": self.path_edit.text(),
-            "format": self.format_combo.currentText(),
-            "scale": self.scale_group.checkedId() if self.scale_group.checkedButton() else 1,
-        }
+        data = self._data_collector.base_data()
 
         logger.debug(
             "Base data: output_dir='%s', format='%s', scale=%s",
@@ -1370,71 +1329,6 @@ class _ModernExportSettings(_WizardStep):
         logger.debug("Final get_data() result: %s", data)
         logger.debug("Data keys: %s", list(data.keys()))
         return data
-
-    def _get_sheet_data(self) -> dict[str, Any]:
-        """Collect sprite sheet export settings."""
-        w = self._settings_widgets.get("sheet_filename")
-        data: dict[str, Any] = {
-            "single_filename": w.text() if w is not None else "",
-            "layout_mode": self._get_layout_mode(),
-            "columns": self.cols_spin.value(),
-            "rows": self.rows_spin.value(),
-        }
-
-        # Style settings
-        spacing_widget = self._settings_widgets.get("spacing")
-        data["spacing"] = spacing_widget.value() if spacing_widget is not None else 0
-
-        bg_widget = self._settings_widgets.get("background")
-        bg_data = bg_widget.currentData() if bg_widget is not None else None
-        if bg_data is not None:
-            mode, fill_rgba = bg_data
-            data["background_mode"] = mode
-            if fill_rgba is not None:
-                data["background_color"] = fill_rgba
-        else:
-            data["background_mode"] = BackgroundMode.TRANSPARENT
-
-        return data
-
-    def _get_individual_frames_data(self) -> dict[str, Any]:
-        """Collect individual frames export settings."""
-        data: dict[str, Any] = {
-            "base_name": self._widget_text_or("base_name", "frame"),
-        }
-
-        # Pattern
-        patterns = ["{name}_{index:03d}", "{name}-{index}", "{name}{index}"]
-        pattern_group = self._settings_widgets.get("pattern_group")
-        if pattern_group and pattern_group.checkedButton():
-            data["pattern"] = patterns[pattern_group.id(pattern_group.checkedButton())]
-        else:
-            data["pattern"] = patterns[0]
-
-        return data
-
-    def _get_selected_frames_data(self) -> dict[str, Any]:
-        """Collect selected frames export settings."""
-        selected_indices: list[int] = []
-        if hasattr(self, "frame_list"):
-            selected_indices.extend(
-                item.data(Qt.ItemDataRole.UserRole) for item in self.frame_list.selectedItems()
-            )
-
-        return {
-            "selected_indices": selected_indices,
-            "base_name": self._widget_text_or("selected_base_name", "frame"),
-            "pattern": "{name}_{index:03d}",
-        }
-
-    def _widget_text_or(self, widget_key: str, fallback: str) -> str:
-        """Get text from a settings widget, falling back if absent or empty."""
-        widget = self._settings_widgets.get(widget_key)
-        if widget and hasattr(widget, "text"):
-            text = widget.text()
-            if text:
-                return text
-        return fallback
 
     def _generate_pattern_display(self, pattern: str, base_name: str) -> str:
         """Generate display text for a pattern with the given base name."""

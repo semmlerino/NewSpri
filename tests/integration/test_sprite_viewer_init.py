@@ -35,6 +35,7 @@ class TestSpriteViewerInitialization:
             assert hasattr(viewer, "_recent_files")
             assert hasattr(viewer, "_sprite_model")
             assert hasattr(viewer, "_animation_controller")
+            assert hasattr(viewer, "_load_coordinator")
 
             # Test the objects are actually the right types
             from core.animation_controller import AnimationController
@@ -47,6 +48,8 @@ class TestSpriteViewerInitialization:
             assert viewer._recent_files._settings is viewer._settings_manager
             assert isinstance(viewer._sprite_model, SpriteModel)
             assert isinstance(viewer._animation_controller, AnimationController)
+            assert not hasattr(viewer._load_coordinator, "_view")
+            assert viewer._load_coordinator._deps.sprite_model is viewer._sprite_model
 
         except AttributeError as e:
             pytest.fail(f"SpriteViewer initialization failed with AttributeError: {e}")
