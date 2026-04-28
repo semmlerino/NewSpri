@@ -128,6 +128,76 @@ class FrameExtractionConfig:
     MAX_REASONABLE_FRAMES = 200
 
 
+class DetectionConfig:
+    """
+    Sprite detection algorithm parameters and thresholds.
+
+    Tuning these affects the comprehensive auto-detection pipeline in
+    sprite_model/sprite_detection.py. Keep regression coverage in
+    tests/unit/test_detection_algorithms.py in sync when changing values.
+    """
+
+    # ==========================================================================
+    # CONFIDENCE SCORES — assigned to individual detection-step outcomes
+    # ==========================================================================
+    CONFIDENCE_HIGH = 0.9  # Margin detection success
+    CONFIDENCE_CONTENT = 0.95  # Content-based frame detection (most reliable)
+    CONFIDENCE_MEDIUM = 0.7  # Rectangular frame detection (fallback OK)
+    CONFIDENCE_FALLBACK = 0.6  # Basic square detection (last-resort strategy)
+    CONFIDENCE_LOW = 0.3  # Detection failed or low certainty
+    CONFIDENCE_FAILED = 0.1  # All strategies exhausted
+    CONFIDENCE_ERROR = 0.2  # Exception during detection
+    CONFIDENCE_VALIDATION_OK = 0.8  # Cross-validation passed
+    CONFIDENCE_VALIDATION_WARN = 0.4  # Cross-validation warned
+
+    # ==========================================================================
+    # CONFIDENCE BUCKETS — used to map a numeric score to a label
+    # ==========================================================================
+    HIGH_CONFIDENCE_CUTOFF = 0.8
+    MEDIUM_CONFIDENCE_CUTOFF = 0.6
+
+    # Spacing-specific confidence buckets (slightly looser than the global one)
+    SPACING_HIGH_CUTOFF = 0.8
+    SPACING_MEDIUM_CUTOFF = 0.5
+
+    # Overall summary thresholds for comprehensive_auto_detect
+    SUMMARY_SUCCESS_THRESHOLD = 0.6
+    SUMMARY_WARNING_THRESHOLD = 0.4
+
+    # ==========================================================================
+    # MARGIN VALIDATION
+    # ==========================================================================
+    HORIZONTAL_STRIP_ASPECT_RATIO = 3.0  # width/height ratio that triggers strip mode
+    HORIZONTAL_STRIP_MARGIN_CAP = 5  # Cap horizontal-strip margins to this many px
+    SMALL_MARGIN_THRESHOLD = 2  # Margins at or below this many px are zeroed (noise)
+
+    # ==========================================================================
+    # FRAME SCORING — used by _score_frame_candidate
+    # ==========================================================================
+    SCORING_COMMON_SIZES = (16, 24, 32, 48, 64, 96, 128)
+    SCORING_COMMON_ASPECT_RATIOS = (1.0, 0.5, 2.0, 0.75, 1.33, 0.67, 1.5)
+    SCORING_ASPECT_RATIO_TOLERANCE = 0.1
+    SCORING_LARGE_FRAME_AREA = 1024  # 32×32 or larger gets a small bonus
+
+    # ==========================================================================
+    # GRID-BASED CONTENT DETECTION
+    # ==========================================================================
+    # Subset of FrameExtractionConfig.AUTO_DETECT_SIZES used for grid-based
+    # content detection (smaller sizes are noisy at this stage).
+    GRID_DETECTION_SIZES = (16, 24, 32, 48, 64)
+
+    # _has_content_in_region samples one pixel every (min(w,h) // DIVISOR) px
+    CONTENT_SAMPLE_STEP_DIVISOR = 4
+
+    # ==========================================================================
+    # SPACING DETECTION
+    # ==========================================================================
+    MAX_TEST_SPACING = 11  # Try spacings in range(MAX_TEST_SPACING) — i.e. 0..10 px
+    MAX_POSITIONS_TO_CHECK = 3  # Validate at most this many gap positions per spacing
+    SPACING_CROSS_SAMPLE_STEP = 5  # Sample every Nth pixel along the cross-axis
+    SPACING_FRAME_EXISTS_SAMPLE_LIMIT = 20  # Look this many cross-axis px to confirm next frame
+
+
 class UIConfig:
     """
     User interface settings - consolidated from UIConfig, StylesConfig,
@@ -394,10 +464,11 @@ class ExportConfig:
 class Config:
     """Main configuration class providing access to all settings."""
 
-    # Primary config groups (6 logical groups)
+    # Primary config groups (7 logical groups)
     Canvas = CanvasConfig
     Animation = AnimationConfig
     FrameExtraction = FrameExtractionConfig
+    Detection = DetectionConfig
     UI = UIConfig
     App = AppConfig
     Export = ExportConfig
@@ -418,6 +489,7 @@ __all__ = [
     "AppConfig",
     "CanvasConfig",
     "Config",
+    "DetectionConfig",
     "ExportConfig",
     "FrameExtractionConfig",
     "UIConfig",

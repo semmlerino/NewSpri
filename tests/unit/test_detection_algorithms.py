@@ -27,17 +27,20 @@ from sprite_model.sprite_detection import (
     DetectionResult,
     DetectionStepResult,
     _calculate_common_dimensions,
+    _confidence_label,
     _detect_raw_margins,
     _detect_spacing_1d,
     _has_content_in_region,
     _score_frame_candidate,
     _validate_margins,
+    comprehensive_auto_detect,
     detect_content_based,
     detect_frame_size,
     detect_margins,
     detect_rectangular_frames,
     detect_spacing,
 )
+from tests.fixtures.detection_cases import DETECTION_BASELINES, DetectionBaseline
 
 
 class TestFrameDetector:
@@ -820,3 +823,47 @@ class TestDetectionIntegration:
         assert frame_width > 0 and frame_height > 0
         assert offset_x >= 0 and offset_y >= 0
         assert spacing_x >= 0 and spacing_y >= 0
+
+
+# ============================================================================
+# Regression baselines — pin comprehensive_auto_detect against fixture PNGs.
+# Update tests/fixtures/detection_cases.py when intentionally tuning detection.
+# ============================================================================
+
+
+class TestDetectionRegressionBaselines:
+    """Pin comprehensive_auto_detect output against real sprite-sheet fixtures."""
+
+    @pytest.mark.parametrize("baseline", DETECTION_BASELINES, ids=lambda b: b.name)
+    def test_comprehensive_detection_matches_baseline(
+        self, qapp, baseline: DetectionBaseline
+    ) -> None:
+        """Detected (frame, offset, spacing, confidence-bucket) must match the baseline."""
+        path = baseline.absolute_path
+        if not path.exists():
+            pytest.skip(f"fixture sprite missing: {path}")
+
+        pixmap = QPixmap(str(path))
+        assert not pixmap.isNull(), f"Failed to load fixture: {path}"
+        assert pixmap.width() == baseline.sheet_width
+        assert pixmap.height() == baseline.sheet_height
+
+        success, _msg, result = comprehensive_auto_detect(pixmap)
+        bucket = _confidence_label(result.confidence)
+
+        assert success == baseline.expected_success, (
+            f"{baseline.name}: success={success} (baseline={baseline.expected_success})"
+        )
+        assert result.frame_width == baseline.expected_frame_width, (
+            f"{baseline.name}: frame_width={result.frame_width} "
+            f"(baseline={baseline.expected_frame_width})"
+        )
+        assert result.frame_height == baseline.expected_frame_height
+        assert result.offset_x == baseline.expected_offset_x
+        assert result.offset_y == baseline.expected_offset_y
+        assert result.spacing_x == baseline.expected_spacing_x
+        assert result.spacing_y == baseline.expected_spacing_y
+        assert bucket == baseline.expected_confidence_bucket, (
+            f"{baseline.name}: confidence={result.confidence:.4f} bucket={bucket} "
+            f"(baseline={baseline.expected_confidence_bucket})"
+        )

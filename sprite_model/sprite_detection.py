@@ -24,24 +24,24 @@ from config import Config
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Confidence score constants
+# Confidence score constants — sourced from Config.Detection so tuning is one file
 # ---------------------------------------------------------------------------
-_CONFIDENCE_HIGH = 0.9
-_CONFIDENCE_CONTENT = 0.95
-_CONFIDENCE_MEDIUM = 0.7
-_CONFIDENCE_FALLBACK = 0.6
-_CONFIDENCE_LOW = 0.3
-_CONFIDENCE_FAILED = 0.1
-_CONFIDENCE_ERROR = 0.2
-_CONFIDENCE_VALIDATION_OK = 0.8
-_CONFIDENCE_VALIDATION_WARN = 0.4
+_CONFIDENCE_HIGH = Config.Detection.CONFIDENCE_HIGH
+_CONFIDENCE_CONTENT = Config.Detection.CONFIDENCE_CONTENT
+_CONFIDENCE_MEDIUM = Config.Detection.CONFIDENCE_MEDIUM
+_CONFIDENCE_FALLBACK = Config.Detection.CONFIDENCE_FALLBACK
+_CONFIDENCE_LOW = Config.Detection.CONFIDENCE_LOW
+_CONFIDENCE_FAILED = Config.Detection.CONFIDENCE_FAILED
+_CONFIDENCE_ERROR = Config.Detection.CONFIDENCE_ERROR
+_CONFIDENCE_VALIDATION_OK = Config.Detection.CONFIDENCE_VALIDATION_OK
+_CONFIDENCE_VALIDATION_WARN = Config.Detection.CONFIDENCE_VALIDATION_WARN
 
 
 def _confidence_label(confidence: float) -> str:
     """Return a human-readable label for a confidence score in [0.0, 1.0]."""
-    if confidence >= 0.8:
+    if confidence >= Config.Detection.HIGH_CONFIDENCE_CUTOFF:
         return "high"
-    if confidence >= 0.6:
+    if confidence >= Config.Detection.MEDIUM_CONFIDENCE_CUTOFF:
         return "medium"
     if confidence > 0.0:
         return "low"
@@ -294,19 +294,21 @@ def _validate_margins(
 
     # For horizontal strips (wide aspect ratio), minimize margins
     aspect_ratio = width / height
-    if aspect_ratio > 3.0:
+    strip_cap = Config.Detection.HORIZONTAL_STRIP_MARGIN_CAP
+    if aspect_ratio > Config.Detection.HORIZONTAL_STRIP_ASPECT_RATIO:
         # This looks like a horizontal strip - minimize margins
-        if validated_left > 5:
-            validated_left = min(5, validated_left)
+        if validated_left > strip_cap:
+            validated_left = min(strip_cap, validated_left)
             validation_msg += "Reduced margins for horizontal strip; "
-        if validated_top > 5:
-            validated_top = min(5, validated_top)
+        if validated_top > strip_cap:
+            validated_top = min(strip_cap, validated_top)
             validation_msg += "Reduced top margin for horizontal strip; "
 
     # If margins are very small, set to zero to avoid noise
-    if validated_left <= 2:
+    small_margin = Config.Detection.SMALL_MARGIN_THRESHOLD
+    if validated_left <= small_margin:
         validated_left = 0
-    if validated_top <= 2:
+    if validated_top <= small_margin:
         validated_top = 0
 
     return validated_left, validated_top, validation_msg.rstrip("; ")
@@ -498,7 +500,7 @@ def _score_frame_candidate(
     score = 0.0
 
     # Prefer common frame sizes
-    common_sizes = [16, 24, 32, 48, 64, 96, 128]
+    common_sizes = Config.Detection.SCORING_COMMON_SIZES
     if frame_width in common_sizes:
         score += 2.0
     if frame_height in common_sizes:
@@ -514,10 +516,11 @@ def _score_frame_candidate(
 
     # Prefer common aspect ratios
     aspect_ratio = frame_width / frame_height
-    common_ratios = [1.0, 0.5, 2.0, 0.75, 1.33, 0.67, 1.5]  # 1:1, 1:2, 2:1, 3:4, 4:3, 2:3, 3:2
+    common_ratios = Config.Detection.SCORING_COMMON_ASPECT_RATIOS
+    tolerance = Config.Detection.SCORING_ASPECT_RATIO_TOLERANCE
 
     for ratio in common_ratios:
-        if abs(aspect_ratio - ratio) < 0.1:
+        if abs(aspect_ratio - ratio) < tolerance:
             score += 1.5
             break
 
@@ -529,7 +532,7 @@ def _score_frame_candidate(
 
     # Slight preference for larger frames (more detail)
     frame_area = frame_width * frame_height
-    if frame_area >= 1024:  # 32x32 or larger
+    if frame_area >= Config.Detection.SCORING_LARGE_FRAME_AREA:
         score += 0.5
 
     return score
@@ -554,8 +557,7 @@ def _find_nonempty_grid_cells(image: QImage) -> list[tuple[int, int, int, int]]:
 
     content_bounds = []
 
-    # Subset of Config.FrameExtraction.AUTO_DETECT_SIZES used for grid-based detection
-    for grid_size in [16, 24, 32, 48, 64]:
+    for grid_size in Config.Detection.GRID_DETECTION_SIZES:
         if width % grid_size == 0 and height % grid_size == 0:
             frames_x = width // grid_size
             frames_y = height // grid_size
@@ -588,7 +590,7 @@ def _has_content_in_region(
         True if region has content, False otherwise
     """
     # Sample pixels in the region to check for content
-    sample_step = max(1, min(width, height) // 4)
+    sample_step = max(1, min(width, height) // Config.Detection.CONTENT_SAMPLE_STEP_DIVISOR)
 
     for check_y in range(y, min(y + height, image.height()), sample_step):
         for check_x in range(x, min(x + width, image.width()), sample_step):
@@ -688,9 +690,12 @@ def detect_spacing(
 
         # Calculate confidence based on consistency scores
         avg_confidence = (best_score_x + best_score_y) / 2
-        confidence_text = (
-            "high" if avg_confidence >= 0.8 else "medium" if avg_confidence >= 0.5 else "low"
-        )
+        if avg_confidence >= Config.Detection.SPACING_HIGH_CUTOFF:
+            confidence_text = "high"
+        elif avg_confidence >= Config.Detection.SPACING_MEDIUM_CUTOFF:
+            confidence_text = "medium"
+        else:
+            confidence_text = "low"
 
         return (
             True,
@@ -744,7 +749,7 @@ def _detect_spacing_1d(
     best_score = 0.0
     alpha_threshold = Config.FrameExtraction.MARGIN_DETECTION_ALPHA_THRESHOLD
 
-    for test_spacing in range(11):
+    for test_spacing in range(Config.Detection.MAX_TEST_SPACING):
         if frame_size <= 0:
             continue
 
@@ -753,7 +758,7 @@ def _detect_spacing_1d(
             if test_spacing > 0
             else available // frame_size
         )
-        positions_to_check = min(3, frames_per_strip - 1)
+        positions_to_check = min(Config.Detection.MAX_POSITIONS_TO_CHECK, frames_per_strip - 1)
 
         if positions_to_check <= 0:
             continue
@@ -772,10 +777,11 @@ def _detect_spacing_1d(
             positions_checked += 1
 
             # Check that the gap strip is empty
+            cross_step = Config.Detection.SPACING_CROSS_SAMPLE_STEP
             gap_valid = True
             if test_spacing > 0:
                 for cross in range(
-                    offset_cross, min(offset_cross + frame_cross, image_cross_size), 5
+                    offset_cross, min(offset_cross + frame_cross, image_cross_size), cross_step
                 ):
                     for main in range(gap_start, gap_end):
                         if main < image_main_size:
@@ -789,7 +795,12 @@ def _detect_spacing_1d(
             # Check that the next frame position contains content
             frame_exists = False
             if gap_valid:
-                for cross in range(offset_cross, min(offset_cross + 20, image_cross_size), 5):
+                frame_sample_limit = Config.Detection.SPACING_FRAME_EXISTS_SAMPLE_LIMIT
+                for cross in range(
+                    offset_cross,
+                    min(offset_cross + frame_sample_limit, image_cross_size),
+                    cross_step,
+                ):
                     alpha = (pixel_fn(next_frame, cross) >> 24) & 0xFF
                     if alpha > alpha_threshold:
                         frame_exists = True
@@ -1110,10 +1121,10 @@ def _summarize_detection(
     messages.append(f"   • Spacing: X={result.spacing_x}, Y={result.spacing_y}")
     messages.append(f"   • Confidence: {confidence_text} ({overall_confidence:.1%})")
 
-    if overall_success and overall_confidence >= 0.6:
+    if overall_success and overall_confidence >= Config.Detection.SUMMARY_SUCCESS_THRESHOLD:
         messages.append("   🎉 Auto-detection completed successfully!")
         return True, True
-    elif overall_confidence >= 0.4:
+    elif overall_confidence >= Config.Detection.SUMMARY_WARNING_THRESHOLD:
         messages.append("   ⚠ Auto-detection completed with warnings")
         return overall_success, True
     else:
