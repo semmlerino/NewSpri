@@ -47,6 +47,7 @@ from utils.styles import StyleManager
 from ..core.export_presets import ExportPreset
 from ..core.frame_exporter import BackgroundMode, ExportFormat, ExportMode, LayoutMode
 from ..dialogs.base.wizard_base import WizardStep, WizardWidget
+from .export_mode_ui_registry import get_ui_mode_spec
 
 logger = logging.getLogger(__name__)
 
@@ -154,8 +155,8 @@ class _SettingsPanelBase:
     """Common boilerplate shared by sheet/individual/selected settings panels.
 
     Subclasses implement ``build()`` to construct the per-mode QWidget. The
-    method is declared here so ``ExportModeSpec.panel_factory`` can return the
-    base type and the registry dispatch stays type-clean.
+    method is declared here so the dialog-side mode registry can return the
+    base type and keep dispatch type-clean.
     """
 
     _parent: "ModernExportSettings"
@@ -1163,8 +1164,6 @@ class ModernExportSettings(WizardStep):
 
     def _setup_for_preset(self, preset: ExportPreset):
         """Configure UI for selected preset."""
-        from export.core.export_presets import get_mode_spec
-
         logger.debug("_setup_for_preset called with: %s (mode: %s)", preset.name, preset.mode)
         self._current_preset = preset
 
@@ -1175,9 +1174,9 @@ class ModernExportSettings(WizardStep):
                 self.mode_stack.removeWidget(widget)
 
         # Create the appropriate settings panel via the registry
-        spec = get_mode_spec(preset.mode)
+        spec = get_ui_mode_spec(preset.mode)
         logger.debug("Creating panel via registry for mode: %s", preset.mode)
-        settings = spec.panel_factory(self).build()
+        settings = spec.build_panel(self)
 
         self.mode_stack.addWidget(settings)
 
@@ -1343,8 +1342,6 @@ class ModernExportSettings(WizardStep):
 
     def get_data(self) -> dict[str, Any]:
         """Get all settings data."""
-        from export.core.export_presets import get_mode_spec
-
         logger.debug("ModernExportSettings.get_data() called")
         logger.debug(
             "Current preset: %s", self._current_preset.name if self._current_preset else "None"
@@ -1367,8 +1364,8 @@ class ModernExportSettings(WizardStep):
         )
 
         if self._current_preset:
-            spec = get_mode_spec(self._current_preset.mode)
-            data.update(spec.data_extractor(self))
+            spec = get_ui_mode_spec(self._current_preset.mode)
+            data.update(spec.collect_data(self))
 
         logger.debug("Final get_data() result: %s", data)
         logger.debug("Data keys: %s", list(data.keys()))

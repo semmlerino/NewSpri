@@ -10,6 +10,7 @@ Provides integration between settings persistence and menu display.
 import threading
 from collections.abc import Callable
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject
 from PySide6.QtGui import QAction, QKeySequence
@@ -17,6 +18,9 @@ from PySide6.QtWidgets import QMenu
 
 from config import Config
 from managers.settings_manager import get_settings_manager
+
+if TYPE_CHECKING:
+    from managers.settings_manager import SettingsManager
 
 
 class RecentFilesManager(QObject):
@@ -32,10 +36,14 @@ class RecentFilesManager(QObject):
 
     # Signals (none currently emitted)
 
-    def __init__(self, max_display_length: int = 50):
+    def __init__(
+        self,
+        max_display_length: int = 50,
+        settings_manager: "SettingsManager | None" = None,
+    ):
         super().__init__()
 
-        self._settings = get_settings_manager()
+        self._settings = settings_manager or get_settings_manager()
         self._max_display_length = max_display_length
 
         # Menu references

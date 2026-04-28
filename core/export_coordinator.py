@@ -6,11 +6,14 @@ and AnimationSegmentController.
 """
 
 import contextlib
+from collections.abc import Sequence
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject
+from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QMessageBox, QWidget
 
+from export.core.export_mode_registry import get_mode_spec
 from export.core.frame_exporter import (
     ExportConfig,
     ExportMode,
@@ -108,10 +111,10 @@ class ExportCoordinator(QObject):
 
         return True, ""
 
-    def handle_export_request(self, config: ExportConfig, frames: list | None = None) -> None:
+    def handle_export_request(
+        self, config: ExportConfig, frames: Sequence[QPixmap] | None = None
+    ) -> None:
         """Handle unified export request from dialog."""
-        from export.core.export_presets import get_mode_spec
-
         # Validate mode-specific preconditions
         valid, error_message = self._validate_mode_preconditions(config)
         if not valid:
@@ -163,7 +166,7 @@ class ExportCoordinator(QObject):
     # Export Methods
     # -------------------------------------------------------------------------
 
-    def _export_frames(self, config: ExportConfig, frames: list | None = None) -> None:
+    def export_frames(self, config: ExportConfig, frames: Sequence[QPixmap] | None = None) -> None:
         """Handle standard frame export (individual or sheet)."""
         from dataclasses import replace
 
@@ -189,7 +192,7 @@ class ExportCoordinator(QObject):
         if not success:
             self._show_error("Failed to start export.")
 
-    def _export_segments_per_row(self, config: ExportConfig) -> None:
+    def export_segments_per_row(self, config: ExportConfig) -> None:
         """Handle segments per row sprite sheet export."""
         if self._segment_manager is None:
             raise RuntimeError("segment_manager is required for segment export")
@@ -213,6 +216,14 @@ class ExportCoordinator(QObject):
 
         if not success:
             self._show_error("Failed to start segments per row export.")
+
+    def _export_frames(self, config: ExportConfig, frames: Sequence[QPixmap] | None = None) -> None:
+        """Backward-compatible shim for older tests/callers."""
+        self.export_frames(config, frames=frames)
+
+    def _export_segments_per_row(self, config: ExportConfig) -> None:
+        """Backward-compatible shim for older tests/callers."""
+        self.export_segments_per_row(config)
 
     # -------------------------------------------------------------------------
     # Signal Handlers

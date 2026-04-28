@@ -3,26 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Any
 
-from .export_mode_spec import ExportModeSpec
 from .frame_exporter import (
     BackgroundMode,
-    ExportConfig,
     ExportMode,
-    ExportWorker,
     LayoutMode,
     SpriteSheetLayout,
 )
-
-if TYPE_CHECKING:
-    from PySide6.QtGui import QPixmap
-
-    from core.export_coordinator import ExportCoordinator
-    from export.dialogs.modern_settings_preview import (
-        ModernExportSettings,
-        _SettingsPanelBase,
-    )
 
 
 @dataclass
@@ -113,107 +100,3 @@ PRESETS: dict[str, ExportPreset] = {
 def get_preset(name: str) -> ExportPreset | None:
     """Get a preset by name."""
     return PRESETS.get(name)
-
-
-# ============================================================================
-# Mode-spec registry (separate axis from PRESETS)
-# ============================================================================
-#
-# PRESETS: user-facing configuration recipes (multiple per mode possible).
-# MODE_SPECS: machinery dispatch — one per ExportMode — wires together the
-# settings panel, data extractor, worker method, and coordinator method.
-#
-# UI-side callables (panel factories + data extractors) live in
-# export/dialogs/modern_settings_preview.py, which imports from this module.
-# To break the resulting import cycle the factory/extractor entries are wrapped
-# in lazy import shims defined below.
-
-
-def _sheet_panel(parent: ModernExportSettings) -> _SettingsPanelBase:
-    from export.dialogs.modern_settings_preview import _SheetSettingsPanel
-
-    return _SheetSettingsPanel(parent)
-
-
-def _individual_panel(parent: ModernExportSettings) -> _SettingsPanelBase:
-    from export.dialogs.modern_settings_preview import _IndividualSettingsPanel
-
-    return _IndividualSettingsPanel(parent)
-
-
-def _selected_panel(parent: ModernExportSettings) -> _SettingsPanelBase:
-    from export.dialogs.modern_settings_preview import _SelectedSettingsPanel
-
-    return _SelectedSettingsPanel(parent)
-
-
-def _sheet_data(parent: ModernExportSettings) -> dict[str, Any]:
-    return parent._get_sheet_data()
-
-
-def _individual_data(parent: ModernExportSettings) -> dict[str, Any]:
-    return parent._get_individual_frames_data()
-
-
-def _selected_data(parent: ModernExportSettings) -> dict[str, Any]:
-    return parent._get_selected_frames_data()
-
-
-def _coord_export_frames(
-    coord: ExportCoordinator, config: ExportConfig, frames: list[QPixmap] | None
-) -> None:
-    coord._export_frames(config, frames=frames)
-
-
-def _coord_export_segments_per_row(
-    coord: ExportCoordinator, config: ExportConfig, frames: list[QPixmap] | None
-) -> None:
-    # frames argument intentionally unused — segment export reads from the model.
-    del frames
-    coord._export_segments_per_row(config)
-
-
-MODE_SPECS: dict[ExportMode, ExportModeSpec] = {
-    ExportMode.INDIVIDUAL_FRAMES: ExportModeSpec(
-        mode=ExportMode.INDIVIDUAL_FRAMES,
-        display_name="Individual Frames",
-        panel_factory=_individual_panel,
-        data_extractor=_individual_data,
-        worker_method=ExportWorker._export_individual_frames,
-        coordinator_method=_coord_export_frames,
-    ),
-    ExportMode.SELECTED_FRAMES: ExportModeSpec(
-        mode=ExportMode.SELECTED_FRAMES,
-        display_name="Selected Frames",
-        panel_factory=_selected_panel,
-        data_extractor=_selected_data,
-        worker_method=ExportWorker._export_individual_frames,
-        coordinator_method=_coord_export_frames,
-    ),
-    ExportMode.SPRITE_SHEET: ExportModeSpec(
-        mode=ExportMode.SPRITE_SHEET,
-        display_name="Sprite Sheet",
-        panel_factory=_sheet_panel,
-        data_extractor=_sheet_data,
-        worker_method=ExportWorker._export_sprite_sheet,
-        coordinator_method=_coord_export_frames,
-    ),
-    ExportMode.SEGMENTS_SHEET: ExportModeSpec(
-        mode=ExportMode.SEGMENTS_SHEET,
-        display_name="Segments Per Row Sheet",
-        panel_factory=_sheet_panel,
-        data_extractor=_sheet_data,
-        worker_method=ExportWorker._export_sprite_sheet,
-        coordinator_method=_coord_export_segments_per_row,
-    ),
-}
-
-
-def get_mode_spec(mode: ExportMode) -> ExportModeSpec:
-    """Look up the ExportModeSpec for a given mode.
-
-    Raises KeyError if the mode is not registered (i.e. the registry is out of
-    sync with the ExportMode enum) — that's a programmer error, not a runtime
-    condition to handle silently.
-    """
-    return MODE_SPECS[mode]

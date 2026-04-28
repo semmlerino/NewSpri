@@ -75,6 +75,17 @@ class TestSingleton:
         assert isinstance(first, RecentFilesManager)
 
 
+class TestSettingsInjection:
+    def test_constructor_uses_injected_settings_manager(self, qapp):
+        settings = MagicMock()
+
+        manager = RecentFilesManager(settings_manager=settings)
+        manager.add_file_to_recent("/tmp/sprite.png")
+
+        assert manager._settings is settings
+        settings.add_recent_file.assert_called_once_with("/tmp/sprite.png")
+
+
 # ============================================================================
 # Menu population
 # ============================================================================

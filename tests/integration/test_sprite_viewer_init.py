@@ -44,6 +44,7 @@ class TestSpriteViewerInitialization:
 
             assert isinstance(viewer._settings_manager, SettingsManager)
             assert isinstance(viewer._recent_files, RecentFilesManager)
+            assert viewer._recent_files._settings is viewer._settings_manager
             assert isinstance(viewer._sprite_model, SpriteModel)
             assert isinstance(viewer._animation_controller, AnimationController)
 

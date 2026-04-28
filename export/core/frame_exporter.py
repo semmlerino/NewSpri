@@ -269,8 +269,8 @@ class ExportWorker(QThread):
 
     def run(self):
         """Execute the export task."""
-        # Lazy import to break the worker → presets → worker cycle at module load.
-        from export.core.export_presets import get_mode_spec
+        # Lazy import to avoid importing the registry before ExportWorker is defined.
+        from export.core.export_mode_registry import get_mode_spec
 
         try:
             spec = get_mode_spec(self.task.mode)
