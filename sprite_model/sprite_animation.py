@@ -13,7 +13,7 @@ from PySide6.QtGui import QPixmap
 from config import Config
 
 
-class AnimationStateManager(QObject):
+class _AnimationStateManager(QObject):
     """
     Manages all animation state and frame navigation logic.
 

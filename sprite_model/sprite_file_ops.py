@@ -15,7 +15,7 @@ from PySide6.QtGui import QPixmap
 from config import Config
 
 
-class FileValidator:
+class _FileValidator:
     """
     File validation functionality for sprite sheets.
 
@@ -93,7 +93,7 @@ class FileValidator:
         return path.suffix.lower() in self.SUPPORTED_FORMATS
 
 
-class FileLoader:
+class _FileLoader:
     """
     Core file loading functionality for sprite sheets.
 
@@ -102,7 +102,7 @@ class FileLoader:
 
     def __init__(self):
         """Initialize file loader with validator."""
-        self.validator = FileValidator()
+        self.validator = _FileValidator()
 
     def load_sprite_sheet(self, file_path: str) -> tuple[bool, QPixmap | None, str]:
         """

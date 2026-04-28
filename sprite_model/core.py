@@ -12,8 +12,8 @@ from PySide6.QtGui import QPixmap
 
 from sprite_model.extraction_mode import ExtractionMode
 from sprite_model.extraction_strategies import ExtractionContext, get_extraction_strategy
-from sprite_model.sprite_animation import AnimationStateManager
-from sprite_model.sprite_ccl import CCLOperations
+from sprite_model.sprite_animation import _AnimationStateManager
+from sprite_model.sprite_ccl import _CCLOperations
 from sprite_model.sprite_detection import (
     DetectionResult,
     comprehensive_auto_detect,
@@ -29,7 +29,7 @@ from sprite_model.sprite_extraction import (
 from sprite_model.sprite_extraction import (
     validate_frame_settings as validate_grid_frame_settings,
 )
-from sprite_model.sprite_file_ops import FileLoader
+from sprite_model.sprite_file_ops import _FileLoader
 
 
 class SpriteModel(QObject):
@@ -58,9 +58,9 @@ class SpriteModel(QObject):
         self._file_path: str = ""
 
         # Initialize refactored modules (pass dependencies directly)
-        self._file_loader = FileLoader()
-        self._animation_state = AnimationStateManager(self._sprite_frames)  # Pass frames reference
-        self._ccl_operations = CCLOperations()
+        self._file_loader = _FileLoader()
+        self._animation_state = _AnimationStateManager(self._sprite_frames)  # Pass frames reference
+        self._ccl_operations = _CCLOperations()
 
         # Frame extraction settings (for backward compatibility)
         self._frame_width: int = 0

@@ -13,7 +13,7 @@ from sprite_model.extraction_strategies import (
     GridExtractionStrategy,
     get_extraction_strategy,
 )
-from sprite_model.sprite_ccl import CCLOperations
+from sprite_model.sprite_ccl import _CCLOperations
 from sprite_model.sprite_extraction import CCLDetectionResult, GridConfig
 
 pytestmark = pytest.mark.requires_qt
@@ -31,7 +31,7 @@ def test_get_extraction_strategy_returns_mode_strategy() -> None:
 
 
 def test_grid_strategy_extracts_frames_and_sets_grid_mode(qapp) -> None:
-    ccl_operations = CCLOperations()
+    ccl_operations = _CCLOperations()
     ccl_operations.set_current_mode(ExtractionMode.CCL)
     context = ExtractionContext(
         sprite_sheet=_sprite_sheet(),
@@ -48,7 +48,7 @@ def test_grid_strategy_extracts_frames_and_sets_grid_mode(qapp) -> None:
 
 
 def test_grid_strategy_rejects_missing_config(qapp) -> None:
-    ccl_operations = CCLOperations()
+    ccl_operations = _CCLOperations()
     context = ExtractionContext(
         sprite_sheet=_sprite_sheet(),
         sprite_sheet_path="",
@@ -76,7 +76,7 @@ def test_ccl_strategy_uses_injected_detection_dependencies(qapp, tmp_path) -> No
         background_paths.append(path)
         return (255, 255, 255), 10
 
-    ccl_operations = CCLOperations()
+    ccl_operations = _CCLOperations()
     context = ExtractionContext(
         sprite_sheet=_sprite_sheet(),
         sprite_sheet_path=str(sprite_path),

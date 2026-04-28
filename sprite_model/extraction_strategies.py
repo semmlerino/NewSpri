@@ -18,7 +18,10 @@ from sprite_model.sprite_extraction import (
 if TYPE_CHECKING:
     from PySide6.QtGui import QPixmap
 
-    from sprite_model.sprite_ccl import CCLOperations
+    from sprite_model.sprite_ccl import _CCLOperations
+
+
+__all__ = ["ExtractionContext", "ExtractionResult", "get_extraction_strategy"]
 
 
 DetectSpritesCcl = Callable[[str], CCLDetectionResult | None]
@@ -41,7 +44,7 @@ class ExtractionContext:
 
     sprite_sheet: QPixmap
     sprite_sheet_path: str
-    ccl_operations: CCLOperations
+    ccl_operations: _CCLOperations
     detect_sprites_ccl_enhanced: DetectSpritesCcl = detect_sprites_ccl_enhanced
     detect_background_color: DetectBackgroundColor = detect_background_color
 

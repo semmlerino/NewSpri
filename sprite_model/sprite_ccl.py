@@ -26,7 +26,7 @@ from sprite_model.sprite_extraction import CCLDetectionResult
 logger = logging.getLogger(__name__)
 
 
-class CCLOperations:
+class _CCLOperations:
     """
     CCL (Connected Component Labeling) operations for sprite extraction.
 

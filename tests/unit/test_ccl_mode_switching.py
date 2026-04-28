@@ -18,7 +18,7 @@ from PySide6.QtGui import QColor, QPainter, QPixmap
 
 from sprite_model import SpriteModel
 from sprite_model.extraction_mode import ExtractionMode
-from sprite_model.sprite_ccl import CCLOperations
+from sprite_model.sprite_ccl import _CCLOperations
 from sprite_model.sprite_extraction import CCLDetectionResult
 
 # Mark all tests in this module as requiring Qt
@@ -424,7 +424,7 @@ class TestCCLOperationsUnit:
 
     def test_extract_ccl_frames_no_sprite_sheet(self) -> None:
         """extract_ccl_frames with null sprite sheet should return error."""
-        ccl_ops = CCLOperations()
+        ccl_ops = _CCLOperations()
 
         success, error, count, frames = ccl_ops.extract_ccl_frames(
             sprite_sheet=QPixmap(),  # Null pixmap
@@ -440,7 +440,7 @@ class TestCCLOperationsUnit:
 
     def test_extract_ccl_frames_no_path_no_bounds(self) -> None:
         """extract_ccl_frames without path and no pre-set bounds should fail."""
-        ccl_ops = CCLOperations()
+        ccl_ops = _CCLOperations()
         pixmap = QPixmap(100, 100)
         pixmap.fill(QColor(255, 255, 255))
 
@@ -456,17 +456,17 @@ class TestCCLOperationsUnit:
 
     def test_get_extraction_mode_default(self) -> None:
         """Default extraction mode should be GRID."""
-        ccl_ops = CCLOperations()
+        ccl_ops = _CCLOperations()
         assert ccl_ops.get_extraction_mode() == ExtractionMode.GRID
 
     def test_get_ccl_sprite_bounds_empty(self) -> None:
         """CCL bounds should be empty initially."""
-        ccl_ops = CCLOperations()
+        ccl_ops = _CCLOperations()
         assert ccl_ops.get_ccl_sprite_bounds() == []
 
     def test_apply_background_transparency_uses_tolerance_mask(self) -> None:
         """Background-like pixels should be fully transparent without changing sprite pixels."""
-        ccl_ops = CCLOperations()
+        ccl_ops = _CCLOperations()
         pixmap = QPixmap(4, 1)
         pixmap.fill(QColor(250, 250, 250))
 
