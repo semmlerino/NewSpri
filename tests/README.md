@@ -93,9 +93,8 @@ Common markers:
 ## CI
 
 GitHub Actions workflow: `.github/workflows/tests.yml`
-- `test` matrix job runs unit + integration tests across Ubuntu/Windows/macOS and Python 3.11/3.12
-- `smoke-test` is a separate Ubuntu job (`uv run pytest -m smoke`)
-- `performance` is a separate Ubuntu job and runs on push events only (`uv run pytest -m performance`)
-- `code-quality` is a separate job (`ruff` + `basedpyright`)
-- Lockfile-based dependency sync (`uv sync --locked --all-extras`)
-- Coverage upload (Codecov) from the Ubuntu/Python 3.11 unit-test run
+- Push and pull-request events run the lightweight `checks` job only:
+  `ruff check`, `ruff format --check`, and `basedpyright`.
+- Manual workflow dispatch can also run the Qt-backed test suite:
+  unit/smoke tests by default, with optional integration and performance tests.
+- Lockfile-based dependency sync uses `uv sync --locked --all-extras`.

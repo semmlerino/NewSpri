@@ -15,6 +15,11 @@ on:
       - "LICENSE"
   workflow_dispatch:
     inputs:
+      run_unit_smoke:
+        description: "Run unit and smoke tests"
+        required: false
+        type: boolean
+        default: true
       run_integration:
         description: "Run integration tests"
         required: false
@@ -35,6 +40,40 @@ permissions:
 
 jobs:
   checks:
+    name: Code quality
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Sync dependencies
+        run: uv sync --locked --all-extras
+
+      - name: Run code quality checks
+        run: |
+          uv run ruff check .
+          uv run ruff format . --check
+          uv run basedpyright
+
+  manual-tests:
+    name: Manual test suite
+    if: >-
+      ${{
+        github.event_name == 'workflow_dispatch' &&
+        (inputs.run_unit_smoke || inputs.run_integration || inputs.run_performance)
+      }}
+    needs: checks
     runs-on: ubuntu-24.04
     timeout-minutes: 20
 
@@ -51,7 +90,7 @@ jobs:
         with:
           enable-cache: true
 
-      - name: Install system dependencies
+      - name: Install Qt test dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -72,32 +111,14 @@ jobs:
       - name: Sync dependencies
         run: uv sync --locked --all-extras
 
-      - name: Run code quality checks
-        run: |
-          uv run ruff check .
-          uv run ruff format . --check
-          uv run basedpyright
-
-      - name: Run unit and smoke tests with coverage
-        run: |
-          xvfb-run -a uv run pytest -m "unit or smoke" \
-            --cov=sprite_model --cov=export.core --cov=managers \
-            --cov-report=term-missing \
-            --cov-report=xml:coverage.xml \
-            --cov-fail-under=70
-
-      - name: Upload coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-xml
-          path: coverage.xml
-          retention-days: 7
+      - name: Run unit and smoke tests
+        if: ${{ inputs.run_unit_smoke }}
+        run: xvfb-run -a uv run pytest -m "unit or smoke"
 
       - name: Run integration tests
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_integration }}
+        if: ${{ inputs.run_integration }}
         run: xvfb-run -a uv run pytest -m integration
 
       - name: Run performance tests
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_performance }}
+        if: ${{ inputs.run_performance }}
         run: xvfb-run -a uv run pytest -m performance

@@ -19,11 +19,10 @@ if TYPE_CHECKING:
     from export.core.frame_exporter import ExportConfig, ExportMode, _ExportWorker
 
     _WorkerMethod = Callable[[_ExportWorker], None]
-    _CoordinatorMethod = Callable[
-        [ExportCoordinator, ExportConfig, Sequence[QPixmap] | None], None
-    ]
+    _CoordinatorMethod = Callable[[ExportCoordinator, ExportConfig, Sequence[QPixmap] | None], None]
 
 __all__: list[str] = []
+
 
 @dataclass(frozen=True)
 class _ExportModeSpec:
