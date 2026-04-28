@@ -25,6 +25,8 @@ from sprite_model.sprite_extraction import CCLDetectionResult
 
 logger = logging.getLogger(__name__)
 
+__all__: list[str] = []
+
 
 class _CCLOperations:
     """

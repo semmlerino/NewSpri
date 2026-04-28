@@ -59,6 +59,8 @@ from ui import (
 from ui.animation_segment_preview import AnimationSegmentPreview
 from utils.styles import StyleManager
 
+__all__ = ["SpriteViewer", "main"]
+
 
 def _is_valid_sprite_drop(mime_data: QMimeData) -> bool:
     """

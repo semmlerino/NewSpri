@@ -6,8 +6,10 @@ Simple progress dialog for export operations.
 from PySide6.QtCore import Signal
 from PySide6.QtWidgets import QDialog, QLabel, QProgressBar, QPushButton, QVBoxLayout, QWidget
 
+__all__: list[str] = []
 
-class ExportProgressDialog(QDialog):
+
+class _ExportProgressDialog(QDialog):
     """Simple progress dialog for export operations."""
 
     cancelled = Signal()
@@ -65,6 +67,3 @@ class ExportProgressDialog(QDialog):
         """Handle cancel button."""
         self.cancelled.emit()
         self.reject()
-
-
-__all__ = ["ExportProgressDialog"]

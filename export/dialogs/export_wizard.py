@@ -34,6 +34,8 @@ from .type_selection import _ExportTypeStep
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["ExportDialog"]
+
 
 class ExportDialog(QDialog):
     """

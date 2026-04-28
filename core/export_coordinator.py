@@ -13,18 +13,20 @@ from PySide6.QtCore import QObject
 from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import QMessageBox, QWidget
 
-from export.core.export_mode_registry import get_mode_spec
+from export.core.export_mode_registry import _get_mode_spec
 from export.core.frame_exporter import (
     ExportConfig,
     ExportMode,
     FrameExporter,
     get_frame_exporter,
 )
-from export.dialogs.progress_dialog import ExportProgressDialog
+from export.dialogs.progress_dialog import _ExportProgressDialog
 
 if TYPE_CHECKING:
     from managers.animation_segment_manager import AnimationSegmentManager
     from sprite_model import SpriteModel
+
+__all__ = ["ExportCoordinator"]
 
 
 class ExportCoordinator(QObject):
@@ -60,7 +62,7 @@ class ExportCoordinator(QObject):
         self._segment_manager = segment_manager
         self._exporter = exporter or get_frame_exporter()
         self._parent_widget = parent
-        self._progress_dialog: ExportProgressDialog | None = None
+        self._progress_dialog: _ExportProgressDialog | None = None
 
     # -------------------------------------------------------------------------
     # Validation
@@ -121,7 +123,7 @@ class ExportCoordinator(QObject):
             self._show_warning(error_message)
             return
 
-        spec = get_mode_spec(config.mode)
+        spec = _get_mode_spec(config.mode)
 
         # Get frame count for progress dialog
         frame_count = (
@@ -131,7 +133,7 @@ class ExportCoordinator(QObject):
         )
 
         # Create and configure progress dialog
-        self._progress_dialog = ExportProgressDialog(
+        self._progress_dialog = _ExportProgressDialog(
             export_type=spec.display_name, total_frames=frame_count, parent=self._parent_widget
         )
 

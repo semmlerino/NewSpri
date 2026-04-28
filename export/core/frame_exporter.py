@@ -281,10 +281,10 @@ class _ExportWorker(QThread):
     def run(self):
         """Execute the export task."""
         # Lazy import to avoid importing the registry before ExportWorker is defined.
-        from export.core.export_mode_registry import get_mode_spec
+        from export.core.export_mode_registry import _get_mode_spec
 
         try:
-            spec = get_mode_spec(self.task.mode)
+            spec = _get_mode_spec(self.task.mode)
             spec.worker_method(self)
         except KeyError:
             self.error.emit(f"Unsupported export mode: {self.task.mode}")

@@ -24,9 +24,11 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+__all__: list[str] = []
+
 
 @dataclass(frozen=True)
-class ExportPreviewRequest:
+class _ExportPreviewRequest:
     """Explicit input state needed to render an export preview."""
 
     mode: ExportMode
@@ -43,30 +45,30 @@ class ExportPreviewRequest:
 
 
 @dataclass(frozen=True)
-class ExportPreviewResult:
+class _ExportPreviewResult:
     """Rendered preview pixmap and optional display metadata."""
 
     pixmap: QPixmap
     info_text: str | None = None
 
 
-class ExportPreviewRenderer:
+class _ExportPreviewRenderer:
     """Render export preview pixmaps from explicit request data."""
 
     _MAX_SEGMENT_PREVIEW_WIDTH = 800
     _MAX_SEGMENT_PREVIEW_HEIGHT = 600
 
-    def render(self, request: ExportPreviewRequest) -> ExportPreviewResult:
+    def render(self, request: _ExportPreviewRequest) -> _ExportPreviewResult:
         """Render a preview for the requested export mode."""
         if not request.sprites:
-            return ExportPreviewResult(QPixmap())
+            return _ExportPreviewResult(QPixmap())
 
         if request.mode in (ExportMode.SPRITE_SHEET, ExportMode.SEGMENTS_SHEET):
             return self._render_sheet_preview(request)
 
         return self._render_frames_preview(request)
 
-    def _render_sheet_preview(self, request: ExportPreviewRequest) -> ExportPreviewResult:
+    def _render_sheet_preview(self, request: _ExportPreviewRequest) -> _ExportPreviewResult:
         """Render sprite sheet or segments-per-row previews."""
         if request.mode is ExportMode.SEGMENTS_SHEET:
             try:
@@ -77,7 +79,7 @@ class ExportPreviewRenderer:
 
         return self._render_sprite_sheet_preview(request)
 
-    def _render_sprite_sheet_preview(self, request: ExportPreviewRequest) -> ExportPreviewResult:
+    def _render_sprite_sheet_preview(self, request: _ExportPreviewRequest) -> _ExportPreviewResult:
         sprite_count = len(request.sprites)
         cols, rows = self._calculate_grid(request.layout_mode, sprite_count, request)
         spacing = request.spacing
@@ -99,12 +101,12 @@ class ExportPreviewRenderer:
             painter.drawPixmap(x, y, sprite)
         painter.end()
 
-        return ExportPreviewResult(
+        return _ExportPreviewResult(
             pixmap,
             f"Sprite Sheet: {cols}x{rows} grid, {sheet_w}x{sheet_h}px",
         )
 
-    def _render_segments_preview(self, request: ExportPreviewRequest) -> ExportPreviewResult:
+    def _render_segments_preview(self, request: _ExportPreviewRequest) -> _ExportPreviewResult:
         if not request.segments:
             if not request.segments_available:
                 return self._placeholder_pixmap(
@@ -183,9 +185,9 @@ class ExportPreviewRenderer:
         if scale < 1.0:
             info += f" (preview scaled {int(scale * 100)}%)"
 
-        return ExportPreviewResult(pixmap, info)
+        return _ExportPreviewResult(pixmap, info)
 
-    def _render_frames_preview(self, request: ExportPreviewRequest) -> ExportPreviewResult:
+    def _render_frames_preview(self, request: _ExportPreviewRequest) -> _ExportPreviewResult:
         display_count = min(len(request.sprites), 6)
         cols = min(3, display_count)
         rows = math.ceil(display_count / cols)
@@ -231,16 +233,16 @@ class ExportPreviewRenderer:
         if len(selected_indices) > display_count:
             info += f" (showing {display_count})"
 
-        return ExportPreviewResult(pixmap, info)
+        return _ExportPreviewResult(pixmap, info)
 
-    def _fill_background(self, pixmap: QPixmap, request: ExportPreviewRequest) -> None:
+    def _fill_background(self, pixmap: QPixmap, request: _ExportPreviewRequest) -> None:
         """Fill pixmap background from explicit preview request settings."""
         if request.background_mode is BackgroundMode.SOLID and request.background_color is not None:
             pixmap.fill(QColor(*request.background_color))
         else:
             pixmap.fill(Qt.GlobalColor.transparent)
 
-    def _placeholder_pixmap(self, text: str, info: str) -> ExportPreviewResult:
+    def _placeholder_pixmap(self, text: str, info: str) -> _ExportPreviewResult:
         """Create a placeholder preview pixmap."""
         pixmap = QPixmap(400, 200)
         pixmap.fill(Qt.GlobalColor.white)
@@ -252,9 +254,9 @@ class ExportPreviewRenderer:
         painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, text)
         painter.end()
 
-        return ExportPreviewResult(pixmap, info)
+        return _ExportPreviewResult(pixmap, info)
 
-    def _frame_dimensions(self, request: ExportPreviewRequest) -> tuple[int, int]:
+    def _frame_dimensions(self, request: _ExportPreviewRequest) -> tuple[int, int]:
         """Return frame dimensions using the first sprite as the preview source."""
         if request.sprites:
             return request.sprites[0].width(), request.sprites[0].height()
@@ -276,7 +278,7 @@ class ExportPreviewRenderer:
         self,
         layout_mode: LayoutMode,
         sprite_count: int,
-        request: ExportPreviewRequest,
+        request: _ExportPreviewRequest,
     ) -> tuple[int, int]:
         """Calculate (columns, rows) for the requested sheet layout."""
         if layout_mode is LayoutMode.COLUMNS:

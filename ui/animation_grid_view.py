@@ -27,6 +27,8 @@ from managers import AnimationSegment, AnimationSegmentManager
 from utils.sprite_rendering import create_padded_pixmap
 from utils.styles import StyleManager
 
+__all__ = ["AnimationGridView"]
+
 
 class _FrameThumbnail(QLabel):
     """Individual frame thumbnail widget with advanced selection capabilities."""

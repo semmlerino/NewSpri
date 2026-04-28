@@ -28,6 +28,8 @@ from config import Config
 from utils.sprite_rendering import create_padded_pixmap
 from utils.styles import StyleManager
 
+__all__ = ["AnimationSegmentPreview"]
+
 
 class _SegmentPreviewItem(QFrame):
     """Individual animation segment preview with playback controls.

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from export.core.export_mode_spec import ExportModeSpec
+from export.core.export_mode_spec import _ExportModeSpec
 from export.core.frame_exporter import ExportMode, _ExportWorker
 
 if TYPE_CHECKING:
@@ -36,26 +36,29 @@ def _coord_export_segments_per_row(
     coord.export_segments_per_row(config)
 
 
-MODE_SPECS: dict[ExportMode, ExportModeSpec] = {
-    ExportMode.INDIVIDUAL_FRAMES: ExportModeSpec(
+__all__: list[str] = []
+
+
+_MODE_SPECS: dict[ExportMode, _ExportModeSpec] = {
+    ExportMode.INDIVIDUAL_FRAMES: _ExportModeSpec(
         mode=ExportMode.INDIVIDUAL_FRAMES,
         display_name="Individual Frames",
         worker_method=_ExportWorker._export_individual_frames,
         coordinator_method=_coord_export_frames,
     ),
-    ExportMode.SELECTED_FRAMES: ExportModeSpec(
+    ExportMode.SELECTED_FRAMES: _ExportModeSpec(
         mode=ExportMode.SELECTED_FRAMES,
         display_name="Selected Frames",
         worker_method=_ExportWorker._export_individual_frames,
         coordinator_method=_coord_export_frames,
     ),
-    ExportMode.SPRITE_SHEET: ExportModeSpec(
+    ExportMode.SPRITE_SHEET: _ExportModeSpec(
         mode=ExportMode.SPRITE_SHEET,
         display_name="Sprite Sheet",
         worker_method=_ExportWorker._export_sprite_sheet,
         coordinator_method=_coord_export_frames,
     ),
-    ExportMode.SEGMENTS_SHEET: ExportModeSpec(
+    ExportMode.SEGMENTS_SHEET: _ExportModeSpec(
         mode=ExportMode.SEGMENTS_SHEET,
         display_name="Segments Per Row Sheet",
         worker_method=_ExportWorker._export_sprite_sheet,
@@ -64,6 +67,6 @@ MODE_SPECS: dict[ExportMode, ExportModeSpec] = {
 }
 
 
-def get_mode_spec(mode: ExportMode) -> ExportModeSpec:
+def _get_mode_spec(mode: ExportMode) -> _ExportModeSpec:
     """Look up the core export-mode dispatch record."""
-    return MODE_SPECS[mode]
+    return _MODE_SPECS[mode]

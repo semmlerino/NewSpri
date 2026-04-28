@@ -13,23 +13,26 @@ if TYPE_CHECKING:
     from export.dialogs.modern_settings_preview import _ModernExportSettings
 
 
+__all__: list[str] = []
+
+
 # Ordered layout modes. Index matches the QButtonGroup id used by the sheet
 # settings panel and by persisted wizard data.
-LAYOUT_MODES: tuple[LayoutMode, ...] = (
+_LAYOUT_MODES: tuple[LayoutMode, ...] = (
     LayoutMode.AUTO,
     LayoutMode.COLUMNS,
     LayoutMode.ROWS,
     LayoutMode.SQUARE,
 )
 
-NAMING_PATTERNS: tuple[str, ...] = (
+_NAMING_PATTERNS: tuple[str, ...] = (
     "{name}_{index:03d}",
     "{name}-{index}",
     "{name}{index}",
 )
 
 
-class ExportSettingsDataCollector:
+class _ExportSettingsDataCollector:
     """Serialize current export settings widget state into wizard data."""
 
     def __init__(self, parent: _ModernExportSettings) -> None:
@@ -78,9 +81,9 @@ class ExportSettingsDataCollector:
 
         pattern_group = self._parent._settings_widgets.get("pattern_group")
         if pattern_group and pattern_group.checkedButton():
-            data["pattern"] = NAMING_PATTERNS[pattern_group.id(pattern_group.checkedButton())]
+            data["pattern"] = _NAMING_PATTERNS[pattern_group.id(pattern_group.checkedButton())]
         else:
-            data["pattern"] = NAMING_PATTERNS[0]
+            data["pattern"] = _NAMING_PATTERNS[0]
 
         return data
 
@@ -96,7 +99,7 @@ class ExportSettingsDataCollector:
         return {
             "selected_indices": selected_indices,
             "base_name": self._widget_text_or("selected_base_name", "frame"),
-            "pattern": NAMING_PATTERNS[0],
+            "pattern": _NAMING_PATTERNS[0],
         }
 
     def layout_mode(self) -> LayoutMode:
@@ -104,8 +107,8 @@ class ExportSettingsDataCollector:
         mode_group = self._parent._settings_widgets.get("layout_mode")
         if mode_group is not None:
             checked_id = mode_group.checkedId()
-            if 0 <= checked_id < len(LAYOUT_MODES):
-                return LAYOUT_MODES[checked_id]
+            if 0 <= checked_id < len(_LAYOUT_MODES):
+                return _LAYOUT_MODES[checked_id]
         return LayoutMode.AUTO
 
     def _widget_text_or(self, widget_key: str, fallback: str) -> str:
@@ -118,7 +121,7 @@ class ExportSettingsDataCollector:
         return fallback
 
 
-class ExportSettingsSummary:
+class _ExportSettingsSummary:
     """Build the compact summary text displayed at the bottom of the settings step."""
 
     def __init__(self, parent: _ModernExportSettings) -> None:

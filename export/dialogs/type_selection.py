@@ -20,6 +20,8 @@ from ..dialogs.base.wizard_base import _WizardStep
 
 logger = logging.getLogger(__name__)
 
+__all__: list[str] = []
+
 
 class _SimpleExportOption(QFrame):
     """Simple, clean export option widget."""

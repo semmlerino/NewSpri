@@ -46,16 +46,18 @@ from utils.styles import StyleManager
 from ..core.export_presets import ExportPreset
 from ..core.frame_exporter import BackgroundMode, ExportFormat, ExportMode, LayoutMode
 from ..dialogs.base.wizard_base import _WizardStep, _WizardWidget
-from .export_mode_ui_registry import get_ui_mode_spec
-from .export_preview_renderer import ExportPreviewRenderer, ExportPreviewRequest
+from .export_mode_ui_registry import _get_ui_mode_spec
+from .export_preview_renderer import _ExportPreviewRenderer, _ExportPreviewRequest
 from .export_settings_data import (
-    LAYOUT_MODES,
-    NAMING_PATTERNS,
-    ExportSettingsDataCollector,
-    ExportSettingsSummary,
+    _LAYOUT_MODES,
+    _NAMING_PATTERNS,
+    _ExportSettingsDataCollector,
+    _ExportSettingsSummary,
 )
 
 logger = logging.getLogger(__name__)
+
+__all__: list[str] = []
 
 
 class _CompactLivePreview(QGraphicsView):
@@ -220,10 +222,10 @@ class _SheetSettingsPanel(_SettingsPanelBase):
         mode_layout.setSpacing(8)
 
         modes = [
-            ("Auto", LAYOUT_MODES[0], "Best fit"),
-            ("Fixed Columns", LAYOUT_MODES[1], "Set columns"),
-            ("Fixed Rows", LAYOUT_MODES[2], "Set rows"),
-            ("Square", LAYOUT_MODES[3], "Force square"),
+            ("Auto", _LAYOUT_MODES[0], "Best fit"),
+            ("Fixed Columns", _LAYOUT_MODES[1], "Set columns"),
+            ("Fixed Rows", _LAYOUT_MODES[2], "Set rows"),
+            ("Square", _LAYOUT_MODES[3], "Force square"),
         ]
 
         for i, (label, value, tooltip) in enumerate(modes):
@@ -357,7 +359,7 @@ class _IndividualSettingsPanel(_SettingsPanelBase):
         # Clear any existing pattern radios before adding new ones
         self._parent._pattern_radios.clear()
 
-        for i, pattern in enumerate(NAMING_PATTERNS):
+        for i, pattern in enumerate(_NAMING_PATTERNS):
             # Generate initial display text
             display_text = self._parent._generate_pattern_display(pattern, "frame")
             radio = QRadioButton(display_text)
@@ -520,7 +522,7 @@ class _PreviewOrchestrator:
 
     def __init__(self, parent: "_ModernExportSettings") -> None:
         self._parent = parent
-        self._renderer = ExportPreviewRenderer()
+        self._renderer = _ExportPreviewRenderer()
         # Parent the timer to the widget so Qt cleans it up alongside the
         # widget tree, preventing the timer from outliving the C++ preview view
         # if Python GC delays orchestrator collection.
@@ -529,7 +531,7 @@ class _PreviewOrchestrator:
         self._timer.timeout.connect(self.update_now)
 
     @property
-    def renderer(self) -> ExportPreviewRenderer:
+    def renderer(self) -> _ExportPreviewRenderer:
         """Direct access to the underlying renderer (used by tests / shim)."""
         return self._renderer
 
@@ -555,7 +557,7 @@ class _PreviewOrchestrator:
             parent._update_preview_info(result.info_text)
         parent.preview_view.update_preview(result.pixmap)
 
-    def _build_request(self) -> ExportPreviewRequest:
+    def _build_request(self) -> _ExportPreviewRequest:
         """Snapshot the current widget state for the preview renderer."""
         parent = self._parent
         assert parent._current_preset is not None
@@ -585,7 +587,7 @@ class _PreviewOrchestrator:
         rows_widget = parent._settings_widgets.get("rows_spin")
         spacing_widget = parent._settings_widgets.get("spacing")
 
-        return ExportPreviewRequest(
+        return _ExportPreviewRequest(
             mode=parent._current_preset.mode,
             sprites=tuple(parent._sprites),
             layout_mode=parent._data_collector.layout_mode(),
@@ -634,8 +636,8 @@ class _ModernExportSettings(_WizardStep):
         # to be inlined into _validate_settings / _update_preview / _on_setting_changed).
         self._validator = _SettingsValidator(self)
         self._preview = _PreviewOrchestrator(self)
-        self._data_collector = ExportSettingsDataCollector(self)
-        self._summary_builder = ExportSettingsSummary(self)
+        self._data_collector = _ExportSettingsDataCollector(self)
+        self._summary_builder = _ExportSettingsSummary(self)
         # Backwards-compat aliases for code/tests that reach for the underlying
         # preview renderer or the preview-debounce timer.
         self._preview_generator = self._preview.renderer
@@ -908,7 +910,7 @@ class _ModernExportSettings(_WizardStep):
                 self.mode_stack.removeWidget(widget)
 
         # Create the appropriate settings panel via the registry
-        spec = get_ui_mode_spec(preset.mode)
+        spec = _get_ui_mode_spec(preset.mode)
         logger.debug("Creating panel via registry for mode: %s", preset.mode)
         settings = spec.build_panel(self)
 
@@ -1060,7 +1062,7 @@ class _ModernExportSettings(_WizardStep):
         )
 
         if self._current_preset:
-            spec = get_ui_mode_spec(self._current_preset.mode)
+            spec = _get_ui_mode_spec(self._current_preset.mode)
             data.update(spec.collect_data(self))
 
         logger.debug("Final get_data() result: %s", data)

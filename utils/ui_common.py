@@ -8,6 +8,8 @@ from PySide6.QtWidgets import QPushButton
 
 from utils.styles import StyleManager
 
+__all__: list[str] = []
+
 
 class _AutoButtonManager(QObject):
     """Manages auto-detection button states and styles."""

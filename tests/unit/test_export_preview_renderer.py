@@ -7,8 +7,8 @@ from PySide6.QtGui import QColor, QPixmap
 
 from export.core.frame_exporter import BackgroundMode, ExportMode, LayoutMode
 from export.dialogs.export_preview_renderer import (
-    ExportPreviewRenderer,
-    ExportPreviewRequest,
+    _ExportPreviewRenderer,
+    _ExportPreviewRequest,
 )
 from managers import AnimationSegment
 
@@ -25,10 +25,10 @@ def _sprites(count: int, width: int = 10, height: int = 8) -> list[QPixmap]:
 
 
 def test_sheet_preview_renders_from_explicit_request(qapp):
-    renderer = ExportPreviewRenderer()
+    renderer = _ExportPreviewRenderer()
 
     result = renderer.render(
-        ExportPreviewRequest(
+        _ExportPreviewRequest(
             mode=ExportMode.SPRITE_SHEET,
             sprites=_sprites(4),
             layout_mode=LayoutMode.COLUMNS,
@@ -45,10 +45,10 @@ def test_sheet_preview_renders_from_explicit_request(qapp):
 
 
 def test_segments_preview_uses_supplied_segments(qapp):
-    renderer = ExportPreviewRenderer()
+    renderer = _ExportPreviewRenderer()
 
     result = renderer.render(
-        ExportPreviewRequest(
+        _ExportPreviewRequest(
             mode=ExportMode.SEGMENTS_SHEET,
             sprites=_sprites(4, width=10, height=10),
             spacing=2,
@@ -65,10 +65,10 @@ def test_segments_preview_uses_supplied_segments(qapp):
 
 
 def test_segments_preview_without_segments_returns_placeholder(qapp):
-    renderer = ExportPreviewRenderer()
+    renderer = _ExportPreviewRenderer()
 
     result = renderer.render(
-        ExportPreviewRequest(
+        _ExportPreviewRequest(
             mode=ExportMode.SEGMENTS_SHEET,
             sprites=_sprites(2),
             segments=[],
@@ -81,10 +81,10 @@ def test_segments_preview_without_segments_returns_placeholder(qapp):
 
 
 def test_segments_preview_without_segment_source_preserves_unavailable_message(qapp):
-    renderer = ExportPreviewRenderer()
+    renderer = _ExportPreviewRenderer()
 
     result = renderer.render(
-        ExportPreviewRequest(
+        _ExportPreviewRequest(
             mode=ExportMode.SEGMENTS_SHEET,
             sprites=_sprites(2),
             segments_available=False,
@@ -95,10 +95,10 @@ def test_segments_preview_without_segment_source_preserves_unavailable_message(q
 
 
 def test_selected_frames_preview_reports_selection_count(qapp):
-    renderer = ExportPreviewRenderer()
+    renderer = _ExportPreviewRenderer()
 
     result = renderer.render(
-        ExportPreviewRequest(
+        _ExportPreviewRequest(
             mode=ExportMode.SELECTED_FRAMES,
             sprites=_sprites(6),
             selected_indices=[1, 3, 5],

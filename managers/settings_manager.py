@@ -16,6 +16,8 @@ from PySide6.QtWidgets import QMainWindow
 
 from config import Config
 
+__all__ = ["SettingsManager", "get_settings_manager"]
+
 
 class SettingsManager(QObject):
     """

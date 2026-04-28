@@ -24,8 +24,8 @@ if TYPE_CHECKING:
 __all__ = ["ExtractionContext", "ExtractionResult", "get_extraction_strategy"]
 
 
-DetectSpritesCcl = Callable[[str], CCLDetectionResult | None]
-DetectBackgroundColor = Callable[[str], tuple[tuple[int, int, int], int] | None]
+_DetectSpritesCcl = Callable[[str], CCLDetectionResult | None]
+_DetectBackgroundColor = Callable[[str], tuple[tuple[int, int, int], int] | None]
 
 
 @dataclass(frozen=True)
@@ -45,11 +45,11 @@ class ExtractionContext:
     sprite_sheet: QPixmap
     sprite_sheet_path: str
     ccl_operations: _CCLOperations
-    detect_sprites_ccl_enhanced: DetectSpritesCcl = detect_sprites_ccl_enhanced
-    detect_background_color: DetectBackgroundColor = detect_background_color
+    detect_sprites_ccl_enhanced: _DetectSpritesCcl = detect_sprites_ccl_enhanced
+    detect_background_color: _DetectBackgroundColor = detect_background_color
 
 
-class ExtractionStrategy(Protocol):
+class _ExtractionStrategy(Protocol):
     """Mode-specific frame extraction behavior."""
 
     mode: ExtractionMode
@@ -63,7 +63,7 @@ class ExtractionStrategy(Protocol):
         ...
 
 
-class GridExtractionStrategy:
+class _GridExtractionStrategy:
     """Extract frames using a rectangular grid."""
 
     mode = ExtractionMode.GRID
@@ -105,7 +105,7 @@ class GridExtractionStrategy:
         return ExtractionResult(True, result_message, len(frames), frames)
 
 
-class CclExtractionStrategy:
+class _CclExtractionStrategy:
     """Extract frames using connected-component labeling."""
 
     mode = ExtractionMode.CCL
@@ -129,12 +129,12 @@ class CclExtractionStrategy:
         return ExtractionResult(success, message, frame_count, frames if success else [])
 
 
-_STRATEGIES: dict[ExtractionMode, ExtractionStrategy] = {
-    ExtractionMode.GRID: GridExtractionStrategy(),
-    ExtractionMode.CCL: CclExtractionStrategy(),
+_STRATEGIES: dict[ExtractionMode, _ExtractionStrategy] = {
+    ExtractionMode.GRID: _GridExtractionStrategy(),
+    ExtractionMode.CCL: _CclExtractionStrategy(),
 }
 
 
-def get_extraction_strategy(mode: ExtractionMode) -> ExtractionStrategy:
+def get_extraction_strategy(mode: ExtractionMode) -> _ExtractionStrategy:
     """Return the extraction strategy for a mode."""
     return _STRATEGIES[mode]

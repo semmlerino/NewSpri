@@ -22,6 +22,8 @@ from managers.settings_manager import get_settings_manager
 if TYPE_CHECKING:
     from managers.settings_manager import SettingsManager
 
+__all__ = ["RecentFilesManager", "get_recent_files_manager"]
+
 
 class RecentFilesManager(QObject):
     """

@@ -9,6 +9,8 @@ Status bar with temporary message and mouse-position indicator.
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QHBoxLayout, QLabel, QStatusBar, QWidget
 
+__all__ = ["EnhancedStatusBar"]
+
 
 class EnhancedStatusBar(QStatusBar):
     """Status bar with temporary message + permanent mouse-coordinates label."""

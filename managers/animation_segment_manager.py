@@ -21,6 +21,8 @@ from PySide6.QtGui import QColor, QPixmap
 
 logger = logging.getLogger(__name__)
 
+__all__ = ["AnimationSegment", "AnimationSegmentManager"]
+
 _WINDOWS_RESERVED_NAMES: frozenset[str] = frozenset(
     {
         "CON",

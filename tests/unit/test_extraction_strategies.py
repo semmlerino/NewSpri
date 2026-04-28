@@ -8,9 +8,9 @@ from PySide6.QtGui import QColor, QPixmap
 from sprite_model import SpriteModel
 from sprite_model.extraction_mode import ExtractionMode
 from sprite_model.extraction_strategies import (
-    CclExtractionStrategy,
     ExtractionContext,
-    GridExtractionStrategy,
+    _CclExtractionStrategy,
+    _GridExtractionStrategy,
     get_extraction_strategy,
 )
 from sprite_model.sprite_ccl import _CCLOperations
@@ -39,7 +39,7 @@ def test_grid_strategy_extracts_frames_and_sets_grid_mode(qapp) -> None:
         ccl_operations=ccl_operations,
     )
 
-    result = GridExtractionStrategy().extract(context, GridConfig(width=32, height=32))
+    result = _GridExtractionStrategy().extract(context, GridConfig(width=32, height=32))
 
     assert result.success is True
     assert result.frame_count == 2
@@ -55,7 +55,7 @@ def test_grid_strategy_rejects_missing_config(qapp) -> None:
         ccl_operations=ccl_operations,
     )
 
-    result = GridExtractionStrategy().extract(context)
+    result = _GridExtractionStrategy().extract(context)
 
     assert result.success is False
     assert result.frame_count == 0
@@ -85,7 +85,7 @@ def test_ccl_strategy_uses_injected_detection_dependencies(qapp, tmp_path) -> No
         detect_background_color=detect_background,
     )
 
-    result = CclExtractionStrategy().extract(context)
+    result = _CclExtractionStrategy().extract(context)
 
     assert result.success is True
     assert result.frame_count == 1

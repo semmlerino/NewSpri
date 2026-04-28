@@ -204,7 +204,7 @@ def test_validate_mode_preconditions_valid_settings(
 # -------------------------------------------------------------------------
 
 
-@patch("core.export_coordinator.ExportProgressDialog")
+@patch("core.export_coordinator._ExportProgressDialog")
 def test_handle_export_request_no_dialog_on_precondition_failure(
     mock_dialog_class, mock_sprite_model, mock_exporter
 ):
@@ -226,7 +226,7 @@ def test_handle_export_request_no_dialog_on_precondition_failure(
     mock_dialog_class.assert_not_called()
 
 
-@patch("core.export_coordinator.ExportProgressDialog")
+@patch("core.export_coordinator._ExportProgressDialog")
 def test_handle_export_request_creates_dialog_on_valid_settings(
     mock_dialog_class, mock_sprite_model, mock_exporter, basic_settings
 ):
@@ -245,7 +245,7 @@ def test_handle_export_request_creates_dialog_on_valid_settings(
     mock_dialog.show.assert_called_once()
 
 
-@patch("core.export_coordinator.ExportProgressDialog")
+@patch("core.export_coordinator._ExportProgressDialog")
 def test_handle_export_request_cleanup_on_success(
     mock_dialog_class, mock_sprite_model, mock_exporter, basic_settings
 ):
@@ -268,7 +268,7 @@ def test_handle_export_request_cleanup_on_success(
     mock_dialog.close.assert_called_once()
 
 
-@patch("core.export_coordinator.ExportProgressDialog")
+@patch("core.export_coordinator._ExportProgressDialog")
 def test_handle_export_request_cleanup_on_error(
     mock_dialog_class, mock_sprite_model, mock_exporter, basic_settings
 ):
@@ -291,7 +291,7 @@ def test_handle_export_request_cleanup_on_error(
     mock_dialog.close.assert_called_once()
 
 
-@patch("core.export_coordinator.ExportProgressDialog")
+@patch("core.export_coordinator._ExportProgressDialog")
 def test_cleanup_progress_dialog_idempotent(
     mock_dialog_class, mock_sprite_model, mock_exporter, basic_settings
 ):
@@ -314,7 +314,7 @@ def test_cleanup_progress_dialog_idempotent(
     assert coordinator._progress_dialog is None
 
 
-@patch("core.export_coordinator.ExportProgressDialog")
+@patch("core.export_coordinator._ExportProgressDialog")
 def test_cleanup_handles_disconnection_errors(
     mock_dialog_class, mock_sprite_model, mock_exporter, basic_settings
 ):
@@ -341,7 +341,7 @@ def test_cleanup_handles_disconnection_errors(
 # -------------------------------------------------------------------------
 
 
-@patch("core.export_coordinator.ExportProgressDialog")
+@patch("core.export_coordinator._ExportProgressDialog")
 def test_handle_export_request_cleanup_on_unexpected_exception(
     mock_dialog_class, mock_sprite_model, mock_exporter, basic_settings
 ):
@@ -370,7 +370,7 @@ def test_handle_export_request_cleanup_on_unexpected_exception(
 # -------------------------------------------------------------------------
 
 
-@patch("core.export_coordinator.ExportProgressDialog")
+@patch("core.export_coordinator._ExportProgressDialog")
 def test_export_frames_calls_exporter(
     mock_dialog_class, mock_sprite_model, mock_exporter, basic_settings
 ):
@@ -395,7 +395,7 @@ def test_export_frames_calls_exporter(
     assert forwarded_config.scale_factor == pytest.approx(1.0)
 
 
-@patch("core.export_coordinator.ExportProgressDialog")
+@patch("core.export_coordinator._ExportProgressDialog")
 def test_export_segments_per_row_calls_exporter(
     mock_dialog_class, mock_sprite_model, mock_segment_manager, mock_exporter
 ):
@@ -428,7 +428,7 @@ def test_export_segments_per_row_calls_exporter(
     assert segment_info[0]["name"] == "Walk"
 
 
-@patch("core.export_coordinator.ExportProgressDialog")
+@patch("core.export_coordinator._ExportProgressDialog")
 def test_export_frames_with_selected_indices(mock_dialog_class, mock_sprite_model, mock_exporter):
     """_export_frames handles selected_indices correctly."""
     mock_dialog = MagicMock()
@@ -456,7 +456,7 @@ def test_export_frames_with_selected_indices(mock_dialog_class, mock_sprite_mode
     assert forwarded_config.mode is ExportMode.INDIVIDUAL_FRAMES
 
 
-@patch("core.export_coordinator.ExportProgressDialog")
+@patch("core.export_coordinator._ExportProgressDialog")
 @patch("core.export_coordinator.QMessageBox")
 def test_export_frames_shows_info_on_invalid_indices(
     mock_messagebox, mock_dialog_class, mock_sprite_model, mock_exporter
@@ -488,7 +488,7 @@ def test_export_frames_shows_info_on_invalid_indices(
     assert "1 invalid" in args[2]
 
 
-@patch("core.export_coordinator.ExportProgressDialog")
+@patch("core.export_coordinator._ExportProgressDialog")
 def test_export_frames_export_failure_shows_error(
     mock_dialog_class, mock_sprite_model, mock_exporter, basic_settings
 ):
@@ -508,7 +508,7 @@ def test_export_frames_export_failure_shows_error(
     mock_error.assert_called_once_with("Failed to start export.")
 
 
-@patch("core.export_coordinator.ExportProgressDialog")
+@patch("core.export_coordinator._ExportProgressDialog")
 def test_export_segments_per_row_export_failure_shows_error(
     mock_dialog_class, mock_sprite_model, mock_segment_manager, mock_exporter
 ):

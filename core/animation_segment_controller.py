@@ -26,6 +26,8 @@ if TYPE_CHECKING:
     from ui import AnimationGridView
     from ui.animation_segment_preview import AnimationSegmentPreview
 
+__all__ = ["AnimationSegmentController"]
+
 
 class AnimationSegmentController(QObject):
     """

@@ -14,6 +14,8 @@ from PySide6.QtGui import QPixmap
 
 from config import Config
 
+__all__: list[str] = []
+
 
 class _FileValidator:
     """

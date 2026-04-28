@@ -29,6 +29,8 @@ __all__ = [
     "CCLDetectionResult",
     "GridConfig",
     "GridLayout",
+    "detect_background_color",
+    "detect_sprites_ccl_enhanced",
     "extract_grid_frames",
     "validate_frame_settings",
 ]

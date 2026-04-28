@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
 from export.core.frame_exporter import ExportMode
-from export.dialogs.export_settings_data import ExportSettingsDataCollector
+from export.dialogs.export_settings_data import _ExportSettingsDataCollector
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget
@@ -22,17 +22,20 @@ if TYPE_CHECKING:
         _SettingsPanelBase,
     )
 
-PanelFactory = Callable[["_ModernExportSettings"], "_SettingsPanelBase"]
-DataExtractor = Callable[["_ModernExportSettings"], dict[str, Any]]
+__all__: list[str] = []
+
+
+_PanelFactory = Callable[["_ModernExportSettings"], "_SettingsPanelBase"]
+_DataExtractor = Callable[["_ModernExportSettings"], dict[str, Any]]
 
 
 @dataclass(frozen=True)
-class ExportModeUiSpec:
+class _ExportModeUiSpec:
     """Per-mode dialog behavior for settings panel construction and data collection."""
 
     mode: ExportMode
-    panel_factory: PanelFactory
-    data_extractor: DataExtractor
+    panel_factory: _PanelFactory
+    data_extractor: _DataExtractor
 
     def build_panel(self, parent: _ModernExportSettings) -> QWidget:
         """Construct the settings panel for this mode."""
@@ -62,34 +65,34 @@ def _selected_panel(parent: _ModernExportSettings) -> _SettingsPanelBase:
 
 
 def _sheet_data(parent: _ModernExportSettings) -> dict[str, Any]:
-    return ExportSettingsDataCollector(parent).sheet_data()
+    return _ExportSettingsDataCollector(parent).sheet_data()
 
 
 def _individual_data(parent: _ModernExportSettings) -> dict[str, Any]:
-    return ExportSettingsDataCollector(parent).individual_frames_data()
+    return _ExportSettingsDataCollector(parent).individual_frames_data()
 
 
 def _selected_data(parent: _ModernExportSettings) -> dict[str, Any]:
-    return ExportSettingsDataCollector(parent).selected_frames_data()
+    return _ExportSettingsDataCollector(parent).selected_frames_data()
 
 
-UI_MODE_SPECS: dict[ExportMode, ExportModeUiSpec] = {
-    ExportMode.INDIVIDUAL_FRAMES: ExportModeUiSpec(
+_UI_MODE_SPECS: dict[ExportMode, _ExportModeUiSpec] = {
+    ExportMode.INDIVIDUAL_FRAMES: _ExportModeUiSpec(
         mode=ExportMode.INDIVIDUAL_FRAMES,
         panel_factory=_individual_panel,
         data_extractor=_individual_data,
     ),
-    ExportMode.SELECTED_FRAMES: ExportModeUiSpec(
+    ExportMode.SELECTED_FRAMES: _ExportModeUiSpec(
         mode=ExportMode.SELECTED_FRAMES,
         panel_factory=_selected_panel,
         data_extractor=_selected_data,
     ),
-    ExportMode.SPRITE_SHEET: ExportModeUiSpec(
+    ExportMode.SPRITE_SHEET: _ExportModeUiSpec(
         mode=ExportMode.SPRITE_SHEET,
         panel_factory=_sheet_panel,
         data_extractor=_sheet_data,
     ),
-    ExportMode.SEGMENTS_SHEET: ExportModeUiSpec(
+    ExportMode.SEGMENTS_SHEET: _ExportModeUiSpec(
         mode=ExportMode.SEGMENTS_SHEET,
         panel_factory=_sheet_panel,
         data_extractor=_sheet_data,
@@ -97,6 +100,6 @@ UI_MODE_SPECS: dict[ExportMode, ExportModeUiSpec] = {
 }
 
 
-def get_ui_mode_spec(mode: ExportMode) -> ExportModeUiSpec:
+def _get_ui_mode_spec(mode: ExportMode) -> _ExportModeUiSpec:
     """Look up dialog behavior for an export mode."""
-    return UI_MODE_SPECS[mode]
+    return _UI_MODE_SPECS[mode]

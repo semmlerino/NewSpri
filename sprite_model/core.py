@@ -31,6 +31,8 @@ from sprite_model.sprite_extraction import (
 )
 from sprite_model.sprite_file_ops import _FileLoader
 
+__all__ = ["SpriteModel"]
+
 
 class SpriteModel(QObject):
     """

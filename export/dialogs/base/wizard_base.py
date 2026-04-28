@@ -23,6 +23,8 @@ from utils.styles import StyleManager
 
 logger = logging.getLogger(__name__)
 
+__all__: list[str] = []
+
 
 class _WizardStep(QWidget):
     """Base class for wizard steps."""

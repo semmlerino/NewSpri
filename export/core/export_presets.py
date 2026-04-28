@@ -11,6 +11,8 @@ from .frame_exporter import (
     SpriteSheetLayout,
 )
 
+__all__ = ["ExportPreset", "get_preset"]
+
 
 @dataclass
 class ExportPreset:
