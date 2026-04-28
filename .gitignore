@@ -102,6 +102,7 @@ yarn-error.log*
 .serena/
 .codex
 .skylos/cache/
+**/.skylos/
 
 # Archive folder
 archive/
