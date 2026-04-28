@@ -41,7 +41,7 @@ def test_sprite_load_clears_stale_extracted_frame_views(qtbot) -> None:
     viewer._canvas.set_pixmap(old_frame)
     viewer._grid_view.set_frames([old_frame])
     viewer._segment_preview.set_frames([old_frame])
-    viewer._sprite_model._sprite_frames.clear()
+    viewer._sprite_model.clear_frames()
 
     viewer._on_sprite_loaded("new_sprite.png")
 

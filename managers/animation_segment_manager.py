@@ -11,6 +11,7 @@ import logging
 import os
 import re
 import tempfile
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
@@ -463,7 +464,7 @@ class AnimationSegmentManager(QObject):
         return None
 
     def extract_frames_for_segment(
-        self, segment_name: str, all_frames: list[QPixmap]
+        self, segment_name: str, all_frames: Sequence[QPixmap]
     ) -> list[QPixmap]:
         """
         Extract frames for a specific segment.
@@ -482,7 +483,7 @@ class AnimationSegmentManager(QObject):
         start = max(0, segment.start_frame)
         end = min(len(all_frames) - 1, segment.end_frame)
 
-        return all_frames[start : end + 1]
+        return list(all_frames[start : end + 1])
 
     def _get_segments_dir(self) -> Path | None:
         """Return the .sprite_segments directory path, creating it if needed.

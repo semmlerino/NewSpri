@@ -35,7 +35,7 @@ class TestFileOperationErrors:
             assert result is False, "Loading nonexistent file should fail"
 
         # Model should remain in valid state
-        assert model.sprite_frames == []
+        assert model.sprite_frames == ()
         assert model.current_frame == 0
 
     @patch("pathlib.Path.open", side_effect=PermissionError("Access denied"))
@@ -156,7 +156,7 @@ class TestInvalidDataHandling:
             assert frame_count == 0, (
                 f"Frame count should be 0 for failed extraction, got {frame_count}"
             )
-            assert model.sprite_frames == [], "Frames should be empty after failed extraction"
+            assert model.sprite_frames == (), "Frames should be empty after failed extraction"
 
     def test_animation_controller_invalid_fps(self):
         """Test animation controller with invalid FPS values."""

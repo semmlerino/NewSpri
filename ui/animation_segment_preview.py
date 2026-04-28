@@ -5,6 +5,7 @@ Part of Animation Segment System Enhancement.
 """
 
 import contextlib
+from collections.abc import Sequence
 
 from PySide6.QtCore import QPoint, Qt, QTimer, Signal
 from PySide6.QtGui import QColor, QKeySequence, QPixmap, QShortcut
@@ -554,9 +555,9 @@ class AnimationSegmentPreview(QWidget):
         self.empty_label.setStyleSheet(StyleManager.label_empty_state())
         self.container_layout.addWidget(self.empty_label)
 
-    def set_frames(self, frames: list[QPixmap]):
+    def set_frames(self, frames: Sequence[QPixmap]):
         """Set the available frames for segment extraction."""
-        self._all_frames = frames
+        self._all_frames = list(frames)
 
     def has_frames(self) -> bool:
         """Check if frames have been set for segment preview."""

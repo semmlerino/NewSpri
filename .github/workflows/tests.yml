@@ -78,8 +78,21 @@ jobs:
           uv run ruff format . --check
           uv run basedpyright
 
-      - name: Run unit and smoke tests
-        run: xvfb-run -a uv run pytest -m "unit or smoke"
+      - name: Run unit and smoke tests with coverage
+        run: |
+          xvfb-run -a uv run pytest -m "unit or smoke" \
+            --cov=sprite_model --cov=export.core --cov=managers \
+            --cov-report=term-missing \
+            --cov-report=xml:coverage.xml \
+            --cov-fail-under=70
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-xml
+          path: coverage.xml
+          retention-days: 7
 
       - name: Run integration tests
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.run_integration }}

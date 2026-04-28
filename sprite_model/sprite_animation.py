@@ -32,7 +32,10 @@ class AnimationStateManager(QObject):
         Initialize animation state manager.
 
         Args:
-            sprite_frames: Reference to the sprite frames list (mutable, updated by parent)
+            sprite_frames: Long-lived reference to the parent SpriteModel's
+                sprite frames list. Observation-only — the parent mutates the
+                list in place via ``SpriteModel.set_frames`` / ``clear_frames``
+                and AnimationStateManager observes those updates.
         """
         super().__init__()
 
@@ -46,7 +49,13 @@ class AnimationStateManager(QObject):
         self._fps: int = Config.Animation.DEFAULT_FPS
 
     def _get_frames(self) -> list[QPixmap]:
-        """Get current sprite frames."""
+        """Observation-only access to the underlying sprite frames list.
+
+        AnimationStateManager holds a long-lived reference to the parent
+        SpriteModel's frames list so it observes in-place updates from
+        ``SpriteModel.set_frames`` / ``clear_frames``. Mutating the returned
+        list directly bypasses the model's invariants — don't.
+        """
         return self._sprite_frames
 
     def update_frame_count(self, total_frames: int) -> None:

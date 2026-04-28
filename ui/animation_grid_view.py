@@ -5,6 +5,7 @@ Part of Animation Splitting Feature implementation.
 """
 
 import copy
+from collections.abc import Sequence
 
 from PySide6.QtCore import QPoint, QPointF, Qt, Signal
 from PySide6.QtGui import QColor, QMouseEvent, QPixmap
@@ -268,10 +269,10 @@ class AnimationGridView(QWidget):
         self._scroll_area.setWidget(self._grid_container)
         parent_layout.addWidget(self._scroll_area)
 
-    def set_frames(self, frames: list[QPixmap]):
+    def set_frames(self, frames: Sequence[QPixmap]):
         """Set the frames to display in the grid."""
         self._clear_selection()
-        self._frames = frames
+        self._frames = list(frames)
         self._clear_grid()
         self._populate_grid()
 

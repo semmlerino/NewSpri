@@ -5,7 +5,7 @@ Modern sprite sheet animation viewer with centralized managers.
 
 import os
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 
 from PySide6.QtCore import QMimeData, Qt, QTimer
 from PySide6.QtGui import (
@@ -16,6 +16,7 @@ from PySide6.QtGui import (
     QDropEvent,
     QKeyEvent,
     QKeySequence,
+    QPixmap,
 )
 from PySide6.QtWidgets import (
     QApplication,
@@ -1097,7 +1098,7 @@ class SpriteViewer(QMainWindow):
             return
         self._show_export_dialog([frames[current_idx]], 0)
 
-    def _show_export_dialog(self, sprites: list, current_frame: int) -> None:
+    def _show_export_dialog(self, sprites: Sequence[QPixmap], current_frame: int) -> None:
         """Show export dialog with the given sprites."""
         if not self._export_coordinator.validate_export():
             return

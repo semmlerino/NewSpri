@@ -256,6 +256,7 @@ class TestValidateFrameSettings:
 class TestExtractGridFrames:
     """Tests for extract_grid_frames function."""
 
+    @pytest.mark.smoke
     def test_basic_extraction(self, simple_grid_sprite_sheet: QPixmap) -> None:
         """Basic extraction should return correct number of frames."""
         config = GridConfig(width=32, height=32)

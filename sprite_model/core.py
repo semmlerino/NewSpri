@@ -5,6 +5,7 @@ and CCL extraction to CCLOperations.
 """
 
 import os
+from collections.abc import Sequence
 
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtGui import QPixmap
@@ -206,7 +207,7 @@ class SpriteModel(QObject):
         result = strategy.extract(context, grid_config)
 
         if result.success:
-            self._store_frames(result.frames)
+            self.set_frames(result.frames)
             self.extractionCompleted.emit(len(result.frames))
 
         return result.success, result.message, result.frame_count
@@ -397,9 +398,15 @@ class SpriteModel(QObject):
         return self._original_sprite_sheet is not None
 
     @property
-    def sprite_frames(self) -> list[QPixmap]:
-        """Get list of extracted frames."""
-        return self._sprite_frames
+    def sprite_frames(self) -> tuple[QPixmap, ...]:
+        """Read-only snapshot of the extracted frames.
+
+        Mutate frames via ``set_frames`` / ``clear_frames``. Returning a tuple
+        prevents callers from accidentally appending or clearing through the
+        public surface (the underlying list is shared with
+        AnimationStateManager and must only be mutated in-place internally).
+        """
+        return tuple(self._sprite_frames)
 
     @property
     def frame_width(self) -> int:
@@ -497,12 +504,18 @@ class SpriteModel(QObject):
             detect_background_color=detect_background_color,
         )
 
-    def _store_frames(self, frames: list[QPixmap]) -> None:
-        """Replace stored frames in-place and update animation state.
+    def set_frames(self, frames: Sequence[QPixmap]) -> None:
+        """Replace the extracted frames in-place.
 
-        Modifies the list in-place to preserve the AnimationStateManager reference.
-        Does NOT emit extractionCompleted -- callers handle that individually.
+        The underlying list is mutated in place to preserve the long-lived
+        reference held by ``AnimationStateManager``. Does NOT emit
+        ``extractionCompleted`` — callers handle signal emission individually.
         """
         self._sprite_frames.clear()
         self._sprite_frames.extend(frames)
-        self._animation_state.update_frame_count(len(frames))
+        self._animation_state.update_frame_count(len(self._sprite_frames))
+
+    def clear_frames(self) -> None:
+        """Remove all extracted frames in-place and reset animation state."""
+        self._sprite_frames.clear()
+        self._animation_state.update_frame_count(0)

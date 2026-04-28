@@ -42,7 +42,7 @@ class TestCompleteApplicationLifecycle:
         viewer.show()
 
         # 1. Test startup state
-        assert viewer._sprite_model.sprite_frames == []
+        assert viewer._sprite_model.sprite_frames == ()
         assert viewer._animation_controller.is_playing is False
         assert viewer._status_bar is not None
 
@@ -191,7 +191,7 @@ class TestCompleteApplicationLifecycle:
         # Should fail gracefully
         assert not success, "Loading non-existent file should fail"
         assert any(word in message.lower() for word in ["not found", "error", "does not exist"])
-        assert viewer._sprite_model.sprite_frames == []
+        assert viewer._sprite_model.sprite_frames == ()
 
         # 2. Test export with no sprites loaded
         # Export should fail gracefully with no frames
@@ -274,10 +274,12 @@ class TestCompleteApplicationLifecycle:
 
     def _load_test_sprites(self, viewer):
         """Load test sprites into viewer."""
+        frames = []
         for i in range(8):
             pixmap = QPixmap(32, 32)
             pixmap.fill(QColor.fromHsv(i * 45, 200, 200))
-            viewer._sprite_model.sprite_frames.append(pixmap)
+            frames.append(pixmap)
+        viewer._sprite_model.set_frames(frames)
         viewer._sprite_model.frameChanged.emit(0, 8)
 
 
@@ -291,10 +293,12 @@ class TestAnimationSegmentWorkflow:
         qtbot.addWidget(viewer)
 
         # Load sprites
+        frames = []
         for i in range(16):
             pixmap = QPixmap(32, 32)
             pixmap.fill(QColor.fromHsv(i * 22, 200, 200))
-            viewer._sprite_model.sprite_frames.append(pixmap)
+            frames.append(pixmap)
+        viewer._sprite_model.set_frames(frames)
 
         # Open animation grid view
         from ui.animation_grid_view import AnimationGridView
@@ -387,10 +391,12 @@ class TestMultiWindowWorkflow:
         qtbot.addWidget(viewer)
 
         # Load sprites first
+        frames = []
         for i in range(8):
             pixmap = QPixmap(32, 32)
             pixmap.fill(QColor.fromHsv(i * 45, 200, 200))
-            viewer._sprite_model.sprite_frames.append(pixmap)
+            frames.append(pixmap)
+        viewer._sprite_model.set_frames(frames)
 
         # Test settings dialog - skip if not implemented
         # Settings dialog might not exist in current implementation
@@ -457,10 +463,12 @@ class TestLargeInputWorkflows:
         qtbot.addWidget(viewer)
 
         # Simulate a loaded 256-frame sprite sheet.
+        frames = []
         for i in range(256):
             pixmap = QPixmap(32, 32)
             pixmap.fill(QColor.fromHsv(i % 360, 200, 200))
-            viewer._sprite_model.sprite_frames.append(pixmap)
+            frames.append(pixmap)
+        viewer._sprite_model.set_frames(frames)
 
         # Trigger updates
         viewer._sprite_model.frameChanged.emit(0, 256)
@@ -484,10 +492,12 @@ def mock_sprite_viewer(qtbot):
     qtbot.addWidget(viewer)
 
     # Add test sprites
+    frames = []
     for i in range(16):
         pixmap = QPixmap(32, 32)
         pixmap.fill(QColor.fromHsv(i * 22, 200, 200))
-        viewer._sprite_model.sprite_frames.append(pixmap)
+        frames.append(pixmap)
+    viewer._sprite_model.set_frames(frames)
 
     viewer._sprite_model.frameChanged.emit(0, 16)
     return viewer

@@ -18,6 +18,7 @@ from PySide6.QtGui import QColor, QImage, QPainter, QPixmap
 from config import Config
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from pathlib import Path
 
 logger = logging.getLogger(__name__)
@@ -743,7 +744,7 @@ class FrameExporter(QObject):
 
     def export_frames(
         self,
-        frames: list[QPixmap],
+        frames: Sequence[QPixmap],
         config: ExportConfig,
         segment_info: list[dict[str, Any]] | None = None,
     ) -> bool:
@@ -785,7 +786,7 @@ class FrameExporter(QObject):
 
     def _prepare_export(
         self,
-        frames: list[QPixmap],
+        frames: Sequence[QPixmap],
         config: ExportConfig,
         segment_info: list[dict[str, Any]] | None,
     ) -> ExportTask | None:
@@ -832,7 +833,7 @@ class FrameExporter(QObject):
             self.exportError.emit(str(e))
             return None
 
-    def _convert_frames_to_images(self, frames: list[QPixmap]) -> list[QImage] | None:
+    def _convert_frames_to_images(self, frames: Sequence[QPixmap]) -> list[QImage] | None:
         """Convert QPixmap frames to thread-safe QImage list.
 
         Returns None (and emits exportError) if any frame fails to convert.

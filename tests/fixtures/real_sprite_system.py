@@ -54,8 +54,7 @@ class RealSpriteSystem:
         width, height = frame_size
 
         # Configure sprite model with real data
-        self.sprite_model.sprite_frames.clear()
-        self.sprite_model.sprite_frames.extend(self.test_frames)
+        self.sprite_model.set_frames(self.test_frames)
         self.sprite_model._apply_grid_config(GridConfig(width=width, height=height))
         self.sprite_model.set_current_frame(0)
 

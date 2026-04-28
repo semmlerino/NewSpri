@@ -63,7 +63,7 @@ class TestSpriteModelInitialization:
 
     def test_initial_state(self, sprite_model):
         """Test SpriteModel starts in clean initial state."""
-        assert sprite_model.sprite_frames == []
+        assert sprite_model.sprite_frames == ()
         assert sprite_model.file_path == ""
         assert sprite_model.frame_width == 0
         assert sprite_model.frame_height == 0
@@ -242,8 +242,7 @@ def test_sprite_model_with_various_frame_counts(sprite_model, mock_sprite_frames
     while len(frames) < frame_count:
         frames.extend(mock_sprite_frames[: frame_count - len(frames)])
 
-    sprite_model.sprite_frames.clear()
-    sprite_model.sprite_frames.extend(frames[:frame_count])
+    sprite_model.set_frames(frames[:frame_count])
 
     assert sprite_model.frame_count == frame_count
 

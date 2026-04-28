@@ -496,7 +496,7 @@ class TestCrossComponentCommunication:
         result = viewer._sprite_model.set_current_frame(999)
 
         assert result is False
-        assert viewer._sprite_model.sprite_frames == []
+        assert viewer._sprite_model.sprite_frames == ()
         assert viewer._sprite_model.current_frame == initial_frame
 
 

@@ -243,9 +243,7 @@ class TestMouseZoomPanWorkflow:
         # Load a sprite properly
         pixmap = QPixmap(64, 64)
         pixmap.fill(Qt.green)
-        # Add frames the proper way
-        viewer._sprite_model.sprite_frames.clear()
-        viewer._sprite_model.sprite_frames.append(pixmap)
+        viewer._sprite_model.set_frames([pixmap])
         viewer._sprite_model.frameChanged.emit(0, 1)
 
         # Update manager context since we added frames manually
@@ -300,8 +298,7 @@ class TestMouseZoomPanWorkflow:
         # Load a sprite properly
         pixmap = QPixmap(256, 256)
         pixmap.fill(Qt.yellow)
-        viewer._sprite_model.sprite_frames.clear()
-        viewer._sprite_model.sprite_frames.append(pixmap)
+        viewer._sprite_model.set_frames([pixmap])
         viewer._sprite_model.frameChanged.emit(0, 1)
 
         # Update manager context since we added frames manually
@@ -389,10 +386,12 @@ class TestAdvancedKeyboardShortcuts:
         qtbot.addWidget(viewer)
 
         # Load sprites
+        frames = []
         for i in range(8):
             pixmap = QPixmap(32, 32)
             pixmap.fill(QColor(255 - i * 30, i * 30, 128))
-            viewer._sprite_model.sprite_frames.append(pixmap)
+            frames.append(pixmap)
+        viewer._sprite_model.set_frames(frames)
         viewer._sprite_model.frameChanged.emit(0, 8)
 
         # Update manager context since we added frames manually
@@ -442,10 +441,12 @@ def mock_sprite_viewer(qtbot):
     qtbot.addWidget(viewer)
 
     # Add test sprites
+    frames = []
     for i in range(8):
         pixmap = QPixmap(32, 32)
         pixmap.fill(QColor.fromHsv(i * 45, 200, 200))
-        viewer._sprite_model.sprite_frames.append(pixmap)
+        frames.append(pixmap)
+    viewer._sprite_model.set_frames(frames)
 
     viewer._sprite_model.frameChanged.emit(0, 8)
     return viewer

@@ -12,6 +12,8 @@ from PySide6.QtGui import QPixmap, QShowEvent
 from PySide6.QtWidgets import QDialog, QMessageBox, QVBoxLayout, QWidget
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
+
     from managers.animation_segment_manager import AnimationSegmentManager
 
 from config import Config
@@ -46,14 +48,14 @@ class ExportDialog(QDialog):
         parent: QWidget | None = None,
         frame_count: int = 0,
         current_frame: int = 0,
-        sprites: list[QPixmap] | None = None,
+        sprites: "Sequence[QPixmap] | None" = None,
         segment_manager: "AnimationSegmentManager | None" = None,
     ):
         super().__init__(parent)
 
         self.frame_count = frame_count
         self.current_frame = current_frame
-        self.sprites = sprites or []
+        self.sprites: list[QPixmap] = list(sprites) if sprites else []
         self.segment_manager = segment_manager  # Store for compatibility
 
         # Dialog settings
