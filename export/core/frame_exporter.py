@@ -269,14 +269,15 @@ class ExportWorker(QThread):
 
     def run(self):
         """Execute the export task."""
-        try:
-            if self.task.mode in (ExportMode.INDIVIDUAL_FRAMES, ExportMode.SELECTED_FRAMES):
-                self._export_individual_frames()
-            elif self.task.mode in (ExportMode.SPRITE_SHEET, ExportMode.SEGMENTS_SHEET):
-                self._export_sprite_sheet()
-            else:
-                raise ValueError(f"Unsupported export mode: {self.task.mode}")
+        # Lazy import to break the worker → presets → worker cycle at module load.
+        from export.core.export_presets import get_mode_spec
 
+        try:
+            spec = get_mode_spec(self.task.mode)
+            spec.worker_method(self)
+        except KeyError:
+            self.error.emit(f"Unsupported export mode: {self.task.mode}")
+            self.finished.emit(False, f"Unsupported export mode: {self.task.mode}")
         except Exception as e:
             self.error.emit(str(e))
             self.finished.emit(False, f"Export failed: {e!s}")

@@ -110,22 +110,15 @@ class ExportCoordinator(QObject):
 
     def handle_export_request(self, config: ExportConfig, frames: list | None = None) -> None:
         """Handle unified export request from dialog."""
+        from export.core.export_presets import get_mode_spec
+
         # Validate mode-specific preconditions
         valid, error_message = self._validate_mode_preconditions(config)
         if not valid:
             self._show_warning(error_message)
             return
 
-        mode = config.mode
-
-        # Determine export type name for progress dialog
-        export_type_names = {
-            ExportMode.INDIVIDUAL_FRAMES: "Individual Frames",
-            ExportMode.SELECTED_FRAMES: "Selected Frames",
-            ExportMode.SPRITE_SHEET: "Sprite Sheet",
-            ExportMode.SEGMENTS_SHEET: "Segments Per Row Sheet",
-        }
-        export_type = export_type_names.get(mode, "Frames")
+        spec = get_mode_spec(config.mode)
 
         # Get frame count for progress dialog
         frame_count = (
@@ -136,7 +129,7 @@ class ExportCoordinator(QObject):
 
         # Create and configure progress dialog
         self._progress_dialog = ExportProgressDialog(
-            export_type=export_type, total_frames=frame_count, parent=self._parent_widget
+            export_type=spec.display_name, total_frames=frame_count, parent=self._parent_widget
         )
 
         # Disconnect-before-connect: the exporter is a singleton, so previous export
@@ -158,12 +151,10 @@ class ExportCoordinator(QObject):
         # Show progress dialog
         self._progress_dialog.show()
 
-        # Route to appropriate export handler with guaranteed cleanup
+        # Route via the registry — segments-sheet uses its own coordinator method
+        # (it ignores the explicit ``frames`` arg and reads from the model).
         try:
-            if mode is ExportMode.SEGMENTS_SHEET:
-                self._export_segments_per_row(config)
-            else:
-                self._export_frames(config, frames=frames)
+            spec.coordinator_method(self, config, frames)
         except Exception:
             self._cleanup_progress_dialog()
             raise
