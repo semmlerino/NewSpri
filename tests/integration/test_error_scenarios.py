@@ -509,7 +509,3 @@ class ErrorInjector:
         }
 
         Path(filepath).write_bytes(corruptions.get(corruption_type, corruptions["random"]))
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

@@ -39,7 +39,3 @@ class TestKeyboardShortcutsSmoke:
                 viewer.keyPressEvent(event)
             except Exception as e:
                 pytest.fail(f"Shortcut '{description}' ({key}) crashed: {e}")
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

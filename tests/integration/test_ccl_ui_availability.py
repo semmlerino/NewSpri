@@ -3,16 +3,15 @@ CCL UI Availability Tests - Ensures CCL mode is always accessible.
 Tests the fix for CCL button being disabled when auto-detection fails.
 """
 
-import pytest
-
-# Mark all tests as integration tests (requires_files only for specific tests)
-pytestmark = [pytest.mark.integration]
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from PySide6.QtWidgets import QApplication
 
 from sprite_model.extraction_mode import ExtractionMode
+
+pytestmark = [pytest.mark.integration]
 
 
 class TestCCLUIAvailability:
@@ -38,9 +37,6 @@ class TestCCLUIAvailability:
         """Test that CCL button is enabled by default."""
         from sprite_viewer import SpriteViewer
 
-        print("\n🔍 TESTING INITIAL CCL STATE")
-        print("=" * 35)
-
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
 
@@ -50,14 +46,10 @@ class TestCCLUIAvailability:
 
         # CCL is now always available, so button should be enabled
         assert ccl_button.isEnabled(), "CCL button should be enabled by default"
-        print("✅ CCL button correctly enabled (always available)")
 
     def test_ccl_availability_methods_exist(self, qtbot):
         """Test that all CCL availability methods exist."""
         from sprite_viewer import SpriteViewer
-
-        print("\n🔍 TESTING CCL AVAILABILITY METHODS")
-        print("=" * 40)
 
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
@@ -73,21 +65,16 @@ class TestCCLUIAvailability:
         assert hasattr(sprite_model, "set_extraction_mode"), (
             "SpriteModel missing set_extraction_mode method"
         )
-        print("✅ SpriteModel CCL methods exist")
 
         # Test FrameExtractor has required methods
         frame_extractor = viewer._frame_extractor
         assert hasattr(frame_extractor, "get_extraction_mode"), (
             "FrameExtractor missing get_extraction_mode method"
         )
-        print("✅ FrameExtractor CCL methods exist")
 
     def test_ccl_remains_enabled_after_sprite_load(self, test_sprite_path, qtbot):
         """Test that CCL stays enabled after sprite loading."""
         from sprite_viewer import SpriteViewer
-
-        print("\n🔍 TESTING CCL STATE AFTER SPRITE LOAD")
-        print("=" * 45)
 
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
@@ -95,7 +82,6 @@ class TestCCLUIAvailability:
         # CCL should be enabled by default
         ccl_button = viewer._frame_extractor.ccl_mode_btn
         assert ccl_button.isEnabled(), "CCL should be enabled by default"
-        print("✅ Confirmed CCL is enabled by default")
 
         # Mock sprite loading success
         with patch.object(viewer._sprite_model, "load_sprite_sheet") as mock_load:
@@ -109,14 +95,10 @@ class TestCCLUIAvailability:
 
             # CCL should still be enabled
             assert ccl_button.isEnabled(), "CCL button should remain enabled after sprite load"
-            print("✅ CCL button remains enabled after sprite loading")
 
     def test_ccl_independent_of_auto_detection(self, qtbot):
         """Test that CCL availability is always enabled (new design)."""
         from sprite_viewer import SpriteViewer
-
-        print("\n🔍 TESTING CCL INDEPENDENCE FROM AUTO-DETECTION")
-        print("=" * 50)
 
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
@@ -143,14 +125,10 @@ class TestCCLUIAvailability:
                 assert ccl_button.isEnabled(), (
                     "CCL should remain enabled regardless of auto-detection"
                 )
-                print("✅ CCL remains enabled independent of auto-detection")
 
     def test_ccl_mode_switching(self, qtbot):
         """Test switching between Grid and CCL extraction modes."""
         from sprite_viewer import SpriteViewer
-
-        print("\n🔍 TESTING CCL MODE SWITCHING")
-        print("=" * 45)
 
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
@@ -171,13 +149,11 @@ class TestCCLUIAvailability:
         grid_button.click()
         assert grid_button.isChecked(), "Grid mode should be checked after click"
         assert not ccl_button.isChecked(), "CCL mode should be unchecked"
-        print("✅ Successfully switched to Grid mode")
 
         # Switch back to CCL mode
         ccl_button.click()
         assert ccl_button.isChecked(), "CCL mode should be checked after click"
         assert not grid_button.isChecked(), "Grid mode should be unchecked"
-        print("✅ Successfully switched back to CCL mode")
 
     def test_real_ccl_workflow_with_ark_png(self, qtbot):
         """Test real CCL workflow with Ark.png if available."""
@@ -187,9 +163,6 @@ class TestCCLUIAvailability:
         ark_path = Path(__file__).parent.parent.parent / "spritetests" / "Ark.png"
         if not ark_path.exists():
             pytest.skip("Ark.png not available for real CCL testing")
-
-        print("\n🔍 TESTING REAL CCL WORKFLOW WITH ARK.PNG")
-        print("=" * 45)
 
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
@@ -204,7 +177,6 @@ class TestCCLUIAvailability:
             # CCL should now be available
             ccl_button = viewer._frame_extractor.ccl_mode_btn
             assert ccl_button.isEnabled(), "CCL should be enabled with real sprite sheet"
-            print("✅ CCL enabled with real Ark.png sprite sheet")
 
             # Test that we can actually set CCL mode
             ccl_button.setChecked(True)
@@ -214,10 +186,8 @@ class TestCCLUIAvailability:
             frames = viewer._sprite_model.sprite_frames
             frame_count = len(frames) if frames else 0
             assert frame_count > 0, "CCL should extract sprites from Ark.png"
-            print(f"✅ CCL extracted {frame_count} sprites from Ark.png")
         else:
-            print(f"⚠️  Could not load Ark.png: {error}")
-            pytest.skip("Could not load Ark.png for testing")
+            pytest.skip(f"Could not load Ark.png for testing: {error}")
 
 
 class TestCCLRegressionPrevention:
@@ -226,9 +196,6 @@ class TestCCLRegressionPrevention:
     def test_ccl_availability_integration_checklist(self, qtbot):
         """Comprehensive checklist to prevent CCL availability regressions."""
         from sprite_viewer import SpriteViewer
-
-        print("\n📋 CCL AVAILABILITY REGRESSION PREVENTION CHECKLIST")
-        print("=" * 55)
 
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
@@ -266,13 +233,5 @@ class TestCCLRegressionPrevention:
             try:
                 result = check_func()
                 assert result, f"FAILED: {description}"
-                print(f"✅ {description}")
             except Exception as e:
-                pytest.fail(f"❌ {description} - Error: {e}")
-
-        print("\n🎉 ALL CCL AVAILABILITY REQUIREMENTS MET!")
-        print("🛡️  CCL availability regression prevented!")
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v", "-s"])
+                pytest.fail(f"{description} failed: {e}")

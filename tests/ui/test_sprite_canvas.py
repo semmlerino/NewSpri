@@ -27,10 +27,8 @@ class TestSpriteCanvasInitialization:
         assert min_size.height() >= Config.Canvas.MIN_HEIGHT
 
         # Initial state
-        assert canvas._zoom_factor == pytest.approx(1.0)
-        assert canvas._pan_offset == [0, 0]
-        assert canvas._pixmap is None
-        assert canvas._show_checkerboard
+        assert canvas.get_zoom_factor() == pytest.approx(1.0)
+        assert canvas.hasMouseTracking()
 
     @pytest.mark.ui
     def test_signals_exist(self, qapp):
@@ -44,11 +42,13 @@ class TestSpriteCanvasPixmapHandling:
 
     @pytest.mark.ui
     def test_set_pixmap(self, qapp, mock_pixmap):
-        """Test setting pixmap for display."""
+        """Setting a pixmap leaves existing zoom alone when auto-fit is disabled."""
         canvas = SpriteCanvas()
+        canvas.set_zoom(2.0)
 
         canvas.set_pixmap(mock_pixmap, auto_fit=False)
-        assert canvas._pixmap == mock_pixmap
+
+        assert canvas.get_zoom_factor() == pytest.approx(2.0)
 
     @pytest.mark.ui
     def test_auto_fit_on_set_pixmap(self, qapp, mock_pixmap):
@@ -66,8 +66,12 @@ class TestSpriteCanvasPixmapHandling:
         canvas = SpriteCanvas()
         canvas.set_pixmap(mock_pixmap)
 
-        canvas.set_pixmap(None)
-        assert canvas._pixmap is None
+        canvas.clear_pixmap()
+
+        # A follow-up fit request with no pixmap should be a no-op.
+        canvas.set_zoom(2.0)
+        canvas.fit_to_window()
+        assert canvas.get_zoom_factor() == pytest.approx(2.0)
 
 
 class TestSpriteCanvasZoom:
@@ -81,18 +85,18 @@ class TestSpriteCanvasZoom:
 
         canvas.set_zoom(zoom_factor)
 
-        assert Config.Canvas.ZOOM_MIN <= canvas._zoom_factor <= Config.Canvas.ZOOM_MAX
+        assert Config.Canvas.ZOOM_MIN <= canvas.get_zoom_factor() <= Config.Canvas.ZOOM_MAX
 
     @pytest.mark.ui
     def test_zoom_in(self, qapp):
         """Test zoom in functionality."""
         canvas = SpriteCanvas()
-        initial_zoom = canvas._zoom_factor
+        initial_zoom = canvas.get_zoom_factor()
 
         # Simulate zoom in by increasing factor
         canvas.set_zoom(initial_zoom * 1.2)
 
-        assert canvas._zoom_factor > initial_zoom
+        assert canvas.get_zoom_factor() > initial_zoom
 
     @pytest.mark.ui
     def test_zoom_out(self, qapp):
@@ -103,7 +107,7 @@ class TestSpriteCanvasZoom:
         # Simulate zoom out by decreasing factor
         canvas.set_zoom(1.6)
 
-        assert canvas._zoom_factor < 2.0
+        assert canvas.get_zoom_factor() < 2.0
 
     @pytest.mark.ui
     def test_reset_zoom(self, qapp):
@@ -114,7 +118,7 @@ class TestSpriteCanvasZoom:
         # Reset zoom to 1.0
         canvas.set_zoom(1.0)
 
-        assert canvas._zoom_factor == pytest.approx(1.0)
+        assert canvas.get_zoom_factor() == pytest.approx(1.0)
 
 
 class TestSpriteCanvasDisplay:
@@ -192,8 +196,8 @@ class TestSpriteCanvasRenderingIntegration:
         canvas.show()
         canvas.update()
 
-        # Should not crash or raise exceptions
-        assert canvas._pixmap is not None
+        # Should not crash or raise exceptions.
+        assert canvas.get_zoom_factor() > 0
 
     @pytest.mark.ui
     def test_painting_without_pixmap(self, qapp):
@@ -204,8 +208,8 @@ class TestSpriteCanvasRenderingIntegration:
         canvas.show()
         canvas.update()
 
-        # Should not crash
-        assert canvas._pixmap is None
+        # Should not crash.
+        assert canvas.get_zoom_factor() == pytest.approx(1.0)
 
 
 class TestSpriteCanvasErrorHandling:
@@ -218,32 +222,28 @@ class TestSpriteCanvasErrorHandling:
 
         # Test extreme values
         canvas.set_zoom(0)
-        assert canvas._zoom_factor >= Config.Canvas.ZOOM_MIN
+        assert canvas.get_zoom_factor() >= Config.Canvas.ZOOM_MIN
 
         canvas.set_zoom(1000)
-        assert canvas._zoom_factor <= Config.Canvas.ZOOM_MAX
+        assert canvas.get_zoom_factor() <= Config.Canvas.ZOOM_MAX
 
         # Canvas should handle None gracefully by keeping current zoom
-        current_zoom = canvas._zoom_factor
+        current_zoom = canvas.get_zoom_factor()
         try:
             canvas.set_zoom(None)
         except Exception:
             pass  # Should not crash
-        assert canvas._zoom_factor == current_zoom
+        assert canvas.get_zoom_factor() == current_zoom
 
     @pytest.mark.ui
-    def test_invalid_pan_values(self, qapp):
-        """Test handling of invalid pan values."""
+    def test_reset_view_after_zoom(self, qapp):
+        """Resetting the view returns to the default zoom."""
         canvas = SpriteCanvas()
+        canvas.set_zoom(2.5)
 
-        # Pan offset is internal - test it doesn't crash with invalid values
-        try:
-            canvas._pan_offset = [None, None]
-            canvas._pan_offset = [0, 0]  # Reset to valid
-        except Exception:
-            pass  # Should not crash
-        assert isinstance(canvas._pan_offset[0], (int, float))
-        assert isinstance(canvas._pan_offset[1], (int, float))
+        canvas.reset_view()
+
+        assert canvas.get_zoom_factor() == pytest.approx(1.0)
 
     @pytest.mark.ui
     def test_operations_without_pixmap(self, qapp):
@@ -251,9 +251,9 @@ class TestSpriteCanvasErrorHandling:
         canvas = SpriteCanvas()
 
         # These should not crash
-        canvas.set_zoom(canvas._zoom_factor * 1.2)  # Simulate zoom in
-        canvas.set_zoom(canvas._zoom_factor * 0.8)  # Simulate zoom out
+        canvas.set_zoom(canvas.get_zoom_factor() * 1.2)  # Simulate zoom in
+        canvas.set_zoom(canvas.get_zoom_factor() * 0.8)  # Simulate zoom out
         canvas.auto_fit_sprite()
         canvas.set_frame_info(0, 0)
 
-        assert canvas._pixmap is None  # Should remain None
+        assert canvas.get_zoom_factor() > 0

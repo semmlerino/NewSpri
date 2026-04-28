@@ -160,7 +160,3 @@ class TestSignalErrorHandling:
 
         if hasattr(dialog, "exportCompleted"):
             dialog.exportCompleted.emit("test_path")  # Should not crash
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

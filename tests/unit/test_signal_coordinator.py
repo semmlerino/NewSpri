@@ -5,14 +5,6 @@ from unittest.mock import MagicMock
 import pytest
 
 
-def create_mock_signal():
-    """Create a mock Qt signal with connect/disconnect methods."""
-    signal = MagicMock()
-    signal.connect = MagicMock()
-    signal.disconnect = MagicMock()
-    return signal
-
-
 class RecordingSignal:
     """Small signal test double that preserves connected slots."""
 
@@ -30,6 +22,11 @@ class RecordingSignal:
     def emit(self, *args):
         for slot in list(self.slots):
             slot(*args)
+
+
+def create_mock_signal():
+    """Create a Qt-like signal fake with observable connections and emissions."""
+    return RecordingSignal()
 
 
 @pytest.fixture
@@ -68,6 +65,11 @@ def mock_auto_detection_controller():
     """Mock AutoDetectionController with all required signals."""
     controller = MagicMock()
     controller.frameSettingsDetected = create_mock_signal()
+    controller.marginSettingsDetected = create_mock_signal()
+    controller.spacingSettingsDetected = create_mock_signal()
+    controller.buttonConfidenceUpdate = create_mock_signal()
+    controller.detectionFailed = create_mock_signal()
+    controller.detectionResultsReady = create_mock_signal()
     controller.statusUpdate = create_mock_signal()
     controller.run_comprehensive_detection_with_dialog = MagicMock()
     controller.run_frame_detection = MagicMock()
@@ -80,6 +82,7 @@ def mock_auto_detection_controller():
 def mock_segment_controller():
     """Mock AnimationSegmentController."""
     controller = MagicMock()
+    controller.statusMessage = create_mock_signal()
     controller.create_segment = MagicMock()
     controller.delete_segment = MagicMock()
     controller.rename_segment = MagicMock()
@@ -128,6 +131,9 @@ def mock_frame_extractor():
     extractor.auto_margins_btn.clicked = create_mock_signal()
     extractor.auto_spacing_btn = MagicMock()
     extractor.auto_spacing_btn.clicked = create_mock_signal()
+    extractor.update_auto_button_confidence = MagicMock()
+    extractor.set_offset = MagicMock()
+    extractor.set_spacing = MagicMock()
 
     return extractor
 
@@ -600,6 +606,24 @@ class TestFrameExtractorSignalConnections:
 
 class TestPlaybackControlsSignalConnections:
     """Test PlaybackControls signal connections."""
+
+    def test_playback_control_signals_route_to_targets(
+        self,
+        signal_coordinator,
+        mock_playback_controls,
+        mock_animation_controller,
+        mock_sprite_model,
+    ):
+        """Connected playback signals invoke the model/controller behavior."""
+        signal_coordinator.connect_all()
+
+        mock_playback_controls.nextFrameClicked.emit()
+        mock_playback_controls.fpsChanged.emit(24)
+        mock_playback_controls.frameChanged.emit(3)
+
+        mock_sprite_model.next_frame.assert_called_once_with()
+        mock_animation_controller.set_fps.assert_called_once_with(24)
+        mock_sprite_model.set_current_frame.assert_called_once_with(3)
 
     def test_play_pause_clicked_connected(
         self, signal_coordinator, mock_playback_controls, mock_animation_controller

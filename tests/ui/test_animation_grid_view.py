@@ -5,7 +5,6 @@ Tests the multi-frame selection behavior that was recently fixed.
 
 from unittest.mock import patch
 
-import pytest
 from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QColor, QMouseEvent, QPixmap
 
@@ -306,9 +305,6 @@ class TestRealImageIntegration:
         if ark_sprite_fixture["exists"]:
             # Ark.png is available for real CCL testing
             assert ark_sprite_fixture["path"] is not None
-            print(f"✅ Ark.png available at: {ark_sprite_fixture['path']}")
-        else:
-            print("⚠️  Ark.png not found - CCL tests will use generated sprites")
 
 
 class TestAnimationGridView:
@@ -537,7 +533,3 @@ class TestSelectionUIInteraction:
         assert grid_view._last_clicked_frame is None
         assert not grid_view._is_dragging
         assert len(grid_view._pre_drag_selection) == 0
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

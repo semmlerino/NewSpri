@@ -181,7 +181,3 @@ class TestSpriteViewerInitialization:
         assert hasattr(viewer._canvas, "reset_view")  # Correct method name
         assert hasattr(viewer._status_bar, "show_message")  # Previously missing
         assert hasattr(viewer._status_bar, "update_mouse_position")  # Previously missing
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

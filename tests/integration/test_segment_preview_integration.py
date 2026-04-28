@@ -240,7 +240,3 @@ class TestSegmentPreviewIntegration:
         current_item = segment_preview._preview_items["Persistent"]
         assert current_item.segment_name == initial_item.segment_name
         assert len(current_item._frames) == len(initial_item._frames)
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

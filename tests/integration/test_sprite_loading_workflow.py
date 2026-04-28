@@ -435,9 +435,3 @@ class TestRealComponentIntegration:
             assert not frame.isNull()
             assert frame.width() > 0
             assert frame.height() > 0
-
-        print(f"✅ CCL integration test completed with {len(extracted_frames)} extracted sprites")
-        if ark_sprite_fixture["exists"]:
-            print(
-                f"🎯 Ark.png available for future real CCL testing at: {ark_sprite_fixture['path']}"
-            )

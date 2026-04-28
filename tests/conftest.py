@@ -12,7 +12,7 @@ import tempfile
 import warnings
 from collections.abc import Generator
 from pathlib import Path
-from unittest.mock import MagicMock, Mock
+from unittest.mock import Mock
 
 import pytest
 
@@ -46,6 +46,7 @@ from config import Config
 from core.animation_controller import AnimationController
 from core.auto_detection_controller import AutoDetectionController
 from sprite_model import SpriteModel
+from sprite_model.sprite_extraction import GridConfig
 
 
 # ============================================================================
@@ -115,7 +116,7 @@ def mock_pixmap() -> QPixmap:
 
 
 @pytest.fixture
-def test_sprite_sheet(sample_sprite_paths) -> QPixmap | None:
+def sample_test_sprite_sheet(sample_sprite_paths) -> QPixmap | None:
     """Load a real test sprite sheet if available."""
     test_path = sample_sprite_paths["test_sheet"]
     if test_path.exists():
@@ -163,14 +164,9 @@ def auto_detection_controller(sprite_model) -> AutoDetectionController:
 def configured_sprite_model(sprite_model, mock_sprite_frames) -> SpriteModel:
     """SpriteModel pre-configured with test data."""
     # Modify frames in-place to preserve AnimationStateManager reference
-    sprite_model._sprite_frames.clear()
-    sprite_model._sprite_frames.extend(mock_sprite_frames)
-    sprite_model._frame_width = 64
-    sprite_model._frame_height = 64
-    sprite_model._offset_x = 0
-    sprite_model._offset_y = 0
-    sprite_model._spacing_x = 0
-    sprite_model._spacing_y = 0
+    sprite_model.sprite_frames.clear()
+    sprite_model.sprite_frames.extend(mock_sprite_frames)
+    sprite_model._apply_grid_config(GridConfig(width=64, height=64))
 
     return sprite_model
 
@@ -181,7 +177,7 @@ def configured_sprite_model(sprite_model, mock_sprite_frames) -> SpriteModel:
 
 
 @pytest.fixture
-def test_config() -> Config:
+def config_class() -> Config:
     """Access to test configuration."""
     return Config
 
@@ -656,17 +652,29 @@ def pytest_configure(config):
 
 
 def pytest_collection_modifyitems(config, items):
-    """Modify test collection to add markers automatically."""
+    """Add suite markers from paths without overriding explicit categories."""
+    category_markers = {"unit", "integration", "ui", "performance"}
+
     for item in items:
-        # Add markers based on test file paths
-        if "unit" in str(item.fspath):
+        item_path = str(item.fspath)
+        explicit_categories = {marker.name for marker in item.iter_markers()} & category_markers
+
+        if explicit_categories:
+            if "ui" in explicit_categories:
+                item.add_marker(pytest.mark.requires_display)
+            continue
+
+        # Add category markers based on test file paths only when a test has not
+        # declared a category itself. This keeps "-m unit" from collecting
+        # Qt/UI-heavy tests that live near unit tests for historical reasons.
+        if "unit" in item_path:
             item.add_marker(pytest.mark.unit)
-        elif "integration" in str(item.fspath):
+        elif "integration" in item_path:
             item.add_marker(pytest.mark.integration)
-        elif "ui" in str(item.fspath):
+        elif "ui" in item_path:
             item.add_marker(pytest.mark.ui)
             item.add_marker(pytest.mark.requires_display)
-        elif "performance" in str(item.fspath):
+        elif "performance" in item_path:
             item.add_marker(pytest.mark.performance)
             item.add_marker(pytest.mark.slow)
 

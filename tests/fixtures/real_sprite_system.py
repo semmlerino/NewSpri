@@ -9,6 +9,8 @@ try:
     from PySide6.QtCore import Qt
     from PySide6.QtGui import QPainter, QPixmap
 
+    from sprite_model.sprite_extraction import GridConfig
+
     PYSIDE6_AVAILABLE = True
 except ImportError:
     PYSIDE6_AVAILABLE = False
@@ -49,15 +51,13 @@ class RealSpriteSystem:
     def setup_sprite_model(self, frame_count=6, frame_size=(64, 64)):
         """Setup sprite model with real frame data."""
         self.setup_test_frames(frame_count, frame_size)
+        width, height = frame_size
 
         # Configure sprite model with real data
-        self.sprite_model._sprite_frames = self.test_frames
-        self.sprite_model._frame_width, self.sprite_model._frame_height = frame_size
-        self.sprite_model._current_frame = 0
-        self.sprite_model._offset_x = 0
-        self.sprite_model._offset_y = 0
-        self.sprite_model._spacing_x = 0
-        self.sprite_model._spacing_y = 0
+        self.sprite_model.sprite_frames.clear()
+        self.sprite_model.sprite_frames.extend(self.test_frames)
+        self.sprite_model._apply_grid_config(GridConfig(width=width, height=height))
+        self.sprite_model.set_current_frame(0)
 
         # Use real setter methods
         self.sprite_model.set_fps(10)
@@ -140,6 +140,10 @@ class RealSpriteSystem:
 
     def cleanup(self):
         """Clean up system resources."""
+        if self.animation_controller is None:
+            self.test_frames.clear()
+            return
+
         if self.animation_controller._is_playing:
             self.animation_controller.stop_animation()
         self.animation_controller.shutdown()

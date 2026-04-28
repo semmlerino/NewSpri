@@ -371,7 +371,3 @@ class TestAnimationSegmentPreviewIntegration:
 
         # Should have advanced through frames
         assert walk_item._current_frame == 3  # Started at 0, advanced 3 times
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

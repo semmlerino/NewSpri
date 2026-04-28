@@ -68,6 +68,7 @@ Notes:
   `tests/requirements-test.txt`; they are not installed by `uv sync --all-extras`.
 - For custom pytest expressions (`-m "not slow"`, `-k ...`, etc.), use `uv run pytest` directly.
 - `uv run pytest tests/ui/` is the most reliable way to run all UI-directory tests; `-m ui` only runs tests explicitly marked `ui`.
+- Explicit suite markers win over directory-derived markers. This keeps `-m unit` limited to tests categorized as unit tests even when a legacy file temporarily lives in the wrong directory.
 
 ## Coverage
 

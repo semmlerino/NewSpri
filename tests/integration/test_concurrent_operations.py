@@ -211,7 +211,3 @@ class TestConcurrentOperations:
         # Stop playback for cleanup
         viewer._animation_controller.pause_animation()
         QApplication.processEvents()
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

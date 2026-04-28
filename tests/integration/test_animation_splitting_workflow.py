@@ -567,7 +567,3 @@ class TestRealAnimationSplittingIntegration:
 
         controller.stop_animation()
         assert not controller.is_playing
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

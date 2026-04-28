@@ -104,18 +104,3 @@ def test_config_integration():
     # Test Settings config access
     assert hasattr(Config.Settings, "MAX_RECENT_FILES")
     assert hasattr(Config.Settings, "DEFAULTS")
-
-
-if __name__ == "__main__":
-    # Add parent directory to path for direct execution
-    import sys
-    from pathlib import Path
-
-    sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-    # Run tests directly
-    test_settings_config_import()
-    test_settings_defaults_structure()
-    test_export_config_values()
-    test_config_integration()
-    print("All settings config tests passed!")

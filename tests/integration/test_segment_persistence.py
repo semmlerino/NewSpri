@@ -230,7 +230,3 @@ class TestSegmentPersistence:
 
         # Manager should have no segments (corrupted file ignored)
         assert len(manager.get_all_segments()) == 0
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

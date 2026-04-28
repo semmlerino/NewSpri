@@ -9,9 +9,9 @@ python sprite_viewer.py
 
 # Testing (pytest is configured in pyproject.toml with sensible defaults)
 uv run pytest                              # All tests (serial, useful summary)
-uv run pytest tests/unit/                  # Unit tests only
+uv run pytest tests/unit/                  # Files under unit/
 uv run pytest tests/integration/           # Integration tests
-uv run pytest -m unit                      # By marker
+uv run pytest -m unit                      # Tests categorized as unit
 uv run pytest path/to/test.py::test_name   # Single test
 uv run pytest --lf                         # Re-run only failures
 uv run pytest -k "test_name" -vv --maxfail=1 --tb=long  # Debug one test

@@ -196,7 +196,3 @@ class TestStateConsistency:
         QApplication.processEvents()
 
         assert canvas._zoom_factor == initial_zoom
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

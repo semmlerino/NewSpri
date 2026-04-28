@@ -63,14 +63,14 @@ class TestSpriteModelInitialization:
 
     def test_initial_state(self, sprite_model):
         """Test SpriteModel starts in clean initial state."""
-        assert sprite_model._sprite_frames == []
-        assert sprite_model._file_path == ""
-        assert sprite_model._frame_width == 0
-        assert sprite_model._frame_height == 0
-        assert sprite_model._offset_x == 0
-        assert sprite_model._offset_y == 0
-        assert sprite_model._spacing_x == 0
-        assert sprite_model._spacing_y == 0
+        assert sprite_model.sprite_frames == []
+        assert sprite_model.file_path == ""
+        assert sprite_model.frame_width == 0
+        assert sprite_model.frame_height == 0
+        assert sprite_model.offset_x == 0
+        assert sprite_model.offset_y == 0
+        assert sprite_model.spacing_x == 0
+        assert sprite_model.spacing_y == 0
 
     def test_signals_exist(self, sprite_model):
         """Test all required signals are defined."""
@@ -89,19 +89,19 @@ class TestSpriteModelConfiguration:
         """Test setting frame extraction parameters."""
         _set_frame_settings(sprite_model, 64, 48, 4, 2, 2, 1)
 
-        assert sprite_model._frame_width == 64
-        assert sprite_model._frame_height == 48
-        assert sprite_model._offset_x == 4
-        assert sprite_model._offset_y == 2
-        assert sprite_model._spacing_x == 2
-        assert sprite_model._spacing_y == 1
+        assert sprite_model.frame_width == 64
+        assert sprite_model.frame_height == 48
+        assert sprite_model.offset_x == 4
+        assert sprite_model.offset_y == 2
+        assert sprite_model.spacing_x == 2
+        assert sprite_model.spacing_y == 1
 
     @pytest.mark.parametrize("width,height", [(32, 32), (64, 48), (128, 128), (16, 24)])
     def test_frame_size_validation(self, sprite_model, width, height):
         """Test various frame sizes are accepted."""
         _set_frame_settings(sprite_model, width, height, 0, 0, 0, 0)
-        assert sprite_model._frame_width == width
-        assert sprite_model._frame_height == height
+        assert sprite_model.frame_width == width
+        assert sprite_model.frame_height == height
 
     def test_invalid_frame_settings(self, sprite_model):
         """Test handling of invalid frame settings."""
@@ -120,7 +120,7 @@ class TestSpriteModelFrameManagement:
         """Test getting frame count via frame_count property."""
         # Use frame_count property (not get_frame_count method)
         count = configured_sprite_model.frame_count
-        assert count == len(configured_sprite_model._sprite_frames)
+        assert count == len(configured_sprite_model.sprite_frames)
         assert count > 0
 
     def test_get_frame_valid_index(self, configured_sprite_model):
@@ -144,8 +144,6 @@ class TestSpriteModelFrameManagement:
         assert frames[frame_count - 1] is not None
 
         # Out of bounds raises IndexError (standard list behavior)
-        import pytest
-
         with pytest.raises(IndexError):
             _ = frames[frame_count + 10]
 
@@ -164,47 +162,41 @@ class TestSpriteModelProperties:
         """Test that set_frame_settings stores frame dimensions correctly."""
         _set_frame_settings(sprite_model, 64, 48, 0, 0, 0, 0)
 
-        # These are stored as private attributes (no public properties)
-        assert sprite_model._frame_width == 64
-        assert sprite_model._frame_height == 48
+        assert sprite_model.frame_width == 64
+        assert sprite_model.frame_height == 48
 
     def test_offset_properties(self, sprite_model):
         """Test that set_frame_settings stores offsets correctly."""
         _set_frame_settings(sprite_model, 32, 32, 5, 10, 0, 0)
 
-        # These are stored as private attributes (no public properties)
-        assert sprite_model._offset_x == 5
-        assert sprite_model._offset_y == 10
+        assert sprite_model.offset_x == 5
+        assert sprite_model.offset_y == 10
 
     def test_spacing_properties(self, sprite_model):
         """Test that set_frame_settings stores spacing correctly."""
         _set_frame_settings(sprite_model, 32, 32, 0, 0, 3, 7)
 
-        # These are stored as private attributes (no public properties)
-        assert sprite_model._spacing_x == 3
-        assert sprite_model._spacing_y == 7
+        assert sprite_model.spacing_x == 3
+        assert sprite_model.spacing_y == 7
 
-    def test_file_path_property(self, sprite_model):
+    def test_file_path_property(self, sprite_model, tmp_path):
         """Test file path property."""
-        test_path = "/test/path/sprite.png"
-        sprite_model._file_path = test_path
+        sprite_path = tmp_path / "sprite.png"
+        pixmap = QPixmap(16, 16)
+        pixmap.fill(QColor(255, 0, 0))
+        pixmap.save(str(sprite_path), "PNG")
 
-        assert sprite_model.file_path == test_path
+        success, error = sprite_model.load_sprite_sheet(str(sprite_path))
+
+        assert success, error
+        assert sprite_model.file_path == str(sprite_path)
 
 
 class TestSpriteModelSignals:
     """Test SpriteModel signal emission."""
 
     def test_configuration_changed_signal(self, sprite_model, qapp):
-        """Test configurationChanged signal is emitted on actual config changes."""
-        spy = QSignalSpy(sprite_model.configurationChanged)
-
-        # set_frame_settings may not emit configurationChanged directly
-        # The signal is meant for mode changes, not dimension settings
-        _set_frame_settings(sprite_model, 64, 64, 0, 0, 0, 0)
-
-        # Note: configurationChanged signal may not be emitted by set_frame_settings
-        # This is implementation-dependent; the test verifies the signal exists
+        """Test configurationChanged signal is available for observers."""
         assert hasattr(sprite_model, "configurationChanged")
 
     def test_frame_changed_signal(self, configured_sprite_model, qapp):
@@ -250,7 +242,8 @@ def test_sprite_model_with_various_frame_counts(sprite_model, mock_sprite_frames
     while len(frames) < frame_count:
         frames.extend(mock_sprite_frames[: frame_count - len(frames)])
 
-    sprite_model._sprite_frames = frames[:frame_count]
+    sprite_model.sprite_frames.clear()
+    sprite_model.sprite_frames.extend(frames[:frame_count])
 
     assert sprite_model.frame_count == frame_count
 
@@ -279,7 +272,7 @@ class TestSpriteModelErrorHandling:
         """Test clearing sprite model to initial state."""
         # Verify it's configured
         assert configured_sprite_model.frame_count > 0
-        assert configured_sprite_model._frame_width > 0
+        assert configured_sprite_model.frame_width > 0
 
         # Clear to initial state
         _clear_sprite_data(configured_sprite_model)

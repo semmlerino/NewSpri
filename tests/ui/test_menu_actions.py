@@ -24,7 +24,3 @@ class TestMenuStructureSmoke:
         assert "File" in menu_names
         assert "View" in menu_names
         assert "Help" in menu_names
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

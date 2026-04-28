@@ -34,7 +34,3 @@ class TestExportDialog:
 
         # Signal should be connectable without error
         assert hasattr(dialog, "exportRequested")
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])

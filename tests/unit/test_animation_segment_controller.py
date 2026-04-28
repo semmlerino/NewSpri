@@ -358,7 +358,3 @@ class TestAnimationSegmentController(unittest.TestCase):
 
         # Assert
         self.mock_grid_view.set_frames.assert_not_called()
-
-
-if __name__ == "__main__":
-    unittest.main()

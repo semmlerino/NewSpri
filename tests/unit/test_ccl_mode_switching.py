@@ -37,7 +37,7 @@ def sprite_model(qapp) -> SpriteModel:
 
 
 @pytest.fixture
-def test_sprite_sheet() -> QPixmap:
+def sample_sprite_sheet() -> QPixmap:
     """Create a simple test sprite sheet (8 frames, 32x32 each)."""
     pixmap = QPixmap(256, 32)
     pixmap.fill(QColor(255, 255, 255))  # White background
@@ -62,10 +62,10 @@ def test_sprite_sheet() -> QPixmap:
 
 
 @pytest.fixture
-def loaded_model(sprite_model: SpriteModel, test_sprite_sheet: QPixmap, tmp_path) -> SpriteModel:
+def loaded_model(sprite_model: SpriteModel, sample_sprite_sheet: QPixmap, tmp_path) -> SpriteModel:
     """Create a model with a loaded sprite sheet."""
     sprite_path = tmp_path / "test_sprite.png"
-    test_sprite_sheet.save(str(sprite_path), "PNG")
+    sample_sprite_sheet.save(str(sprite_path), "PNG")
 
     success, error = sprite_model.load_sprite_sheet(str(sprite_path))
     assert success, f"Failed to load test sprite: {error}"

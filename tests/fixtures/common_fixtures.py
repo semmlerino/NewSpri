@@ -91,9 +91,9 @@ def varied_size_sprites():
 def sprite_model_with_data(simple_sprites):
     """Create a sprite model populated with test data."""
     model = SpriteModel()
-    model.sprite_frames = simple_sprites.copy()
-    model.current_frame = 0
-    model.sprite_path = "/test/sprites.png"
+    model.sprite_frames.extend(simple_sprites)
+    model.set_current_frame(0)
+    model._file_path = "/test/sprites.png"
     return model
 
 
