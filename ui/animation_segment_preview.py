@@ -29,7 +29,7 @@ from utils.sprite_rendering import create_padded_pixmap
 from utils.styles import StyleManager
 
 
-class SegmentPreviewItem(QFrame):
+class _SegmentPreviewItem(QFrame):
     """Individual animation segment preview with playback controls.
 
     Features:
@@ -462,7 +462,7 @@ class AnimationSegmentPreview(QWidget):
 
     def __init__(self):
         super().__init__()
-        self._preview_items: dict[str, SegmentPreviewItem] = {}
+        self._preview_items: dict[str, _SegmentPreviewItem] = {}
         self._all_frames: list[QPixmap] = []
         self._zoom_factor = 1.0  # Default zoom level
 
@@ -585,7 +585,7 @@ class AnimationSegmentPreview(QWidget):
         self.empty_label.hide()
 
         # Create preview item with animation settings and current zoom
-        preview_item = SegmentPreviewItem(
+        preview_item = _SegmentPreviewItem(
             name, color, segment_frames, bounce_mode, frame_holds, self._zoom_factor
         )
         preview_item.removeRequested.connect(self._on_remove_requested)

@@ -8,7 +8,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import QSpinBox
 
-from ui.animation_segment_preview import AnimationSegmentPreview, SegmentPreviewItem
+from ui.animation_segment_preview import AnimationSegmentPreview, _SegmentPreviewItem
 
 
 class TestSegmentPreviewItem:
@@ -22,7 +22,7 @@ class TestSegmentPreviewItem:
             frame.fill(Qt.blue)
 
         # Create preview item
-        item = SegmentPreviewItem("TestSegment", QColor(255, 0, 0), frames)
+        item = _SegmentPreviewItem("TestSegment", QColor(255, 0, 0), frames)
         qtbot.addWidget(item)
 
         # Verify basic properties
@@ -36,7 +36,7 @@ class TestSegmentPreviewItem:
     def test_fps_spinner_default_value(self, qtbot):
         """Test FPS spinner has correct default value of 10."""
         frames = [QPixmap(32, 32) for _ in range(3)]
-        item = SegmentPreviewItem("Test", QColor(0, 255, 0), frames)
+        item = _SegmentPreviewItem("Test", QColor(0, 255, 0), frames)
         qtbot.addWidget(item)
 
         # Find FPS spinner
@@ -49,7 +49,7 @@ class TestSegmentPreviewItem:
     def test_fps_spinner_functionality(self, qtbot):
         """Test FPS spinner changes timer interval."""
         frames = [QPixmap(32, 32) for _ in range(3)]
-        item = SegmentPreviewItem("Test", QColor(0, 0, 255), frames)
+        item = _SegmentPreviewItem("Test", QColor(0, 0, 255), frames)
         qtbot.addWidget(item)
 
         # Test FPS change
@@ -69,7 +69,7 @@ class TestSegmentPreviewItem:
     def test_play_pause_toggle(self, qtbot):
         """Test play/pause button functionality."""
         frames = [QPixmap(32, 32) for _ in range(4)]
-        item = SegmentPreviewItem("Test", QColor(255, 255, 0), frames)
+        item = _SegmentPreviewItem("Test", QColor(255, 255, 0), frames)
         qtbot.addWidget(item)
 
         # Create signal spy
@@ -103,7 +103,7 @@ class TestSegmentPreviewItem:
             # Fill with different colors to distinguish
             frame.fill([Qt.red, Qt.green, Qt.blue][i])
 
-        item = SegmentPreviewItem("Test", QColor(128, 128, 128), frames)
+        item = _SegmentPreviewItem("Test", QColor(128, 128, 128), frames)
         qtbot.addWidget(item)
 
         # Check initial frame
@@ -127,7 +127,7 @@ class TestSegmentPreviewItem:
     def test_remove_button_signal(self, qtbot):
         """Test remove button emits correct signal."""
         frames = [QPixmap(32, 32) for _ in range(2)]
-        item = SegmentPreviewItem("RemoveTest", QColor(0, 128, 255), frames)
+        item = _SegmentPreviewItem("RemoveTest", QColor(0, 128, 255), frames)
         qtbot.addWidget(item)
 
         # Create signal spy
@@ -152,7 +152,7 @@ class TestSegmentPreviewItem:
     def test_stop_playback(self, qtbot):
         """Test stop playback functionality."""
         frames = [QPixmap(32, 32) for _ in range(4)]
-        item = SegmentPreviewItem("Test", QColor(255, 128, 0), frames)
+        item = _SegmentPreviewItem("Test", QColor(255, 128, 0), frames)
         qtbot.addWidget(item)
 
         # Start playing and advance frames

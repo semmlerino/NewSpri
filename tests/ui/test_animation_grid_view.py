@@ -9,7 +9,7 @@ from PySide6.QtCore import QPoint, Qt
 from PySide6.QtGui import QColor, QMouseEvent, QPixmap
 
 from managers import AnimationSegment
-from ui.animation_grid_view import AnimationGridView, FrameThumbnail
+from ui.animation_grid_view import AnimationGridView, _FrameThumbnail
 
 
 class TestFrameThumbnail:
@@ -18,7 +18,7 @@ class TestFrameThumbnail:
     def test_thumbnail_creation(self, qtbot):
         """Test basic thumbnail creation and setup."""
         pixmap = QPixmap(32, 32)
-        thumbnail = FrameThumbnail(5, pixmap)
+        thumbnail = _FrameThumbnail(5, pixmap)
         qtbot.addWidget(thumbnail)
 
         assert thumbnail.frame_index == 5
@@ -29,7 +29,7 @@ class TestFrameThumbnail:
     def test_selection_state_management(self, qtbot):
         """Test selection state changes."""
         pixmap = QPixmap(32, 32)
-        thumbnail = FrameThumbnail(0, pixmap)
+        thumbnail = _FrameThumbnail(0, pixmap)
         qtbot.addWidget(thumbnail)
 
         # Test initial state
@@ -46,7 +46,7 @@ class TestFrameThumbnail:
     def test_keyboard_modifier_conversion(self, qtbot):
         """Test safe keyboard modifier conversion across PySide6 versions."""
         pixmap = QPixmap(32, 32)
-        thumbnail = FrameThumbnail(0, pixmap)
+        thumbnail = _FrameThumbnail(0, pixmap)
         qtbot.addWidget(thumbnail)
 
         signal_received = []
@@ -78,7 +78,7 @@ class TestFrameThumbnail:
     def test_drag_threshold_behavior_real_events(self, qtbot, real_event_helpers):
         """Test drag detection threshold with REAL Qt events (key fix - was 3, now 8 pixels)."""
         pixmap = QPixmap(32, 32)
-        thumbnail = FrameThumbnail(0, pixmap)
+        thumbnail = _FrameThumbnail(0, pixmap)
         qtbot.addWidget(thumbnail)
 
         drag_signals = []
@@ -149,7 +149,7 @@ class TestFrameThumbnail:
     ):
         """Test real mouse click behavior with keyboard modifiers using real Qt events."""
         pixmap = QPixmap(32, 32)
-        thumbnail = FrameThumbnail(2, pixmap)
+        thumbnail = _FrameThumbnail(2, pixmap)
         qtbot.addWidget(thumbnail)
 
         # Test 1: Normal click (no modifiers)
@@ -165,7 +165,7 @@ class TestFrameThumbnail:
 
         # Test 2: Ctrl+click on separate thumbnail
         pixmap2 = QPixmap(32, 32)
-        thumbnail2 = FrameThumbnail(3, pixmap2)
+        thumbnail2 = _FrameThumbnail(3, pixmap2)
         qtbot.addWidget(thumbnail2)
 
         ctrl_click_spy = real_signal_tester.connect_spy(thumbnail2.clicked, "ctrl_clicked")
@@ -185,7 +185,7 @@ class TestFrameThumbnail:
     def test_real_drag_sequence_complete(self, qtbot, real_event_helpers, real_signal_tester):
         """Test complete drag sequence with real Qt events."""
         pixmap = QPixmap(32, 32)
-        thumbnail = FrameThumbnail(4, pixmap)
+        thumbnail = _FrameThumbnail(4, pixmap)
         qtbot.addWidget(thumbnail)
 
         # Connect real signal spies

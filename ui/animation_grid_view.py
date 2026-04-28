@@ -28,7 +28,7 @@ from utils.sprite_rendering import create_padded_pixmap
 from utils.styles import StyleManager
 
 
-class FrameThumbnail(QLabel):
+class _FrameThumbnail(QLabel):
     """Individual frame thumbnail widget with advanced selection capabilities."""
 
     clicked = Signal(int, int)  # frame_index, modifiers (Qt.KeyboardModifiers as int)
@@ -245,7 +245,7 @@ class _GridViewBuilder:
         """Recreate thumbnails for the current ``view._frames``."""
         view = self._view
         for i, frame in enumerate(view._frames):
-            thumbnail = FrameThumbnail(i, frame, view._thumbnail_size)
+            thumbnail = _FrameThumbnail(i, frame, view._thumbnail_size)
 
             thumbnail.clicked.connect(view._on_frame_clicked)
             thumbnail.doubleClicked.connect(view._on_frame_double_clicked)
@@ -379,7 +379,7 @@ class AnimationGridView(QWidget):
 
         # State
         self._frames: list[QPixmap] = []
-        self._thumbnails: list[FrameThumbnail] = []
+        self._thumbnails: list[_FrameThumbnail] = []
         self._segments: dict[str, AnimationSegment] = {}
 
         # Enhanced selection state
@@ -760,10 +760,10 @@ class AnimationGridView(QWidget):
         widget = self.childAt(position.toPoint())
 
         # Look for FrameThumbnail in the widget hierarchy
-        while widget and not isinstance(widget, FrameThumbnail):
+        while widget and not isinstance(widget, _FrameThumbnail):
             widget = widget.parent()
 
-        if isinstance(widget, FrameThumbnail):
+        if isinstance(widget, _FrameThumbnail):
             return widget.frame_index
 
         return None
