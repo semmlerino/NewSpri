@@ -4,7 +4,6 @@ Redesigned for better usability and modern aesthetics.
 """
 
 import logging
-import math
 import os
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, cast
@@ -48,6 +47,7 @@ from ..core.export_presets import ExportPreset
 from ..core.frame_exporter import BackgroundMode, ExportFormat, ExportMode, LayoutMode
 from ..dialogs.base.wizard_base import _WizardStep, _WizardWidget
 from .export_mode_ui_registry import get_ui_mode_spec
+from .export_preview_renderer import ExportPreviewRenderer, ExportPreviewRequest
 from .export_settings_data import (
     LAYOUT_MODES,
     NAMING_PATTERNS,
@@ -469,308 +469,6 @@ class _SelectedSettingsPanel(_SettingsPanelBase):
         self._parent.frame_list.clearSelection()
 
 
-class _PreviewGenerator:
-    """Helper class to generate preview images for different export modes."""
-
-    def __init__(self, parent: "_ModernExportSettings"):
-        self._parent = parent
-
-    def generate_sheet_preview(self) -> QPixmap:
-        """Generate sprite sheet preview."""
-        logger.debug("_generate_sheet_preview called")
-
-        if not self._parent._sprites:
-            logger.debug("No sprites available for sheet preview")
-            return QPixmap()
-
-        # Special handling for segments per row mode
-        if (
-            self._parent._current_preset
-            and self._parent._current_preset.mode is ExportMode.SEGMENTS_SHEET
-        ):
-            logger.debug("Detected segments_sheet mode, calling generate_segments_preview")
-            try:
-                return self.generate_segments_preview()
-            except Exception as e:
-                # If segments preview fails, fall back to regular sheet preview
-                logger.debug("Failed to generate segments preview: %s", e, exc_info=True)
-                logger.debug("Falling back to regular sheet preview")
-
-        # Get layout settings
-        layout_mode = self._parent._data_collector.layout_mode()
-        sprite_count = len(self._parent._sprites)
-        cols, rows = self._calculate_grid(layout_mode, sprite_count)
-
-        spacing = self._get_spacing()
-        fw, fh = self._get_frame_dimensions()
-
-        sheet_w = cols * fw + (cols - 1) * spacing
-        sheet_h = rows * fh + (rows - 1) * spacing
-
-        # Create pixmap
-        pixmap = QPixmap(sheet_w, sheet_h)
-        self._fill_background(pixmap)
-
-        # Draw sprites
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        for i, sprite in enumerate(self._parent._sprites):
-            if i >= cols * rows:
-                break
-            row = i // cols
-            col = i % cols
-            x = col * (fw + spacing)
-            y = row * (fh + spacing)
-            painter.drawPixmap(x, y, sprite)
-
-        painter.end()
-
-        self._parent._update_preview_info(
-            f"Sprite Sheet: {cols}x{rows} grid, {sheet_w}x{sheet_h}px"
-        )
-
-        return pixmap
-
-    def generate_segments_preview(self) -> QPixmap:
-        """Generate preview for segments per row mode."""
-        logger.debug("_generate_segments_preview called")
-        logger.debug("Sprites available: %d", len(self._parent._sprites))
-        logger.debug("Segment manager available: %s", self._parent._segment_manager is not None)
-
-        if not self._parent._sprites or not self._parent._segment_manager:
-            logger.debug("No sprites or segment manager, showing placeholder")
-            placeholder_text = (
-                "No animation segments available"
-                if not self._parent._segment_manager
-                else "Loading segments preview..."
-            )
-            return self._placeholder_pixmap(
-                placeholder_text, "Segments Per Row: No segments defined"
-            )
-
-        # _segment_manager is guaranteed non-None after the guard above
-        segments = self._parent._segment_manager.get_all_segments()
-        logger.debug("Retrieved %d segments from manager", len(segments))
-
-        for i, seg in enumerate(segments):
-            logger.debug(
-                "  Segment %d: '%s' frames %d-%d", i, seg.name, seg.start_frame, seg.end_frame
-            )
-
-        if not segments:
-            logger.debug("No segments found, showing placeholder")
-            return self._placeholder_pixmap(
-                "No animation segments defined", "Segments Per Row: No segments"
-            )
-
-        # Calculate layout for segments
-        try:
-            max_frames_in_segment = max(seg.end_frame - seg.start_frame + 1 for seg in segments)
-            logger.debug("Max frames in any segment: %d", max_frames_in_segment)
-        except (ValueError, AttributeError) as e:
-            # Handle case where segments might be malformed
-            logger.debug("Invalid segment data: %s", e)
-            max_frames_in_segment = 1
-
-        rows = len(segments)
-        cols = max_frames_in_segment
-        logger.debug("Preview layout will be %d rows x %d cols", rows, cols)
-
-        spacing = self._get_spacing()
-        fw, fh = self._get_frame_dimensions()
-
-        # Scale down for preview if too large
-        max_preview_width = 800
-        max_preview_height = 600
-
-        # Calculate compact dimensions based on actual content
-        sheet_w = max_frames_in_segment * fw + (max_frames_in_segment - 1) * spacing
-        sheet_h = rows * fh + (rows - 1) * spacing
-
-        # Scale if needed
-        scale = min(1.0, max_preview_width / sheet_w if sheet_w > 0 else 1.0)
-        if sheet_h * scale > max_preview_height and sheet_h > 0:
-            scale = max_preview_height / sheet_h
-
-        if scale < 1.0:
-            fw = int(fw * scale)
-            fh = int(fh * scale)
-            spacing = int(spacing * scale)
-            sheet_w = max_frames_in_segment * fw + (max_frames_in_segment - 1) * spacing
-            sheet_h = rows * fh + (rows - 1) * spacing
-
-        # Create pixmap
-        pixmap = QPixmap(sheet_w, sheet_h)
-        self._fill_background(pixmap)
-
-        # Draw segments
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        for row_idx, segment in enumerate(segments):
-            for frame_idx in range(segment.start_frame, segment.end_frame + 1):
-                if frame_idx < len(self._parent._sprites):
-                    col_idx = frame_idx - segment.start_frame
-                    x = col_idx * (fw + spacing)
-                    y = row_idx * (fh + spacing)
-
-                    if scale < 1.0:
-                        scaled_sprite = self._parent._sprites[frame_idx].scaled(
-                            fw,
-                            fh,
-                            Qt.AspectRatioMode.KeepAspectRatio,
-                            Qt.TransformationMode.SmoothTransformation,
-                        )
-                        painter.drawPixmap(x, y, scaled_sprite)
-                    else:
-                        painter.drawPixmap(x, y, self._parent._sprites[frame_idx])
-
-        painter.end()
-
-        # Update info
-        info = f"Segments Per Row: {rows} segments"
-        if scale < 1.0:
-            info += f" (preview scaled {int(scale * 100)}%)"
-        self._parent._update_preview_info(info)
-
-        return pixmap
-
-    def generate_frames_preview(self) -> QPixmap:
-        """Generate individual frames preview."""
-        if not self._parent._sprites:
-            return QPixmap()
-
-        # Show grid of frames
-        display_count = min(len(self._parent._sprites), 6)
-        cols = min(3, display_count)
-        rows = math.ceil(display_count / cols)
-
-        # Size for preview
-        fw = min(self._parent._sprites[0].width(), 100)
-        fh = min(self._parent._sprites[0].height(), 100)
-        spacing = 10
-
-        width = cols * fw + (cols - 1) * spacing
-        height = rows * fh + (rows - 1) * spacing
-
-        pixmap = QPixmap(width, height)
-        pixmap.fill(Qt.GlobalColor.transparent)
-
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        # Get selected frames if in selected mode
-        selected_indices = []
-        if (
-            self._parent._current_preset
-            and self._parent._current_preset.mode is ExportMode.SELECTED_FRAMES
-            and "frame_list" in self._parent._settings_widgets
-        ):
-            selected_indices.extend(
-                item.data(Qt.ItemDataRole.UserRole)
-                for item in self._parent._settings_widgets["frame_list"].selectedItems()
-            )
-        else:
-            selected_indices = list(range(len(self._parent._sprites)))
-
-        # Draw frames
-        for i in range(min(display_count, len(selected_indices))):
-            frame_idx = selected_indices[i]
-            if frame_idx < len(self._parent._sprites):
-                row = i // cols
-                col = i % cols
-                x = col * (fw + spacing)
-                y = row * (fh + spacing)
-
-                scaled = self._parent._sprites[frame_idx].scaled(
-                    fw,
-                    fh,
-                    Qt.AspectRatioMode.KeepAspectRatio,
-                    Qt.TransformationMode.SmoothTransformation,
-                )
-                painter.drawPixmap(x, y, scaled)
-
-        painter.end()
-
-        # Update info
-        if (
-            self._parent._current_preset
-            and self._parent._current_preset.mode is ExportMode.SELECTED_FRAMES
-        ):
-            info = f"Selected: {len(selected_indices)} frames"
-        else:
-            info = f"Individual: {len(self._parent._sprites)} frames"
-
-        if len(selected_indices) > display_count:
-            info += f" (showing {display_count})"
-
-        self._parent._update_preview_info(info)
-
-        return pixmap
-
-    def _fill_background(self, pixmap: QPixmap) -> None:
-        """Fill pixmap background based on the current background combo selection."""
-        bg_widget = self._parent._settings_widgets.get("background")
-        if bg_widget is None:
-            pixmap.fill(Qt.GlobalColor.transparent)
-            return
-
-        data = bg_widget.currentData()
-        if data is None:
-            pixmap.fill(Qt.GlobalColor.transparent)
-            return
-
-        mode, fill_rgba = data
-        if mode is BackgroundMode.SOLID and fill_rgba is not None:
-            pixmap.fill(QColor(*fill_rgba))
-        else:
-            pixmap.fill(Qt.GlobalColor.transparent)
-
-    def _placeholder_pixmap(self, text: str, info: str) -> QPixmap:
-        """Create a 400x200 placeholder pixmap with centered text and update preview info."""
-        pixmap = QPixmap(400, 200)
-        pixmap.fill(Qt.GlobalColor.white)
-
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        font = QFont("Segoe UI", 12)
-        painter.setFont(font)
-        painter.setPen(QColor(108, 117, 125))
-        painter.drawText(pixmap.rect(), Qt.AlignmentFlag.AlignCenter, text)
-        painter.end()
-
-        self._parent._update_preview_info(info)
-        return pixmap
-
-    def _get_spacing(self) -> int:
-        """Return the current spacing value from the settings widgets."""
-        spacing_widget = self._parent._settings_widgets.get("spacing")
-        return spacing_widget.value() if spacing_widget is not None else 0
-
-    def _get_frame_dimensions(self) -> tuple[int, int]:
-        """Return (width, height) of the first sprite, or (32, 32) as fallback."""
-        if self._parent._sprites:
-            return self._parent._sprites[0].width(), self._parent._sprites[0].height()
-        return 32, 32
-
-    def _calculate_grid(self, layout_mode: LayoutMode, sprite_count: int) -> tuple[int, int]:
-        """Calculate (cols, rows) for the given layout mode and sprite count."""
-        if layout_mode is LayoutMode.COLUMNS:
-            cols = self._parent.cols_spin.value()
-            rows = math.ceil(sprite_count / cols)
-        elif layout_mode is LayoutMode.ROWS:
-            rows = self._parent.rows_spin.value()
-            cols = math.ceil(sprite_count / rows)
-        elif layout_mode is LayoutMode.SQUARE:
-            side = math.ceil(math.sqrt(sprite_count))
-            cols = rows = side
-        else:  # auto / fallback
-            cols = math.ceil(math.sqrt(sprite_count))
-            rows = math.ceil(sprite_count / cols)
-        return cols, rows
-
-
 class _SettingsValidator:
     """Per-mode settings validation for ModernExportSettings.
 
@@ -811,30 +509,29 @@ class _SettingsValidator:
 
 
 class _PreviewOrchestrator:
-    """Owns the preview generator + debounce timer for ModernExportSettings.
+    """Owns preview request wiring and the debounce timer for ModernExportSettings.
 
     ``schedule_update`` (re)starts the debounce; ``update_now`` runs the
-    generator immediately and pushes the resulting pixmap into the preview
-    widget. Replaces the timer wiring + per-mode if/elif previously inlined
-    into ModernExportSettings.
+    renderer immediately and pushes the resulting pixmap into the preview
+    widget.
     """
 
     DEBOUNCE_MS = 100
 
     def __init__(self, parent: "_ModernExportSettings") -> None:
         self._parent = parent
-        self._generator = _PreviewGenerator(parent)
+        self._renderer = ExportPreviewRenderer()
         # Parent the timer to the widget so Qt cleans it up alongside the
-        # widget tree — prevents the timer from outliving the C++ preview view
+        # widget tree, preventing the timer from outliving the C++ preview view
         # if Python GC delays orchestrator collection.
         self._timer = QTimer(parent)
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(self.update_now)
 
     @property
-    def generator(self) -> "_PreviewGenerator":
-        """Direct access to the underlying generator (used by tests / shim)."""
-        return self._generator
+    def renderer(self) -> ExportPreviewRenderer:
+        """Direct access to the underlying renderer (used by tests / shim)."""
+        return self._renderer
 
     @property
     def timer(self) -> QTimer:
@@ -853,15 +550,54 @@ class _PreviewOrchestrator:
             parent.preview_view.update_preview(QPixmap())
             return
 
-        if parent._current_preset.mode in (
-            ExportMode.SPRITE_SHEET,
-            ExportMode.SEGMENTS_SHEET,
-        ):
-            pixmap = self._generator.generate_sheet_preview()
-        else:
-            pixmap = self._generator.generate_frames_preview()
+        result = self._renderer.render(self._build_request())
+        if result.info_text:
+            parent._update_preview_info(result.info_text)
+        parent.preview_view.update_preview(result.pixmap)
 
-        parent.preview_view.update_preview(pixmap)
+    def _build_request(self) -> ExportPreviewRequest:
+        """Snapshot the current widget state for the preview renderer."""
+        parent = self._parent
+        assert parent._current_preset is not None
+
+        background_mode = BackgroundMode.TRANSPARENT
+        background_color: tuple[int, int, int, int] | None = None
+        bg_widget = parent._settings_widgets.get("background")
+        if bg_widget is not None:
+            bg_data = bg_widget.currentData()
+            if bg_data is not None:
+                background_mode, background_color = bg_data
+
+        selected_indices: list[int] = []
+        frame_list = parent._settings_widgets.get("frame_list")
+        if frame_list is not None:
+            selected_indices.extend(
+                item.data(Qt.ItemDataRole.UserRole) for item in frame_list.selectedItems()
+            )
+
+        segments = (
+            parent._segment_manager.get_all_segments()
+            if parent._segment_manager is not None
+            else []
+        )
+
+        cols_widget = parent._settings_widgets.get("cols_spin")
+        rows_widget = parent._settings_widgets.get("rows_spin")
+        spacing_widget = parent._settings_widgets.get("spacing")
+
+        return ExportPreviewRequest(
+            mode=parent._current_preset.mode,
+            sprites=tuple(parent._sprites),
+            layout_mode=parent._data_collector.layout_mode(),
+            columns=cols_widget.value() if cols_widget is not None else 8,
+            rows=rows_widget.value() if rows_widget is not None else 8,
+            spacing=spacing_widget.value() if spacing_widget is not None else 0,
+            background_mode=background_mode,
+            background_color=background_color,
+            selected_indices=tuple(selected_indices),
+            segments=tuple(segments),
+            segments_available=parent._segment_manager is not None,
+        )
 
 
 class _ModernExportSettings(_WizardStep):
@@ -901,8 +637,9 @@ class _ModernExportSettings(_WizardStep):
         self._data_collector = ExportSettingsDataCollector(self)
         self._summary_builder = ExportSettingsSummary(self)
         # Backwards-compat aliases for code/tests that reach for the underlying
-        # generator or the preview-debounce timer.
-        self._preview_generator = self._preview.generator
+        # preview renderer or the preview-debounce timer.
+        self._preview_generator = self._preview.renderer
+        self._preview_renderer = self._preview.renderer
         self._preview_timer = self._preview.timer
 
         # Declare dynamic widget attributes (set by helper builders during _setup_for_preset)
