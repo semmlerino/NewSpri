@@ -26,7 +26,7 @@ from config import Config
 from sprite_model.extraction_mode import ExtractionMode
 from sprite_model.sprite_extraction import GridConfig
 from utils.styles import StyleManager
-from utils.ui_common import AutoButtonManager
+from utils.ui_common import _AutoButtonManager
 
 
 class FrameExtractor(QGroupBox):
@@ -40,7 +40,7 @@ class FrameExtractor(QGroupBox):
         self.setStyleSheet(StyleManager.frame_extractor_groupbox())
 
         # Initialize button manager
-        self._button_manager = AutoButtonManager()
+        self._button_manager = _AutoButtonManager()
 
         layout = QVBoxLayout(self)
 

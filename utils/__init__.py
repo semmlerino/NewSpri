@@ -9,10 +9,8 @@ Contains utility modules and helper functions:
 
 from .sprite_rendering import create_padded_pixmap
 from .styles import StyleManager
-from .ui_common import AutoButtonManager
 
 __all__ = [
-    "AutoButtonManager",
     "StyleManager",
     "create_padded_pixmap",
 ]

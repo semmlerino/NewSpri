@@ -111,7 +111,7 @@ def _extract_file_from_drop(event: QDropEvent) -> str | None:
 # KEYBOARD SHORTCUTS
 # ============================================================================
 
-SHORTCUTS = {
+_SHORTCUTS = {
     # File actions
     "file_open": ("Ctrl+O", "Open sprite sheet"),
     "file_quit": ("Ctrl+Q", "Quit application"),
@@ -135,7 +135,7 @@ SHORTCUTS = {
 }
 
 # Actions that require frames to be loaded
-ACTIONS_REQUIRING_FRAMES = {
+_ACTIONS_REQUIRING_FRAMES = {
     "file_export_frames",
     "file_export_current",
     "animation_toggle",
@@ -410,8 +410,8 @@ class SpriteViewer(QMainWindow):
         action = QAction(text, self)
 
         # Add shortcut and tooltip
-        if action_id in SHORTCUTS:
-            shortcut_key, description = SHORTCUTS[action_id]
+        if action_id in _SHORTCUTS:
+            shortcut_key, description = _SHORTCUTS[action_id]
             action.setShortcut(shortcut_key)
             action.setToolTip(f"{description} ({shortcut_key})")
             self._shortcut_to_action[shortcut_key] = action_id
@@ -623,7 +623,7 @@ class SpriteViewer(QMainWindow):
         has_frames = bool(self._sprite_model.sprite_frames)
 
         # Enable/disable actions that require frames
-        for action_id in ACTIONS_REQUIRING_FRAMES:
+        for action_id in _ACTIONS_REQUIRING_FRAMES:
             if action_id in self._actions:
                 self._actions[action_id].setEnabled(has_frames)
 
@@ -861,10 +861,10 @@ class SpriteViewer(QMainWindow):
             html.append("<table>")
 
             for action_id in action_ids:
-                if action_id in SHORTCUTS:
-                    shortcut_key, description = SHORTCUTS[action_id]
+                if action_id in _SHORTCUTS:
+                    shortcut_key, description = _SHORTCUTS[action_id]
                     context_info = ""
-                    if action_id in ACTIONS_REQUIRING_FRAMES:
+                    if action_id in _ACTIONS_REQUIRING_FRAMES:
                         context_info = " <i>(requires frames)</i>"
 
                     html.append(
