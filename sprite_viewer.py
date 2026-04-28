@@ -151,6 +151,206 @@ ACTIONS_REQUIRING_FRAMES = {
 }
 
 
+class _SpriteLoadCoordinator:
+    """Sprite-loading + extraction cascade for SpriteViewer.
+
+    Owns the load → confirm → detect → extract → display pipeline plus the
+    signal handlers that fire when those steps finish. Holds a back-reference
+    to the view so it can reach controllers, model, and UI surfaces.
+    SpriteViewer keeps thin shim methods that delegate here, so the
+    SignalCoordinator wiring (which is bound to the view's methods) is
+    unchanged.
+    """
+
+    def __init__(self, view: "SpriteViewer") -> None:
+        self._view = view
+
+    # ---- Loading ---------------------------------------------------------
+
+    def load(self, file_path: str) -> bool:
+        """Load a sprite file with validation. Re-entrant guard via the view."""
+        view = self._view
+        if view._loading_in_progress:
+            return False
+        view._loading_in_progress = True
+        try:
+            if not self._confirm_load_over_segments(file_path):
+                return False
+
+            success, error_message = view._sprite_model.load_sprite_sheet(file_path)
+            if not success:
+                QMessageBox.critical(view, "Load Error", error_message)
+                return False
+            return True
+        finally:
+            view._loading_in_progress = False
+
+    def _confirm_load_over_segments(self, file_path: str) -> bool:
+        """Ask user to confirm if loading a new sprite would clear existing segments."""
+        view = self._view
+        current_path = view._sprite_model.file_path
+        if not current_path or current_path == file_path:
+            return True
+
+        existing_segments = view._segment_manager.get_all_segments()
+        if not existing_segments:
+            return True
+
+        reply = QMessageBox.question(
+            view,
+            "Clear Segments?",
+            f"Loading a new sprite will clear {len(existing_segments)} existing segment(s).\n\nContinue?",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+        )
+        return reply == QMessageBox.StandardButton.Yes
+
+    def trigger_post_load_detection(self) -> None:
+        """Trigger appropriate frame detection based on current extraction mode."""
+        view = self._view
+        current_mode = view._frame_extractor.get_extraction_mode()
+        if current_mode is ExtractionMode.CCL:
+            view._status_bar.show_message("Running CCL extraction...")
+            self.update_frame_slicing()
+        else:
+            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+            QApplication.processEvents()
+            try:
+                view._auto_detection_controller.run_comprehensive_detection_with_dialog()
+            finally:
+                QApplication.restoreOverrideCursor()
+
+    # ---- Sprite-loaded handler ------------------------------------------
+
+    def on_sprite_loaded(self, file_path: str) -> None:
+        """Handle ``SpriteModel.dataLoaded`` — refresh recents, status, kick detection."""
+        view = self._view
+        # Update recent files manager and refresh the menu
+        view._recent_files.add_file_to_recent(file_path)
+        view._update_recent_files_menu()
+
+        # Clear stale display state — extraction will repopulate.
+        self.clear_extracted_frame_views()
+
+        view._status_bar.show_message(f"Loaded sprite sheet: {file_path}")
+        self.trigger_post_load_detection()
+
+    def clear_extracted_frame_views(self) -> None:
+        """Clear all UI surfaces that display extracted frames."""
+        view = self._view
+        view._canvas.clear_pixmap()
+        view._canvas.set_frame_info(0, 0)
+        view._grid_view.set_frames([])
+        view._grid_view.clear_segments()
+        view._segment_preview.set_frames([])
+        view._segment_preview.clear_segments()
+
+    # ---- Extraction cascade ---------------------------------------------
+
+    def update_frame_slicing(self) -> None:
+        """Update frame slicing based on current settings."""
+        view = self._view
+        if not view._sprite_model.original_sprite_sheet:
+            return
+
+        success, error_message, total_frames = self.extract_frames_by_mode()
+
+        if not success:
+            self.clear_extracted_frame_views()
+            view._update_has_frames_actions()
+            QMessageBox.warning(view, "Frame Extraction Error", error_message)
+            return
+
+        view._info_label.setText(view._sprite_model.sprite_info)
+        view._update_has_frames_actions()
+
+        # Ensure first frame is displayed after extraction
+        if total_frames > 0:
+            view._sprite_model.set_current_frame(0)
+            self.push_current_frame_to_canvas()
+
+    def extract_frames_by_mode(self) -> tuple[bool, str, int]:
+        """Run frame extraction using the current mode, with a wait cursor."""
+        view = self._view
+        mode = view._frame_extractor.get_extraction_mode()
+
+        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
+        QApplication.processEvents()
+        try:
+            grid_config = (
+                view._frame_extractor.get_grid_config() if mode is ExtractionMode.GRID else None
+            )
+            return view._sprite_model.extract_frames_for_mode(mode, grid_config)
+        finally:
+            QApplication.restoreOverrideCursor()
+
+    def push_current_frame_to_canvas(self) -> None:
+        """Push the current frame pixmap to the canvas if valid."""
+        view = self._view
+        pixmap = view._sprite_model.current_frame_pixmap
+        if pixmap and not pixmap.isNull():
+            view._canvas.set_pixmap(pixmap, auto_fit=False)
+        else:
+            view._canvas.clear_pixmap()
+
+    # ---- Post-extraction signal handlers --------------------------------
+
+    def on_extraction_completed(self, frame_count: int) -> None:
+        """Handle extraction completion."""
+        view = self._view
+        view._update_playback_for_extraction(frame_count)
+
+        if frame_count > 0:
+            current_frame = view._sprite_model.current_frame
+            view._canvas.set_frame_info(current_frame, frame_count)
+
+            # Single combined call: refresh grid frames, set context, sync segments.
+            if view._sprite_model.file_path:
+                view._segment_controller.set_sprite_context_and_sync(
+                    view._sprite_model.file_path, frame_count, refresh_frames=True
+                )
+            else:
+                view._segment_controller.update_grid_view_frames()
+        else:
+            self.clear_extracted_frame_views()
+
+        view._update_has_frames_actions()
+        self.push_current_frame_to_canvas()
+
+    def on_frame_settings_detected(self, width: int, height: int) -> None:
+        """Auto-detection produced new frame dimensions — apply and re-extract."""
+        view = self._view
+        view._slicing_debounce_timer.stop()
+        view._frame_extractor.apply_grid_settings(
+            width,
+            height,
+            view._sprite_model.offset_x,
+            view._sprite_model.offset_y,
+            view._sprite_model.spacing_x,
+            view._sprite_model.spacing_y,
+        )
+        self.update_frame_slicing()
+
+    def on_extraction_mode_changed(self, mode: ExtractionMode) -> None:
+        """Extraction strategy switched (grid ↔ CCL); re-extract.
+
+        Strategies update the model's mode on success, so a single
+        update_frame_slicing() call handles both mode mutation and
+        re-extraction.
+        """
+        view = self._view
+        if not view._sprite_model.original_sprite_sheet:
+            return
+
+        self.update_frame_slicing()
+
+        view._info_label.setText(view._sprite_model.sprite_info)
+        view._status_bar.show_message(f"Switched to {extraction_mode_label(mode)} extraction mode")
+
+    def on_settings_changed_debounced(self) -> None:
+        """Restart debounce timer on settings change (prevents per-keystroke extraction)."""
+        self._view._slicing_debounce_timer.start()
+
+
 class SpriteViewer(QMainWindow):
     """
     Main sprite viewer application window.
@@ -196,7 +396,7 @@ class SpriteViewer(QMainWindow):
         2. Core components (model, controllers)
         3. UI setup (all widgets)
         4. Controller/coordinator initialization (with constructor DI)
-        5. Signal connections
+        5. Signal connections (via SignalCoordinator)
         6. Final setup (settings, welcome message)
         """
         super().__init__()
@@ -226,15 +426,23 @@ class SpriteViewer(QMainWindow):
         # Initialize controllers with all dependencies
         self._init_controllers()
 
-        # Initial action enabled state — coordinator wires the rest of the
-        # cross-component signals below.
-        self._update_has_frames_actions()
-
-        # Debounce timer for frame slicing (prevents per-keystroke extraction)
+        # Debounce timer for frame slicing (prevents per-keystroke extraction).
+        # Must exist BEFORE _SpriteLoadCoordinator is created — coordinator
+        # methods reach for ``view._slicing_debounce_timer`` from their first
+        # invocation onward.
         self._slicing_debounce_timer = QTimer(self)
         self._slicing_debounce_timer.setSingleShot(True)
         self._slicing_debounce_timer.setInterval(300)
         self._slicing_debounce_timer.timeout.connect(self._update_frame_slicing)
+
+        # Sprite-load + extraction cascade collaborator. Created after the
+        # debounce timer (which it reads) and before the signal coordinator
+        # (which wires the load handlers).
+        self._load_coordinator = _SpriteLoadCoordinator(self)
+
+        # Initial action enabled state — coordinator wires the rest of the
+        # cross-component signals below.
+        self._update_has_frames_actions()
 
         # Create signal coordinator and connect all signals
         self._init_signal_coordinator()
@@ -631,66 +839,8 @@ class SpriteViewer(QMainWindow):
             self._load_sprite_file(file_path)
 
     def _load_sprite_file(self, file_path: str) -> bool:
-        """
-        Load a sprite file with validation.
-
-        This is the main entry point for loading sprites, called from:
-        - File dialog selection
-        - Recent files menu
-        - Drag and drop
-
-        Args:
-            file_path: Path to the sprite sheet file
-
-        Returns:
-            True if loading succeeded
-        """
-        if self._loading_in_progress:
-            return False
-        self._loading_in_progress = True
-        try:
-            if not self._confirm_load_over_segments(file_path):
-                return False
-
-            success, error_message = self._sprite_model.load_sprite_sheet(file_path)
-            if not success:
-                QMessageBox.critical(self, "Load Error", error_message)
-                return False
-            return True
-        finally:
-            self._loading_in_progress = False
-
-    def _confirm_load_over_segments(self, file_path: str) -> bool:
-        """Ask user to confirm if loading a new sprite would clear existing segments."""
-        current_path = self._sprite_model.file_path
-        if not current_path or current_path == file_path:
-            return True
-
-        existing_segments = self._segment_manager.get_all_segments()
-        if not existing_segments:
-            return True
-
-        reply = QMessageBox.question(
-            self,
-            "Clear Segments?",
-            f"Loading a new sprite will clear {len(existing_segments)} existing segment(s).\n\nContinue?",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-        )
-        return reply == QMessageBox.StandardButton.Yes
-
-    def _trigger_post_load_detection(self):
-        """Trigger appropriate frame detection based on current extraction mode."""
-        current_mode = self._frame_extractor.get_extraction_mode()
-        if current_mode is ExtractionMode.CCL:
-            self._status_bar.show_message("Running CCL extraction...")
-            self._update_frame_slicing()
-        else:
-            QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-            QApplication.processEvents()
-            try:
-                self._auto_detection_controller.run_comprehensive_detection_with_dialog()
-            finally:
-                QApplication.restoreOverrideCursor()
+        """Main entry point for loading sprites (delegated to load coordinator)."""
+        return self._load_coordinator.load(file_path)
 
     # ============================================================================
     # VIEW OPERATIONS
@@ -768,27 +918,8 @@ class SpriteViewer(QMainWindow):
         )
 
     def _on_sprite_loaded(self, file_path: str):
-        """Handle sprite loaded - all post-load UI work and downstream triggers."""
-        self._canvas.reset_view()
-        self._clear_extracted_frame_views()
-        self._info_label.setText(self._sprite_model.sprite_info)
-        self._update_has_frames_actions()
-
-        if self._sprite_model.sprite_frames:
-            self._segment_controller.update_grid_view_frames()
-
-        self._recent_files.add_file_to_recent(file_path)
-        self._status_bar.show_message(f"Loaded sprite sheet: {file_path}")
-        self._trigger_post_load_detection()
-
-    def _clear_extracted_frame_views(self) -> None:
-        """Clear all UI surfaces that display extracted frames."""
-        self._canvas.clear_pixmap()
-        self._canvas.set_frame_info(0, 0)
-        self._grid_view.set_frames([])
-        self._grid_view.clear_segments()
-        self._segment_preview.set_frames([])
-        self._segment_preview.clear_segments()
+        """Sprite loaded — handler wired by SignalCoordinator (delegated)."""
+        self._load_coordinator.on_sprite_loaded(file_path)
 
     def _on_playback_started(self):
         """Handle playback start."""
@@ -829,102 +960,28 @@ class SpriteViewer(QMainWindow):
             )
 
     def _on_extraction_completed(self, frame_count: int):
-        """Handle extraction completion."""
-        # Update playback controls
-        self._update_playback_for_extraction(frame_count)
-
-        if frame_count > 0:
-            current_frame = self._sprite_model.current_frame
-            self._canvas.set_frame_info(current_frame, frame_count)
-
-            # Single combined call: refresh grid frames, set context, sync segments.
-            if self._sprite_model.file_path:
-                self._segment_controller.set_sprite_context_and_sync(
-                    self._sprite_model.file_path, frame_count, refresh_frames=True
-                )
-            else:
-                self._segment_controller.update_grid_view_frames()
-        else:
-            self._clear_extracted_frame_views()
-
-        # Update action states
-        self._update_has_frames_actions()
-
-        self._push_current_frame_to_canvas()
+        """Extraction completed — handler wired by SignalCoordinator (delegated)."""
+        self._load_coordinator.on_extraction_completed(frame_count)
 
     def _on_frame_settings_detected(self, width: int, height: int):
-        """Handle frame settings detected."""
-        self._slicing_debounce_timer.stop()
-        self._frame_extractor.apply_grid_settings(
-            width,
-            height,
-            self._sprite_model.offset_x,
-            self._sprite_model.offset_y,
-            self._sprite_model.spacing_x,
-            self._sprite_model.spacing_y,
-        )
-        self._update_frame_slicing()
+        """Frame settings detected — handler wired by SignalCoordinator (delegated)."""
+        self._load_coordinator.on_frame_settings_detected(width, height)
 
     def _on_extraction_mode_changed(self, mode: ExtractionMode):
-        """Handle extraction mode change (grid vs CCL).
-
-        Extraction strategies update the model's mode on success, so a single
-        _update_frame_slicing() call handles both mode mutation and re-extraction.
-        """
-        if not self._sprite_model.original_sprite_sheet:
-            return
-
-        self._update_frame_slicing()
-
-        self._info_label.setText(self._sprite_model.sprite_info)
-        self._status_bar.show_message(f"Switched to {extraction_mode_label(mode)} extraction mode")
+        """Extraction mode change — handler wired by SignalCoordinator (delegated)."""
+        self._load_coordinator.on_extraction_mode_changed(mode)
 
     def _on_settings_changed_debounced(self):
-        """Restart debounce timer on settings change (prevents per-keystroke extraction)."""
-        self._slicing_debounce_timer.start()
+        """Restart debounce timer on settings change (delegated to load coordinator)."""
+        self._load_coordinator.on_settings_changed_debounced()
 
     def _update_frame_slicing(self):
-        """Update frame slicing based on current settings."""
-        if not self._sprite_model.original_sprite_sheet:
-            return
-
-        success, error_message, total_frames = self._extract_frames_by_mode()
-
-        if not success:
-            self._clear_extracted_frame_views()
-            self._update_has_frames_actions()
-            QMessageBox.warning(self, "Frame Extraction Error", error_message)
-            return
-
-        self._info_label.setText(self._sprite_model.sprite_info)
-        self._update_has_frames_actions()
-
-        # Ensure first frame is displayed after extraction
-        if total_frames > 0:
-            self._sprite_model.set_current_frame(0)
-            self._push_current_frame_to_canvas()
-
-    def _extract_frames_by_mode(self) -> tuple[bool, str, int]:
-        """Run frame extraction using the current mode, with a wait cursor."""
-        mode = self._frame_extractor.get_extraction_mode()
-
-        QApplication.setOverrideCursor(Qt.CursorShape.WaitCursor)
-        QApplication.processEvents()
-        try:
-            grid_config = (
-                self._frame_extractor.get_grid_config() if mode is ExtractionMode.GRID else None
-            )
-            return self._sprite_model.extract_frames_for_mode(mode, grid_config)
-        finally:
-            QApplication.restoreOverrideCursor()
+        """Update frame slicing based on current settings (delegated)."""
+        self._load_coordinator.update_frame_slicing()
 
     def _push_current_frame_to_canvas(self):
-        """Push the current frame pixmap to the canvas if valid."""
-        pixmap = self._sprite_model.current_frame_pixmap
-        if pixmap and not pixmap.isNull():
-            self._canvas.set_pixmap(pixmap, auto_fit=False)
-        else:
-            self._canvas.clear_pixmap()
+        """Push the current frame pixmap to the canvas (delegated)."""
+        self._load_coordinator.push_current_frame_to_canvas()
 
     def _show_welcome_message(self):
         """Show welcome message."""

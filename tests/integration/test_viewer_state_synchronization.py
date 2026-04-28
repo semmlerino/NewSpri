@@ -63,7 +63,11 @@ def test_extraction_failure_clears_stale_frame_views(qtbot) -> None:
     viewer._segment_preview.set_frames([old_frame])
 
     with (
-        patch.object(viewer, "_extract_frames_by_mode", return_value=(False, "bad settings", 0)),
+        patch.object(
+            viewer._load_coordinator,
+            "extract_frames_by_mode",
+            return_value=(False, "bad settings", 0),
+        ),
         patch("sprite_viewer.QMessageBox.warning"),
     ):
         viewer._update_frame_slicing()
