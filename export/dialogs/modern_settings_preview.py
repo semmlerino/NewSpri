@@ -775,6 +775,99 @@ class _PreviewGenerator:
         return cols, rows
 
 
+class _SettingsValidator:
+    """Per-mode settings validation for ModernExportSettings.
+
+    Reads current widget state and reports whether the export button should be
+    enabled. Mode-specific checks dispatch on the current preset's mode.
+    """
+
+    def __init__(self, parent: "ModernExportSettings") -> None:
+        self._parent = parent
+
+    def validate(self) -> bool:
+        """Run validation, update the export button, and emit stepValidated."""
+        valid = self._compute_validity()
+        self._parent.export_btn.setEnabled(valid)
+        self._parent.stepValidated.emit(valid)
+        return valid
+
+    def _compute_validity(self) -> bool:
+        parent = self._parent
+        if not parent.path_edit.text():
+            return False
+        preset = parent._current_preset
+        if preset is None:
+            return True
+        if preset.mode is ExportMode.SPRITE_SHEET:
+            return self._has_text("sheet_filename")
+        if preset.mode is ExportMode.INDIVIDUAL_FRAMES:
+            return self._has_text("base_name")
+        if preset.mode is ExportMode.SELECTED_FRAMES:
+            frame_list = self._parent._settings_widgets.get("frame_list")
+            has_selection = frame_list is not None and len(frame_list.selectedItems()) > 0
+            return has_selection and self._has_text("selected_base_name")
+        return True
+
+    def _has_text(self, widget_key: str) -> bool:
+        w = self._parent._settings_widgets.get(widget_key)
+        return bool(w.text() if w is not None else "")
+
+
+class _PreviewOrchestrator:
+    """Owns the preview generator + debounce timer for ModernExportSettings.
+
+    ``schedule_update`` (re)starts the debounce; ``update_now`` runs the
+    generator immediately and pushes the resulting pixmap into the preview
+    widget. Replaces the timer wiring + per-mode if/elif previously inlined
+    into ModernExportSettings.
+    """
+
+    DEBOUNCE_MS = 100
+
+    def __init__(self, parent: "ModernExportSettings") -> None:
+        self._parent = parent
+        self._generator = _PreviewGenerator(parent)
+        # Parent the timer to the widget so Qt cleans it up alongside the
+        # widget tree — prevents the timer from outliving the C++ preview view
+        # if Python GC delays orchestrator collection.
+        self._timer = QTimer(parent)
+        self._timer.setSingleShot(True)
+        self._timer.timeout.connect(self.update_now)
+
+    @property
+    def generator(self) -> "_PreviewGenerator":
+        """Direct access to the underlying generator (used by tests / shim)."""
+        return self._generator
+
+    @property
+    def timer(self) -> QTimer:
+        """Public handle on the debounce timer (used by tests / shim)."""
+        return self._timer
+
+    def schedule_update(self) -> None:
+        """Restart the debounce timer; the actual update runs ``DEBOUNCE_MS`` later."""
+        self._timer.stop()
+        self._timer.start(self.DEBOUNCE_MS)
+
+    def update_now(self) -> None:
+        """Generate and display the preview synchronously."""
+        parent = self._parent
+        if not parent._current_preset or not parent._sprites:
+            parent.preview_view.update_preview(QPixmap())
+            return
+
+        if parent._current_preset.mode in (
+            ExportMode.SPRITE_SHEET,
+            ExportMode.SEGMENTS_SHEET,
+        ):
+            pixmap = self._generator.generate_sheet_preview()
+        else:
+            pixmap = self._generator.generate_frames_preview()
+
+        parent.preview_view.update_preview(pixmap)
+
+
 class ModernExportSettings(WizardStep):
     """
     Modern, compact export settings with live preview.
@@ -805,13 +898,14 @@ class ModernExportSettings(WizardStep):
         self._settings_widgets: dict[str, Any] = {}
         self._pattern_radios: list[QRadioButton] = []  # Track pattern radio buttons for updates
 
-        # Preview generator (stored once, reused for each preview update)
-        self._preview_generator = _PreviewGenerator(self)
-
-        # Preview debounce
-        self._preview_timer = QTimer()
-        self._preview_timer.setSingleShot(True)
-        self._preview_timer.timeout.connect(self._update_preview)
+        # Validation + preview collaborators (own the per-mode logic that used
+        # to be inlined into _validate_settings / _update_preview / _on_setting_changed).
+        self._validator = _SettingsValidator(self)
+        self._preview = _PreviewOrchestrator(self)
+        # Backwards-compat aliases for code/tests that reach for the underlying
+        # generator or the preview-debounce timer.
+        self._preview_generator = self._preview.generator
+        self._preview_timer = self._preview.timer
 
         # Declare dynamic widget attributes (set by helper builders during _setup_for_preset)
         # These are typed without None since they're always set before use
@@ -1156,48 +1250,18 @@ class ModernExportSettings(WizardStep):
         self._on_setting_changed()
 
     def _on_setting_changed(self):
-        """Handle any setting change."""
-        self._preview_timer.stop()
-        self._preview_timer.start(100)  # 100ms debounce
-        self._validate_settings()
+        """Handle any setting change — schedule preview, validate, refresh summary."""
+        self._preview.schedule_update()
+        self._validator.validate()
         self._update_summary()
 
     def _validate_settings(self):
-        """Validate current settings."""
-        valid = bool(self.path_edit.text())
-
-        if self._current_preset:
-            if self._current_preset.mode is ExportMode.SPRITE_SHEET:
-                w = self._settings_widgets.get("sheet_filename")
-                valid &= bool(w.text() if w is not None else "")
-            elif self._current_preset.mode is ExportMode.INDIVIDUAL_FRAMES:
-                w = self._settings_widgets.get("base_name")
-                valid &= bool(w.text() if w is not None else "")
-            elif self._current_preset.mode is ExportMode.SELECTED_FRAMES:
-                frame_list = self._settings_widgets.get("frame_list")
-                valid &= frame_list is not None and len(frame_list.selectedItems()) > 0
-                w = self._settings_widgets.get("selected_base_name")
-                valid &= bool(w.text() if w is not None else "")
-
-        self.export_btn.setEnabled(valid)
-        self.stepValidated.emit(valid)
+        """Validate current settings (delegated to _SettingsValidator)."""
+        self._validator.validate()
 
     def _update_preview(self):
-        """Update preview based on settings."""
-        if not self._current_preset or not self._sprites:
-            self.preview_view.update_preview(QPixmap())
-            return
-
-        # Generate preview
-        if self._current_preset.mode in (
-            ExportMode.SPRITE_SHEET,
-            ExportMode.SEGMENTS_SHEET,
-        ):
-            pixmap = self._preview_generator.generate_sheet_preview()
-        else:
-            pixmap = self._preview_generator.generate_frames_preview()
-
-        self.preview_view.update_preview(pixmap)
+        """Update preview based on settings (delegated to _PreviewOrchestrator)."""
+        self._preview.update_now()
 
     def _get_layout_mode(self) -> LayoutMode:
         """Return the currently selected layout mode."""
