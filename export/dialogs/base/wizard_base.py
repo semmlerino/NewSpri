@@ -24,7 +24,7 @@ from utils.styles import StyleManager
 logger = logging.getLogger(__name__)
 
 
-class WizardStep(QWidget):
+class _WizardStep(QWidget):
     """Base class for wizard steps."""
 
     # Signals
@@ -57,7 +57,7 @@ class WizardStep(QWidget):
         """Called when leaving this step. Override for cleanup."""
 
 
-class WizardWidget(QWidget):
+class _WizardWidget(QWidget):
     """
     Modern wizard widget with step navigation and validation.
     Features:
@@ -72,7 +72,7 @@ class WizardWidget(QWidget):
 
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
-        self.steps: list[WizardStep] = []
+        self.steps: list[_WizardStep] = []
         self.current_step_index = 0
         self._wizard_data = {}
 
@@ -182,7 +182,7 @@ class WizardWidget(QWidget):
 
         return nav
 
-    def add_step(self, step: WizardStep):
+    def add_step(self, step: _WizardStep):
         """Add a step to the wizard."""
         self.steps.append(step)
         self.content_stack.addWidget(step)

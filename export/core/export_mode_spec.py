@@ -16,9 +16,9 @@ if TYPE_CHECKING:
     from PySide6.QtGui import QPixmap
 
     from core.export_coordinator import ExportCoordinator
-    from export.core.frame_exporter import ExportConfig, ExportMode, ExportWorker
+    from export.core.frame_exporter import ExportConfig, ExportMode, _ExportWorker
 
-    WorkerMethod = Callable[[ExportWorker], None]
+    WorkerMethod = Callable[[_ExportWorker], None]
     CoordinatorMethod = Callable[[ExportCoordinator, ExportConfig, Sequence[QPixmap] | None], None]
 
 

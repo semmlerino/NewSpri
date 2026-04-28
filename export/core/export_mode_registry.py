@@ -10,7 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from export.core.export_mode_spec import ExportModeSpec
-from export.core.frame_exporter import ExportMode, ExportWorker
+from export.core.frame_exporter import ExportMode, _ExportWorker
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -40,25 +40,25 @@ MODE_SPECS: dict[ExportMode, ExportModeSpec] = {
     ExportMode.INDIVIDUAL_FRAMES: ExportModeSpec(
         mode=ExportMode.INDIVIDUAL_FRAMES,
         display_name="Individual Frames",
-        worker_method=ExportWorker._export_individual_frames,
+        worker_method=_ExportWorker._export_individual_frames,
         coordinator_method=_coord_export_frames,
     ),
     ExportMode.SELECTED_FRAMES: ExportModeSpec(
         mode=ExportMode.SELECTED_FRAMES,
         display_name="Selected Frames",
-        worker_method=ExportWorker._export_individual_frames,
+        worker_method=_ExportWorker._export_individual_frames,
         coordinator_method=_coord_export_frames,
     ),
     ExportMode.SPRITE_SHEET: ExportModeSpec(
         mode=ExportMode.SPRITE_SHEET,
         display_name="Sprite Sheet",
-        worker_method=ExportWorker._export_sprite_sheet,
+        worker_method=_ExportWorker._export_sprite_sheet,
         coordinator_method=_coord_export_frames,
     ),
     ExportMode.SEGMENTS_SHEET: ExportModeSpec(
         mode=ExportMode.SEGMENTS_SHEET,
         display_name="Segments Per Row Sheet",
-        worker_method=ExportWorker._export_sprite_sheet,
+        worker_method=_ExportWorker._export_sprite_sheet,
         coordinator_method=_coord_export_segments_per_row,
     ),
 }

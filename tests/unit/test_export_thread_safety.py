@@ -20,10 +20,10 @@ from PySide6.QtGui import QColor, QImage, QPixmap
 from export.core.frame_exporter import (
     ExportFormat,
     ExportMode,
-    ExportTask,
-    ExportWorker,
     LayoutMode,
     SpriteSheetLayout,
+    _ExportTask,
+    _ExportWorker,
     get_frame_exporter,
 )
 
@@ -79,9 +79,9 @@ def export_dir(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def basic_export_task(sample_frames: list[QImage], export_dir: Path) -> ExportTask:
+def basic_export_task(sample_frames: list[QImage], export_dir: Path) -> _ExportTask:
     """Create a basic export task for individual frames."""
-    return ExportTask(
+    return _ExportTask(
         frames=sample_frames,
         output_dir=export_dir,
         base_name="test_frame",
@@ -92,9 +92,9 @@ def basic_export_task(sample_frames: list[QImage], export_dir: Path) -> ExportTa
 
 
 @pytest.fixture
-def sheet_export_task(sample_frames: list[QImage], export_dir: Path) -> ExportTask:
+def sheet_export_task(sample_frames: list[QImage], export_dir: Path) -> _ExportTask:
     """Create an export task for sprite sheet."""
-    return ExportTask(
+    return _ExportTask(
         frames=sample_frames,
         output_dir=export_dir,
         base_name="test_sheet",
@@ -113,16 +113,16 @@ def sheet_export_task(sample_frames: list[QImage], export_dir: Path) -> ExportTa
 class TestExportWorkerCancellation:
     """Tests for export worker cancellation behavior."""
 
-    def test_cancel_before_start(self, qapp, basic_export_task: ExportTask) -> None:
+    def test_cancel_before_start(self, qapp, basic_export_task: _ExportTask) -> None:
         """Cancellation before start should prevent export."""
-        worker = ExportWorker(basic_export_task)
+        worker = _ExportWorker(basic_export_task)
         worker.cancel()
 
         assert worker._cancelled is True
 
-    def test_cancel_flag_checked(self, qapp, basic_export_task: ExportTask) -> None:
+    def test_cancel_flag_checked(self, qapp, basic_export_task: _ExportTask) -> None:
         """Worker should check cancellation flag during export."""
-        worker = ExportWorker(basic_export_task)
+        worker = _ExportWorker(basic_export_task)
 
         # Spy on cancelled state
         assert worker._cancelled is False
@@ -132,10 +132,10 @@ class TestExportWorkerCancellation:
         assert worker._cancelled is True
 
     def test_cancelled_export_does_not_emit_success(
-        self, qapp, basic_export_task: ExportTask, qtbot
+        self, qapp, basic_export_task: _ExportTask, qtbot
     ) -> None:
         """Cancelled export should not emit success signal."""
-        worker = ExportWorker(basic_export_task)
+        worker = _ExportWorker(basic_export_task)
 
         # Track signals
         progress_values = []
@@ -184,9 +184,9 @@ class TestConcurrentExportPrevention:
 class TestExportSignalSafety:
     """Tests for signal emission safety from worker thread."""
 
-    def test_progress_signal_emission(self, qapp, basic_export_task: ExportTask, qtbot) -> None:
+    def test_progress_signal_emission(self, qapp, basic_export_task: _ExportTask, qtbot) -> None:
         """Progress signals should be emitted safely."""
-        worker = ExportWorker(basic_export_task)
+        worker = _ExportWorker(basic_export_task)
 
         progress_values = []
         worker.progress.connect(lambda val: progress_values.append(val))
@@ -198,9 +198,9 @@ class TestExportSignalSafety:
         # For 8 frames, we expect multiple progress updates
         assert len(progress_values) >= 1
 
-    def test_finished_signal_emission(self, qapp, basic_export_task: ExportTask, qtbot) -> None:
+    def test_finished_signal_emission(self, qapp, basic_export_task: _ExportTask, qtbot) -> None:
         """Finished signal should be emitted on completion."""
-        worker = ExportWorker(basic_export_task)
+        worker = _ExportWorker(basic_export_task)
 
         finished_results = []
         worker.finished.connect(lambda success, msg: finished_results.append((success, msg)))
@@ -217,7 +217,7 @@ class TestExportSignalSafety:
         """ExportTask should raise ValueError for empty frames."""
         # Creating task with no frames should raise ValueError
         with pytest.raises(ValueError, match="No frames to export"):
-            ExportTask(
+            _ExportTask(
                 frames=[],
                 output_dir=export_dir,
                 base_name="test",
@@ -231,7 +231,7 @@ class TestExportSignalSafety:
     ) -> None:
         """ExportTask should raise ValueError for invalid scale factor."""
         with pytest.raises(ValueError, match="Scale factor must be positive"):
-            ExportTask(
+            _ExportTask(
                 frames=sample_frames,
                 output_dir=export_dir,
                 base_name="test",
@@ -250,10 +250,10 @@ class TestResourceCleanup:
     """Tests for proper resource cleanup after export."""
 
     def test_export_creates_output_files(
-        self, qapp, basic_export_task: ExportTask, export_dir: Path
+        self, qapp, basic_export_task: _ExportTask, export_dir: Path
     ) -> None:
         """Export should create output files."""
-        worker = ExportWorker(basic_export_task)
+        worker = _ExportWorker(basic_export_task)
         worker.run()
 
         # Check that files were created
@@ -261,10 +261,10 @@ class TestResourceCleanup:
         assert len(png_files) == 8  # 8 frames
 
     def test_sprite_sheet_export_creates_single_file(
-        self, qapp, sheet_export_task: ExportTask, export_dir: Path
+        self, qapp, sheet_export_task: _ExportTask, export_dir: Path
     ) -> None:
         """Sprite sheet export should create single output file."""
-        worker = ExportWorker(sheet_export_task)
+        worker = _ExportWorker(sheet_export_task)
         worker.run()
 
         # Check that single sheet file was created
@@ -278,7 +278,7 @@ class TestResourceCleanup:
         # Use non-existent directory to cause failure
         invalid_path = tmp_path / "nonexistent" / "deeply" / "nested"
 
-        task = ExportTask(
+        task = _ExportTask(
             frames=sample_frames,
             output_dir=invalid_path,
             base_name="test",
@@ -286,7 +286,7 @@ class TestResourceCleanup:
             mode=ExportMode.INDIVIDUAL_FRAMES,
             scale_factor=1.0,
         )
-        worker = ExportWorker(task)
+        worker = _ExportWorker(task)
 
         error_messages = []
         finished_results = []
@@ -327,12 +327,12 @@ class TestStateConsistency:
 
         assert exporter1 is not exporter2
 
-    def test_export_task_immutability(self, qapp, basic_export_task: ExportTask) -> None:
+    def test_export_task_immutability(self, qapp, basic_export_task: _ExportTask) -> None:
         """Export task should not be modified during export."""
         original_frame_count = len(basic_export_task.frames)
         original_base_name = basic_export_task.base_name
 
-        worker = ExportWorker(basic_export_task)
+        worker = _ExportWorker(basic_export_task)
         worker.run()
 
         # Task should be unchanged
@@ -365,7 +365,7 @@ class TestExportFormats:
         self, qapp, sample_frames: list[QImage], export_dir: Path
     ) -> None:
         """Individual frame export to PNG should work."""
-        task = ExportTask(
+        task = _ExportTask(
             frames=sample_frames,
             output_dir=export_dir,
             base_name="frame",
@@ -373,7 +373,7 @@ class TestExportFormats:
             mode=ExportMode.INDIVIDUAL_FRAMES,
             scale_factor=1.0,
         )
-        worker = ExportWorker(task)
+        worker = _ExportWorker(task)
         worker.run()
 
         # Verify files created
@@ -384,7 +384,7 @@ class TestExportFormats:
         self, qapp, sample_frames: list[QImage], export_dir: Path
     ) -> None:
         """Individual frame export to JPG should work."""
-        task = ExportTask(
+        task = _ExportTask(
             frames=sample_frames,
             output_dir=export_dir,
             base_name="frame",
@@ -392,7 +392,7 @@ class TestExportFormats:
             mode=ExportMode.INDIVIDUAL_FRAMES,
             scale_factor=1.0,
         )
-        worker = ExportWorker(task)
+        worker = _ExportWorker(task)
         worker.run()
 
         # Verify files created
@@ -410,7 +410,7 @@ class TestScaleFactor:
 
     def test_scale_factor_2x(self, qapp, sample_frames: list[QImage], export_dir: Path) -> None:
         """2x scale factor should double dimensions."""
-        task = ExportTask(
+        task = _ExportTask(
             frames=sample_frames,
             output_dir=export_dir,
             base_name="scaled",
@@ -418,7 +418,7 @@ class TestScaleFactor:
             mode=ExportMode.INDIVIDUAL_FRAMES,
             scale_factor=2.0,
         )
-        worker = ExportWorker(task)
+        worker = _ExportWorker(task)
         worker.run()
 
         # Load first exported frame and check size
@@ -432,7 +432,7 @@ class TestScaleFactor:
 
     def test_scale_factor_half(self, qapp, sample_frames: list[QImage], export_dir: Path) -> None:
         """0.5x scale factor should halve dimensions."""
-        task = ExportTask(
+        task = _ExportTask(
             frames=sample_frames,
             output_dir=export_dir,
             base_name="scaled",
@@ -440,7 +440,7 @@ class TestScaleFactor:
             mode=ExportMode.INDIVIDUAL_FRAMES,
             scale_factor=0.5,
         )
-        worker = ExportWorker(task)
+        worker = _ExportWorker(task)
         worker.run()
 
         # Load first exported frame and check size
@@ -479,7 +479,7 @@ class TestSpriteSheetLayout:
         self, qapp, sample_frames: list[QImage], export_dir: Path
     ) -> None:
         """Sprite sheet should have correct dimensions."""
-        task = ExportTask(
+        task = _ExportTask(
             frames=sample_frames,
             output_dir=export_dir,
             base_name="sheet",
@@ -488,7 +488,7 @@ class TestSpriteSheetLayout:
             scale_factor=1.0,
             sprite_sheet_layout=SpriteSheetLayout(mode=LayoutMode.ROWS, max_columns=4, spacing=0),
         )
-        worker = ExportWorker(task)
+        worker = _ExportWorker(task)
         worker.run()
 
         # Load sheet and check dimensions

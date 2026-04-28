@@ -21,7 +21,7 @@ from PySide6.QtGui import QColor, QPixmap
 
 from export.core.export_presets import ExportPreset
 from export.core.frame_exporter import ExportFormat, ExportMode, LayoutMode
-from export.dialogs.base.wizard_base import WizardStep, WizardWidget
+from export.dialogs.base.wizard_base import _WizardStep, _WizardWidget
 from export.dialogs.export_wizard import ExportDialog
 
 # Mark all tests in this module as requiring Qt
@@ -62,20 +62,20 @@ class TestWizardStep:
 
     def test_wizard_step_initialization(self, qapp) -> None:
         """WizardStep should initialize with title and subtitle."""
-        step = WizardStep(title="Test Step", subtitle="Test Subtitle")
+        step = _WizardStep(title="Test Step", subtitle="Test Subtitle")
 
         assert step.title == "Test Step"
         assert step.subtitle == "Test Subtitle"
 
     def test_wizard_step_default_valid(self, qapp) -> None:
         """WizardStep should be valid by default."""
-        step = WizardStep(title="Test")
+        step = _WizardStep(title="Test")
 
         assert step.validate() is True
 
     def test_wizard_step_get_data_default(self, qapp) -> None:
         """WizardStep get_data should return empty dict by default."""
-        step = WizardStep(title="Test")
+        step = _WizardStep(title="Test")
 
         data = step.get_data()
 
@@ -83,7 +83,7 @@ class TestWizardStep:
 
     def test_wizard_step_set_data(self, qapp) -> None:
         """WizardStep set_data should store data."""
-        step = WizardStep(title="Test")
+        step = _WizardStep(title="Test")
 
         step.set_data({"key": "value"})
 
@@ -91,21 +91,21 @@ class TestWizardStep:
 
     def test_wizard_step_on_entering_callable(self, qapp) -> None:
         """WizardStep on_entering should be callable."""
-        step = WizardStep(title="Test")
+        step = _WizardStep(title="Test")
 
         # Should not raise
         step.on_entering()
 
     def test_wizard_step_on_leaving_callable(self, qapp) -> None:
         """WizardStep on_leaving should be callable."""
-        step = WizardStep(title="Test")
+        step = _WizardStep(title="Test")
 
         # Should not raise
         step.on_leaving()
 
     def test_wizard_step_has_signals(self, qapp) -> None:
         """WizardStep should have expected signals."""
-        step = WizardStep(title="Test")
+        step = _WizardStep(title="Test")
 
         assert hasattr(step, "stepValidated")
         assert hasattr(step, "dataChanged")
@@ -121,15 +121,15 @@ class TestWizardWidget:
 
     def test_wizard_widget_initialization(self, qapp) -> None:
         """WizardWidget should initialize correctly."""
-        wizard = WizardWidget()
+        wizard = _WizardWidget()
 
         assert hasattr(wizard, "wizardFinished")
         assert hasattr(wizard, "wizardCancelled")
 
     def test_wizard_widget_add_step(self, qapp) -> None:
         """WizardWidget should add steps correctly."""
-        wizard = WizardWidget()
-        step = WizardStep(title="Step 1")
+        wizard = _WizardWidget()
+        step = _WizardStep(title="Step 1")
 
         wizard.add_step(step)
 
@@ -138,9 +138,9 @@ class TestWizardWidget:
 
     def test_wizard_widget_multiple_steps(self, qapp) -> None:
         """WizardWidget should handle multiple steps."""
-        wizard = WizardWidget()
-        step1 = WizardStep(title="Step 1")
-        step2 = WizardStep(title="Step 2")
+        wizard = _WizardWidget()
+        step1 = _WizardStep(title="Step 1")
+        step2 = _WizardStep(title="Step 2")
 
         wizard.add_step(step1)
         wizard.add_step(step2)
@@ -150,9 +150,9 @@ class TestWizardWidget:
 
     def test_wizard_widget_set_current_step(self, qapp) -> None:
         """WizardWidget should set current step."""
-        wizard = WizardWidget()
-        step1 = WizardStep(title="Step 1")
-        step2 = WizardStep(title="Step 2")
+        wizard = _WizardWidget()
+        step1 = _WizardStep(title="Step 1")
+        step2 = _WizardStep(title="Step 2")
 
         wizard.add_step(step1)
         wizard.add_step(step2)
@@ -163,8 +163,8 @@ class TestWizardWidget:
 
     def test_wizard_widget_get_wizard_data(self, qapp) -> None:
         """WizardWidget should collect data from all steps."""
-        wizard = WizardWidget()
-        step1 = WizardStep(title="Step 1")
+        wizard = _WizardWidget()
+        step1 = _WizardStep(title="Step 1")
         step1.set_data({"key1": "value1"})
 
         wizard.add_step(step1)
@@ -175,8 +175,8 @@ class TestWizardWidget:
 
     def test_wizard_widget_cancel_emits_signal(self, qapp, qtbot) -> None:
         """WizardWidget cancel should emit wizardCancelled signal."""
-        wizard = WizardWidget()
-        step = WizardStep(title="Step 1")
+        wizard = _WizardWidget()
+        step = _WizardStep(title="Step 1")
         wizard.add_step(step)
 
         with qtbot.waitSignal(wizard.wizardCancelled, timeout=1000):
@@ -235,7 +235,7 @@ class TestExportDialog:
         )
 
         assert hasattr(dialog, "wizard")
-        assert isinstance(dialog.wizard, WizardWidget)
+        assert isinstance(dialog.wizard, _WizardWidget)
 
     def test_export_dialog_has_steps(self, qapp, sample_sprites: list[QPixmap]) -> None:
         """ExportDialog should have type and settings steps."""
@@ -466,9 +466,9 @@ class TestWizardNavigation:
 
     def test_wizard_back_navigation(self, qapp) -> None:
         """WizardWidget should support back navigation."""
-        wizard = WizardWidget()
-        step1 = WizardStep(title="Step 1")
-        step2 = WizardStep(title="Step 2")
+        wizard = _WizardWidget()
+        step1 = _WizardStep(title="Step 1")
+        step2 = _WizardStep(title="Step 2")
 
         wizard.add_step(step1)
         wizard.add_step(step2)
@@ -480,9 +480,9 @@ class TestWizardNavigation:
 
     def test_wizard_next_navigation(self, qapp) -> None:
         """WizardWidget should support next navigation."""
-        wizard = WizardWidget()
-        step1 = WizardStep(title="Step 1")
-        step2 = WizardStep(title="Step 2")
+        wizard = _WizardWidget()
+        step1 = _WizardStep(title="Step 1")
+        step2 = _WizardStep(title="Step 2")
 
         wizard.add_step(step1)
         wizard.add_step(step2)
@@ -516,14 +516,14 @@ class TestEdgeCases:
 
     def test_wizard_step_empty_title(self, qapp) -> None:
         """WizardStep should accept empty title."""
-        step = WizardStep(title="", subtitle="")
+        step = _WizardStep(title="", subtitle="")
 
         assert step.title == ""
         assert step.subtitle == ""
 
     def test_wizard_widget_no_steps(self, qapp) -> None:
         """WizardWidget should handle no steps gracefully."""
-        wizard = WizardWidget()
+        wizard = _WizardWidget()
 
         # Should not raise when getting data
         data = wizard.get_wizard_data()

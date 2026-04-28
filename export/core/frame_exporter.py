@@ -219,7 +219,7 @@ class ExportConfig:
     selected_indices: list[int] | None = None
 
 
-class ExportTask:
+class _ExportTask:
     """Represents a single export task."""
 
     def __init__(
@@ -265,7 +265,7 @@ class ExportTask:
             raise ValueError("Scale factor must be positive")
 
 
-class ExportWorker(QThread):
+class _ExportWorker(QThread):
     """Worker thread for export operations."""
 
     # Signals
@@ -273,7 +273,7 @@ class ExportWorker(QThread):
     finished = Signal(bool, str)  # success, message
     error = Signal(str)  # error message
 
-    def __init__(self, task: ExportTask):
+    def __init__(self, task: _ExportTask):
         super().__init__()
         self.task = task
         self._cancelled = False
@@ -751,8 +751,8 @@ class FrameExporter(QObject):
 
     def __init__(self):
         super().__init__()
-        self._worker: ExportWorker | None = None
-        self._current_task: ExportTask | None = None
+        self._worker: _ExportWorker | None = None
+        self._current_task: _ExportTask | None = None
 
     def export_frames(
         self,
@@ -801,7 +801,7 @@ class FrameExporter(QObject):
         frames: Sequence[QPixmap],
         config: ExportConfig,
         segment_info: list[dict[str, Any]] | None,
-    ) -> ExportTask | None:
+    ) -> _ExportTask | None:
         """Validate inputs, convert frames, and build an ExportTask.
 
         Returns None (and emits exportError) on any validation failure.
@@ -830,7 +830,7 @@ class FrameExporter(QObject):
             return None
 
         try:
-            return ExportTask(
+            return _ExportTask(
                 frames=image_frames,
                 output_dir=config.output_dir,
                 base_name=safe_base_name,
@@ -859,9 +859,9 @@ class FrameExporter(QObject):
             image_frames.append(image)
         return image_frames
 
-    def _start_worker(self, task: ExportTask) -> None:
+    def _start_worker(self, task: _ExportTask) -> None:
         """Create, connect, and start the export worker thread."""
-        self._worker = ExportWorker(task)
+        self._worker = _ExportWorker(task)
         self._worker.progress.connect(self._on_progress)
         self._worker.finished.connect(self._on_finished)
         self._worker.error.connect(self._on_error)

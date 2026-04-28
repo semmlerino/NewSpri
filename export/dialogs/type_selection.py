@@ -16,12 +16,12 @@ from PySide6.QtWidgets import QFrame, QLabel, QRadioButton, QVBoxLayout, QWidget
 from utils.styles import StyleManager
 
 from ..core.export_presets import ExportPreset, get_preset
-from ..dialogs.base.wizard_base import WizardStep
+from ..dialogs.base.wizard_base import _WizardStep
 
 logger = logging.getLogger(__name__)
 
 
-class SimpleExportOption(QFrame):
+class _SimpleExportOption(QFrame):
     """Simple, clean export option widget."""
 
     clicked = Signal()
@@ -88,7 +88,7 @@ class SimpleExportOption(QFrame):
         super().mousePressEvent(event)
 
 
-class ExportTypeStep(WizardStep):
+class _ExportTypeStep(_WizardStep):
     """
     Simplified export type selection step.
     Clean, focused interface without clutter.
@@ -108,7 +108,7 @@ class ExportTypeStep(WizardStep):
         self.frame_count = frame_count
         self.segment_manager = segment_manager
         self._selected_preset: ExportPreset | None = None
-        self._options: list[SimpleExportOption] = []
+        self._options: list[_SimpleExportOption] = []
         self._has_segments = False
 
         self._setup_ui()
@@ -194,7 +194,7 @@ class ExportTypeStep(WizardStep):
         for preset_name in preset_names:
             preset = get_preset(preset_name)
             if preset:
-                option = SimpleExportOption(preset)
+                option = _SimpleExportOption(preset)
                 option.clicked.connect(lambda p=preset: self._on_option_clicked(p))
                 self._options.append(option)
 

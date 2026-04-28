@@ -278,7 +278,7 @@ class TestExportFailureRecovery:
         """Verify cleanup when export fails mid-operation."""
         from unittest.mock import MagicMock
 
-        from export.core.frame_exporter import ExportFormat, ExportMode, ExportTask, ExportWorker
+        from export.core.frame_exporter import ExportFormat, ExportMode, _ExportTask, _ExportWorker
 
         # Create mock frames
         frames = []
@@ -290,7 +290,7 @@ class TestExportFailureRecovery:
             frame.save.return_value = i == 0
             frames.append(frame)
 
-        task = ExportTask(
+        task = _ExportTask(
             frames=frames,
             output_dir=tmp_path,
             base_name="test",
@@ -298,7 +298,7 @@ class TestExportFailureRecovery:
             mode=ExportMode.INDIVIDUAL_FRAMES,
         )
 
-        worker = ExportWorker(task)
+        worker = _ExportWorker(task)
 
         # Capture error signals
         errors = []
@@ -325,7 +325,7 @@ class TestExportFailureRecovery:
         output_dir.mkdir()
 
         # Start export with mocked worker
-        with patch("export.core.frame_exporter.ExportWorker") as mock_worker_class:
+        with patch("export.core.frame_exporter._ExportWorker") as mock_worker_class:
             mock_worker = MagicMock()
             mock_worker_class.return_value = mock_worker
 

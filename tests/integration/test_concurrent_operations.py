@@ -63,7 +63,7 @@ class TestConcurrentOperations:
         assert viewer._animation_controller.is_playing
 
         # 2. Trigger export while playing (mock the dialog and export)
-        with patch("export.core.frame_exporter.ExportWorker") as mock_worker_class:
+        with patch("export.core.frame_exporter._ExportWorker") as mock_worker_class:
             mock_worker = MagicMock()
             mock_worker_class.return_value = mock_worker
 

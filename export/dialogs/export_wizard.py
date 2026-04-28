@@ -28,9 +28,9 @@ from ..core.frame_exporter import (
     LayoutMode,
     SpriteSheetLayout,
 )
-from .base.wizard_base import WizardWidget
-from .modern_settings_preview import ModernExportSettings
-from .type_selection import ExportTypeStep
+from .base.wizard_base import _WizardWidget
+from .modern_settings_preview import _ModernExportSettings
+from .type_selection import _ExportTypeStep
 
 logger = logging.getLogger(__name__)
 
@@ -80,7 +80,7 @@ class ExportDialog(QDialog):
         layout.setSpacing(0)
 
         # Create wizard widget
-        self.wizard = WizardWidget()
+        self.wizard = _WizardWidget()
         layout.addWidget(self.wizard)
 
         # Connect wizard signals
@@ -90,13 +90,13 @@ class ExportDialog(QDialog):
     def _setup_wizard(self):
         """Set up wizard steps."""
         # Step 1: Export type selection
-        self.type_step = ExportTypeStep(
+        self.type_step = _ExportTypeStep(
             frame_count=self.frame_count, segment_manager=self.segment_manager, parent=self.wizard
         )
         self.wizard.add_step(self.type_step)
 
         # Step 2: Settings with live preview
-        self.settings_preview_step = ModernExportSettings(
+        self.settings_preview_step = _ModernExportSettings(
             frame_count=self.frame_count,
             current_frame=self.current_frame,
             sprites=self.sprites,

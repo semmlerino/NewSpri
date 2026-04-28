@@ -14,8 +14,8 @@ from export.core.frame_exporter import (
     ExportConfig,
     ExportFormat,
     ExportMode,
-    ExportTask,
     FrameExporter,
+    _ExportTask,
     get_frame_exporter,
 )
 
@@ -55,7 +55,7 @@ class TestExportTask:
         frames = [mock_frame]
         output_dir = Path("/tmp/test")
 
-        task = ExportTask(
+        task = _ExportTask(
             frames=frames,
             output_dir=output_dir,
             base_name="test",
@@ -77,7 +77,7 @@ class TestExportTask:
 
         # Test empty frames
         with pytest.raises(ValueError, match="No frames to export"):
-            ExportTask(
+            _ExportTask(
                 frames=[],
                 output_dir=output_dir,
                 base_name="test",
@@ -87,7 +87,7 @@ class TestExportTask:
 
         # Test invalid scale factor
         with pytest.raises(ValueError, match="Scale factor must be positive"):
-            ExportTask(
+            _ExportTask(
                 frames=[MagicMock()],
                 output_dir=output_dir,
                 base_name="test",
@@ -123,7 +123,7 @@ class TestFrameExporter:
         success = exporter.export_frames(frames=[], config=config)
         assert not success
 
-    @patch("export.core.frame_exporter.ExportWorker")
+    @patch("export.core.frame_exporter._ExportWorker")
     @patch("pathlib.Path.mkdir")
     def test_export_frames_creates_directory(self, mock_mkdir, mock_worker_class):
         """Test that export creates output directory if needed."""
@@ -183,9 +183,9 @@ class TestExportWorker:
 
     def test_individual_frames_export(self, mock_frames, tmp_path):
         """Test exporting individual frames."""
-        from export.core.frame_exporter import ExportWorker
+        from export.core.frame_exporter import _ExportWorker
 
-        task = ExportTask(
+        task = _ExportTask(
             frames=mock_frames,
             output_dir=tmp_path,
             base_name="frame",
@@ -194,7 +194,7 @@ class TestExportWorker:
             pattern="{name}_{index:03d}",
         )
 
-        worker = ExportWorker(task)
+        worker = _ExportWorker(task)
 
         # Mock the progress signal
         progress_calls = []
@@ -213,9 +213,9 @@ class TestExportWorker:
 
     def test_sprite_sheet_export(self, mock_frames, tmp_path):
         """Test exporting as sprite sheet."""
-        from export.core.frame_exporter import ExportWorker
+        from export.core.frame_exporter import _ExportWorker
 
-        task = ExportTask(
+        task = _ExportTask(
             frames=mock_frames,
             output_dir=tmp_path,
             base_name="sprites",
@@ -223,7 +223,7 @@ class TestExportWorker:
             mode=ExportMode.SPRITE_SHEET,
         )
 
-        worker = ExportWorker(task)
+        worker = _ExportWorker(task)
 
         # Mock QImage creation for sprite sheet (now uses thread-safe QImage)
         with patch("export.core.frame_exporter.QImage") as mock_image_class:
@@ -247,7 +247,7 @@ class TestExportWorker:
 
     def test_scale_factor_application(self, mock_frames, tmp_path):
         """Test that scale factor is applied correctly."""
-        from export.core.frame_exporter import ExportWorker
+        from export.core.frame_exporter import _ExportWorker
 
         # Mock scaled return
         for frame in mock_frames:
@@ -255,7 +255,7 @@ class TestExportWorker:
             scaled_frame.save.return_value = True
             frame.scaled.return_value = scaled_frame
 
-        task = ExportTask(
+        task = _ExportTask(
             frames=mock_frames,
             output_dir=tmp_path,
             base_name="scaled",
@@ -264,7 +264,7 @@ class TestExportWorker:
             scale_factor=2.0,
         )
 
-        worker = ExportWorker(task)
+        worker = _ExportWorker(task)
         worker._export_individual_frames()
 
         # Check that scaling was called with correct parameters
@@ -279,9 +279,9 @@ class TestExportWorker:
 
     def test_export_cancellation(self, mock_frames, tmp_path):
         """Test export cancellation."""
-        from export.core.frame_exporter import ExportWorker
+        from export.core.frame_exporter import _ExportWorker
 
-        task = ExportTask(
+        task = _ExportTask(
             frames=mock_frames,
             output_dir=tmp_path,
             base_name="test",
@@ -289,7 +289,7 @@ class TestExportWorker:
             mode=ExportMode.INDIVIDUAL_FRAMES,
         )
 
-        worker = ExportWorker(task)
+        worker = _ExportWorker(task)
         worker.cancel()
 
         assert worker._cancelled
@@ -298,7 +298,7 @@ class TestExportWorker:
 class TestExportIntegration:
     """Integration tests for export functionality."""
 
-    @patch("export.core.frame_exporter.ExportWorker")
+    @patch("export.core.frame_exporter._ExportWorker")
     def test_full_export_workflow(self, mock_worker_class, qtbot):
         """Test complete export workflow."""
         exporter = FrameExporter()

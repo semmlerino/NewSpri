@@ -46,7 +46,7 @@ from utils.styles import StyleManager
 
 from ..core.export_presets import ExportPreset
 from ..core.frame_exporter import BackgroundMode, ExportFormat, ExportMode, LayoutMode
-from ..dialogs.base.wizard_base import WizardStep, WizardWidget
+from ..dialogs.base.wizard_base import _WizardStep, _WizardWidget
 from .export_mode_ui_registry import get_ui_mode_spec
 
 logger = logging.getLogger(__name__)
@@ -61,7 +61,7 @@ _LAYOUT_MODES: tuple[LayoutMode, ...] = (
 )
 
 
-class CompactLivePreview(QGraphicsView):
+class _CompactLivePreview(QGraphicsView):
     """Modern preview widget with integrated controls."""
 
     def __init__(self, parent: QWidget | None = None):
@@ -159,7 +159,7 @@ class _SettingsPanelBase:
     base type and keep dispatch type-clean.
     """
 
-    _parent: "ModernExportSettings"
+    _parent: "_ModernExportSettings"
 
     def _create_panel(self) -> tuple[QWidget, QVBoxLayout]:
         """Create the standard widget + vertical layout with shared chrome."""
@@ -477,7 +477,7 @@ class _SelectedSettingsPanel(_SettingsPanelBase):
 class _PreviewGenerator:
     """Helper class to generate preview images for different export modes."""
 
-    def __init__(self, parent: "ModernExportSettings"):
+    def __init__(self, parent: "_ModernExportSettings"):
         self._parent = parent
 
     def generate_sheet_preview(self) -> QPixmap:
@@ -783,7 +783,7 @@ class _SettingsValidator:
     enabled. Mode-specific checks dispatch on the current preset's mode.
     """
 
-    def __init__(self, parent: "ModernExportSettings") -> None:
+    def __init__(self, parent: "_ModernExportSettings") -> None:
         self._parent = parent
 
     def validate(self) -> bool:
@@ -826,7 +826,7 @@ class _PreviewOrchestrator:
 
     DEBOUNCE_MS = 100
 
-    def __init__(self, parent: "ModernExportSettings") -> None:
+    def __init__(self, parent: "_ModernExportSettings") -> None:
         self._parent = parent
         self._generator = _PreviewGenerator(parent)
         # Parent the timer to the widget so Qt cleans it up alongside the
@@ -869,7 +869,7 @@ class _PreviewOrchestrator:
         parent.preview_view.update_preview(pixmap)
 
 
-class ModernExportSettings(WizardStep):
+class _ModernExportSettings(_WizardStep):
     """
     Modern, compact export settings with live preview.
     """
@@ -1103,7 +1103,7 @@ class ModernExportSettings(WizardStep):
         layout.addLayout(header_layout)
 
         # Preview view
-        self.preview_view = CompactLivePreview()
+        self.preview_view = _CompactLivePreview()
         self.preview_view.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         layout.addWidget(self.preview_view, 1)
 
@@ -1320,7 +1320,7 @@ class ModernExportSettings(WizardStep):
             wizard = wizard.parent()
 
         if wizard:
-            wizard_data = cast("WizardWidget", wizard).get_wizard_data()
+            wizard_data = cast("_WizardWidget", wizard).get_wizard_data()
             logger.debug("Wizard data keys: %s", list(wizard_data.keys()))
 
             step_0_data = wizard_data.get("step_0", {})

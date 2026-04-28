@@ -29,7 +29,7 @@ class ExportPreset:
 
 
 # All available presets keyed by name
-PRESETS: dict[str, ExportPreset] = {
+_PRESETS: dict[str, ExportPreset] = {
     "individual_frames": ExportPreset(
         name="individual_frames",
         display_name="Individual Frames",
@@ -99,4 +99,4 @@ PRESETS: dict[str, ExportPreset] = {
 
 def get_preset(name: str) -> ExportPreset | None:
     """Get a preset by name."""
-    return PRESETS.get(name)
+    return _PRESETS.get(name)

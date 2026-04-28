@@ -17,12 +17,12 @@ if TYPE_CHECKING:
     from PySide6.QtWidgets import QWidget
 
     from export.dialogs.modern_settings_preview import (
-        ModernExportSettings,
+        _ModernExportSettings,
         _SettingsPanelBase,
     )
 
-PanelFactory = Callable[["ModernExportSettings"], "_SettingsPanelBase"]
-DataExtractor = Callable[["ModernExportSettings"], dict[str, Any]]
+PanelFactory = Callable[["_ModernExportSettings"], "_SettingsPanelBase"]
+DataExtractor = Callable[["_ModernExportSettings"], dict[str, Any]]
 
 
 @dataclass(frozen=True)
@@ -33,42 +33,42 @@ class ExportModeUiSpec:
     panel_factory: PanelFactory
     data_extractor: DataExtractor
 
-    def build_panel(self, parent: ModernExportSettings) -> QWidget:
+    def build_panel(self, parent: _ModernExportSettings) -> QWidget:
         """Construct the settings panel for this mode."""
         return self.panel_factory(parent).build()
 
-    def collect_data(self, parent: ModernExportSettings) -> dict[str, Any]:
+    def collect_data(self, parent: _ModernExportSettings) -> dict[str, Any]:
         """Collect mode-specific settings from the dialog."""
         return self.data_extractor(parent)
 
 
-def _sheet_panel(parent: ModernExportSettings) -> _SettingsPanelBase:
+def _sheet_panel(parent: _ModernExportSettings) -> _SettingsPanelBase:
     from export.dialogs.modern_settings_preview import _SheetSettingsPanel
 
     return _SheetSettingsPanel(parent)
 
 
-def _individual_panel(parent: ModernExportSettings) -> _SettingsPanelBase:
+def _individual_panel(parent: _ModernExportSettings) -> _SettingsPanelBase:
     from export.dialogs.modern_settings_preview import _IndividualSettingsPanel
 
     return _IndividualSettingsPanel(parent)
 
 
-def _selected_panel(parent: ModernExportSettings) -> _SettingsPanelBase:
+def _selected_panel(parent: _ModernExportSettings) -> _SettingsPanelBase:
     from export.dialogs.modern_settings_preview import _SelectedSettingsPanel
 
     return _SelectedSettingsPanel(parent)
 
 
-def _sheet_data(parent: ModernExportSettings) -> dict[str, Any]:
+def _sheet_data(parent: _ModernExportSettings) -> dict[str, Any]:
     return parent._get_sheet_data()
 
 
-def _individual_data(parent: ModernExportSettings) -> dict[str, Any]:
+def _individual_data(parent: _ModernExportSettings) -> dict[str, Any]:
     return parent._get_individual_frames_data()
 
 
-def _selected_data(parent: ModernExportSettings) -> dict[str, Any]:
+def _selected_data(parent: _ModernExportSettings) -> dict[str, Any]:
     return parent._get_selected_frames_data()
 
 
