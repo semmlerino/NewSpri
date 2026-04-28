@@ -160,6 +160,207 @@ class FrameThumbnail(QLabel):
         super().mouseReleaseEvent(event)
 
 
+class _GridViewBuilder:
+    """Widget construction + thumbnail population helper for AnimationGridView.
+
+    Holds no state of its own beyond a back-reference to the view; all attributes
+    it builds (``_scroll_area``, ``_grid_layout``, ``_columns_display``, etc.)
+    live on the view so existing tests and signal wiring keep working.
+    """
+
+    def __init__(self, view: "AnimationGridView") -> None:
+        self._view = view
+
+    def setup_grid_area(self, parent_layout: QVBoxLayout) -> None:
+        """Build the controls row, instructions, and scroll-area chrome."""
+        view = self._view
+
+        controls_layout = QHBoxLayout()
+
+        view._columns_label = QLabel("Columns:")
+        controls_layout.addWidget(view._columns_label)
+
+        decrease_btn = QPushButton("-")
+        decrease_btn.setMaximumWidth(30)
+        decrease_btn.clicked.connect(lambda: view._adjust_columns(-1))
+        controls_layout.addWidget(decrease_btn)
+
+        view._columns_display = QLabel(str(view._grid_columns))
+        view._columns_display.setMinimumWidth(30)
+        view._columns_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        controls_layout.addWidget(view._columns_display)
+
+        increase_btn = QPushButton("+")
+        increase_btn.setMaximumWidth(30)
+        increase_btn.clicked.connect(lambda: view._adjust_columns(1))
+        controls_layout.addWidget(increase_btn)
+
+        controls_layout.addStretch()
+
+        view._create_segment_btn = QPushButton("Create Animation Segment")
+        view._create_segment_btn.setEnabled(False)
+        view._create_segment_btn.clicked.connect(view._create_segment_from_selection)
+        controls_layout.addWidget(view._create_segment_btn)
+
+        view._clear_selection_btn = QPushButton("Clear Selection")
+        view._clear_selection_btn.setEnabled(False)
+        view._clear_selection_btn.clicked.connect(view._clear_selection)
+        controls_layout.addWidget(view._clear_selection_btn)
+
+        parent_layout.addLayout(controls_layout)
+
+        instructions = QLabel(
+            "Selection modes: Click = select • Drag = range • Shift+Click = extend range • "
+            "Ctrl/Alt+Click = multi-select • Double-Click = preview • Right-Click = add as segment"
+        )
+        instructions.setStyleSheet(StyleManager.instruction_label())
+        instructions.setWordWrap(True)
+        parent_layout.addWidget(instructions)
+
+        view._scroll_area = QScrollArea()
+        view._scroll_area.setWidgetResizable(True)
+        view._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        view._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+
+        view._grid_container = QWidget()
+        view._grid_layout = QGridLayout(view._grid_container)
+        view._grid_layout.setSpacing(2)
+
+        view._scroll_area.setWidget(view._grid_container)
+        parent_layout.addWidget(view._scroll_area)
+
+    def clear(self) -> None:
+        """Tear down current thumbnails and grid items."""
+        view = self._view
+        for thumbnail in view._thumbnails:
+            thumbnail.deleteLater()
+        view._thumbnails.clear()
+
+        while view._grid_layout.count():
+            item = view._grid_layout.takeAt(0)
+            if item is not None and (widget := item.widget()) is not None:
+                widget.deleteLater()
+
+    def populate(self) -> None:
+        """Recreate thumbnails for the current ``view._frames``."""
+        view = self._view
+        for i, frame in enumerate(view._frames):
+            thumbnail = FrameThumbnail(i, frame, view._thumbnail_size)
+
+            thumbnail.clicked.connect(view._on_frame_clicked)
+            thumbnail.doubleClicked.connect(view._on_frame_double_clicked)
+            thumbnail.rightClicked.connect(view._on_frame_right_clicked)
+            thumbnail.dragStarted.connect(view._on_drag_started)
+
+            row = i // view._grid_columns
+            col = i % view._grid_columns
+            view._grid_layout.addWidget(thumbnail, row, col)
+
+            view._thumbnails.append(thumbnail)
+
+        view._update_segment_visualization()
+        view._update_selection_display()
+
+    def adjust_columns(self, delta: int) -> None:
+        """Change column count; rebuild grid if it actually changed."""
+        view = self._view
+        new_columns = max(1, min(20, view._grid_columns + delta))
+        if new_columns != view._grid_columns:
+            view._grid_columns = new_columns
+            view._columns_display.setText(str(view._grid_columns))
+            if view._frames:
+                self.clear()
+                self.populate()
+
+
+class _SegmentFactory:
+    """Domain helper that turns a frame selection into an AnimationSegment.
+
+    Owns the rolling color index used to assign each new segment a distinct
+    palette entry. The view exposes the index via a property delegate so
+    legacy tests/code that touched ``view._segment_color_index`` keep working.
+    """
+
+    def __init__(self, view: "AnimationGridView") -> None:
+        self._view = view
+        self._color_index = 0
+
+    def reset(self) -> None:
+        self._color_index = 0
+
+    def create_from_selection(self, selected_frames: set[int]) -> AnimationSegment | None:
+        """Build a segment from the current selection.
+
+        Returns the configured segment on confirmation, or None if the user
+        cancelled (empty selection, declined non-contiguous warning, blank
+        name). Caller is responsible for clearing selection and emitting
+        ``segmentCreated``.
+        """
+        if not selected_frames:
+            return None
+
+        sorted_frames = sorted(selected_frames)
+
+        if self._view._is_contiguous_selection(sorted_frames):
+            start, end = sorted_frames[0], sorted_frames[-1]
+            description = f"frames {start}-{end}"
+        else:
+            start, end = sorted_frames[0], sorted_frames[-1]
+            description = f"{len(sorted_frames)} selected frames"
+
+            total_frames = end - start + 1
+            unselected_count = total_frames - len(sorted_frames)
+            reply = QMessageBox.question(
+                self._view,
+                "Non-contiguous Selection",
+                f"Your selection has gaps between frames.\n\n"
+                f"Selected: frames {', '.join(str(f) for f in sorted_frames[:5])}"
+                f"{'...' if len(sorted_frames) > 5 else ''}\n"
+                f"Segment will span: frames {start} to {end} ({total_frames} total)\n"
+                f"Includes {unselected_count} unselected frame(s) in between.\n\n"
+                f"Continue?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            )
+            if reply != QMessageBox.StandardButton.Yes:
+                return None
+
+        default_name = self._generate_unique_name()
+        name, ok = QInputDialog.getText(
+            self._view,
+            "Create Animation Segment",
+            f"Enter name for {description}:",
+            text=default_name,
+        )
+
+        if not (ok and name.strip()):
+            return None
+
+        segment = AnimationSegment(
+            name=name.strip(),
+            start_frame=start,
+            end_frame=end,
+        )
+        segment.set_color(self._next_color())
+        return segment
+
+    def _generate_unique_name(self, base_name: str = "Animation") -> str:
+        existing = self._view._segments
+        for index in range(1, 1001):
+            candidate = f"{base_name}_{index}"
+            if candidate not in existing:
+                return candidate
+        raise RuntimeError(
+            f"Could not generate a unique segment name after 1000 attempts "
+            f"(base_name={base_name!r})"
+        )
+
+    def _next_color(self) -> QColor:
+        palette = Config.Colors.SEGMENT_PALETTE
+        color_hex = palette[self._color_index % len(palette)]
+        self._color_index += 1
+        return QColor(color_hex)
+
+
 class AnimationGridView(QWidget):
     """Main grid view widget for animation frame selection and splitting."""
 
@@ -192,8 +393,20 @@ class AnimationGridView(QWidget):
         self._grid_columns = 8
         self._thumbnail_size = Config.UI.THUMBNAIL_SIZE
 
-        # Color assignment for segments
-        self._segment_color_index = 0
+        # Forward-declare widgets that GridViewBuilder assigns during
+        # setup_grid_area; declared here so type-checkers see them as members.
+        self._columns_label: QLabel
+        self._columns_display: QLabel
+        self._create_segment_btn: QPushButton
+        self._clear_selection_btn: QPushButton
+        self._scroll_area: QScrollArea
+        self._grid_container: QWidget
+        self._grid_layout: QGridLayout
+
+        # Construction + segment-creation collaborators (created before _setup_ui
+        # so the builder can wire button signals into self).
+        self._builder = _GridViewBuilder(self)
+        self._segment_factory = _SegmentFactory(self)
 
         self._setup_ui()
 
@@ -208,115 +421,27 @@ class AnimationGridView(QWidget):
         self._setup_grid_area(layout)
 
     def _setup_grid_area(self, parent_layout: QVBoxLayout):
-        """Set up the main grid area."""
-        # Controls
-        controls_layout = QHBoxLayout()
-
-        self._columns_label = QLabel("Columns:")
-        controls_layout.addWidget(self._columns_label)
-
-        # Add column adjustment buttons
-        decrease_btn = QPushButton("-")
-        decrease_btn.setMaximumWidth(30)
-        decrease_btn.clicked.connect(lambda: self._adjust_columns(-1))
-        controls_layout.addWidget(decrease_btn)
-
-        self._columns_display = QLabel(str(self._grid_columns))
-        self._columns_display.setMinimumWidth(30)
-        self._columns_display.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        controls_layout.addWidget(self._columns_display)
-
-        increase_btn = QPushButton("+")
-        increase_btn.setMaximumWidth(30)
-        increase_btn.clicked.connect(lambda: self._adjust_columns(1))
-        controls_layout.addWidget(increase_btn)
-
-        controls_layout.addStretch()
-
-        # Selection controls
-        self._create_segment_btn = QPushButton("Create Animation Segment")
-        self._create_segment_btn.setEnabled(False)
-        self._create_segment_btn.clicked.connect(self._create_segment_from_selection)
-        controls_layout.addWidget(self._create_segment_btn)
-
-        self._clear_selection_btn = QPushButton("Clear Selection")
-        self._clear_selection_btn.setEnabled(False)
-        self._clear_selection_btn.clicked.connect(self._clear_selection)
-        controls_layout.addWidget(self._clear_selection_btn)
-
-        parent_layout.addLayout(controls_layout)
-
-        # Add selection instructions
-        instructions = QLabel(
-            "Selection modes: Click = select • Drag = range • Shift+Click = extend range • "
-            "Ctrl/Alt+Click = multi-select • Double-Click = preview • Right-Click = add as segment"
-        )
-        instructions.setStyleSheet(StyleManager.instruction_label())
-        instructions.setWordWrap(True)
-        parent_layout.addWidget(instructions)
-
-        # Scroll area for grid
-        self._scroll_area = QScrollArea()
-        self._scroll_area.setWidgetResizable(True)
-        self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-        self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
-
-        # Grid container
-        self._grid_container = QWidget()
-        self._grid_layout = QGridLayout(self._grid_container)
-        self._grid_layout.setSpacing(2)
-
-        self._scroll_area.setWidget(self._grid_container)
-        parent_layout.addWidget(self._scroll_area)
+        """Set up the main grid area (delegated to GridViewBuilder)."""
+        self._builder.setup_grid_area(parent_layout)
 
     def set_frames(self, frames: Sequence[QPixmap]):
         """Set the frames to display in the grid."""
         self._clear_selection()
         self._frames = list(frames)
-        self._clear_grid()
-        self._populate_grid()
+        self._builder.clear()
+        self._builder.populate()
 
     def _clear_grid(self):
-        """Clear the current grid."""
-        for thumbnail in self._thumbnails:
-            thumbnail.deleteLater()
-        self._thumbnails.clear()
-
-        # Clear layout
-        while self._grid_layout.count():
-            item = self._grid_layout.takeAt(0)
-            if item is not None and (widget := item.widget()) is not None:
-                widget.deleteLater()
+        """Clear the current grid (delegated to GridViewBuilder)."""
+        self._builder.clear()
 
     def _populate_grid(self):
-        """Populate the grid with frame thumbnails."""
-        for i, frame in enumerate(self._frames):
-            thumbnail = FrameThumbnail(i, frame, self._thumbnail_size)
-
-            # Connect new enhanced signals
-            thumbnail.clicked.connect(self._on_frame_clicked)
-            thumbnail.doubleClicked.connect(self._on_frame_double_clicked)
-            thumbnail.rightClicked.connect(self._on_frame_right_clicked)
-            thumbnail.dragStarted.connect(self._on_drag_started)
-
-            row = i // self._grid_columns
-            col = i % self._grid_columns
-            self._grid_layout.addWidget(thumbnail, row, col)
-
-            self._thumbnails.append(thumbnail)
-
-        self._update_segment_visualization()
-        self._update_selection_display()
+        """Populate the grid with frame thumbnails (delegated to GridViewBuilder)."""
+        self._builder.populate()
 
     def _adjust_columns(self, delta: int):
-        """Adjust the number of grid columns."""
-        new_columns = max(1, min(20, self._grid_columns + delta))
-        if new_columns != self._grid_columns:
-            self._grid_columns = new_columns
-            self._columns_display.setText(str(self._grid_columns))
-            if self._frames:
-                self._clear_grid()
-                self._populate_grid()
+        """Adjust the number of grid columns (delegated to GridViewBuilder)."""
+        self._builder.adjust_columns(delta)
 
     def _on_frame_clicked(self, frame_index: int, modifiers: int):
         """Handle frame thumbnail click with keyboard modifiers."""
@@ -498,76 +623,19 @@ class AnimationGridView(QWidget):
         self._update_selection_controls()
 
     def _create_segment_from_selection(self):
-        """Create an animation segment from current selection."""
-        if not self._selected_frames:
+        """Create an animation segment from current selection.
+
+        Delegates the dialog flow + domain object creation to SegmentFactory;
+        the view stays responsible for clearing selection and emitting
+        ``segmentCreated`` so the controller can persist and validate.
+        """
+        segment = self._segment_factory.create_from_selection(self._selected_frames)
+        if segment is None:
             return
-
-        sorted_frames = sorted(self._selected_frames)
-
-        # Determine start and end frames
-        if self._is_contiguous_selection(sorted_frames):
-            # Contiguous selection - use actual range
-            start, end = sorted_frames[0], sorted_frames[-1]
-            description = f"frames {start}-{end}"
-        else:
-            # Non-contiguous selection - use overall range but warn user
-            start, end = sorted_frames[0], sorted_frames[-1]
-            description = f"{len(sorted_frames)} selected frames"
-
-            # Show warning for non-contiguous selection
-            total_frames = end - start + 1
-            unselected_count = total_frames - len(sorted_frames)
-            reply = QMessageBox.question(
-                self,
-                "Non-contiguous Selection",
-                f"Your selection has gaps between frames.\n\n"
-                f"Selected: frames {', '.join(str(f) for f in sorted_frames[:5])}"
-                f"{'...' if len(sorted_frames) > 5 else ''}\n"
-                f"Segment will span: frames {start} to {end} ({total_frames} total)\n"
-                f"Includes {unselected_count} unselected frame(s) in between.\n\n"
-                f"Continue?",
-                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-            )
-            if reply != QMessageBox.StandardButton.Yes:
-                return
-
-        # Generate unique default name
-        default_name = self._generate_unique_segment_name()
-
-        # Get segment name from user
-        name, ok = QInputDialog.getText(
-            self, "Create Animation Segment", f"Enter name for {description}:", text=default_name
-        )
-
-        if ok and name.strip():
-            segment = AnimationSegment(
-                name=name.strip(),
-                start_frame=start,
-                end_frame=end,
-            )
-            segment.set_color(self._get_next_segment_color())
-            self._clear_selection()
-            # Manager/controller own segment persistence and validation.
-            # Grid updates are applied only after controller confirms success.
-            self.segmentCreated.emit(segment)
-
-    def _generate_unique_segment_name(self, base_name: str = "Animation") -> str:
-        """Generate a unique segment name that doesn't conflict with existing segments."""
-        for index in range(1, 1001):
-            candidate_name = f"{base_name}_{index}"
-            if candidate_name not in self._segments:
-                return candidate_name
-        raise RuntimeError(
-            f"Could not generate a unique segment name after 1000 attempts "
-            f"(base_name={base_name!r})"
-        )
-
-    def _get_next_segment_color(self) -> QColor:
-        """Get the next color for a new segment from the palette."""
-        palette = Config.Colors.SEGMENT_PALETTE
-        color_hex = palette[self._segment_color_index % len(palette)]
-        self._segment_color_index += 1
-        return QColor(color_hex)
+        self._clear_selection()
+        # Manager/controller own segment persistence and validation.
+        # Grid updates are applied only after controller confirms success.
+        self.segmentCreated.emit(segment)
 
     def sync_segments_with_manager(self, segment_manager: AnimationSegmentManager | None):
         """Synchronize local segments with segment manager to prevent conflicts."""
@@ -661,7 +729,7 @@ class AnimationGridView(QWidget):
         """Clear all animation segments."""
         self._segments.clear()
         # Reset color index for fresh color sequence
-        self._segment_color_index = 0
+        self._segment_factory.reset()
         self._update_segment_visualization()
 
     def mouseMoveEvent(self, event: QMouseEvent):
