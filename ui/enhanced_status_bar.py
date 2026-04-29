@@ -18,7 +18,7 @@ class EnhancedStatusBar(QStatusBar):
     def __init__(self, parent: QWidget | None = None):
         super().__init__(parent)
 
-        self._message_timer = QTimer()
+        self._message_timer = QTimer(self)
         self._message_timer.setSingleShot(True)
         self._message_timer.timeout.connect(self.clearMessage)
 

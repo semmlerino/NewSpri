@@ -270,11 +270,11 @@ class _ExportWorker(QThread):
 
     # Signals
     progress = Signal(int, int, str)  # current, total, message
-    finished = Signal(bool, str)  # success, message
+    taskFinished = Signal(bool, str)  # success, message
     error = Signal(str)  # error message
 
-    def __init__(self, task: _ExportTask):
-        super().__init__()
+    def __init__(self, task: _ExportTask, parent: QObject | None = None):
+        super().__init__(parent=parent)
         self.task = task
         self._cancelled = False
 
@@ -288,10 +288,10 @@ class _ExportWorker(QThread):
             spec.worker_method(self)
         except KeyError:
             self.error.emit(f"Unsupported export mode: {self.task.mode}")
-            self.finished.emit(False, f"Unsupported export mode: {self.task.mode}")
+            self.taskFinished.emit(False, f"Unsupported export mode: {self.task.mode}")
         except Exception as e:
             self.error.emit(str(e))
-            self.finished.emit(False, f"Export failed: {e!s}")
+            self.taskFinished.emit(False, f"Export failed: {e!s}")
 
     def cancel(self):
         """Cancel the export operation."""
@@ -325,7 +325,7 @@ class _ExportWorker(QThread):
 
         for i, frame in enumerate(self.task.frames):
             if self._cancelled:
-                self.finished.emit(False, "Export cancelled")
+                self.taskFinished.emit(False, "Export cancelled")
                 return
 
             # Generate filename
@@ -354,18 +354,18 @@ class _ExportWorker(QThread):
             if len(failed_frames) > 3:
                 failed_summary += f" (and {len(failed_frames) - 3} more)"
             if exported_count > 0:
-                self.finished.emit(
+                self.taskFinished.emit(
                     True,
                     f"Partial export: {exported_count} of {total_frames} frames exported; "
                     f"{len(failed_frames)} failed ({failed_summary})",
                 )
             else:
-                self.finished.emit(
+                self.taskFinished.emit(
                     False,
                     f"Export failed: {len(failed_frames)} of {total_frames} frames failed ({failed_summary})",
                 )
         else:
-            self.finished.emit(True, f"Successfully exported {exported_count} frames")
+            self.taskFinished.emit(True, f"Successfully exported {exported_count} frames")
 
     def _export_sprite_sheet(self):
         """Export all frames as a single sprite sheet with enhanced layout options."""
@@ -382,7 +382,7 @@ class _ExportWorker(QThread):
         if layout.mode is LayoutMode.SEGMENTS_PER_ROW:
             is_valid, error_msg = self._validate_segment_info()
             if not is_valid:
-                self.finished.emit(False, error_msg)
+                self.taskFinished.emit(False, error_msg)
                 return
 
         # Get original frame dimensions
@@ -441,12 +441,12 @@ class _ExportWorker(QThread):
 
         if sprite_sheet.save(str(filepath)):
             self.progress.emit(3, 3, f"Saved {filename}")
-            self.finished.emit(
+            self.taskFinished.emit(
                 True,
                 f"Successfully exported sprite sheet ({cols}x{rows}, {layout.spacing}px spacing)",
             )
         else:
-            self.finished.emit(False, "Failed to save sprite sheet")
+            self.taskFinished.emit(False, "Failed to save sprite sheet")
 
     def _calculate_grid_layout(
         self, layout: SpriteSheetLayout, frame_count: int
@@ -640,7 +640,7 @@ class _ExportWorker(QThread):
         for i, frame in enumerate(self.task.frames):
             if self._cancelled:
                 painter.end()
-                self.finished.emit(False, "Export cancelled")
+                self.taskFinished.emit(False, "Export cancelled")
                 return False
 
             # Calculate grid position
@@ -701,7 +701,7 @@ class _ExportWorker(QThread):
 
                 if self._cancelled:
                     painter.end()
-                    self.finished.emit(False, "Export cancelled")
+                    self.taskFinished.emit(False, "Export cancelled")
                     return False
 
                 frame = self.task.frames[frame_idx]
@@ -861,9 +861,9 @@ class FrameExporter(QObject):
 
     def _start_worker(self, task: _ExportTask) -> None:
         """Create, connect, and start the export worker thread."""
-        self._worker = _ExportWorker(task)
+        self._worker = _ExportWorker(task, parent=self)
         self._worker.progress.connect(self._on_progress)
-        self._worker.finished.connect(self._on_finished)
+        self._worker.taskFinished.connect(self._on_finished)
         self._worker.error.connect(self._on_error)
         self.exportStarted.emit()
         self._worker.start()

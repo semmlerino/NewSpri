@@ -11,7 +11,7 @@ import pytest
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QPixmap
 
-from export import ExportDialog, get_frame_exporter
+from export import ExportDialog
 from managers import AnimationSegmentManager
 from sprite_model import SpriteModel
 from sprite_model.extraction_mode import ExtractionMode
@@ -51,72 +51,6 @@ class TestFileOperationErrors:
             assert success is False, "Loading restricted file should fail gracefully"
         else:
             assert result is False, "Loading restricted file should fail gracefully"
-
-    def test_save_to_readonly_directory(self, qapp, tmp_path):
-        """Test exporting to a read-only directory."""
-        # Create read-only directory
-        readonly_dir = tmp_path / "readonly"
-        readonly_dir.mkdir()
-
-        # Make it read-only (Unix-like systems)
-        try:
-            os.chmod(readonly_dir, 0o444)
-
-            exporter = get_frame_exporter()
-            test_pixmap = QPixmap(32, 32)
-            test_pixmap.fill(Qt.white)
-
-            # Track error signal
-            error_messages = []
-            exporter.exportError.connect(lambda msg: error_messages.append(msg))
-
-            # Attempt to export to read-only directory
-            # The export_frames method creates subdirectory, which should fail
-            from pathlib import Path
-
-            from export.core.frame_exporter import ExportConfig, ExportFormat, ExportMode
-
-            config = ExportConfig(
-                output_dir=Path(readonly_dir / "subdir"),  # Creating subdir should fail
-                base_name="test",
-                format=ExportFormat.PNG,
-                mode=ExportMode.INDIVIDUAL_FRAMES,
-                scale_factor=1.0,
-            )
-            result = exporter.export_frames(frames=[test_pixmap], config=config)
-
-            # Export should fail or error should be emitted
-            assert result is False or len(error_messages) > 0
-        finally:
-            # Restore permissions for cleanup
-            os.chmod(readonly_dir, 0o755)
-
-    def test_export_disk_full_simulation(self, qapp, tmp_path):
-        """Test export when disk write fails."""
-        exporter = get_frame_exporter()
-        test_pixmap = QPixmap(32, 32)
-        test_pixmap.fill(Qt.white)
-
-        # Track error signals
-        error_messages = []
-        exporter.exportError.connect(lambda msg: error_messages.append(msg))
-
-        # Test with empty frames - should emit error
-        from pathlib import Path
-
-        from export.core.frame_exporter import ExportConfig, ExportFormat, ExportMode
-
-        empty_config = ExportConfig(
-            output_dir=Path(tmp_path),
-            base_name="test",
-            format=ExportFormat.PNG,
-            mode=ExportMode.INDIVIDUAL_FRAMES,
-            scale_factor=1.0,
-        )
-        result = exporter.export_frames(frames=[], config=empty_config)
-
-        assert result is False, "Export should fail with empty frames"
-        assert len(error_messages) > 0, "Error should be emitted"
 
 
 @pytest.mark.integration

@@ -57,7 +57,7 @@ class AnimationController(QObject):
         # TIMER MANAGEMENT
         # ============================================================================
 
-        self._animation_timer: QTimer = QTimer()
+        self._animation_timer: QTimer = QTimer(self)
         self._animation_timer.setSingleShot(False)  # Repeating timer
 
         # ============================================================================

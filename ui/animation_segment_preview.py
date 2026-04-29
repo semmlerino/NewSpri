@@ -75,7 +75,7 @@ class _SegmentPreviewItem(QFrame):
         self._hold_counter = 0  # Counter for frame holds
 
         # Create mini animation controller
-        self._timer = QTimer()
+        self._timer = QTimer(self)
         self._timer.timeout.connect(self._update_frame)
         self._update_timer_interval()
 

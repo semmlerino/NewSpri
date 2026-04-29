@@ -151,10 +151,9 @@ addopts = [
     "-v",
     "--tb=short",
     "--durations=10",
-    "--maxfail=3",
-    "--disable-warnings",
-    "-p", "no:cacheprovider",
     "--ignore=archive/",
+    "--timeout=30",
+    "--timeout-method=thread",
 ]
 markers = [
     "unit: Unit tests (fast, isolated components)",
@@ -178,6 +177,7 @@ markers = [
     "config: Configuration system tests",
     "export_integration: Export dialog integration tests",
     "requires_display: Tests requiring GUI display",
+    "serial: Tests that must not run in parallel (e.g. real-thread workers)",
 ]
 filterwarnings = [
     "error",
@@ -188,12 +188,7 @@ filterwarnings = [
     "ignore:.*Qt.*:DeprecationWarning",
     "ignore:.*PySide6.*:DeprecationWarning",
     "ignore:.*shiboken6.*:DeprecationWarning",
-    "ignore::pytest.PytestUnraisableExceptionWarning",
     "ignore:.*unclosed.*:ResourceWarning",
-    "ignore:.*QObject.*:RuntimeWarning",
-    "ignore:.*QThread.*:RuntimeWarning",
-    "ignore:.*QPixmap.*:RuntimeWarning",
-    "ignore:.*QWidget.*:RuntimeWarning",
 ]
 
 [tool.coverage.run]

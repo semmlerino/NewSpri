@@ -3,8 +3,6 @@ Integrated real sprite system for authentic component testing.
 Combines SpriteModel and AnimationController with real image data.
 """
 
-from unittest.mock import Mock
-
 try:
     from PySide6.QtCore import Qt
     from PySide6.QtGui import QPainter, QPixmap
@@ -61,10 +59,6 @@ class RealSpriteSystem:
         # Use real setter methods
         self.sprite_model.set_fps(10)
         self.sprite_model.set_loop_enabled(True)
-
-        # Mock only the methods that need simulation for testing
-        self.sprite_model.next_frame = Mock(return_value=(1, True))
-        self.sprite_model.first_frame = Mock()
 
         return self.sprite_model
 

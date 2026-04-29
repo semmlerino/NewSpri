@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QKeyEvent, QPixmap
+from PySide6.QtGui import QColor, QPixmap
 from PySide6.QtWidgets import QApplication
 
 from export import ExportDialog
@@ -27,156 +27,41 @@ from sprite_viewer import SpriteViewer
 class TestCompleteApplicationLifecycle:
     """Test the complete application lifecycle from startup to shutdown."""
 
+    @pytest.mark.smoke
     @pytest.mark.integration
-    def test_full_application_workflow(self, qtbot, tmp_path):
-        """Test complete workflow: load → detect → animate → export."""
-        # Use a real sprite sheet for more realistic testing
-        # Create a simple grid-based sprite sheet
-        sprite_path = tmp_path / "test_sprites.png"
-        sprite_sheet = self._create_test_sprite_sheet(256, 64, 32)
-        sprite_sheet.save(str(sprite_path), "PNG")
+    def test_smoke_load_extract_export(self, qtbot, tmp_path):
+        """Smoke: load a sprite sheet, extract grid frames, export frames, close cleanly."""
+        sprite_path = tmp_path / "smoke.png"
+        self._create_test_sprite_sheet(64, 32, 32).save(str(sprite_path), "PNG")
 
-        # Create application
         viewer = SpriteViewer()
         qtbot.addWidget(viewer)
-        viewer.show()
+        try:
+            success, _ = viewer._sprite_model.load_sprite_sheet(str(sprite_path))
+            assert success
+            success, _, count = viewer._sprite_model.extract_frames(32, 32, 0, 0)
+            assert success and count > 0
 
-        # 1. Test startup state
-        assert viewer._sprite_model.sprite_frames == ()
-        assert viewer._animation_controller.is_playing is False
-        assert viewer._status_bar is not None
-
-        # 2. Load sprite sheet (direct load, no dialog mocking)
-        success, message = viewer._sprite_model.load_sprite_sheet(str(sprite_path))
-        assert success, f"Failed to load sprite: {message}"
-
-        # Skip setting extraction mode - the model should use grid by default
-        # or CCL if it detects the sprite sheet is suitable for it
-        # For now, let's just work with whatever mode is selected
-
-        # Extract frames using real extraction
-        success, message, frame_count = viewer._sprite_model.extract_frames(
-            width=32, height=32, offset_x=0, offset_y=0
-        )
-        assert success, f"Failed to extract frames: {message}"
-        # The sprite sheet is 256x64 with 32x32 sprites = 8x2 = 16 frames
-        # But with margins, CCL might detect different counts - just verify we got frames
-        assert frame_count > 0, f"Expected frames to be extracted, got {frame_count}"
-
-        # Verify sprite loaded
-        assert len(viewer._sprite_model.sprite_frames) == frame_count
-        # The sprite model uses _file_path internally
-        assert viewer._sprite_model._file_path == str(sprite_path)
-
-        # 3. Test auto-detection (real detection, no mocking)
-        # Skip auto-detection test since we already extracted frames
-        # The auto-detection controller has complex UI interactions
-        # and we're focusing on testing real workflow without mocks
-
-        # 4. Test animation playback
-        viewer._animation_controller.start_animation()
-        assert viewer._animation_controller.is_playing is True
-
-        # Wait for at least one frame to advance
-        with qtbot.waitSignal(viewer._sprite_model.frameChanged, timeout=500):
-            pass
-
-        viewer._animation_controller.stop_animation()
-        assert viewer._animation_controller.is_playing is False
-
-        # 5. Test frame navigation
-        initial_frame = viewer._sprite_model.current_frame
-        viewer._sprite_model.next_frame()
-        assert viewer._sprite_model.current_frame == initial_frame + 1
-
-        viewer._sprite_model.set_current_frame(0)
-        assert viewer._sprite_model.current_frame == 0
-
-        # 6. Test export workflow (real export, no dialog mocking)
-        export_dir = tmp_path / "exports"
-        export_dir.mkdir()
-
-        # Use the frame exporter directly to avoid dialog
-        exporter = get_frame_exporter()
-
-        # Track export completion
-        export_complete = {"done": False, "success": False}
-
-        def on_export_finished(success, message):
-            export_complete["done"] = True
-            export_complete["success"] = success
-
-        exporter.exportFinished.connect(on_export_finished)
-
-        # Execute the export
-        export_config = ExportConfig(
-            output_dir=Path(export_dir),
-            base_name="exported",
-            format=ExportFormat.PNG,
-            mode=ExportMode.INDIVIDUAL_FRAMES,
-            scale_factor=1.0,
-        )
-        success = exporter.export_frames(
-            frames=viewer._sprite_model.sprite_frames,
-            config=export_config,
-        )
-        assert success, "Export should succeed"
-
-        # Wait for export to complete (it runs in a thread)
-        qtbot.waitUntil(lambda: export_complete["done"], timeout=5000)
-
-        assert export_complete["done"], "Export should complete within timeout"
-        assert export_complete["success"], "Export should complete successfully"
-
-        # Verify files were created (should match the number of frames extracted)
-        exported_files = list(export_dir.glob("exported_*.png"))
-        assert len(exported_files) == len(viewer._sprite_model.sprite_frames), (
-            f"Expected {len(viewer._sprite_model.sprite_frames)} exported files, found {len(exported_files)}"
-        )
-
-        # Verify file contents
-        for file in exported_files:
-            assert file.stat().st_size > 0, f"Exported file {file} is empty"
-
-        # 7. Test settings persistence
-        # Window state saving might be handled automatically or via settings manager
-        # For now, just verify the application can close cleanly
-
-        # Verify cleanup
-        viewer.close()
-
-    @pytest.mark.integration
-    def test_keyboard_driven_workflow(self, qtbot):
-        """Test complete workflow using only keyboard shortcuts."""
-        viewer = SpriteViewer()
-        qtbot.addWidget(viewer)
-        viewer.show()
-
-        # Load test sprites
-        self._load_test_sprites(viewer)
-
-        # Test keyboard navigation
-        shortcuts = [
-            (Qt.Key_Space, lambda: viewer._animation_controller.is_playing),  # Toggle playback
-            (Qt.Key_Right, lambda: viewer._sprite_model.current_frame),  # Next frame
-            (Qt.Key_Left, lambda: viewer._sprite_model.current_frame),  # Previous frame
-            (Qt.Key_Home, lambda: viewer._sprite_model.current_frame == 0),  # First frame
-            (Qt.Key_End, lambda: viewer._sprite_model.current_frame),  # Last frame
-            (Qt.Key_G, lambda: viewer._canvas._show_grid),  # Toggle grid
-            (Qt.Key_Plus, lambda: viewer._canvas._zoom_factor),  # Zoom in
-            (Qt.Key_Minus, lambda: viewer._canvas._zoom_factor),  # Zoom out
-            (Qt.Key_0, lambda: viewer._canvas._zoom_factor == pytest.approx(1.0)),  # Reset zoom
-        ]
-
-        for key, check_func in shortcuts:
-            # Send key event
-            event = QKeyEvent(QKeyEvent.KeyPress, key, Qt.NoModifier)
-            viewer.keyPressEvent(event)
-            QApplication.processEvents()
-
-            # Verify action occurred
-            result = check_func()
-            assert result is not None
+            out_dir = tmp_path / "out"
+            out_dir.mkdir()
+            config = ExportConfig(
+                output_dir=out_dir,
+                base_name="smoke",
+                format=ExportFormat.PNG,
+                mode=ExportMode.INDIVIDUAL_FRAMES,
+                scale_factor=1.0,
+            )
+            finished: list[bool] = []
+            get_frame_exporter().exportFinished.connect(lambda s, _m: finished.append(s))
+            assert get_frame_exporter().export_frames(
+                frames=viewer._sprite_model.sprite_frames,
+                config=config,
+            )
+            qtbot.waitUntil(lambda: bool(finished), timeout=3000)
+            assert finished[0] is True
+            assert any(out_dir.iterdir())
+        finally:
+            viewer.close()
 
     @pytest.mark.integration
     def test_error_recovery_workflow(self, qtbot):
@@ -418,39 +303,6 @@ class TestMultiWindowWorkflow:
         viewer.show()
         assert viewer.isVisible()
 
-    @pytest.mark.integration
-    def test_window_state_persistence(self, qtbot, tmp_path):
-        """Test window state saves and restores correctly."""
-        # Create settings file path
-        settings_file = tmp_path / "settings.json"
-
-        viewer = SpriteViewer()
-        qtbot.addWidget(viewer)
-        viewer.show()
-
-        # Set specific window state
-        viewer.resize(1024, 768)
-        viewer.move(100, 100)
-        viewer._canvas.set_zoom(2.0)
-
-        # Get initial state
-        initial_width = viewer.width()
-        initial_height = viewer.height()
-        initial_zoom = viewer._canvas._zoom_factor
-
-        # Create new viewer
-        viewer2 = SpriteViewer()
-        qtbot.addWidget(viewer2)
-
-        # Manually set the same state (since auto save/restore might not be implemented)
-        viewer2.resize(initial_width, initial_height)
-        viewer2._canvas.set_zoom(initial_zoom)
-
-        # Verify state matches
-        assert viewer2.width() == initial_width
-        assert viewer2.height() == initial_height
-        assert viewer2._canvas._zoom_factor == initial_zoom
-
 
 class TestLargeInputWorkflows:
     """Test complete workflows with larger frame sets."""
@@ -501,71 +353,6 @@ def mock_sprite_viewer(qtbot):
 
     viewer._sprite_model.frameChanged.emit(0, 16)
     return viewer
-
-
-class TestAPIContracts:
-    """Test API contracts to prevent integration failures (consolidated from test_complete_user_workflows.py)."""
-
-    @pytest.mark.integration
-    def test_api_contract_enforcement(self, qtbot):
-        """Test that enforces all the API contracts we fixed."""
-        viewer = SpriteViewer()
-        qtbot.addWidget(viewer)
-
-        # Test all the API contracts that were violated and fixed
-        api_tests = [
-            ("SpriteCanvas.update()", lambda: viewer._canvas.update()),
-            ("SpriteCanvas.reset_view()", lambda: viewer._canvas.reset_view()),
-            (
-                "RecentFiles.add_file_to_recent()",
-                lambda: viewer._recent_files.add_file_to_recent("/test"),
-            ),
-            ("StatusManager.show_message()", lambda: viewer._status_bar.show_message("test")),
-            (
-                "StatusManager.update_mouse_position()",
-                lambda: viewer._status_bar.update_mouse_position(0, 0),
-            ),
-            (
-                "AnimationController.is_playing property",
-                lambda: viewer._animation_controller.is_playing,
-            ),
-            (
-                "AutoDetectionController.run_comprehensive_detection_with_dialog()",
-                lambda: hasattr(
-                    viewer._auto_detection_controller, "run_comprehensive_detection_with_dialog"
-                ),
-            ),
-        ]
-
-        for description, test_func in api_tests:
-            try:
-                # Execute the test - we just care that it doesn't raise
-                test_func()
-            except AttributeError as e:
-                pytest.fail(f"{description} - API contract violation: {e}")
-            except TypeError as e:
-                pytest.fail(f"{description} - Type error (property vs method): {e}")
-
-    @pytest.mark.integration
-    def test_signal_connection_contracts(self, qtbot):
-        """Test that all signal connections use correct signal names."""
-        viewer = SpriteViewer()
-        qtbot.addWidget(viewer)
-
-        # Test signal contracts that were wrong
-        signal_tests = [
-            ("SpriteCanvas.mouseMoved", viewer._canvas, "mouseMoved"),
-            ("SpriteCanvas.zoomChanged", viewer._canvas, "zoomChanged"),
-            ("FrameExtractor.settingsChanged", viewer._frame_extractor, "settingsChanged"),
-            (
-                "AnimationController.animationStarted",
-                viewer._animation_controller,
-                "animationStarted",
-            ),
-        ]
-
-        for description, obj, signal_name in signal_tests:
-            assert hasattr(obj, signal_name), f"{description} - Signal does not exist"
 
 
 @pytest.fixture

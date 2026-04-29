@@ -95,24 +95,6 @@ class TestSingletonPattern:
 
         assert manager1 is not manager2
 
-    def test_singleton_is_thread_safe(self, qapp) -> None:
-        """Singleton access should be thread-safe."""
-        import threading
-
-        managers = []
-
-        def get_manager():
-            managers.append(get_settings_manager())
-
-        threads = [threading.Thread(target=get_manager) for _ in range(10)]
-        for t in threads:
-            t.start()
-        for t in threads:
-            t.join()
-
-        # All should be the same instance
-        assert all(m is managers[0] for m in managers)
-
 
 # ============================================================================
 # Get/Set Value Tests

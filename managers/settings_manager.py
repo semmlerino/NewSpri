@@ -44,7 +44,7 @@ class SettingsManager(QObject):
         )
 
         # Auto-save timer for debounced saving
-        self._autosave_timer = QTimer()
+        self._autosave_timer = QTimer(self)
         self._autosave_timer.setSingleShot(True)
         self._autosave_timer.timeout.connect(self._auto_save)
 

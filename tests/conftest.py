@@ -54,6 +54,42 @@ from sprite_model.sprite_extraction import GridConfig
 # ============================================================================
 
 
+@pytest.fixture(scope="session", autouse=True)
+def _isolate_qsettings(tmp_path_factory) -> Generator[None, None, None]:
+    """Redirect QSettings to a session-local ini file so tests don't touch user state."""
+    from PySide6.QtCore import QCoreApplication, QSettings
+
+    settings_dir = tmp_path_factory.mktemp("qsettings")
+    QSettings.setDefaultFormat(QSettings.IniFormat)
+    QSettings.setPath(QSettings.IniFormat, QSettings.UserScope, str(settings_dir))
+    QCoreApplication.setOrganizationName("SpriteViewerTests")
+    QCoreApplication.setApplicationName("SpriteViewerTests")
+    yield
+
+
+@pytest.fixture(scope="session", autouse=True)
+def _qt_message_handler() -> Generator[list[str], None, None]:
+    """Fail tests on Qt critical/fatal messages and on cross-thread/object warnings."""
+    from PySide6.QtCore import QtMsgType, qInstallMessageHandler
+
+    captured: list[str] = []
+
+    def handler(msg_type, _ctx, msg):
+        if msg_type in (QtMsgType.QtCriticalMsg, QtMsgType.QtFatalMsg) or (
+            msg_type == QtMsgType.QtWarningMsg
+            and any(tag in msg for tag in ("QThread:", "QObject:", "QPixmap:", "QPainter:"))
+        ):
+            captured.append(f"[{msg_type.name}] {msg}")
+
+    prev = qInstallMessageHandler(handler)
+    yield captured
+    qInstallMessageHandler(prev)
+    if captured:
+        raise AssertionError(
+            "Qt emitted critical/threading messages during the session:\n  " + "\n  ".join(captured)
+        )
+
+
 @pytest.fixture(scope="session")
 def qapp() -> Generator[QApplication, None, None]:
     """

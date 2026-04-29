@@ -27,8 +27,9 @@ from export.core.frame_exporter import (
     get_frame_exporter,
 )
 
-# Mark all tests in this module as requiring Qt
-pytestmark = pytest.mark.requires_qt
+# Mark all tests in this module as requiring Qt; quarantine to serial execution
+# because real worker threads + singleton state interact poorly under parallelism.
+pytestmark = [pytest.mark.requires_qt, pytest.mark.serial]
 
 
 # ============================================================================
@@ -43,9 +44,15 @@ def reset_exporter():
 
     def _do_reset():
         inst = _fe_mod._exporter_instance
-        if inst is not None and inst._worker is not None and inst._worker.isRunning():
-            inst._worker.quit()
-            inst._worker.wait()
+        if inst is not None:
+            worker = inst._worker
+            if worker is not None and worker.isRunning():
+                worker.cancel()
+                if not worker.wait(2000):
+                    raise AssertionError(
+                        "ExportWorker did not finish within 2s during teardown — "
+                        "test left a real thread running"
+                    )
         _fe_mod._exporter_instance = None
 
     _do_reset()
@@ -141,7 +148,7 @@ class TestExportWorkerCancellation:
         progress_values = []
         finished_results = []
         worker.progress.connect(lambda *args: progress_values.append(args))
-        worker.finished.connect(lambda success, msg: finished_results.append((success, msg)))
+        worker.taskFinished.connect(lambda success, msg: finished_results.append((success, msg)))
 
         # Cancel and run
         worker.cancel()
@@ -161,7 +168,7 @@ class TestConcurrentExportPrevention:
     """Tests for preventing concurrent exports."""
 
     def test_export_sets_exporting_state(
-        self, qapp, sample_pixmaps: list[QPixmap], export_dir: Path
+        self, qapp, qtbot, sample_pixmaps: list[QPixmap], export_dir: Path
     ) -> None:
         """Starting export should set exporting state."""
         from export.core.frame_exporter import ExportConfig, ExportFormat, ExportMode
@@ -179,6 +186,12 @@ class TestConcurrentExportPrevention:
 
         # Should have started successfully
         assert result is True
+
+        # Wait for the worker thread to finish before teardown
+        qtbot.waitUntil(
+            lambda: exporter._worker is None or not exporter._worker.isRunning(),
+            timeout=2000,
+        )
 
 
 class TestExportSignalSafety:
@@ -203,7 +216,7 @@ class TestExportSignalSafety:
         worker = _ExportWorker(basic_export_task)
 
         finished_results = []
-        worker.finished.connect(lambda success, msg: finished_results.append((success, msg)))
+        worker.taskFinished.connect(lambda success, msg: finished_results.append((success, msg)))
 
         # Run export
         worker.run()
@@ -291,7 +304,7 @@ class TestResourceCleanup:
         error_messages = []
         finished_results = []
         worker.error.connect(lambda msg: error_messages.append(msg))
-        worker.finished.connect(lambda success, msg: finished_results.append((success, msg)))
+        worker.taskFinished.connect(lambda success, msg: finished_results.append((success, msg)))
 
         worker.run()
 

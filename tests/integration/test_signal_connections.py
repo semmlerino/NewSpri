@@ -143,20 +143,3 @@ class TestSignalDataFlow:
         # Status emits should describe the FPS change; controller state should reflect it
         assert controller.current_fps == 15
         assert any("15" in msg for msg in status_changes)
-
-
-@pytest.mark.integration
-@pytest.mark.signal_test
-class TestSignalErrorHandling:
-    """Test signal behavior under error conditions."""
-
-    def test_signal_emission_with_no_connections(self, qapp):
-        """Test that emitting signals with no connections doesn't crash."""
-        dialog = ExportDialog(parent=None, frame_count=1, current_frame=0)
-
-        # Emit signal with no connections - should not raise
-        if hasattr(dialog, "exportRequested"):
-            dialog.exportRequested.emit({})  # Should not crash
-
-        if hasattr(dialog, "exportCompleted"):
-            dialog.exportCompleted.emit("test_path")  # Should not crash

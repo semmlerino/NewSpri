@@ -22,15 +22,3 @@ class TestExportDialog:
         assert dialog.isModal()
         assert dialog.frame_count == 10
         assert dialog.current_frame == 5
-
-    def test_export_requested_signal_exists(self, qtbot):
-        """Test that exportRequested signal can be connected."""
-        dialog = ExportDialog(frame_count=1)
-        qtbot.addWidget(dialog)
-
-        # Verify signal exists and can be connected
-        signal_received = []
-        dialog.exportRequested.connect(lambda s: signal_received.append(s))
-
-        # Signal should be connectable without error
-        assert hasattr(dialog, "exportRequested")

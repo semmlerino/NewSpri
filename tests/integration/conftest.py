@@ -17,11 +17,17 @@ def _reset_singletons():
     """Reset singleton instances for test isolation."""
     _sm_mod._settings_instance = None
     _rfm_mod._recent_files_instance = None
-    # Wait for any running export thread before resetting
+
     inst = _fe_mod._exporter_instance
-    if inst is not None and inst._worker is not None and inst._worker.isRunning():
-        inst._worker.quit()
-        inst._worker.wait()
+    if inst is not None:
+        worker = inst._worker
+        if worker is not None and worker.isRunning():
+            worker.cancel()
+            if not worker.wait(2000):
+                raise AssertionError(
+                    "ExportWorker did not finish within 2s during teardown — "
+                    "test left a real thread running"
+                )
     _fe_mod._exporter_instance = None
 
 
